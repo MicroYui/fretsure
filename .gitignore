@@ -18,6 +18,9 @@ htmlcov/
 # uv
 .uv/
 
+# superpowers scratch (SDD ledger, task briefs, review packages)
+.superpowers/
+
 # Node / web
 node_modules/
 web/dist/

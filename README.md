@@ -15,3 +15,13 @@ Fretsure 是一个 agent：输入一首歌的音乐内容（乐谱 / MIDI / lead
 ## 核心思路
 `LLM 提议编配 → 确定性指法求解 → 可弹性 oracle 硬门 + 定位化诊断 → 自动修复 → checker 打分 benchmark`
 范式：**oracle 当环境、LLM 当策略**；harness 自研；每个 agent 能力用 leave-one-out 消融证明其价值。
+
+## 开发（Build & test）
+用 [uv](https://docs.astral.sh/uv/) 管理 Python 3.11 环境：
+```bash
+uv sync --extra dev     # 建 3.11 venv + 装依赖
+uv run pytest -q        # 测试
+uv run ruff check       # lint
+uv run mypy src         # 类型检查
+```
+`fretsure-oracle` 是确定性可弹性 oracle 包（`import fretsure`）。实现计划见 `docs/superpowers/plans/`。
