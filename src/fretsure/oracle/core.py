@@ -1,0 +1,86 @@
+"""Three-state playability verdict.
+
+Soundness by construction:
+- RED   = fails even the *optimistic* profile (provably unplayable),
+- GREEN = passes even the *pessimistic* profile (provably playable, err safe),
+- AMBER = in between (send to repair / human; never a certified output).
+
+The verdict never relaxes the GREEN threshold; uncertainty is absorbed by AMBER.
+Diagnostics are computed on the median profile for localization, and the whole
+result is deterministic and version-stamped.
+"""
+
+from dataclasses import dataclass
+from fractions import Fraction
+
+from fretsure.oracle.diagnostics import Diagnostic, Verdict
+from fretsure.oracle.predicates import (
+    check_barre,
+    check_finger_count,
+    check_finger_monotonic,
+    check_fret_span,
+    check_one_string_one_note,
+    check_range,
+    check_shift_speed,
+    check_sustain,
+)
+from fretsure.oracle.profiles import Profile, optimistic, pessimistic
+from fretsure.tab import Tab
+
+CHECKER_VERSION = "oracle@0.1.0"
+
+
+@dataclass(frozen=True)
+class OracleResult:
+    verdict: Verdict
+    diagnostics: tuple[Diagnostic, ...]
+    checker_version: str
+    profile_version: str
+
+
+def _sort_key(d: Diagnostic) -> tuple[int, Fraction, str, tuple[int, ...]]:
+    return (d.measure, d.beat, d.violation_type, d.offending_notes)
+
+
+def _all_diagnostics(
+    tab: Tab, profile: Profile, *, tempo_bpm: float, beats_per_bar: int
+) -> list[Diagnostic]:
+    diags: list[Diagnostic] = []
+    diags += check_range(tab, profile, beats_per_bar=beats_per_bar)
+    diags += check_one_string_one_note(tab, profile, beats_per_bar=beats_per_bar)
+    diags += check_finger_count(tab, profile, beats_per_bar=beats_per_bar)
+    diags += check_finger_monotonic(tab, profile, beats_per_bar=beats_per_bar)
+    diags += check_fret_span(tab, profile, beats_per_bar=beats_per_bar)
+    diags += check_barre(tab, profile, beats_per_bar=beats_per_bar)
+    diags += check_shift_speed(tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar)
+    diags += check_sustain(tab, profile, beats_per_bar=beats_per_bar)
+    return sorted(diags, key=_sort_key)
+
+
+def check_playability(
+    tab: Tab, profile: Profile, *, tempo_bpm: float = 90.0, beats_per_bar: int = 4
+) -> OracleResult:
+    fails_optimistic = bool(
+        _all_diagnostics(
+            tab, optimistic(profile), tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar
+        )
+    )
+    if fails_optimistic:
+        verdict: Verdict = "RED"
+    else:
+        fails_pessimistic = bool(
+            _all_diagnostics(
+                tab,
+                pessimistic(profile),
+                tempo_bpm=tempo_bpm,
+                beats_per_bar=beats_per_bar,
+            )
+        )
+        verdict = "AMBER" if fails_pessimistic else "GREEN"
+
+    diagnostics = _all_diagnostics(
+        tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar
+    )
+    return OracleResult(
+        verdict, tuple(diagnostics), CHECKER_VERSION, profile.version
+    )
