@@ -33,13 +33,34 @@ def _indexed_frames(tab: Tab) -> list[tuple[Fraction, list[tuple[int, TabNote]]]
     ]
 
 
-def check_range(tab: Tab, profile: Profile, *, beats_per_bar: int = 4) -> list[Diagnostic]:
+def check_wellformed(
+    tab: Tab, profile: Profile, *, beats_per_bar: int = 4
+) -> list[Diagnostic]:
+    """A note must be fretted-with-a-finger or open-without-one: ``fret > 0`` iff
+    ``left_finger > 0``. A fretted note carrying finger 0 (or an open string
+    carrying a finger) is an invalid exhibited fingering and must be rejected —
+    otherwise it would slip past the finger-filtered left-hand predicates."""
     out: list[Diagnostic] = []
     for idx, n in enumerate(tab.notes):
-        if not 0 <= n.fret <= profile.max_fret:
+        if (n.fret > 0) != (n.left_finger > 0):
             measure, beat = _measure_beat(n.onset, beats_per_bar)
-            if n.fret > profile.max_fret:
-                overage = float(n.fret - profile.max_fret)
+            out.append(
+                Diagnostic(measure, beat, "MALFORMED_FINGERING", (idx,), 0.0, ("refinger",))
+            )
+    return out
+
+
+def check_range(tab: Tab, profile: Profile, *, beats_per_bar: int = 4) -> list[Diagnostic]:
+    """Each note's *absolute* position (``capo + fret``) must sit on the neck:
+    ``0 <= fret`` and ``capo + fret <= max_fret``. The upper bound is absolute
+    because a capo does not move the neck's last fret."""
+    out: list[Diagnostic] = []
+    for idx, n in enumerate(tab.notes):
+        absolute = tab.capo + n.fret
+        if n.fret < 0 or absolute > profile.max_fret:
+            measure, beat = _measure_beat(n.onset, beats_per_bar)
+            if absolute > profile.max_fret:
+                overage = float(absolute - profile.max_fret)
                 relax: tuple[str, ...] = ("octave_down_bass", "shift_to_lower_position")
             else:  # negative fret
                 overage = float(-n.fret)
@@ -134,6 +155,7 @@ __all__ = [
     "check_right_hand",
     "check_shift_speed",
     "check_sustain",
+    "check_wellformed",
 ]
 
 _RIGHT_RANK = {"p": 0, "i": 1, "m": 2, "a": 3}  # thumb..ring, low->high strings
@@ -234,7 +256,10 @@ def check_shift_speed(
     for onset, notes in _indexed_frames(tab):
         fretted = [(idx, n) for idx, n in notes if n.fret > 0]
         if not fretted:
-            prev = None  # open-only frame: hand position undefined, reset
+            # Open-only frame: the hand can be anywhere, but it must still travel
+            # from the previous fretted frame to the next within the elapsed
+            # time. Carry `prev` forward (do NOT reset) so a fast shift bridged
+            # by an open frame is still charged over the full interval.
             continue
         xs: list[float] = []
         for _, n in fretted:

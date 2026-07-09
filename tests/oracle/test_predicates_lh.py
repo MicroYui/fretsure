@@ -5,6 +5,7 @@ from fretsure.oracle.predicates import (
     check_finger_monotonic,
     check_one_string_one_note,
     check_range,
+    check_wellformed,
 )
 from fretsure.oracle.profiles import MEDIAN_HAND
 from fretsure.tab import Tab, TabNote
@@ -33,6 +34,36 @@ def test_range_negative_fret_flagged() -> None:
     t = _t([TabNote(F(0), F(1), 0, -1, 1, "p")])
     d = check_range(t, MEDIAN_HAND)
     assert d and d[0].violation_type == "RANGE"
+
+
+def test_range_absolute_position_with_capo_flagged() -> None:
+    # fret 20 + capo 7 = absolute 27, past a 22-fret neck
+    t = Tab((TabNote(F(0), F(1), 0, 20, 1, "p"),), TUN, 7)
+    d = check_range(t, MEDIAN_HAND)
+    assert d and d[0].violation_type == "RANGE"
+    assert d[0].overage == 27 - 22
+
+
+def test_range_ok_with_capo_within_neck() -> None:
+    t = Tab((TabNote(F(0), F(1), 0, 10, 1, "p"),), TUN, 5)  # absolute 15 <= 22
+    assert check_range(t, MEDIAN_HAND) == []
+
+
+def test_wellformed_ok() -> None:
+    t = _t([TabNote(F(0), F(1), 0, 3, 1, "p"), TabNote(F(0), F(1), 1, 0, 0, "i")])
+    assert check_wellformed(t, MEDIAN_HAND) == []
+
+
+def test_wellformed_fretted_without_finger_flagged() -> None:
+    t = _t([TabNote(F(0), F(1), 0, 3, 0, "p")])
+    d = check_wellformed(t, MEDIAN_HAND)
+    assert d and d[0].violation_type == "MALFORMED_FINGERING"
+
+
+def test_wellformed_open_with_finger_flagged() -> None:
+    t = _t([TabNote(F(0), F(1), 0, 0, 2, "p")])
+    d = check_wellformed(t, MEDIAN_HAND)
+    assert d and d[0].violation_type == "MALFORMED_FINGERING"
 
 
 def test_one_string_one_note() -> None:

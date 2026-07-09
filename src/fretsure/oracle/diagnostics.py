@@ -12,6 +12,7 @@ from typing import Literal
 Verdict = Literal["GREEN", "RED", "AMBER"]
 
 ViolationType = Literal[
+    "MALFORMED_FINGERING",
     "RANGE",
     "ONE_STRING_ONE_NOTE",
     "FINGER_COUNT",

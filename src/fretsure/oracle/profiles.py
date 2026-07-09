@@ -18,7 +18,8 @@ from fretsure.geometry import DEFAULT_STRING_LENGTH_MM
 class Profile:
     version: str
     hand_span_mm: float  # max fingertip 1..4 distance
-    reach_mm: float
+    reach_mm: float  # RESERVED for future position-dependent reach compression;
+    # not yet consumed by any predicate (v1 folds reach into d_max via hand_span).
     v_shift_mm_per_s: float  # hand-shift speed ceiling
     r_max_hz: float  # single right-finger repeat-rate ceiling
     string_length_mm: float

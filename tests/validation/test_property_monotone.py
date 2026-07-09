@@ -34,7 +34,7 @@ def tabs(draw: st.DrawFn) -> Tab:
         )
         for s in strings:
             fret = draw(st.integers(0, 16))
-            finger = draw(st.integers(0, 4))
+            finger = 0 if fret == 0 else draw(st.integers(1, 4))  # well-formed
             rf = draw(st.sampled_from(["p", "i", "m", "a"]))
             notes.append(TabNote(F(onset), F(1), s, fret, finger, rf))
     return Tab(tuple(notes), TUN, 0)

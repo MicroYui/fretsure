@@ -24,6 +24,7 @@ from fretsure.oracle.predicates import (
     check_right_hand,
     check_shift_speed,
     check_sustain,
+    check_wellformed,
 )
 from fretsure.oracle.profiles import Profile, optimistic, pessimistic
 from fretsure.tab import Tab
@@ -47,6 +48,7 @@ def _all_diagnostics(
     tab: Tab, profile: Profile, *, tempo_bpm: float, beats_per_bar: int
 ) -> list[Diagnostic]:
     diags: list[Diagnostic] = []
+    diags += check_wellformed(tab, profile, beats_per_bar=beats_per_bar)
     diags += check_range(tab, profile, beats_per_bar=beats_per_bar)
     diags += check_one_string_one_note(tab, profile, beats_per_bar=beats_per_bar)
     diags += check_finger_count(tab, profile, beats_per_bar=beats_per_bar)

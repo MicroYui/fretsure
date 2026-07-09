@@ -46,13 +46,15 @@ def tabs(draw: st.DrawFn) -> Tab:
             st.lists(st.integers(0, 5), min_size=n_notes, max_size=n_notes, unique=True)
         )
         for s in strings:
+            fret = draw(st.integers(0, 16))
+            finger = 0 if fret == 0 else draw(st.integers(1, 4))  # well-formed
             notes.append(
                 TabNote(
                     F(onset),
                     F(1),
                     s,
-                    draw(st.integers(0, 16)),
-                    draw(st.integers(0, 4)),
+                    fret,
+                    finger,
                     draw(st.sampled_from(["p", "i", "m", "a"])),
                 )
             )

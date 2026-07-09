@@ -53,3 +53,20 @@ def test_red_carries_diagnostics() -> None:
 
 def test_green_has_no_diagnostics() -> None:
     assert check_playability(GREEN_TAB, MEDIAN_HAND).diagnostics == ()
+
+
+def test_malformed_fingering_is_red() -> None:
+    # fret>0 with finger 0 is an invalid exhibited fingering; must never be GREEN
+    t = _t([TabNote(F(0), F(1), 0, 1, 0, "p"), TabNote(F(0), F(1), 1, 20, 0, "i")])
+    r = check_playability(t, MEDIAN_HAND)
+    assert r.verdict == "RED"
+    assert any(d.violation_type == "MALFORMED_FINGERING" for d in r.diagnostics)
+
+
+def test_capo_past_neck_end_is_red() -> None:
+    # fret 20 with capo 7 = absolute fret 27, off a 22-fret neck
+    t = Tab((TabNote(F(0), F(1), 0, 20, 1, "p"),), TUN, 7)
+    r = check_playability(t, MEDIAN_HAND)
+    assert r.verdict == "RED"
+    assert any(d.violation_type == "RANGE" for d in r.diagnostics)
+
