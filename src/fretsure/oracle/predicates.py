@@ -36,13 +36,20 @@ def _indexed_frames(tab: Tab) -> list[tuple[Fraction, list[tuple[int, TabNote]]]
 def check_wellformed(
     tab: Tab, profile: Profile, *, beats_per_bar: int = 4
 ) -> list[Diagnostic]:
-    """A note must be fretted-with-a-finger or open-without-one: ``fret > 0`` iff
-    ``left_finger > 0``. A fretted note carrying finger 0 (or an open string
-    carrying a finger) is an invalid exhibited fingering and must be rejected —
-    otherwise it would slip past the finger-filtered left-hand predicates."""
+    """A note must be a valid exhibited fingering: fretted-with-a-finger or
+    open-without-one (``fret > 0`` iff ``left_finger > 0``), the left finger in
+    ``0..4``, and the right finger in ``{p, i, m, a}``. Rejecting this is a
+    soundness requirement: an out-of-domain finger (e.g. ``left_finger == 5``)
+    would inflate ``d_max`` and certify a span no real 4-finger hand can reach,
+    and an unfiltered note would slip past the finger-filtered predicates."""
     out: list[Diagnostic] = []
     for idx, n in enumerate(tab.notes):
-        if (n.fret > 0) != (n.left_finger > 0):
+        malformed = (
+            (n.fret > 0) != (n.left_finger > 0)
+            or not 0 <= n.left_finger <= 4
+            or n.right_finger not in ("p", "i", "m", "a")
+        )
+        if malformed:
             measure, beat = _measure_beat(n.onset, beats_per_bar)
             out.append(
                 Diagnostic(measure, beat, "MALFORMED_FINGERING", (idx,), 0.0, ("refinger",))
@@ -359,7 +366,8 @@ def check_right_hand(
             for ib, nb in notes:
                 if ia == ib:
                     continue
-                ra, rb = _RIGHT_RANK[na.right_finger], _RIGHT_RANK[nb.right_finger]
+                ra = _RIGHT_RANK.get(na.right_finger, 0)
+                rb = _RIGHT_RANK.get(nb.right_finger, 0)
                 if na.string < nb.string and ra > rb:
                     bad.update((ia, ib))
         if bad:

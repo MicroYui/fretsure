@@ -66,6 +66,18 @@ def test_wellformed_open_with_finger_flagged() -> None:
     assert d and d[0].violation_type == "MALFORMED_FINGERING"
 
 
+def test_wellformed_left_finger_out_of_domain_flagged() -> None:
+    t = _t([TabNote(F(0), F(1), 0, 4, 5, "p")])  # finger 5 does not exist
+    d = check_wellformed(t, MEDIAN_HAND)
+    assert d and d[0].violation_type == "MALFORMED_FINGERING"
+
+
+def test_wellformed_invalid_right_finger_flagged() -> None:
+    t = _t([TabNote(F(0), F(1), 0, 3, 1, "z")])  # 'z' is not p/i/m/a
+    d = check_wellformed(t, MEDIAN_HAND)
+    assert d and d[0].violation_type == "MALFORMED_FINGERING"
+
+
 def test_one_string_one_note() -> None:
     t = _t(
         [

@@ -52,6 +52,20 @@ with the design partner (roadmap D.4). Until then:
   `test_predicates_lh::test_range_absolute_position_with_capo_flagged` +
   `test_wellformed_*`, `test_predicates_temporal::test_shift_bridged_by_open_frame_still_charged`.
   The property/metamorphic generators now emit well-formed fingerings.
+- **Re-review (after the fixes) found one residual of the same class — now
+  fixed:** `check_wellformed` enforced the fret↔finger biconditional but not the
+  finger *domain*, so `left_finger == 5` inflated `d_max` (`|1-5|/3·H > H`) and
+  certified an unreachable fret-1↔fret-4 span GREEN. Extended `check_wellformed`
+  to also reject `left_finger ∉ 0..4` and `right_finger ∉ {p,i,m,a}`, and made
+  `check_right_hand` crash-safe on out-of-domain right fingers. Regression:
+  `test_core::test_out_of_domain_finger_is_red`,
+  `::test_invalid_right_finger_is_red_without_crashing`,
+  `test_predicates_lh::test_wellformed_left_finger_out_of_domain_flagged`,
+  `::test_wellformed_invalid_right_finger_flagged`.
+- **Final verdict: Ready.** The reviewer's updated verdict was
+  "Ready-with-minor-fixes" contingent on the finger-domain guard; that guard is
+  now in place, re-verified (the finger-5 input reproduces as RED), 103 tests
+  green. "Nothing else … produces a false GREEN."
 - **Lesson (worth stating):** the monotone-in-resources property passed *over*
   the Critical bug (a false GREEN that is monotone in resources stays hidden).
   Monotonicity certifies the soundness *direction*, not end-to-end soundness —

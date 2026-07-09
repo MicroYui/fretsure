@@ -70,3 +70,20 @@ def test_capo_past_neck_end_is_red() -> None:
     assert r.verdict == "RED"
     assert any(d.violation_type == "RANGE" for d in r.diagnostics)
 
+
+def test_out_of_domain_finger_is_red() -> None:
+    # left_finger 5 does not exist; must not inflate d_max into a false GREEN.
+    # fret1<->fret4 span is ~100.8mm > pessimistic d_max(1,4)=90, unreachable.
+    t = _t([TabNote(F(0), F(1), 0, 1, 1, "p"), TabNote(F(0), F(1), 1, 4, 5, "i")])
+    r = check_playability(t, MEDIAN_HAND)
+    assert r.verdict == "RED"
+    assert any(d.violation_type == "MALFORMED_FINGERING" for d in r.diagnostics)
+
+
+def test_invalid_right_finger_is_red_without_crashing() -> None:
+    t = _t([TabNote(F(0), F(1), 0, 3, 1, "z")])  # 'z' is not a right finger
+    r = check_playability(t, MEDIAN_HAND)
+    assert r.verdict == "RED"
+    assert any(d.violation_type == "MALFORMED_FINGERING" for d in r.diagnostics)
+
+
