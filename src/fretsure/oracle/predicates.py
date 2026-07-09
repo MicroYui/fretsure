@@ -10,7 +10,7 @@ Note indices in diagnostics are global indices into ``tab.notes``.
 
 from fractions import Fraction
 
-from fretsure.geometry import d_max, euclid, fingertip_xy
+from fretsure.geometry import d_max, euclid, fingertip_xy, press_x
 from fretsure.oracle.diagnostics import Diagnostic
 from fretsure.oracle.profiles import Profile
 from fretsure.tab import Tab, TabNote
@@ -131,6 +131,8 @@ __all__ = [
     "check_fret_span",
     "check_one_string_one_note",
     "check_range",
+    "check_shift_speed",
+    "check_sustain",
 ]
 
 
@@ -214,4 +216,82 @@ def check_barre(
                     ("substitute_voicing",),
                 )
             )
+    return out
+
+
+def check_shift_speed(
+    tab: Tab, profile: Profile, *, tempo_bpm: float = 90.0, beats_per_bar: int = 4
+) -> list[Diagnostic]:
+    """Between consecutive frames the hand centre (mean absolute press-x of the
+    fretted notes) may not move faster than ``v_shift``. A shared
+    (string, fret, finger) across the two frames acts as a guide finger and
+    anchors the hand, so no shift is charged."""
+    out: list[Diagnostic] = []
+    prev: tuple[Fraction, float, set[tuple[int, int, int]]] | None = None
+    for onset, notes in _indexed_frames(tab):
+        fretted = [(idx, n) for idx, n in notes if n.fret > 0]
+        if not fretted:
+            prev = None  # open-only frame: hand position undefined, reset
+            continue
+        xs: list[float] = []
+        for _, n in fretted:
+            px = press_x(tab.capo + n.fret, profile.string_length_mm)
+            assert px is not None  # fret > 0 => not open
+            xs.append(px)
+        hand_center = sum(xs) / len(xs)
+        keys = {(n.string, n.fret, n.left_finger) for _, n in fretted}
+        if prev is not None:
+            p_onset, p_center, p_keys = prev
+            if not (keys & p_keys):  # no guide finger anchoring the hand
+                dt = float(onset - p_onset) * 60.0 / tempo_bpm
+                if dt > 0:
+                    speed = abs(hand_center - p_center) / dt
+                    if speed > profile.v_shift_mm_per_s:
+                        measure, beat = _measure_beat(onset, beats_per_bar)
+                        out.append(
+                            Diagnostic(
+                                measure,
+                                beat,
+                                "SHIFT_SPEED",
+                                tuple(idx for idx, _ in fretted),
+                                speed - profile.v_shift_mm_per_s,
+                                ("shift_to_lower_position",),
+                            )
+                        )
+        prev = (onset, hand_center, keys)
+    return out
+
+
+def check_sustain(
+    tab: Tab, profile: Profile, *, beats_per_bar: int = 4
+) -> list[Diagnostic]:
+    """A held note whose left finger is needed at a *different fret* while it is
+    still sounding is infeasible. Same-fret different-string overlap is a barre,
+    not a conflict."""
+    out: list[Diagnostic] = []
+    indexed = list(enumerate(tab.notes))
+    for a in range(len(indexed)):
+        ia, na = indexed[a]
+        if na.fret <= 0 or na.left_finger <= 0:
+            continue
+        for b in range(a + 1, len(indexed)):
+            ib, nb = indexed[b]
+            if nb.fret <= 0 or nb.left_finger <= 0:
+                continue
+            overlap = (
+                na.onset < nb.onset + nb.duration
+                and nb.onset < na.onset + na.duration
+            )
+            if overlap and na.left_finger == nb.left_finger and na.fret != nb.fret:
+                measure, beat = _measure_beat(max(na.onset, nb.onset), beats_per_bar)
+                out.append(
+                    Diagnostic(
+                        measure,
+                        beat,
+                        "SUSTAIN_CONFLICT",
+                        (ia, ib),
+                        0.0,
+                        ("octave_down_bass", "refinger"),
+                    )
+                )
     return out
