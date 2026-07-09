@@ -21,6 +21,7 @@ from fretsure.oracle.predicates import (
     check_fret_span,
     check_one_string_one_note,
     check_range,
+    check_right_hand,
     check_shift_speed,
     check_sustain,
 )
@@ -54,6 +55,7 @@ def _all_diagnostics(
     diags += check_barre(tab, profile, beats_per_bar=beats_per_bar)
     diags += check_shift_speed(tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar)
     diags += check_sustain(tab, profile, beats_per_bar=beats_per_bar)
+    diags += check_right_hand(tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar)
     return sorted(diags, key=_sort_key)
 
 

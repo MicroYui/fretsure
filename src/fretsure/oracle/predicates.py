@@ -131,9 +131,12 @@ __all__ = [
     "check_fret_span",
     "check_one_string_one_note",
     "check_range",
+    "check_right_hand",
     "check_shift_speed",
     "check_sustain",
 ]
+
+_RIGHT_RANK = {"p": 0, "i": 1, "m": 2, "a": 3}  # thumb..ring, low->high strings
 
 
 def check_fret_span(
@@ -294,4 +297,66 @@ def check_sustain(
                         ("octave_down_bass", "refinger"),
                     )
                 )
+    return out
+
+
+def check_right_hand(
+    tab: Tab, profile: Profile, *, tempo_bpm: float = 90.0, beats_per_bar: int = 4
+) -> list[Diagnostic]:
+    """Right-hand (p-i-m-a) feasibility: one finger per plucked string in a
+    frame, thumb-to-ring following ascending string index, at most four
+    simultaneous plucks, and no single finger repeating faster than ``r_max``."""
+    out: list[Diagnostic] = []
+    last_used: dict[str, Fraction] = {}
+    for onset, notes in _indexed_frames(tab):
+        measure, beat = _measure_beat(onset, beats_per_bar)
+
+        if len(notes) > 4:
+            out.append(
+                Diagnostic(
+                    measure,
+                    beat,
+                    "RIGHT_HAND",
+                    tuple(idx for idx, _ in notes),
+                    float(len(notes) - 4),
+                    ("drop_inner",),
+                )
+            )
+
+        bad: set[int] = set()
+        by_finger: dict[str, list[int]] = {}
+        for idx, n in notes:
+            by_finger.setdefault(n.right_finger, []).append(idx)
+        for idxs in by_finger.values():
+            if len(idxs) > 1:  # one finger cannot pluck two strings at once
+                bad.update(idxs)
+        for ia, na in notes:
+            for ib, nb in notes:
+                if ia == ib:
+                    continue
+                ra, rb = _RIGHT_RANK[na.right_finger], _RIGHT_RANK[nb.right_finger]
+                if na.string < nb.string and ra > rb:
+                    bad.update((ia, ib))
+        if bad:
+            out.append(
+                Diagnostic(measure, beat, "RIGHT_HAND", tuple(sorted(bad)), 0.0, ("refinger",))
+            )
+
+        for idx, n in notes:
+            prev = last_used.get(n.right_finger)
+            if prev is not None:
+                dt = float(onset - prev) * 60.0 / tempo_bpm
+                if 0 < dt < 1.0 / profile.r_max_hz:
+                    out.append(
+                        Diagnostic(
+                            measure,
+                            beat,
+                            "RIGHT_HAND",
+                            (idx,),
+                            profile.r_max_hz - 1.0 / dt,
+                            ("simplify_rhythm",),
+                        )
+                    )
+        for _, n in notes:
+            last_used[n.right_finger] = onset
     return out
