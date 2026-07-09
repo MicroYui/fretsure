@@ -10,6 +10,7 @@ Note indices in diagnostics are global indices into ``tab.notes``.
 
 from fractions import Fraction
 
+from fretsure.geometry import d_max, euclid, fingertip_xy
 from fretsure.oracle.diagnostics import Diagnostic
 from fretsure.oracle.profiles import Profile
 from fretsure.tab import Tab, TabNote
@@ -124,8 +125,93 @@ def check_finger_monotonic(
 
 
 __all__ = [
+    "check_barre",
     "check_finger_count",
     "check_finger_monotonic",
+    "check_fret_span",
     "check_one_string_one_note",
     "check_range",
 ]
+
+
+def check_fret_span(
+    tab: Tab, profile: Profile, *, beats_per_bar: int = 4
+) -> list[Diagnostic]:
+    """Verify the *given* fingering is geometrically reachable: every
+    different-finger fretted pair within ``d_max`` (mm)."""
+    out: list[Diagnostic] = []
+    for onset, notes in _indexed_frames(tab):
+        fretted = [(idx, n) for idx, n in notes if n.fret > 0 and n.left_finger > 0]
+        offending: set[int] = set()
+        max_over = 0.0
+        for a in range(len(fretted)):
+            for b in range(a + 1, len(fretted)):
+                ia, na = fretted[a]
+                ib, nb = fretted[b]
+                if na.left_finger == nb.left_finger:
+                    continue
+                pa = fingertip_xy(na.string, tab.capo + na.fret, profile.string_length_mm)
+                pb = fingertip_xy(nb.string, tab.capo + nb.fret, profile.string_length_mm)
+                assert pa is not None and pb is not None
+                dist = euclid(pa, pb)
+                limit = d_max(na.left_finger, nb.left_finger, profile.hand_span_mm)
+                if dist > limit:
+                    offending.update((ia, ib))
+                    max_over = max(max_over, dist - limit)
+        if offending:
+            measure, beat = _measure_beat(onset, beats_per_bar)
+            out.append(
+                Diagnostic(
+                    measure,
+                    beat,
+                    "FRET_SPAN",
+                    tuple(sorted(offending)),
+                    max_over,
+                    ("drop_5th", "shift_to_lower_position"),
+                )
+            )
+    return out
+
+
+def check_barre(
+    tab: Tab, profile: Profile, *, beats_per_bar: int = 4
+) -> list[Diagnostic]:
+    """A barre (one finger, multiple strings) must be a single fret, and nothing
+    lower may be needed on the strings it spans (you cannot fret behind a barre).
+
+    v1 model: covered strings are the inclusive span of the barre's strings.
+    """
+    out: list[Diagnostic] = []
+    for onset, notes in _indexed_frames(tab):
+        by_finger: dict[int, list[tuple[int, TabNote]]] = {}
+        for idx, n in notes:
+            if n.fret > 0 and n.left_finger > 0:
+                by_finger.setdefault(n.left_finger, []).append((idx, n))
+        offending: set[int] = set()
+        for finger in sorted(by_finger):
+            grp = by_finger[finger]
+            if len(grp) < 2:
+                continue
+            frets = {n.fret for _, n in grp}
+            if len(frets) > 1:  # a finger cannot span two frets
+                offending.update(idx for idx, _ in grp)
+                continue
+            barre_fret = next(iter(frets))
+            strings = [n.string for _, n in grp]
+            lo, hi = min(strings), max(strings)
+            for idx, n in notes:
+                if lo <= n.string <= hi and n.left_finger != finger and n.fret < barre_fret:
+                    offending.add(idx)
+        if offending:
+            measure, beat = _measure_beat(onset, beats_per_bar)
+            out.append(
+                Diagnostic(
+                    measure,
+                    beat,
+                    "BARRE_INFEASIBLE",
+                    tuple(sorted(offending)),
+                    0.0,
+                    ("substitute_voicing",),
+                )
+            )
+    return out
