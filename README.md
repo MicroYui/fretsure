@@ -7,10 +7,12 @@ Fretsure 是一个 agent：输入一首歌的音乐内容（乐谱 / MIDI / lead
 > 定位（已过敌意核查）："Suno 给你一首弹不了的歌；Fretsure 给你一份人手可证明弹得出来的谱。"
 
 ## 状态
-**设计完成，尚未实现。** 设计文档是唯一真源：
+**Plan 1（核心 + 可弹性 Oracle）已实现**：Music IR + Tab 表示 + 毫米几何可弹性 oracle（三态 GREEN/AMBER/RED + 定位化诊断）+ 自验证台（property/metamorphic/mutation/N-version + 混淆矩阵 + Clopper–Pearson GREEN 误接受上界）。`fretsure-oracle` 可 pip 安装，91 测试全绿。逐门证据见 [`docs/PLAN1_ACCEPTANCE.md`](docs/PLAN1_ACCEPTANCE.md)，认证范围见 [`docs/SCOPE.md`](docs/SCOPE.md)。后续 Plan 2–7 见路线图。
+
+设计文档是唯一真源：
 - 设计 spec：[`docs/superpowers/specs/2026-07-09-fretsure-design.md`](docs/superpowers/specs/2026-07-09-fretsure-design.md)
+- 实现路线图：[`docs/superpowers/plans/2026-07-09-fretsure-implementation-roadmap.md`](docs/superpowers/plans/2026-07-09-fretsure-implementation-roadmap.md)
 - 项目状态 / 恢复：[`docs/PROJECT_STATE.md`](docs/PROJECT_STATE.md)
-- Claude Code 上下文：[`CLAUDE.md`](CLAUDE.md)
 
 ## 核心思路
 `LLM 提议编配 → 确定性指法求解 → 可弹性 oracle 硬门 + 定位化诊断 → 自动修复 → checker 打分 benchmark`

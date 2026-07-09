@@ -8,9 +8,10 @@ honest ceiling.
 """
 
 import json
+import math
 from dataclasses import dataclass
 
-from scipy.stats import beta
+from scipy.stats import beta, norm
 
 from fretsure.oracle.core import check_playability
 from fretsure.oracle.profiles import Profile
@@ -92,3 +93,15 @@ def cohen_kappa(cm: ConfusionMatrix) -> float:
     if pe >= 1.0:
         return 1.0
     return (po - pe) / (1 - pe)
+
+
+def wilson_ci(successes: int, n: int, conf: float = 0.95) -> tuple[float, float]:
+    """Wilson score interval for a binomial proportion (clamped to [0, 1])."""
+    if n == 0:
+        return (0.0, 1.0)
+    z = float(norm.ppf(1 - (1 - conf) / 2))
+    phat = successes / n
+    denom = 1 + z * z / n
+    center = (phat + z * z / (2 * n)) / denom
+    margin = (z / denom) * math.sqrt(phat * (1 - phat) / n + z * z / (4 * n * n))
+    return (max(0.0, center - margin), min(1.0, center + margin))

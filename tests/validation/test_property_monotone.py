@@ -40,7 +40,7 @@ def tabs(draw: st.DrawFn) -> Tab:
     return Tab(tuple(notes), TUN, 0)
 
 
-@settings(max_examples=400, deadline=None)
+@settings(max_examples=1000, deadline=None)
 @given(tabs())
 def test_monotone_in_resources(tab: Tab) -> None:
     small = check_playability(tab, SMALL).verdict

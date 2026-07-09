@@ -1,13 +1,14 @@
 import os
 from pathlib import Path
 
-from fretsure.oracle.profiles import MEDIAN_HAND
+from fretsure.oracle.profiles import LARGE_HAND, MEDIAN_HAND, SMALL_HAND
 from fretsure.oracle.validation.stats import (
     ConfusionMatrix,
     cohen_kappa,
     confusion_from_labeled,
     green_false_accept_upper_bound,
     load_labeled,
+    wilson_ci,
 )
 
 FIXTURE = str(
@@ -52,3 +53,24 @@ def test_cohen_kappa_perfect_is_one() -> None:
 def test_cohen_kappa_within_bounds_on_fixture() -> None:
     cm = confusion_from_labeled(load_labeled(FIXTURE), MEDIAN_HAND)
     assert -1.0 <= cohen_kappa(cm) <= 1.0
+
+
+def test_wilson_ci_bounds() -> None:
+    lo, hi = wilson_ci(5, 10)
+    assert 0.0 <= lo < hi <= 1.0
+    assert lo < 0.5 < hi
+
+
+def test_wilson_ci_empty_is_full_range() -> None:
+    assert wilson_ci(0, 0) == (0.0, 1.0)
+
+
+def _green_total(profile: object) -> int:
+    cm = confusion_from_labeled(load_labeled(FIXTURE), profile)  # type: ignore[arg-type]
+    return cm.green_playable + cm.green_unplayable
+
+
+def test_preset_sensitivity_green_count_monotone() -> None:
+    # sensitivity scan: a larger hand can only certify more (or equal) tabs GREEN
+    assert _green_total(SMALL_HAND) <= _green_total(MEDIAN_HAND) <= _green_total(LARGE_HAND)
+

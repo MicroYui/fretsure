@@ -49,7 +49,7 @@ def test_nversion_fast_matches_bruteforce() -> None:
     # Differential: the pruned DFS and the exhaustive spec must agree on
     # feasibility for every frame. A bug in one would not be mirrored in the other.
     rng = random.Random(20260709)
-    for _ in range(200):
+    for _ in range(500):
         n = rng.randint(1, 4)
         strings = rng.sample(range(6), n)  # distinct strings
         specs = [(s, rng.randint(1, 14)) for s in strings]
