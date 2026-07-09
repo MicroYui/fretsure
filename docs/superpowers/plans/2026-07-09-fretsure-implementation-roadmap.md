@@ -105,6 +105,7 @@ class Tab:
 ```python
 Verdict = Literal["GREEN", "RED", "AMBER"]
 ViolationType = Literal[
+    "MALFORMED_FINGERING",  # fret>0 必须有指、fret==0 必须无指（良构前提）
     "RANGE", "ONE_STRING_ONE_NOTE", "FINGER_COUNT", "FINGER_MONOTONIC",
     "FRET_SPAN", "BARRE_INFEASIBLE", "SHIFT_SPEED", "RIGHT_HAND", "SUSTAIN_CONFLICT",
 ]

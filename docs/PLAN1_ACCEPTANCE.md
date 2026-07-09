@@ -33,14 +33,30 @@ with the design partner (roadmap D.4). Until then:
 ## Independent review
 
 - Foundation layer (IR/Tab/geometry/Profile): reviewed by an independent Opus
-  reviewer — SPEC ✅ / quality Approved; findings fixed (see commit
-  "fix: address foundation review").
-- Oracle logic (predicates/CSP/core): the independent reviewer runs were
-  repeatedly interrupted by transient API errors. The critical correctness
-  properties it would check — three-state soundness (via predicate monotonicity)
-  and DFS↔bruteforce agreement — are instead pinned **empirically** by the
-  property/metamorphic/mutation/N-version suites, which is a stronger guarantee
-  than manual inspection. An independent pass will be re-attempted before merge.
+  reviewer — SPEC ✅ / quality Approved; findings fixed (commit "fix: address
+  foundation review").
+- **Whole-branch final review (Opus, read-only): found 1 Critical + 2 Important
+  soundness bugs — now fixed and regression-tested:**
+  1. *Critical false GREEN* — a fretted note carrying `left_finger == 0` slipped
+     past every finger-filtered left-hand predicate, certifying an impossible
+     fret-1 + fret-20 double-stop as GREEN. Fixed by `check_wellformed`
+     (`fret > 0` iff `left_finger > 0`) → `MALFORMED_FINGERING` → RED.
+  2. *Capo range* — `check_range` bounded the capo-relative fret; a capo could
+     push the absolute position off the neck end and still certify GREEN. Fixed
+     to bound `capo + fret ≤ max_fret`.
+  3. *Shift bridged by an open frame* — an open-only frame reset the hand
+     position, hiding a too-fast shift. Fixed to carry the hand position across
+     open frames.
+  Regression tests: `test_core::test_malformed_fingering_is_red`,
+  `::test_capo_past_neck_end_is_red`,
+  `test_predicates_lh::test_range_absolute_position_with_capo_flagged` +
+  `test_wellformed_*`, `test_predicates_temporal::test_shift_bridged_by_open_frame_still_charged`.
+  The property/metamorphic generators now emit well-formed fingerings.
+- **Lesson (worth stating):** the monotone-in-resources property passed *over*
+  the Critical bug (a false GREEN that is monotone in resources stays hidden).
+  Monotonicity certifies the soundness *direction*, not end-to-end soundness —
+  the human gold set + adversarial cases + independent review are what close the
+  gap. This is exactly why the independent pass ran.
 
 ## Reproduce
 

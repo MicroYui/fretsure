@@ -3,7 +3,7 @@
 > 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-09。
 
 ## 0. 现状一句话
-设计（brainstorming → spec）**已完成并经用户确认**；**尚未写实现计划、尚未写代码**。用户当前选择**暂不实现**，但已采用项目名 **Fretsure** 并要求建好恢复文档 + git 仓库。
+设计（brainstorming → spec）**已完成并确认**；**主实现路线图 + Plan 1 详细计划已写**；**Plan 1「核心 + Oracle」已实现**（分支 `plan-1-core-oracle`）：Music IR + Tab + 毫米几何可弹性 oracle（三态 + 定位诊断 + 良构/range/finger-count/monotonic/几何 span-CSP/barre/shift/sustain/right-hand 全套硬谓词）+ 自验证台（property monotone 1000 例 / metamorphic / mutation kill-rate 1.0 / N-version 差分 500 例 / 混淆矩阵 + Clopper–Pearson GREEN 误接受上界 + Wilson CI）。`fretsure-oracle` 可 pip 安装、**99 测试全绿、ruff+mypy clean**。独立 opus 终审抓到并已修一个 Critical false-GREEN（fret>0 但 finger==0）+ 2 个 Important。逐门证据见 `docs/PLAN1_ACCEPTANCE.md`，认证范围见 `docs/SCOPE.md`。**下一步：Plan 2（指法求解器 + M0 端到端）——待用户指令。**
 
 ## 1. 这是什么
 一个 agent，把一首歌的**音乐内容**（符号：MusicXML/MIDI/lead sheet 为保证路径；mp3 为 best-effort 前端）编配成一份在指定难度/调弦/变调夹下**人手可证明弹得出来**的吉他谱：
@@ -50,5 +50,7 @@
 用 workflow 跑过并已内化：① agent 产品赛道 landscape；② 创意向重筛（音乐/游戏谜题/格律写作/视觉/wildcard）；③ 音乐深挖（新颖性 + Azure TTS 可否撑 demo + 免费/付费工具链）；④ AI 编曲成熟度红队（生成成熟 vs 保证不成熟）；⑤ 吉他 tab 具体新颖性红队（TemPolor/SMC id55…）；⑥ benchmark + checker + agent 深度设计（含消融矩阵 + 两个头牌结果）；⑦ SOTA harness 选型 + 可展示 demo + 求职 artifact。**再研究前先看 spec §14/§15,多数问题已答。**
 
 ## 7. 下一步（用户说"继续"时）
-- 默认：进入 **writing-plans**，写 **Plan 1「核心 + Oracle」** 的可执行计划（bite-sized TDD 任务）。
+- **Plan 1 已完成**（分支 `plan-1-core-oracle`，99 测试绿，独立终审过并修了 Critical）。
+- 默认下一步：**Plan 2「指法求解器 + M0 端到端纵切」**——写详细 TDD 计划（候选生成 + 帧级 DP/Viterbi 调 `feasible_fingerings` + `solve_fingering` + ASCII/MusicXML 渲染 + lead sheet→提议 stub→solver→oracle→渲染端到端），再逐 task 执行。
 - 或按用户指定的 Plan 切入。
+- 合并 `plan-1-core-oracle` 到主线：待用户决定（PR / 直接 merge）。
