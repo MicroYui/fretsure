@@ -42,7 +42,12 @@ def string_y(string: int) -> float:
 def fingertip_xy(
     string: int, fret: int, length_mm: float = DEFAULT_STRING_LENGTH_MM
 ) -> tuple[float, float] | None:
-    """(x, y) of the fingertip for a fretted note, or ``None`` for an open string."""
+    """(x, y) of the fingertip for a fretted note, or ``None`` for an open string.
+
+    ``fret`` here is the **absolute** fret measured from the nut. Fret wire
+    positions do not move when a capo is fitted, so a capo-aware caller must
+    pass ``capo + capo_relative_fret`` — never the bare capo-relative fret.
+    """
     px = press_x(fret, length_mm)
     if px is None:
         return None

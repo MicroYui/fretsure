@@ -35,10 +35,27 @@ def test_melody_polyphony_flagged() -> None:
     assert any(v.kind == "melody_polyphony" for v in validate_ir(ir))
 
 
-def test_missing_melody_flagged() -> None:
-    # onset 0 has notes but only bass/inner, no melody
+def test_missing_melody_needs_no_melody_in_whole_piece() -> None:
+    # onset 0 has notes but only bass/harmony, no melody anywhere -> flagged once
     ir = MusicIR((Note(F(0), F(1), 48, "bass"),), (), _meta())
-    assert any(v.kind == "missing_melody" for v in validate_ir(ir))
+    viols = validate_ir(ir)
+    assert [v.kind for v in viols] == ["missing_melody"]
+    assert viols[0].onset is None
+
+
+def test_sustained_melody_with_accompaniment_onsets_ok() -> None:
+    # melody sustains from beat 1; bass/harmony onset at beats 2,3 -> NOT flagged.
+    # This is the fingerstyle bread-and-butter case (Travis / alternating bass).
+    ir = MusicIR(
+        (
+            Note(F(0), F(3), 72, "melody"),
+            Note(F(1), F(1), 48, "bass"),
+            Note(F(2), F(1), 55, "harmony"),
+        ),
+        (),
+        _meta(),
+    )
+    assert not any(v.kind == "missing_melody" for v in validate_ir(ir))
 
 
 def test_bad_chord_root_flagged() -> None:
@@ -50,13 +67,17 @@ def test_bad_chord_root_flagged() -> None:
     assert any(v.kind == "bad_chord_root" for v in validate_ir(ir))
 
 
-def test_validate_ir_is_deterministic() -> None:
+def test_validate_ir_deterministic_exact_order() -> None:
+    # melody note has zero duration (nonpositive), chord root not in pcs (bad_chord_root).
+    # Pins BOTH determinism and the emission order: per-note first, then chords.
     ir = MusicIR(
         (Note(F(2), F(1), 48, "bass"), Note(F(0), F(0), 60, "melody")),
         (ChordSymbol(F(0), "C", frozenset({0, 4, 7}), 2),),
         _meta(),
     )
-    assert validate_ir(ir) == validate_ir(ir)
+    result = validate_ir(ir)
+    assert validate_ir(ir) == result
+    assert [v.kind for v in result] == ["nonpositive_duration", "bad_chord_root"]
 
 
 def test_dataclasses_are_frozen() -> None:

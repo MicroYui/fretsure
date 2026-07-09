@@ -11,6 +11,8 @@ against real players (roadmap D.4). Only their ordering/direction is asserted.
 
 from dataclasses import dataclass, replace
 
+from fretsure.geometry import DEFAULT_STRING_LENGTH_MM
+
 
 @dataclass(frozen=True)
 class Profile:
@@ -23,9 +25,9 @@ class Profile:
     max_fret: int = 22
 
 
-SMALL_HAND = Profile("small@0.1", 90.0, 45.0, 450.0, 7.0, 648.0)
-MEDIAN_HAND = Profile("median@0.1", 100.0, 50.0, 500.0, 8.0, 648.0)
-LARGE_HAND = Profile("large@0.1", 115.0, 58.0, 560.0, 9.0, 648.0)
+SMALL_HAND = Profile("small@0.1", 90.0, 45.0, 450.0, 7.0, DEFAULT_STRING_LENGTH_MM)
+MEDIAN_HAND = Profile("median@0.1", 100.0, 50.0, 500.0, 8.0, DEFAULT_STRING_LENGTH_MM)
+LARGE_HAND = Profile("large@0.1", 115.0, 58.0, 560.0, 9.0, DEFAULT_STRING_LENGTH_MM)
 
 _PESS = 0.9
 _OPT = 1.1

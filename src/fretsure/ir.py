@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Literal
 
-VoiceRole = Literal["melody", "bass", "inner"]
+VoiceRole = Literal["melody", "bass", "harmony"]
 
 
 @dataclass(frozen=True)
@@ -74,15 +74,11 @@ def validate_ir(ir: MusicIR) -> list[IRViolation]:
         if not 0 <= n.pitch <= 127:
             violations.append(IRViolation("pitch_range", f"pitch {n.pitch}", n.onset))
 
-    # Structural checks over onsets.
+    # Structural checks.
     melody_pitches: defaultdict[Fraction, set[int]] = defaultdict(set)
-    onsets_with_notes: set[Fraction] = set()
-    onsets_with_melody: set[Fraction] = set()
     for n in ir.notes:
-        onsets_with_notes.add(n.onset)
         if n.voice == "melody":
             melody_pitches[n.onset].add(n.pitch)
-            onsets_with_melody.add(n.onset)
 
     for onset in sorted(melody_pitches):
         pitches = melody_pitches[onset]
@@ -91,8 +87,15 @@ def validate_ir(ir: MusicIR) -> list[IRViolation]:
                 IRViolation("melody_polyphony", f"{sorted(pitches)}", onset)
             )
 
-    for onset in sorted(onsets_with_notes - onsets_with_melody):
-        violations.append(IRViolation("missing_melody", "no melody voice", onset))
+    # A piece with notes must carry a melody voice (the top voice that must be
+    # retained). Per-onset melody presence is deliberately NOT required: in
+    # fingerstyle the melody sustains across accompaniment onsets (Travis
+    # picking, alternating bass), so those onsets legitimately have no melody
+    # onset of their own.
+    if ir.notes and not melody_pitches:
+        violations.append(
+            IRViolation("missing_melody", "no melody voice in piece", None)
+        )
 
     # Chord checks (input order).
     for c in ir.chords:

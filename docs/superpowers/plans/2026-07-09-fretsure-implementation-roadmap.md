@@ -51,7 +51,8 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Literal
 
-VoiceRole = Literal["melody", "bass", "inner"]  # 修复时的保留优先级：melody 必留 > bass 尽量保 > inner 可增删
+VoiceRole = Literal["melody", "bass", "harmony"]  # 修复时的保留优先级：melody 必留 > bass 尽量保 > harmony 可增删
+# 契约调和：spec §5.2 主 IR 定义与 §5.6 修复算子/§A.5 忠实度用 "harmony"；§A.1 note-graph 用 "inner"——二者同义（非旋律非低音的内声部），实现统一取 spec 主定义的 "harmony"。
 
 @dataclass(frozen=True)
 class Note:

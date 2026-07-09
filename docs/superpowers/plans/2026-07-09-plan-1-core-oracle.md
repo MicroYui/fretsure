@@ -80,7 +80,7 @@ def test_package_imports_and_has_version():
 
 **Interfaces (Produces):**
 ```python
-VoiceRole = Literal["melody", "bass", "inner"]
+VoiceRole = Literal["melody", "bass", "harmony"]
 @dataclass(frozen=True) Note(onset: Fraction, duration: Fraction, pitch: int, voice: VoiceRole)
 @dataclass(frozen=True) ChordSymbol(onset: Fraction, symbol: str, pitch_classes: frozenset[int], root_pc: int)
 @dataclass(frozen=True) Meta(key: str, time_sig: tuple[int,int], tempo_bpm: float, source: str, title: str, license: str)
