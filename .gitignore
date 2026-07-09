@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+.env.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# uv
+.uv/
+
+# Node / web
+node_modules/
+web/dist/
+web/.vite/
+*.log
+
+# Data / artifacts (large; regenerated from seeds/scripts)
+data/corpus/
+data/*.mid
+data/*.midi
+outputs/
+benchmarks/results/
+*.wav
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
