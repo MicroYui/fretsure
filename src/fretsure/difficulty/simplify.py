@@ -4,7 +4,9 @@ Structurally the Plan 3 repair loop, but the gate is the stricter
 :func:`check_tier` and the solve runs under the tier's tightened profile. The LLM
 reads the playability diagnostics + the tier violations and emits edit-DSL edits
 (drop inner voices, re-octave bass) until the tab meets the tier — melody
-protected. The output is checker-proven to meet the requested tier.
+protected. On the success path (``tier_result.meets``) the output is checker-proven
+to meet the requested tier; if ``max_iters`` is exhausted the last (non-meeting) tab
+is returned with ``meets=False``, so callers must check it.
 """
 
 from dataclasses import dataclass
@@ -36,8 +38,14 @@ class SimplifyResult:
     trace: Trace
 
 
-def _tier_prompt(tab: Tab, tier_result: TierResult, target: tuple[Note, ...], tier: Tier) -> str:
-    oracle = check_playability(tab, tier.profile)
+def _tier_prompt(
+    tab: Tab,
+    tier_result: TierResult,
+    target: tuple[Note, ...],
+    tier: Tier,
+    tempo_bpm: float,
+) -> str:
+    oracle = check_playability(tab, tier.profile, tempo_bpm=tempo_bpm)
     base = diagnostics_to_prompt(oracle, target, tab=tab)
     barre = "allowed" if tier.allow_barre else "NOT allowed"
     tv = "\n".join(f"  - {v}" for v in tier_result.tier_violations) or "  (none)"
@@ -68,7 +76,7 @@ def simplify_to_tier(
             trace.add("ORACLE", f"tier={tier.name} meets={tr.meets}", meets=tr.meets)
             if tr.meets:
                 return SimplifyResult(solved, current, tr, iterations, trace)
-            context = _tier_prompt(solved, tr, current, tier)
+            context = _tier_prompt(solved, tr, current, tier, tempo_bpm)
         else:
             tr = None
             trace.add("ORACLE", "INFEASIBLE")

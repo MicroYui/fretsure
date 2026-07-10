@@ -21,7 +21,8 @@ def realize_chord(chord: ChordSymbol) -> tuple[int, list[int]]:
 
 def arpeggio(chord: ChordSymbol, *, beats_per_bar: int = 4) -> tuple[Note, ...]:
     root, tones = realize_chord(chord)
-    voicing = [root, *tones]
+    upper = [t for t in tones if t % 12 != chord.root_pc]
+    voicing = [root, *upper]
     notes = [
         Note(
             chord.onset + beat,
