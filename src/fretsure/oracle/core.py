@@ -88,3 +88,41 @@ def check_playability(
     return OracleResult(
         verdict, tuple(diagnostics), CHECKER_VERSION, profile.version
     )
+
+
+def _any_violation(
+    tab: Tab, profile: Profile, *, tempo_bpm: float, beats_per_bar: int
+) -> bool:
+    """True if any predicate flags a violation, short-circuiting on the first
+    (cheap, profile-independent predicates first). Same predicate set as
+    _all_diagnostics — no parallel logic."""
+    if check_wellformed(tab, profile, beats_per_bar=beats_per_bar):
+        return True
+    if check_range(tab, profile, beats_per_bar=beats_per_bar):
+        return True
+    if check_one_string_one_note(tab, profile, beats_per_bar=beats_per_bar):
+        return True
+    if check_finger_count(tab, profile, beats_per_bar=beats_per_bar):
+        return True
+    if check_finger_monotonic(tab, profile, beats_per_bar=beats_per_bar):
+        return True
+    if check_barre(tab, profile, beats_per_bar=beats_per_bar):
+        return True
+    if check_fret_span(tab, profile, beats_per_bar=beats_per_bar):
+        return True
+    if check_right_hand(tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar):
+        return True
+    if check_shift_speed(tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar):
+        return True
+    return bool(check_sustain(tab, profile, beats_per_bar=beats_per_bar))
+
+
+def passes_optimistic(
+    tab: Tab, profile: Profile, *, tempo_bpm: float = 90.0, beats_per_bar: int = 4
+) -> bool:
+    """True iff the tab is NOT RED (passes the optimistic profile). A fast path for
+    the solver's inner loop: one profile evaluation with first-violation exit,
+    equivalent to ``check_playability(...).verdict != "RED"``."""
+    return not _any_violation(
+        tab, optimistic(profile), tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar
+    )

@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from fretsure.ir import Note
-from fretsure.oracle.core import check_playability
+from fretsure.oracle.core import passes_optimistic
 from fretsure.oracle.profiles import Profile
 from fretsure.solver.candidates import candidates
 from fretsure.solver.cost import config_base_cost, transition_cost
@@ -83,8 +83,7 @@ def solve_fingering(
                     for p in cfg.placements
                 )
                 cand = snotes + added
-                result = check_playability(Tab(cand, tuning, capo), profile, tempo_bpm=tempo_bpm)
-                if result.verdict == "RED":
+                if not passes_optimistic(Tab(cand, tuning, capo), profile, tempo_bpm=tempo_bpm):
                     continue
                 step = 0.0 if last_cfg is None else transition_cost(last_cfg, cfg, capo, profile)
                 extended.append((cost + step + config_base_cost(cfg), cand, cfg))

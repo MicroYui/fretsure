@@ -14,7 +14,7 @@ import itertools
 from dataclasses import dataclass
 from fractions import Fraction
 
-from fretsure.oracle.core import check_playability
+from fretsure.oracle.core import passes_optimistic
 from fretsure.oracle.csp import feasible_fingerings
 from fretsure.oracle.profiles import Profile
 from fretsure.solver.candidates import candidates
@@ -96,7 +96,7 @@ def frame_configs(
                 for i, k in enumerate(order)
             )
             base_tab = _single_frame_tab(base, tuning, capo)
-            if check_playability(base_tab, profile).verdict == "RED":
+            if not passes_optimistic(base_tab, profile):
                 continue
 
             for right_sel in itertools.combinations(_RIGHT_ORDER, len(order)):

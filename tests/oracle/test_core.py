@@ -1,6 +1,11 @@
 from fractions import Fraction as F
 
-from fretsure.oracle.core import CHECKER_VERSION, OracleResult, check_playability
+from fretsure.oracle.core import (
+    CHECKER_VERSION,
+    OracleResult,
+    check_playability,
+    passes_optimistic,
+)
 from fretsure.oracle.profiles import MEDIAN_HAND
 from fretsure.tab import Tab, TabNote
 
@@ -53,6 +58,13 @@ def test_red_carries_diagnostics() -> None:
 
 def test_green_has_no_diagnostics() -> None:
     assert check_playability(GREEN_TAB, MEDIAN_HAND).diagnostics == ()
+
+
+def test_passes_optimistic_equivalent_to_not_red() -> None:
+    for tab in (GREEN_TAB, RED_TAB, AMBER_TAB):
+        fast = passes_optimistic(tab, MEDIAN_HAND)
+        slow = check_playability(tab, MEDIAN_HAND).verdict != "RED"
+        assert fast == slow
 
 
 def test_malformed_fingering_is_red() -> None:
