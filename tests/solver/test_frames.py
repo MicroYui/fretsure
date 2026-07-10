@@ -37,11 +37,20 @@ def test_two_pitch_distinct_strings_and_right_order() -> None:
 
 
 def test_each_config_passes_oracle_non_red() -> None:
-    for pitches in [(64,), (52, 67), (40, 55, 64)]:
+    # (49,53,59) can enumerate a behind-the-barre placement; frame_configs must
+    # verify and drop any config that is RED in isolation (I1).
+    for pitches in [(64,), (52, 67), (40, 55, 64), (49, 53, 59)]:
         cfgs = frame_configs(pitches, STANDARD_TUNING, 0, MEDIAN_HAND)
         for c in cfgs:
             r = check_playability(_tab(c), MEDIAN_HAND)
             assert r.verdict != "RED", (pitches, c, r.diagnostics)
+
+
+def test_single_note_offers_multiple_right_fingers() -> None:
+    # a lone note must not be forced to the thumb; the solver needs alternatives
+    cfgs = frame_configs((64,), STANDARD_TUNING, 0, MEDIAN_HAND)
+    rights = {c.placements[0].right_finger for c in cfgs}
+    assert len(rights) >= 2
 
 
 def test_over_four_notes_empty() -> None:
