@@ -50,9 +50,18 @@ def run_benchmark(
     profile: Profile = MEDIAN_HAND,
     bars: int = 2,
 ) -> BenchReport:
+    """Rebuild the procedural corpus and run the full agent + leave-one-out ablation.
+
+    NOTE ON HEADLINES: the ablation deltas (repair/critic/best-of-N "earn existence")
+    only appear with a STOCHASTIC LLM (ProxyLLM) on a corpus whose proposals are
+    sometimes infeasible. Under ``--stub``/ConstantLLM the rule-stub fallback is
+    already GREEN with no repair, so every arm ties `full` — a flat ablation there
+    is expected, not evidence that a capability is worthless. best_of_n>=2 so the
+    best-of-N arm is a real ablation.
+    """
     corpus = _corpus(seed, items, bars)
     loo = leave_one_out(
-        corpus, ArrangeGoal(), llm_factory, profile, base=AblationConfig(best_of_n=1)
+        corpus, ArrangeGoal(), llm_factory, profile, base=AblationConfig(best_of_n=2)
     )
     return BenchReport(seed, items, loo["full"], loo, CHECKER_VERSION, profile.version)
 
