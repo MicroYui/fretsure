@@ -38,19 +38,45 @@ verifier-guided repair loop doing exactly its job: the raw LLM proposal is often
 AMBER/RED or drops notes; the oracle's localized diagnostics steer edits back to
 a GREEN, melody-faithful tab.
 
+## Robustness — a second seed, and pooled intervals
+
+Seed 2 (`--seed 2 --items 16`), same pipeline:
+
+| arm | joint_success | green_rate | mean melody-F1 | Wilson 95% (green) |
+|---|---|---|---|---|
+| **full** | 0.94 | 1.00 | 1.00 | [0.81, 1.00] |
+| **− repair** | 0.31 | 0.44 | 0.87 | [0.23, 0.67] |
+| − critic | 0.88 | 1.00 | 1.00 | [0.81, 1.00] |
+| − best-of-N | 0.56 | 0.56 | 0.81 | [0.33, 0.77] |
+
+Pooling both seeds (n = 32) on `joint_success`:
+
+| arm | joint_success (28/32 etc.) | Wilson 95% |
+|---|---|---|
+| **full** | **0.875** | [0.72, 0.95] |
+| **− repair** | 0.312 | [0.18, 0.49] |
+| − critic | 0.844 | [0.68, 0.93] |
+| − best-of-N | 0.750 | [0.58, 0.87] |
+
+**Repair survives pooling decisively** — its interval [0.18, 0.49] sits entirely
+below full's [0.72, 0.95] over 32 items. **Critic and best-of-N do not**: both
+overlap `full` heavily, i.e. no statistically distinguishable effect on this
+corpus. Best-of-N is the sharpest illustration of the unpaired-sampling caveat:
+it looked *negative* on seed 1 (−best-of-N 0.94 > full 0.81) and *strongly
+positive* on seed 2 (full 0.94 > −best-of-N 0.56). An effect whose **sign flips
+between seeds** is dominated by which independent draws each arm happened to get
+— it must be measured with a paired ablation (shared proposal pool, vary only
+the selection) before any claim is made.
+
 ## The honest negatives (ablated components we keep public)
 
-- **Critic buys nothing here.** −critic ties `full` exactly (0.81). The critic
-  only re-ranks among already-GREEN candidates; on this corpus the top candidate
-  was already the faithful one, so taste never changed the outcome. It is *not*
-  earning its cost on this test set.
-- **Best-of-N does not help — and nominally hurts.** −best-of-N (i.e. N=1) scored
-  *higher* (0.94) than `full` (0.81). Caveat: each arm draws *independently* from
-  the stochastic LLM (the arms are not paired on a shared proposal pool), so this
-  is a between-samples comparison and the gap is within the overlapping Wilson
-  intervals — the honest reading is "no measurable benefit on this corpus," not
-  "N=1 is better." A paired best-of-N ablation (fix the proposals, vary only the
-  selection) is the correct next experiment.
+- **Critic buys little or nothing.** It ties `full` on seed 1 and lifts it by one
+  item on seed 2; pooled, its interval overlaps `full`. The critic only re-ranks
+  among already-GREEN candidates, and on this corpus the top candidate is usually
+  already faithful, so taste rarely changes the outcome.
+- **Best-of-N has no determinable effect here.** Its sign flips across seeds (see
+  above), so on this corpus the honest statement is "confounded by unpaired
+  sampling," not "helps" or "hurts." The paired experiment is the fix.
 
 Reporting these keeps the project honest: only **repair** has so far earned its
 existence on the procedural corpus. Critic and best-of-N remain in the agent but
@@ -74,9 +100,9 @@ checker") turned on the benchmark corpus.
 
 ## Limitations (do not over-read these numbers)
 
-- **n = 16, one seed** for the headline table (a second seed is used only as a
-  robustness check). These are effect-size demonstrations, not leaderboard
-  numbers.
+- **n = 16 per seed, 2 seeds (n = 32 pooled)**. These are effect-size
+  demonstrations, not leaderboard numbers; only the *large* effect (repair)
+  clears the noise floor at this scale.
 - The procedural corpus is deliberately *easy* (2-bar diatonic lead sheets) so the
   data flow and ablation are unambiguous. Harder inputs (longer pieces, real MIDI,
   dense harmony) are the D-layer corpus work and are expected to move critic and
