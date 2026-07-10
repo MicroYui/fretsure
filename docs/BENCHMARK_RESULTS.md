@@ -95,18 +95,43 @@ The joint delta is the informative one, since `_rank` optimizes green/melody/bas
 not exactly the harmony-inclusive joint gate — so best-of-N can, in principle, trade
 a hair of harmony for greenness.
 
+## Paired critic — judged on its actual job (taste)
+
+`bench.paired_critic` builds one pool per item (critic scored), then selects
+best-of-N **with** vs **without** the critic term on that same pool. Crucially, the
+critic is judged on the metric it actually optimizes — musical **taste** (its own
+0–1 score of the selection) — *not* the playability+faithfulness joint gate, which it
+neither targets nor should. (An earlier draft scored it on `joint_delta`; the opus
+review correctly flagged that as the wrong yardstick — `_rank` keys on `melody_recall`
+while the gate keys on top-voice `melody_f1`, so the critic can even *hurt* joint by
+construction.) Real LLM, N=2, both seeds:
+
+| seed | taste off → on | Δ taste | Δ joint (side effect) | Δ green |
+|---|---|---|---|---|
+| 1 | 0.276 → 0.284 | +0.009 | −0.063 | 0 |
+| 2 | 0.377 → 0.391 | +0.014 | 0.000 | 0 |
+| pooled | 0.326 → 0.338 | **+0.012** | −0.031 | 0 |
+
+**Verdict: the critic barely earns anything on this corpus.** Judged on taste it
+lifts the selection by ≈ **+0.01** (about 1% of scale); on the joint gate it is
+neutral-to-slightly-negative. On these easy 2-bar pieces the candidates rarely differ
+enough for a tie-break-level signal (the critic sits at rank index 3, below
+green/melody/bass) to matter. `Δ green = 0` is structural (critic ranks below green).
+So the critic has **not** paid its way here — it must justify itself on harder /
+taste-sensitive corpora (where candidates diverge and taste is the point), or be cut.
+
 ## The honest scorecard (what each component earns)
 
 - **Repair — earns it decisively.** Pooled 0.31 → 0.88; non-overlapping intervals.
 - **Best-of-N — earns a modest keep**, once measured paired: +0.125 GREEN on both
   seeds. The unpaired arm's sign-flip was the confound, not the verdict.
-- **Critic — still on notice.** Ties `full` on seed 1, +1 item on seed 2, interval
-  overlaps `full`. It only re-ranks among already-GREEN candidates, and on this easy
-  corpus the top candidate is usually already faithful. It must earn its keep on the
-  harder (real-corpus) test sets, or be cut.
+- **Critic — has NOT earned it here.** Measured paired on its own objective, taste
+  lift is ≈ +0.01 and the joint side effect is ≤ 0. It stays in the agent for now
+  *on probation*: it must show a real taste lift on harder/real corpora, or be cut.
 
-Keeping this scorecard public — including the one component that has *not* yet paid
-its way — is the anti-LARP discipline the project runs on.
+Keeping this scorecard public — including the component that has *not* paid its way —
+is the anti-LARP discipline the project runs on. Two of three capabilities earn their
+keep on the procedural corpus; the third is honestly flagged, not quietly retained.
 
 ## A "who checks the corpus" finding
 
