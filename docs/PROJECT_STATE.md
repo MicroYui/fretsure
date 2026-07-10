@@ -3,13 +3,16 @@
 > 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-09。
 
 ## 0. 现状一句话
-设计完成；**路线图 + Plan 1/2/3/4 计划已写**；**Plan 1–4 全部实现**（oracle + 求解器 + agent 回路 + benchmark 台 = 整个护城河系统）。
-- **Plan 1**（`plan-1-core-oracle`）：可弹性 oracle + 自验证台。独立终审 Ready。
-- **Plan 2**（`plan-2-solver-m0`）：beam 求解器（对真 oracle 逐步验证→永不返回 RED）+ M0 端到端。独立复核 Ready。
-- **Plan 3**（`plan-3-agent-loop`）：oracle 当环境、LLM 当策略——LLM 客户端 + edit-DSL（保 melody）+ verifier-guided 修复脊柱 + 提议器 + critic + best-of-N。端到端真 LLM 跑通。独立审查 Ready-with-minor（已修）。
-- **Plan 4**（`plan-4-benchmark`）：**checker 打分 benchmark**——程序化功能和声生成器(皇冠防污染) + note-graph 语料 + 忠实度权威版(DTW Melody-F1/门) + pass@k/pass^k 无偏 + Wilson + **leave-one-out 消融(头牌#1)** + **checker-vs-LLM-judge(头牌)** + baselines + **`fretsure-bench --seed` 一条命令可复现**。独立审查中。
-- **223 单测 + 5 真 LLM 集成全绿、ruff+mypy clean**；每个 Plan 过独立 opus 审查并修掉发现（多个 false-GREEN + 求解器返回-RED 洞）。
-- **下一步**：Plan 5（难度 tier + 可验证简化 + 伴奏）/ Plan 6（UI/trace viewer/demo/MCP）/ Plan 7（stretch RL/GEPA）；或收敛打磨（真实语料 D 层、求解器性能、gold 集）。**已知性能点**：solve_fingering 在长片段(>16 帧)偏慢（beam×逐步 oracle 验证，M0 取舍）。
+设计完成；**路线图 + Plan 1–5 计划已写**；**Plan 1–5 全部实现**（oracle + 求解器 + agent + benchmark + 难度简化/伴奏 = 整个后端产品）。
+- **Plan 1**（`plan-1-core-oracle`）：可弹性 oracle + 自验证台。终审 Ready。
+- **Plan 2**（`plan-2-solver-m0`）：beam 求解器（永不返回 RED）+ M0。复核 Ready。
+- **Plan 3**（`plan-3-agent-loop`）：oracle 当环境、LLM 当策略——修复脊柱 + 提议器 + critic + best-of-N。真 LLM 端到端。Ready-with-minor（已修）。
+- **Plan 4**（`plan-4-benchmark`）：checker 打分 benchmark——程序生成器 + 忠实度 DTW + pass^k/Wilson + leave-one-out 消融 + checker-vs-judge + baselines + `fretsure-bench` CLI。Ready-with-minor（已修）。
+- **Plan 5**（`plan-5-difficulty-accompaniment`）：**可验证难度简化**（tier/check_tier 门/measured_tier/simplify_to_tier，真 LLM 简化到 beginner 档保旋律）+ **伴奏**（声位 + arpeggio/strum 过 oracle）。独立审查中。
+- **244 单测 + 6 真 LLM 集成全绿、ruff+mypy clean**；每 Plan 过独立 opus 审查并修发现。
+- **分支链** plan-1→2→3→4→5（各从上个切出，**均未 merge 到 main**）。
+- **下一步待定**：Plan 6（UI/web/demo/MCP，前端领域跳转）/ Plan 7（stretch RL/GEPA）/ 收敛打磨（merge 分支链、README+求职 artifact、真实语料 D 层、求解器性能、gold 集）。
+- **已知点**：solve_fingering 长片段偏慢（M0 取舍）；tier/忠实度/难度参数占位待 design partner 校准。
 
 ## 1. 这是什么
 一个 agent，把一首歌的**音乐内容**（符号：MusicXML/MIDI/lead sheet 为保证路径；mp3 为 best-effort 前端）编配成一份在指定难度/调弦/变调夹下**人手可证明弹得出来**的吉他谱：
