@@ -16,12 +16,13 @@
   - **"谁检查语料"发现并修**：生成器 `KEY:degN` 用 0 索引音级，`C:deg5` 实为 vi(A) 却读作 V(G)，误导 LLM 放错低音、`bass_root` 恒 0 → `joint_success` 恒 0。非 agent/度量 bug，是语料标注 bug。改为真实和弦名（`Am`/`Dm`…）与 root_pc 一致，回归测试守。
   - harness `_rank` 加 `bass_preserved`（在 critic 之上）——选择不再为口味牺牲低音。
   - solver `passes_optimistic` 快路径（~3.5×）。
-  - **配对 best-of-N 消融**（`bench.paired_best_of_n` + `--paired`）：harness 拆成 `arrange_pool`+`best_of_k`，同一提议池上比 best-of-1 vs best-of-N，消除非配对采样混淆。实测两 seed 一致 **+0.125 GREEN**（非配对臂原本符号翻转）→ best-of-N 挣得薄利；critic 仍在观察名单。过 **3-lens opus 审查 workflow**（pairing/regression/stats 全清，1 个 Minor n≤0 已修）。
+  - **配对消融（best-of-N + critic）**（`bench.paired_best_of_n`/`paired_critic` + `--paired`）：harness 拆成 `arrange_pool`+`best_of_k`（`use_critic` 可参数化），同一提议池上比选择宽度 / critic 开关，消除非配对采样混淆。实测：best-of-N 两 seed 一致 **+0.125 GREEN**（非配对臂原本符号翻转）→ 挣得薄利；critic 按**本职 taste** 测两 seed 仅 **+0.01**、对 joint ≤0 → **在此语料未挣得存在，留观察/待砍**。各过 **opus 审查 workflow**（best-of-N 3-lens 全清 1 Minor n≤0 已修；critic lens 无 Critical/Important，其 Minor "critic 应按 taste 而非 joint 评判"已采纳并改度量）。
   - **demo overclaim 修**：AMBER 路径原误印 "machine-certified"，改为按判决门控（只 GREEN 才认证）。
-- **267 单测全绿（261 离线 + 6 真 LLM 集成）、ruff+mypy(strict) clean**；每 Plan 过独立 opus 审查并修发现。
+- **诚实记分卡**：repair 决定性挣得存在；best-of-N 薄利；**critic 未挣得（观察/待砍）**——三者公开挂账。
+- **270 单测全绿（264 离线 + 6 真 LLM 集成）、ruff+mypy(strict) clean**；每 Plan / 每重构过独立 opus 审查并修发现。
 - **分支**：plan-1→2→3→4→5→`consolidation` 已**全部 ff 并入 `master`（trunk）**（trunk 原只有 spec 脚手架；现含完整后端）。
-- **下一步待定**：Plan 6（UI/web/demo/MCP，前端领域跳转）/ Plan 7（stretch RL/GEPA）/ D 层真实语料 + gold 集 + 参数校准（需 design partner）/ 配对式 best-of-N 消融（现为非配对，见 RESULTS 局限）。
-- **已知点**：solve_fingering 长片段仍偏慢（快路径已缓解）；tier/忠实度/难度参数占位待 design partner 校准；消融各臂对随机 LLM 非配对（大效应 repair 不受影响，小效应 best-of-N 被混淆）。
+- **下一步待定**：Plan 6（UI/web/demo/MCP，前端领域跳转）/ Plan 7（stretch RL/GEPA）/ D 层真实语料 + gold 集 + 参数校准（需 design partner）/ critic 存废（在真实/重口味语料再测 taste，否则砍）/ 配对消融加 McNemar 显著性。
+- **已知点**：solve_fingering 长片段仍偏慢（快路径已缓解）；tier/忠实度/难度参数占位待 design partner 校准；leave-one-out 各臂对随机 LLM **非配对**（大效应 repair 不受影响；best-of-N/critic 已另有**配对**测量，见 RESULTS）。
 
 ## 1. 这是什么
 一个 agent，把一首歌的**音乐内容**（符号：MusicXML/MIDI/lead sheet 为保证路径；mp3 为 best-effort 前端）编配成一份在指定难度/调弦/变调夹下**人手可证明弹得出来**的吉他谱：
