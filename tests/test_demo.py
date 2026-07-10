@@ -34,3 +34,24 @@ def test_render_demo_has_expected_sections() -> None:
         assert section in text
     # the ASCII tab renders 6 strings, each prefixed with a name + bar
     assert text.count("|") >= 12
+
+
+def test_render_demo_amber_does_not_overclaim() -> None:
+    # An AMBER tab is NOT certified playable; the demo must not print a proof claim.
+    from fractions import Fraction as F
+
+    from fretsure.agent.harness import ArrangeResult
+    from fretsure.agent.trace import Trace
+    from fretsure.oracle.core import check_playability
+    from fretsure.oracle.profiles import MEDIAN_HAND
+    from fretsure.tab import Tab, TabNote
+
+    tun = (40, 45, 50, 55, 59, 64)
+    amber = Tab((TabNote(F(0), F(1), 0, 1, 1, "p"), TabNote(F(0), F(1), 1, 4, 4, "i")), tun, 0)
+    oracle = check_playability(amber, MEDIAN_HAND)
+    assert oracle.verdict == "AMBER"  # guard: this fixture must actually be AMBER
+    demo = DemoResult(ArrangeResult(amber, oracle, None, None, Trace(), 1), None)
+    text = render_demo(demo, sample_ir(), engine="stub")
+    assert "AMBER" in text
+    assert "machine-certified" not in text
+    assert "did NOT certify" in text

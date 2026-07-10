@@ -92,12 +92,18 @@ def render_demo(demo: DemoResult, ir: MusicIR, *, engine: str) -> str:
             f"  melody-F1 {gate.melody_f1:.2f}   bass-root {gate.bass_root:.2f}   "
             f"harmony {gate.harmony:.2f}   gate {'PASS' if gate.passed else 'FAIL'}",
         ]
+    certified = {
+        "GREEN": "The LLM only proposed intent; playability is machine-certified.",
+        "AMBER": "The oracle did NOT certify this tab: it is borderline for the "
+        "pessimistic hand and needs more repair or a human check.",
+        "RED": "The oracle rejected this tab as unplayable (it should never be returned).",
+    }[verdict]
     lines += [
         "",
-        "WHAT THIS PROVES",
+        "WHAT THIS PROVES" if verdict == "GREEN" else "WHAT THIS MEANS",
         "  The tab above is not an LLM opinion: a deterministic, millimetre-geometry",
         "  oracle checked every note/frame against a conservatively-tightened hand and",
-        f"  returned {verdict}. The LLM only proposed intent; playability is machine-certified.",
+        f"  returned {verdict}. {certified}",
         "=" * 66,
     ]
     return "\n".join(lines)
