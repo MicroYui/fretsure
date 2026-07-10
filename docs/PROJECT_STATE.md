@@ -3,7 +3,10 @@
 > 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-09。
 
 ## 0. 现状一句话
-设计（brainstorming → spec）**已完成并确认**；**主实现路线图 + Plan 1 详细计划已写**；**Plan 1「核心 + Oracle」已实现**（分支 `plan-1-core-oracle`）：Music IR + Tab + 毫米几何可弹性 oracle（三态 + 定位诊断 + 良构/range/finger-count/monotonic/几何 span-CSP/barre/shift/sustain/right-hand 全套硬谓词）+ 自验证台（property monotone 1000 例 / metamorphic / mutation kill-rate 1.0 / N-version 差分 500 例 / 混淆矩阵 + Clopper–Pearson GREEN 误接受上界 + Wilson CI）。`fretsure-oracle` 可 pip 安装、**99 测试全绿、ruff+mypy clean**。独立 opus 终审抓到并已修一个 Critical false-GREEN（fret>0 但 finger==0）+ 2 个 Important。逐门证据见 `docs/PLAN1_ACCEPTANCE.md`，认证范围见 `docs/SCOPE.md`。**下一步：Plan 2（指法求解器 + M0 端到端）——待用户指令。**
+设计已完成；**主路线图 + Plan 1/2 计划已写**；**Plan 1「核心 + Oracle」+ Plan 2「求解器 + M0」均已实现**。
+- **Plan 1**（分支 `plan-1-core-oracle`）：可弹性 oracle（三态 + 定位诊断 + 全套硬谓词 + 良构性）+ 自验证台（property/metamorphic/mutation/N-version/混淆矩阵/Clopper–Pearson/Wilson）。独立终审判 Ready。
+- **Plan 2**（分支 `plan-2-solver-m0`，从 Plan 1 切出）：候选生成 + 帧配置枚举 + 代价 + **beam 搜索求解器（对真 oracle 逐步验证 → 永不返回 RED）** + ASCII 渲染 + 规则提议器 + **M0 端到端**（lead sheet → GREEN 指弹 tab）。独立审查抓到求解器返回 RED tab（sustain/shift/repeat/barre）并已 rework 闭合。
+- **138 测试全绿、ruff+mypy clean**。**下一步：Plan 3（agent 回路 + verifier-guided 修复 + best-of-N + critic）——用本地 LLM 代理 localhost:4141（见 memory）。**
 
 ## 1. 这是什么
 一个 agent，把一首歌的**音乐内容**（符号：MusicXML/MIDI/lead sheet 为保证路径；mp3 为 best-effort 前端）编配成一份在指定难度/调弦/变调夹下**人手可证明弹得出来**的吉他谱：
