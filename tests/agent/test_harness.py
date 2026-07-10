@@ -42,6 +42,33 @@ def test_melody_preserved_in_selection() -> None:
     assert r.fidelity is not None and r.fidelity.melody_recall == 1.0
 
 
+# IR with a real bass voice: selection must prefer the candidate that keeps it.
+_IR_BASS = MusicIR(
+    (Note(F(0), F(1), 64, "melody"), Note(F(0), F(1), 40, "bass")),
+    (),
+    Meta("C", (4, 4), 90.0, "t", "t", "PD"),
+)
+_PROP_DROPS_BASS = (  # bass re-octaved to 52 (same pc, wrong pitch) -> not preserved
+    '{"notes":[{"onset":"0","duration":"1","pitch":64,"voice":"melody"},'
+    '{"onset":"0","duration":"1","pitch":52,"voice":"bass"}]}'
+)
+_PROP_KEEPS_BASS = (
+    '{"notes":[{"onset":"0","duration":"1","pitch":64,"voice":"melody"},'
+    '{"onset":"0","duration":"1","pitch":40,"voice":"bass"}]}'
+)
+
+
+def test_selection_prefers_bass_preservation_over_order() -> None:
+    # Both GREEN, equal melody + equal critic + equal harmony: only bass differs.
+    # The bass-dropping candidate is proposed first, so a bass-blind ranker would
+    # keep it; ranking on bass preservation must instead pick the second.
+    script = [_PROP_DROPS_BASS, '{"overall":0.8}', _PROP_KEEPS_BASS, '{"overall":0.8}']
+    r = arrange(_IR_BASS, ArrangeGoal(), FakeLLM(script), n=2)
+    assert r.tab is not None and r.oracle is not None and r.oracle.verdict == "GREEN"
+    played = {note_pitch(n.string, n.fret, r.tab.tuning, r.tab.capo) for n in r.tab.notes}
+    assert 40 in played and 52 not in played  # kept the input bass
+
+
 def test_deterministic() -> None:
     a = arrange(_IR, ArrangeGoal(), FakeLLM(_script()), n=2)
     b = arrange(_IR, ArrangeGoal(), FakeLLM(_script()), n=2)

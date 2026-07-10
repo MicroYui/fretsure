@@ -14,6 +14,7 @@ from fractions import Fraction
 from fretsure.ir import ChordSymbol, Meta, MusicIR, Note
 
 _MAJOR_SCALE = (0, 2, 4, 5, 7, 9, 11)  # semitones from tonic
+_NOTE_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 _FUNCTIONS: dict[str, tuple[int, ...]] = {
     "T": (0, 5, 2),  # I, vi, iii  (0-indexed scale degrees)
     "S": (3, 1),  # IV, ii
@@ -21,6 +22,17 @@ _FUNCTIONS: dict[str, tuple[int, ...]] = {
 }
 _CYCLE = ("T", "S", "D", "T")
 _KEY_TONIC = {"C": 0, "G": 7, "D": 2, "A": 9, "E": 4, "F": 5, "Bb": 10, "B": 11}
+
+
+def _chord_name(root_pc: int, pcs: frozenset[int]) -> str:
+    """An unambiguous chord name (root note + quality) consistent with ``root_pc``.
+
+    The label the LLM reads must name the same root the bass-root metric scores;
+    a mismatched label makes a correct arranger look wrong (and vice-versa).
+    """
+    intervals = tuple(sorted((p - root_pc) % 12 for p in pcs))
+    quality: dict[tuple[int, ...], str] = {(0, 3, 6): "dim", (0, 3, 7): "m", (0, 4, 8): "aug"}
+    return _NOTE_NAMES[root_pc] + quality.get(intervals, "")
 
 
 @dataclass(frozen=True)
@@ -51,7 +63,7 @@ def generate_leadsheet(cfg: GenConfig) -> MusicIR:
         degree = rng.choice(_FUNCTIONS[function])
         chord_pcs, root_pc = _triad(tonic_pc, degree)
         bar_onset = Fraction(bar * beats_per_bar)
-        chords.append(ChordSymbol(bar_onset, f"{cfg.key}:deg{degree}", chord_pcs, root_pc))
+        chords.append(ChordSymbol(bar_onset, _chord_name(root_pc, chord_pcs), chord_pcs, root_pc))
         notes.append(Note(bar_onset, Fraction(beats_per_bar), 48 + root_pc, "bass"))
 
         for beat in range(beats_per_bar):

@@ -48,3 +48,37 @@ def test_melody_above_bass() -> None:
 def test_bars_parameter_respected() -> None:
     ir = generate_leadsheet(GenConfig(bars=8, seed=0))
     assert len(ir.chords) == 8
+
+
+_PC_OF_NAME = {
+    "C": 0, "C#": 1, "D": 2, "D#": 3, "E": 4, "F": 5,
+    "F#": 6, "G": 7, "G#": 8, "A": 9, "A#": 10, "B": 11,
+}
+
+
+def _symbol_root_pc(sym: str) -> int:
+    name = sym[:2] if len(sym) > 1 and sym[1] == "#" else sym[:1]
+    return _PC_OF_NAME[name]
+
+
+def test_chord_symbol_root_matches_root_pc() -> None:
+    # The human/LLM-facing symbol string must name the same root the metric scores
+    # (root_pc). A mislabeled key prefix once made the LLM place the wrong bass while
+    # bass_root_accuracy scored against root_pc -> permanent joint_success=0.
+    for key in ("C", "G", "D", "A", "F"):
+        ir = generate_leadsheet(GenConfig(key=key, bars=8, seed=11))
+        for c in ir.chords:
+            assert _symbol_root_pc(c.symbol) == c.root_pc, (c.symbol, c.root_pc)
+
+
+def test_chord_symbol_quality_matches_triad() -> None:
+    # Symbol quality (''/'m'/'dim') must match the triad's intervals from the root.
+    ir = generate_leadsheet(GenConfig(key="C", bars=8, seed=12))
+    for c in ir.chords:
+        intervals = frozenset((p - c.root_pc) % 12 for p in c.pitch_classes)
+        if c.symbol.endswith("dim"):
+            assert intervals == {0, 3, 6}
+        elif c.symbol.endswith("m"):
+            assert intervals == {0, 3, 7}
+        else:
+            assert intervals == {0, 4, 7}

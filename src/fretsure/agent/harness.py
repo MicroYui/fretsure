@@ -45,11 +45,14 @@ class _Candidate:
     repair: RepairResult
 
 
-def _rank(c: _Candidate) -> tuple[int, float, float, float]:
-    # prefer GREEN, then melody preservation, then critic taste, then harmony
+def _rank(c: _Candidate) -> tuple[int, float, float, float, float]:
+    # prefer GREEN, then melody preservation, then bass preservation (both are
+    # faithfulness to the input, which the joint gate scores), then critic taste,
+    # then harmony. Bass sits above critic so we never trade the bass for taste.
     return (
         1 if c.is_green else 0,
         c.fidelity.melody_recall,
+        c.fidelity.bass_preserved,
         c.critic.overall if c.critic is not None else 0.0,
         c.fidelity.harmony_jaccard,
     )
