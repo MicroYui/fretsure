@@ -22,6 +22,7 @@ dev = [
 
 [project.scripts]
 fretsure-bench = "fretsure.bench.runner:main"
+fretsure-demo = "fretsure.demo:main"
 
 [build-system]
 requires = ["hatchling"]
