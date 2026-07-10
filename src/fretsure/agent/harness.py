@@ -63,6 +63,7 @@ def arrange(
     profile: Profile = MEDIAN_HAND,
     n: int = 4,
     max_iters: int = 8,
+    use_critic: bool = True,
 ) -> ArrangeResult:
     trace = Trace()
     scored: list[_Candidate] = []
@@ -80,7 +81,7 @@ def arrange(
             continue
         fid = fidelity(ir, rr.tab)
         is_green = rr.oracle is not None and rr.oracle.verdict == "GREEN"
-        crit = critique(ir, rr.tab, llm) if is_green else None
+        crit = critique(ir, rr.tab, llm) if (is_green and use_critic) else None
         scored.append(_Candidate(is_green, fid, crit, rr))
 
     if not scored:
