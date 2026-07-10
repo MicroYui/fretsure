@@ -20,6 +20,9 @@ dev = [
     "anthropic>=0.40",
 ]
 
+[project.scripts]
+fretsure-bench = "fretsure.bench.runner:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

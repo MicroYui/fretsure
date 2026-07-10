@@ -35,6 +35,18 @@ class FakeLLM:
         return self._calls
 
 
+class ConstantLLM:
+    """Always returns the same reply (never exhausts). For reproducible bench stubs."""
+
+    def __init__(self, reply: str = "{}") -> None:
+        self._reply = reply
+
+    def complete(
+        self, *, system: str, user: str, max_tokens: int = 1024, temperature: float = 0.0
+    ) -> str:
+        return self._reply
+
+
 class ProxyLLM:
     """Anthropic-messages client pointed at the local proxy via env vars.
 
