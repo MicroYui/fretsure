@@ -1,18 +1,25 @@
 # Fretsure — 项目状态 / 恢复文档
 
-> 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-09。
+> 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-10。
 
 ## 0. 现状一句话
-设计完成；**路线图 + Plan 1–5 计划已写**；**Plan 1–5 全部实现**（oracle + 求解器 + agent + benchmark + 难度简化/伴奏 = 整个后端产品）。
+设计完成；**路线图 + Plan 1–5 计划已写**；**Plan 1–5 全部实现**（oracle + 求解器 + agent + benchmark + 难度简化/伴奏 = 整个后端产品）；**已收敛打磨 + merge 到 trunk + 求职 artifact 就位**。
 - **Plan 1**（`plan-1-core-oracle`）：可弹性 oracle + 自验证台。终审 Ready。
 - **Plan 2**（`plan-2-solver-m0`）：beam 求解器（永不返回 RED）+ M0。复核 Ready。
 - **Plan 3**（`plan-3-agent-loop`）：oracle 当环境、LLM 当策略——修复脊柱 + 提议器 + critic + best-of-N。真 LLM 端到端。Ready-with-minor（已修）。
 - **Plan 4**（`plan-4-benchmark`）：checker 打分 benchmark——程序生成器 + 忠实度 DTW + pass^k/Wilson + leave-one-out 消融 + checker-vs-judge + baselines + `fretsure-bench` CLI。Ready-with-minor（已修）。
-- **Plan 5**（`plan-5-difficulty-accompaniment`）：**可验证难度简化**（tier/check_tier 门/measured_tier/simplify_to_tier，真 LLM 简化到 beginner 档保旋律）+ **伴奏**（声位 + arpeggio/strum 过 oracle）。独立审查中。
-- **244 单测 + 6 真 LLM 集成全绿、ruff+mypy clean**；每 Plan 过独立 opus 审查并修发现。
-- **分支链** plan-1→2→3→4→5（各从上个切出，**均未 merge 到 main**）。
-- **下一步待定**：Plan 6（UI/web/demo/MCP，前端领域跳转）/ Plan 7（stretch RL/GEPA）/ 收敛打磨（merge 分支链、README+求职 artifact、真实语料 D 层、求解器性能、gold 集）。
-- **已知点**：solve_fingering 长片段偏慢（M0 取舍）；tier/忠实度/难度参数占位待 design partner 校准。
+- **Plan 5**（`plan-5-difficulty-accompaniment`）：**可验证难度简化**（tier/check_tier 门/measured_tier/simplify_to_tier，真 LLM 简化到 beginner 档保旋律）+ **伴奏**（声位 + arpeggio/strum 过 oracle）。独立审查 Ready-with-minor（I1/I2/M1/M2/M3/M5 已修）。
+- **收敛打磨（2026-07-10，`consolidation`→已 ff 并入 `master`）**：
+  - `fretsure-demo` 一条命令端到端 demo（离线确定性；`--llm` 用真代理）。
+  - `docs/BENCHMARK_RESULTS.md`：真 LLM 消融真实数（n=16 seed1）+ Wilson CI；头条**修复挣得存在**（0.81 vs 0.31，CI 不重叠）；critic/best-of-N 诚实负结果公开。
+  - README 首屏重写（一条命令 + 架构图 + 头条表 + Plan 1–5 状态）；`docs/DEMO_SCRIPT.md` 3 分钟脚本。
+  - **"谁检查语料"发现并修**：生成器 `KEY:degN` 用 0 索引音级，`C:deg5` 实为 vi(A) 却读作 V(G)，误导 LLM 放错低音、`bass_root` 恒 0 → `joint_success` 恒 0。非 agent/度量 bug，是语料标注 bug。改为真实和弦名（`Am`/`Dm`…）与 root_pc 一致，回归测试守。
+  - harness `_rank` 加 `bass_preserved`（在 critic 之上）——选择不再为口味牺牲低音。
+  - solver `passes_optimistic` 快路径（~3.5×）。
+- **260 单测全绿（254 离线 + 6 真 LLM 集成）、ruff+mypy(strict) clean**；每 Plan 过独立 opus 审查并修发现。
+- **分支**：plan-1→2→3→4→5→`consolidation` 已**全部 ff 并入 `master`（trunk）**（trunk 原只有 spec 脚手架；现含完整后端）。
+- **下一步待定**：Plan 6（UI/web/demo/MCP，前端领域跳转）/ Plan 7（stretch RL/GEPA）/ D 层真实语料 + gold 集 + 参数校准（需 design partner）/ 配对式 best-of-N 消融（现为非配对，见 RESULTS 局限）。
+- **已知点**：solve_fingering 长片段仍偏慢（快路径已缓解）；tier/忠实度/难度参数占位待 design partner 校准；消融各臂对随机 LLM 非配对（大效应 repair 不受影响，小效应 best-of-N 被混淆）。
 
 ## 1. 这是什么
 一个 agent，把一首歌的**音乐内容**（符号：MusicXML/MIDI/lead sheet 为保证路径；mp3 为 best-effort 前端）编配成一份在指定难度/调弦/变调夹下**人手可证明弹得出来**的吉他谱：
