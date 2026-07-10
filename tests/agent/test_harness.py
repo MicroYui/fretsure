@@ -69,10 +69,33 @@ def test_selection_prefers_bass_preservation_over_order() -> None:
     assert 40 in played and 52 not in played  # kept the input bass
 
 
+def test_best_of_k_is_paired_on_one_pool() -> None:
+    # Build ONE pool, then compare best-of-1 (greedy) vs best-of-2 on that SAME
+    # pool — no re-sampling. This is the paired comparison the ablation needs.
+    from fretsure.agent.harness import arrange_pool, best_of_k
+
+    script = [_PROP_DROPS_BASS, '{"overall":0.8}', _PROP_KEEPS_BASS, '{"overall":0.8}']
+    pool = arrange_pool(_IR_BASS, ArrangeGoal(), FakeLLM(script), n=2)
+    r1 = best_of_k(pool, 1)
+    r2 = best_of_k(pool, 2)
+    assert r1.tab is not None and r2.tab is not None
+    p1 = {note_pitch(n.string, n.fret, r1.tab.tuning, r1.tab.capo) for n in r1.tab.notes}
+    p2 = {note_pitch(n.string, n.fret, r2.tab.tuning, r2.tab.capo) for n in r2.tab.notes}
+    assert 52 in p1 and 40 not in p1  # best-of-1 is the greedy (bass-dropping) draw
+    assert 40 in p2 and 52 not in p2  # best-of-2 recovers the faithful one
+    assert r1.candidates_tried == 1 and r2.candidates_tried == 2
+
+
 def test_deterministic() -> None:
     a = arrange(_IR, ArrangeGoal(), FakeLLM(_script()), n=2)
     b = arrange(_IR, ArrangeGoal(), FakeLLM(_script()), n=2)
     assert a.tab == b.tab and a.critic == b.critic
+
+
+def test_arrange_zero_n_makes_no_llm_call() -> None:
+    # n<=0 must not propose anything: an empty FakeLLM script would raise on any call.
+    r = arrange(_IR, ArrangeGoal(), FakeLLM([]), n=0)
+    assert r.tab is None and r.oracle is None and r.candidates_tried == 0
 
 
 @pytest.mark.integration

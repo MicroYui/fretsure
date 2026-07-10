@@ -4,6 +4,11 @@ Generates N proposals (rising temperature), repairs each to GREEN via the
 verifier-guided loop, scores the survivors (playable + faithful + critic taste),
 and selects the best — emitting an explainable trace. All LLM use is injected,
 so the selection is deterministic under FakeLLM.
+
+The pool build (:func:`arrange_pool`) and the selection (:func:`best_of_k`) are
+split so best-of-N can be measured *paired*: build one proposal pool, then
+compare best-of-1 vs best-of-N on the SAME pool, isolating selection breadth
+from the stochastic-draw noise that confounds an unpaired ablation.
 """
 
 from dataclasses import dataclass
@@ -45,6 +50,19 @@ class _Candidate:
     repair: RepairResult
 
 
+@dataclass(frozen=True)
+class ArrangePool:
+    """An ordered pool of repaired candidates (index 0 = the greedy temp-0 draw).
+
+    ``candidates[i]`` is ``None`` when proposal ``i`` had no feasible arrangement,
+    so slot order (and thus "best-of-1 == the greedy draw") is preserved.
+    """
+
+    candidates: tuple[_Candidate | None, ...]
+    trace: Trace
+    n: int
+
+
 def _rank(c: _Candidate) -> tuple[int, float, float, float, float]:
     # prefer GREEN, then melody preservation, then bass preservation (both are
     # faithfulness to the input, which the joint gate scores), then critic taste,
@@ -58,7 +76,7 @@ def _rank(c: _Candidate) -> tuple[int, float, float, float, float]:
     )
 
 
-def arrange(
+def arrange_pool(
     ir: MusicIR,
     goal: ArrangeGoal,
     llm: LLMClient,
@@ -67,9 +85,11 @@ def arrange(
     n: int = 4,
     max_iters: int = 8,
     use_critic: bool = True,
-) -> ArrangeResult:
+) -> ArrangePool:
+    """Build the ordered pool of N repaired candidates (no selection)."""
+    n = max(0, n)  # n<=0 -> empty pool (no proposals, no LLM calls), matching best-of-0
     trace = Trace()
-    scored: list[_Candidate] = []
+    slots: list[_Candidate | None] = []
     for i in range(n):
         temperature = min(1.0, 0.2 * i)
         target = propose_arrangement(ir, goal, llm, temperature=temperature)
@@ -81,16 +101,24 @@ def arrange(
         verdict = rr.oracle.verdict if rr.oracle is not None else "INFEASIBLE"
         trace.add("SOLVE", f"candidate {i}: {verdict}", i=i, verdict=verdict)
         if rr.tab is None:
+            slots.append(None)
             continue
         fid = fidelity(ir, rr.tab)
         is_green = rr.oracle is not None and rr.oracle.verdict == "GREEN"
         crit = critique(ir, rr.tab, llm) if (is_green and use_critic) else None
-        scored.append(_Candidate(is_green, fid, crit, rr))
+        slots.append(_Candidate(is_green, fid, crit, rr))
+    return ArrangePool(tuple(slots), trace, n)
 
+
+def best_of_k(pool: ArrangePool, k: int) -> ArrangeResult:
+    """Select the best among the first ``k`` candidates of ``pool`` (paired-safe)."""
+    k = max(0, min(k, pool.n))  # k=0 (empty pool) -> no-candidate result, candidates_tried=0
+    scored = [c for c in pool.candidates[:k] if c is not None]
+    trace = Trace()
+    trace.steps.extend(pool.trace.steps)
     if not scored:
         trace.add("SELECT", "no feasible candidate found")
-        return ArrangeResult(None, None, None, None, trace, n)
-
+        return ArrangeResult(None, None, None, None, trace, k)
     best = max(scored, key=_rank)
     trace.steps.extend(best.repair.trace.steps)  # surface the winner's repair reasoning
     trace.add(
@@ -98,5 +126,21 @@ def arrange(
         f"green={best.is_green} melody_recall={best.fidelity.melody_recall:.2f}",
     )
     return ArrangeResult(
-        best.repair.tab, best.repair.oracle, best.fidelity, best.critic, trace, n
+        best.repair.tab, best.repair.oracle, best.fidelity, best.critic, trace, k
     )
+
+
+def arrange(
+    ir: MusicIR,
+    goal: ArrangeGoal,
+    llm: LLMClient,
+    *,
+    profile: Profile = MEDIAN_HAND,
+    n: int = 4,
+    max_iters: int = 8,
+    use_critic: bool = True,
+) -> ArrangeResult:
+    pool = arrange_pool(
+        ir, goal, llm, profile=profile, n=n, max_iters=max_iters, use_critic=use_critic
+    )
+    return best_of_k(pool, pool.n)
