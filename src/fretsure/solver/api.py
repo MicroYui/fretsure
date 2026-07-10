@@ -8,8 +8,9 @@ here. A comfort/shift cost orders the beam. If no non-RED extension exists for a
 frame within the beam, it returns Infeasible.
 
 Contract: the returned Tab is always non-RED under the given profile. The dual
-"finds a solution whenever one exists" is best-effort (bounded beam) and biases
-to a safe Infeasible rather than a RED output.
+"finds a solution whenever one exists" is best-effort — the bounded beam plus the
+``frame_configs`` / ``feasible_fingerings`` caps can drop a config a later frame
+needs — and biases to a safe Infeasible rather than a RED output.
 """
 
 from collections import defaultdict
@@ -51,6 +52,7 @@ def solve_fingering(
     tempo_bpm: float = 90.0,
     beam: int = 16,
 ) -> Tab | Infeasible:
+    beam = max(1, beam)  # a non-positive beam would empty the search
     by_onset: dict[Fraction, list[Note]] = defaultdict(list)
     for n in notes:
         by_onset[n.onset].append(n)

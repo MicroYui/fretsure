@@ -101,6 +101,12 @@ def test_empty_notes_gives_empty_tab() -> None:
     assert result.notes == ()
 
 
+def test_non_positive_beam_is_clamped_not_crash() -> None:
+    notes = _melody([60, 62, 64])
+    r = solve_fingering(notes, STANDARD_TUNING, 0, MEDIAN_HAND, beam=0)
+    assert isinstance(r, (Tab, Infeasible))  # clamped to 1, no ValueError
+
+
 def test_deterministic() -> None:
     notes = _melody([60, 64, 67, 72])
     assert solve_fingering(notes, STANDARD_TUNING, 0, MEDIAN_HAND) == solve_fingering(
