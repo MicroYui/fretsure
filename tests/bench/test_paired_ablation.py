@@ -1,8 +1,10 @@
 from fractions import Fraction as F
 
 from fretsure.agent.arranger import ArrangeGoal
-from fretsure.bench.ablation import paired_best_of_n
+from fretsure.agent.harness import arrange_pool, best_of_k
+from fretsure.bench.ablation import paired_best_of_n, paired_critic
 from fretsure.bench.corpus import CorpusItem
+from fretsure.geometry import note_pitch
 from fretsure.ir import ChordSymbol, Meta, MusicIR, Note
 from fretsure.llm.client import FakeLLM
 from fretsure.oracle.profiles import MEDIAN_HAND
@@ -65,3 +67,55 @@ def test_green_delta_is_never_negative_by_construction() -> None:
     )
     assert res.green_delta >= 0.0
     assert res.best_of_n.green_rate >= res.best_of_1.green_rate
+
+
+# --- paired critic ablation ---
+
+# melody E4 only. Candidate 0 adds a harmony note (lower harmony-jaccard) but earns a
+# high critic; candidate 1 is melody-only (perfect harmony-jaccard) with a low critic.
+# The critic term (rank index 3) outranks harmony (index 4), so it flips the selection.
+_MEL_IR = MusicIR((Note(F(0), F(1), 64, "melody"),), (), Meta("C", (4, 4), 90.0, "t", "t", "PD"))
+_MEL_ITEM = CorpusItem(_MEL_IR, "test", "generated", 1, "critic-1")
+_WITH_HARMONY = (
+    '{"notes":[{"onset":"0","duration":"1","pitch":64,"voice":"melody"},'
+    '{"onset":"0","duration":"1","pitch":67,"voice":"harmony"}]}'
+)
+_MELODY_ONLY = '{"notes":[{"onset":"0","duration":"1","pitch":64,"voice":"melody"}]}'
+_CRITIC_SCRIPT = [_WITH_HARMONY, '{"overall":0.9}', _MELODY_ONLY, '{"overall":0.3}']
+
+
+def test_critic_term_flips_selection_on_a_shared_pool() -> None:
+    pool = arrange_pool(_MEL_IR, ArrangeGoal(), FakeLLM(_CRITIC_SCRIPT), n=2, use_critic=True)
+    on = best_of_k(pool, 2, use_critic=True)
+    off = best_of_k(pool, 2, use_critic=False)
+    assert on.tab is not None and off.tab is not None
+    onp = {note_pitch(x.string, x.fret, on.tab.tuning, on.tab.capo) for x in on.tab.notes}
+    offp = {note_pitch(x.string, x.fret, off.tab.tuning, off.tab.capo) for x in off.tab.notes}
+    assert 67 in onp  # critic (0.9) picked the harmony-added candidate
+    assert 67 not in offp  # without critic, harmony-jaccard picked the melody-only one
+
+
+def test_paired_critic_captures_selection_effect() -> None:
+    res = paired_critic(
+        [_MEL_ITEM], ArrangeGoal(), lambda: FakeLLM(_CRITIC_SCRIPT), MEDIAN_HAND, n=2
+    )
+    # critic ranks below green, so it can never change green-ness (structural).
+    assert res.green_delta == 0.0
+    # taste_delta is the critic's real yardstick: enabling it selects the higher-critic
+    # candidate (0.9 vs 0.3) -> taste goes up. (This is what the critic is FOR.)
+    assert res.taste_with > res.taste_without
+    assert res.taste_delta > 0.0
+    # joint_delta is a SIDE EFFECT, not the objective: here the ranker keys on
+    # melody_recall while the joint gate keys on top-voice melody_f1, so the critic's
+    # pick (melody 64 + harmony 67 above it) fails the gate -> joint_delta == -1. This
+    # asserts the machinery captures the effect; the sign is not the critic's verdict.
+    # NOTE: coupled to the STUB top-voice melody_f1 (fidelity.py); a Plan-4 DTW melody
+    # metric that no longer requires top-voice would flip this to 0 — update deliberately.
+    assert res.joint_delta == -1.0
+    assert res.items == 1
+
+
+def test_paired_critic_deterministic() -> None:
+    a = paired_critic([_MEL_ITEM], ArrangeGoal(), lambda: FakeLLM(_CRITIC_SCRIPT), MEDIAN_HAND, n=2)
+    b = paired_critic([_MEL_ITEM], ArrangeGoal(), lambda: FakeLLM(_CRITIC_SCRIPT), MEDIAN_HAND, n=2)
+    assert a == b

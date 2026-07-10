@@ -16,8 +16,10 @@ from fretsure.bench.ablation import (
     ConfigMetrics,
     LLMFactory,
     PairedBestOfN,
+    PairedCritic,
     leave_one_out,
     paired_best_of_n,
+    paired_critic,
 )
 from fretsure.bench.corpus import CorpusItem
 from fretsure.bench.generator import GenConfig, generate_leadsheet
@@ -35,6 +37,7 @@ class BenchReport:
     checker_version: str
     profile_version: str
     paired: PairedBestOfN | None = None
+    paired_crit: PairedCritic | None = None
 
 
 def _corpus(seed: int, items: int, bars: int) -> list[CorpusItem]:
@@ -76,7 +79,8 @@ def run_benchmark(
     goal = ArrangeGoal()
     loo = leave_one_out(corpus, goal, llm_factory, profile, base=AblationConfig(best_of_n=2))
     pbn = paired_best_of_n(corpus, goal, llm_factory, profile, n=2) if paired else None
-    return BenchReport(seed, items, loo["full"], loo, CHECKER_VERSION, profile.version, pbn)
+    pcr = paired_critic(corpus, goal, llm_factory, profile, n=2) if paired else None
+    return BenchReport(seed, items, loo["full"], loo, CHECKER_VERSION, profile.version, pbn, pcr)
 
 
 def report_to_dict(report: BenchReport) -> dict[str, Any]:
@@ -96,6 +100,19 @@ def report_to_dict(report: BenchReport) -> dict[str, Any]:
             "green_delta": p.green_delta,
             "joint_delta": p.joint_delta,
             "items": p.items,
+        }
+    if report.paired_crit is not None:
+        c = report.paired_crit
+        out["paired_critic"] = {
+            "n": c.n,
+            "without_critic": asdict(c.without_critic),
+            "with_critic": asdict(c.with_critic),
+            "green_delta": c.green_delta,
+            "joint_delta": c.joint_delta,
+            "taste_without": c.taste_without,
+            "taste_with": c.taste_with,
+            "taste_delta": c.taste_delta,
+            "items": c.items,
         }
     return out
 

@@ -158,3 +158,81 @@ def paired_best_of_n(
     return PairedBestOfN(
         n, k1, kn, kn.green_rate - k1.green_rate, kn.joint_success - k1.joint_success, m
     )
+
+
+@dataclass(frozen=True)
+class PairedCritic:
+    """Critic-on vs critic-off selection measured over one shared candidate pool.
+
+    The critic's JOB is musical taste, not the playability+faithfulness joint gate —
+    and because `_rank` keys on melody_recall while the gate keys on top-voice
+    melody_f1, the critic can be neutral or even NEGATIVE on ``joint_delta`` by
+    construction. So the critic is judged on ``taste_delta`` (did enabling it select
+    higher-critic-scored arrangements?); ``joint_delta`` is reported honestly as the
+    playability-faithfulness side effect, not as the critic's yardstick.
+    """
+
+    n: int
+    without_critic: ConfigMetrics
+    with_critic: ConfigMetrics
+    green_delta: float  # with - without (0 by construction: critic ranks below green)
+    joint_delta: float  # with - without (a side effect, NOT the critic's objective)
+    taste_without: float  # mean critic.overall of the without-critic selection
+    taste_with: float  # mean critic.overall of the with-critic selection
+    taste_delta: float  # with - without (>= 0: critic steers toward higher taste)
+    items: int
+
+
+def _selected_taste(result: ArrangeResult) -> float:
+    return result.critic.overall if result.critic is not None else 0.0
+
+
+def paired_critic(
+    items: list[CorpusItem],
+    goal: ArrangeGoal,
+    llm_factory: LLMFactory,
+    profile: Profile,
+    *,
+    n: int = 4,
+    max_iters: int = 8,
+) -> PairedCritic:
+    """Paired critic ablation: build one pool (with critic scores) per item, then
+    select best-of-N WITH vs WITHOUT the critic term on that SAME pool.
+
+    Like ``paired_best_of_n``, this removes the stochastic-draw noise that confounds
+    ``leave_one_out``'s unpaired ``-critic`` arm: the only difference between the two
+    arms is whether the critic participates in ranking. Deterministic under FakeLLM.
+    The critic is judged on ``taste_delta`` (its actual objective); see PairedCritic.
+    """
+    n = max(1, n)
+    g0 = j0 = e0 = g1 = j1 = e1 = 0
+    mf0 = mf1 = t0 = t1 = 0.0
+    for item in items:
+        llm = llm_factory()
+        pool = arrange_pool(
+            item.ir, goal, llm, profile=profile, n=n, max_iters=max_iters, use_critic=True
+        )
+        r0 = best_of_k(pool, pool.n, use_critic=False)
+        r1 = best_of_k(pool, pool.n, use_critic=True)
+        s0 = _score(r0, item)
+        s1 = _score(r1, item)
+        g0 += int(s0[0])
+        j0 += int(s0[1])
+        mf0 += s0[2]
+        e0 += s0[3]
+        t0 += _selected_taste(r0)
+        g1 += int(s1[0])
+        j1 += int(s1[1])
+        mf1 += s1[2]
+        e1 += s1[3]
+        t1 += _selected_taste(r1)
+    m = len(items)
+    d = m or 1
+    without = ConfigMetrics(j0 / d, g0 / d, mf0 / d, e0 / d, m)
+    with_ = ConfigMetrics(j1 / d, g1 / d, mf1 / d, e1 / d, m)
+    return PairedCritic(
+        n, without, with_,
+        with_.green_rate - without.green_rate,
+        with_.joint_success - without.joint_success,
+        t0 / d, t1 / d, (t1 - t0) / d, m,
+    )

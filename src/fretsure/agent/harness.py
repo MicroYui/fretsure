@@ -63,15 +63,17 @@ class ArrangePool:
     n: int
 
 
-def _rank(c: _Candidate) -> tuple[int, float, float, float, float]:
+def _rank(c: _Candidate, *, use_critic: bool = True) -> tuple[int, float, float, float, float]:
     # prefer GREEN, then melody preservation, then bass preservation (both are
     # faithfulness to the input, which the joint gate scores), then critic taste,
     # then harmony. Bass sits above critic so we never trade the bass for taste.
+    # use_critic=False zeroes the critic term (for the paired critic ablation).
+    critic = c.critic.overall if (use_critic and c.critic is not None) else 0.0
     return (
         1 if c.is_green else 0,
         c.fidelity.melody_recall,
         c.fidelity.bass_preserved,
-        c.critic.overall if c.critic is not None else 0.0,
+        critic,
         c.fidelity.harmony_jaccard,
     )
 
@@ -110,8 +112,12 @@ def arrange_pool(
     return ArrangePool(tuple(slots), trace, n)
 
 
-def best_of_k(pool: ArrangePool, k: int) -> ArrangeResult:
-    """Select the best among the first ``k`` candidates of ``pool`` (paired-safe)."""
+def best_of_k(pool: ArrangePool, k: int, *, use_critic: bool = True) -> ArrangeResult:
+    """Select the best among the first ``k`` candidates of ``pool`` (paired-safe).
+
+    ``use_critic=False`` selects while ignoring the critic term — used by the paired
+    critic ablation to vary only the ranking objective over a fixed pool.
+    """
     k = max(0, min(k, pool.n))  # k=0 (empty pool) -> no-candidate result, candidates_tried=0
     scored = [c for c in pool.candidates[:k] if c is not None]
     trace = Trace()
@@ -119,7 +125,7 @@ def best_of_k(pool: ArrangePool, k: int) -> ArrangeResult:
     if not scored:
         trace.add("SELECT", "no feasible candidate found")
         return ArrangeResult(None, None, None, None, trace, k)
-    best = max(scored, key=_rank)
+    best = max(scored, key=lambda c: _rank(c, use_critic=use_critic))
     trace.steps.extend(best.repair.trace.steps)  # surface the winner's repair reasoning
     trace.add(
         "SELECT",
