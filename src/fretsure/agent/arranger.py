@@ -68,9 +68,13 @@ def _parse_notes(obj: dict[str, object]) -> tuple[Note, ...]:
 def propose_arrangement(
     ir: MusicIR, goal: ArrangeGoal, llm: LLMClient, *, temperature: float = 0.0
 ) -> tuple[Note, ...]:
+    low = min(goal.tuning)
+    high = max(goal.tuning) + 22
     user = (
-        f"{_ir_summary(ir)}\n\nGoal: {goal.style}, {goal.tier} difficulty. "
-        "Produce the target note set now."
+        f"{_ir_summary(ir)}\n\nPlayable range on this tuning: MIDI {low}-{high} "
+        f"(the lowest playable note is {low}; never write a note below {low}). "
+        f"Keep at most 4 notes sounding at the same onset. "
+        f"Goal: {goal.style}, {goal.tier} difficulty. Produce the target note set now."
     )
     try:
         reply = llm.complete(

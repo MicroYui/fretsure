@@ -21,6 +21,7 @@ from fractions import Fraction
 from fretsure.ir import Note
 from fretsure.oracle.core import check_playability
 from fretsure.oracle.profiles import Profile
+from fretsure.solver.candidates import candidates
 from fretsure.solver.cost import config_base_cost, transition_cost
 from fretsure.solver.frames import FrameConfig
 from fretsure.solver.frames import frame_configs as _frame_configs
@@ -65,6 +66,11 @@ def solve_fingering(
         fnotes = by_onset[onset]
         pitches = tuple(sorted(fn.pitch for fn in fnotes))
         durs = {fn.pitch: fn.duration for fn in fnotes}
+        for pitch in pitches:
+            if not candidates(pitch, tuning, capo, profile.max_fret):
+                return Infeasible(
+                    onset, f"pitch {pitch} unreachable on this tuning/capo", (pitch,)
+                )
         cfgs = _frame_configs(pitches, tuning, capo, profile)
         if not cfgs:
             return Infeasible(onset, "no feasible frame config", pitches)
