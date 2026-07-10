@@ -47,5 +47,5 @@ def critique(ir: MusicIR, tab: Tab, llm: LLMClient) -> CriticScore:
             texture=_clamp01(obj.get("texture", overall)),
             notes=str(obj.get("notes", "")),
         )
-    except (ValueError, KeyError, TypeError):
+    except (ValueError, KeyError, TypeError, RuntimeError):
         return CriticScore(0.5, 0.5, 0.5, 0.5, "unparsed critic output; neutral score")

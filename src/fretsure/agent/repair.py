@@ -60,6 +60,7 @@ def repair(
 ) -> RepairResult:
     current = tuple(sorted(target, key=lambda n: (n.onset, n.pitch)))
     trace = Trace()
+    max_iters = max(0, max_iters)
     for iterations in range(max_iters + 1):
         solved, oracle = solve_and_check(current, tuning, capo, profile, tempo_bpm=tempo_bpm)
         verdict = oracle.verdict if oracle is not None else "INFEASIBLE"
@@ -75,10 +76,17 @@ def repair(
         if isinstance(solved, Tab):
             assert oracle is not None
             prompt_ctx: OracleResult | Infeasible = oracle
+            tab_for_prompt: Tab | None = solved
         else:
             prompt_ctx = solved
-        user = f"{diagnostics_to_prompt(prompt_ctx, current)}\n\n{edit_schema_prompt()}"
-        reply = llm.complete(system=_SYSTEM, user=user)
+            tab_for_prompt = None
+        diag = diagnostics_to_prompt(prompt_ctx, current, tab=tab_for_prompt)
+        user = f"{diag}\n\n{edit_schema_prompt()}"
+        try:
+            reply = llm.complete(system=_SYSTEM, user=user)
+        except Exception as exc:  # noqa: BLE001 - LLM transport failure: stop gracefully
+            trace.add("REASON", f"LLM call failed, stopping repair: {exc}")
+            return _terminal(solved, oracle, current, iterations, trace)
         trace.add("REASON", reply[:200])
 
         try:

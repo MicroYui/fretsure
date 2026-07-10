@@ -84,5 +84,5 @@ def propose_arrangement(
         if not any(n.voice == "melody" for n in notes):
             raise ValueError("proposal has no melody")
         return notes
-    except (ValueError, KeyError, TypeError):
+    except (ValueError, KeyError, TypeError, RuntimeError):
         return propose_fingerstyle(ir)  # honest deterministic fallback

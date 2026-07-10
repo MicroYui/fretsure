@@ -22,6 +22,13 @@ from fretsure.tab import Tab
 
 @dataclass(frozen=True)
 class ArrangeResult:
+    """Best-of-N arrange result.
+
+    NOTE: ``tab`` may be AMBER (borderline, NOT certified playable) when no
+    candidate reached GREEN within budget. Check ``oracle.verdict == "GREEN"``
+    before presenting a tab as provably playable.
+    """
+
     tab: Tab | None
     oracle: OracleResult | None
     fidelity: Fidelity | None
@@ -81,6 +88,7 @@ def arrange(
         return ArrangeResult(None, None, None, None, trace, n)
 
     best = max(scored, key=_rank)
+    trace.steps.extend(best.repair.trace.steps)  # surface the winner's repair reasoning
     trace.add(
         "SELECT",
         f"green={best.is_green} melody_recall={best.fidelity.melody_recall:.2f}",

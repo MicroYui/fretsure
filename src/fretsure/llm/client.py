@@ -2,6 +2,7 @@
 
 import json
 import os
+import time
 from typing import Any, Protocol
 
 
@@ -53,18 +54,25 @@ class ProxyLLM:
     def complete(
         self, *, system: str, user: str, max_tokens: int = 1024, temperature: float = 0.0
     ) -> str:
-        message = self._client.messages.create(
-            model=self._model,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-        return "".join(
-            getattr(block, "text", "")
-            for block in message.content
-            if getattr(block, "type", None) == "text"
-        )
+        last_exc: Exception | None = None
+        for attempt in range(3):  # transient proxy/network errors -> back off and retry
+            try:
+                message = self._client.messages.create(
+                    model=self._model,
+                    system=system,
+                    messages=[{"role": "user", "content": user}],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                return "".join(
+                    getattr(block, "text", "")
+                    for block in message.content
+                    if getattr(block, "type", None) == "text"
+                )
+            except Exception as exc:  # noqa: BLE001 - transient; retried then re-raised
+                last_exc = exc
+                time.sleep(0.5 * (attempt + 1))
+        raise RuntimeError(f"LLM call failed after retries: {last_exc}") from last_exc
 
 
 def extract_json(text: str) -> dict[str, Any]:
