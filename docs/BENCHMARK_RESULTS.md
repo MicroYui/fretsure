@@ -59,28 +59,54 @@ Pooling both seeds (n = 32) on `joint_success`:
 | − best-of-N | 0.750 | [0.58, 0.87] |
 
 **Repair survives pooling decisively** — its interval [0.18, 0.49] sits entirely
-below full's [0.72, 0.95] over 32 items. **Critic and best-of-N do not**: both
-overlap `full` heavily, i.e. no statistically distinguishable effect on this
-corpus. Best-of-N is the sharpest illustration of the unpaired-sampling caveat:
-it looked *negative* on seed 1 (−best-of-N 0.94 > full 0.81) and *strongly
-positive* on seed 2 (full 0.94 > −best-of-N 0.56). An effect whose **sign flips
-between seeds** is dominated by which independent draws each arm happened to get
-— it must be measured with a paired ablation (shared proposal pool, vary only
-the selection) before any claim is made.
+below full's [0.72, 0.95] over 32 items. Critic's interval overlaps `full` (no
+distinguishable effect). Best-of-N's *unpaired* arm is the sharpest illustration of
+the unpaired-sampling caveat: it looked *negative* on seed 1 (−best-of-N 0.94 >
+full 0.81) and *strongly positive* on seed 2 (full 0.94 > −best-of-N 0.56). An
+effect whose **sign flips between seeds** is dominated by which independent draws
+each arm happened to get — it must be measured with a paired ablation. That is
+exactly the next section.
 
-## The honest negatives (ablated components we keep public)
+## Paired best-of-N — resolving the confound
 
-- **Critic buys little or nothing.** It ties `full` on seed 1 and lifts it by one
-  item on seed 2; pooled, its interval overlaps `full`. The critic only re-ranks
-  among already-GREEN candidates, and on this corpus the top candidate is usually
-  already faithful, so taste rarely changes the outcome.
-- **Best-of-N has no determinable effect here.** Its sign flips across seeds (see
-  above), so on this corpus the honest statement is "confounded by unpaired
-  sampling," not "helps" or "hurts." The paired experiment is the fix.
+`fretsure-bench --paired` (and `bench.paired_best_of_n`) builds **one** proposal
+pool of N per item, then scores best-of-1 (the greedy temp-0 draw) vs best-of-N on
+that *same* pool — so the only thing that varies is selection breadth, not the LLM
+draws. Real LLM, N=2, both seeds:
 
-Reporting these keeps the project honest: only **repair** has so far earned its
-existence on the procedural corpus. Critic and best-of-N remain in the agent but
-are on notice — they must earn their keep on the harder (real-corpus) test sets.
+| seed | best-of-1 green | best-of-N green | Δ green | best-of-1 joint | best-of-N joint | Δ joint |
+|---|---|---|---|---|---|---|
+| 1 | 0.69 | 0.81 | **+0.125** | 0.56 | 0.75 | +0.19 |
+| 2 | 0.75 | 0.88 | **+0.125** | 0.75 | 0.88 | +0.125 |
+| pooled (n=32) | 0.719 | 0.844 | **+0.125** | 0.656 | 0.812 | +0.156 |
+
+Measured paired, best-of-N is a **consistent, positive** gain: +0.125 GREEN on
+*both* seeds and +0.13–0.19 joint. The sign no longer flips — so best-of-N *does*
+earn a modest keep; the unpaired "no effect / negative" reading was a sampling
+artifact, not the truth. Two independent seeds replicating the same +0.125 is
+itself the evidence (a proper paired significance test is McNemar on the discordant
+item pairs — a small future refinement; the code already exposes the per-arm
+counts needed to add it).
+
+Note one delta is *structural*, not empirical: because `is_green` is `_rank`'s top
+key and best-of-N selects over a superset that includes the greedy draw,
+**Δ green ≥ 0 always** (locked by `test_green_delta_is_never_negative_by_construction`).
+The joint delta is the informative one, since `_rank` optimizes green/melody/bass —
+not exactly the harmony-inclusive joint gate — so best-of-N can, in principle, trade
+a hair of harmony for greenness.
+
+## The honest scorecard (what each component earns)
+
+- **Repair — earns it decisively.** Pooled 0.31 → 0.88; non-overlapping intervals.
+- **Best-of-N — earns a modest keep**, once measured paired: +0.125 GREEN on both
+  seeds. The unpaired arm's sign-flip was the confound, not the verdict.
+- **Critic — still on notice.** Ties `full` on seed 1, +1 item on seed 2, interval
+  overlaps `full`. It only re-ranks among already-GREEN candidates, and on this easy
+  corpus the top candidate is usually already faithful. It must earn its keep on the
+  harder (real-corpus) test sets, or be cut.
+
+Keeping this scorecard public — including the one component that has *not* yet paid
+its way — is the anti-LARP discipline the project runs on.
 
 ## A "who checks the corpus" finding
 
@@ -105,11 +131,12 @@ checker") turned on the benchmark corpus.
   clears the noise floor at this scale.
 - The procedural corpus is deliberately *easy* (2-bar diatonic lead sheets) so the
   data flow and ablation are unambiguous. Harder inputs (longer pieces, real MIDI,
-  dense harmony) are the D-layer corpus work and are expected to move critic and
-  best-of-N off zero.
-- Ablation arms are unpaired across the stochastic LLM; large effects (repair)
-  survive this, small ones (best-of-N) are confounded by it — hence the paired
-  follow-up noted above.
+  dense harmony) are the D-layer corpus work and are expected to move critic off
+  zero too.
+- The **leave-one-out** arms are unpaired across the stochastic LLM; large effects
+  (repair) survive this, small ones (best-of-N) are confounded by it — which is why
+  best-of-N is measured with the paired ablation above. Critic still lacks a paired
+  measurement; giving it one is the obvious next step.
 - `joint_success` uses exact-onset matching for melody/bass; grid/DTW tolerance
   for real (human-timed) corpora is a later refinement (see `metrics/fidelity.py`).
 

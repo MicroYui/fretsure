@@ -55,3 +55,13 @@ def test_paired_best_of_n_forces_min_two() -> None:
         [_ITEM], ArrangeGoal(), lambda: FakeLLM(_SCRIPT), MEDIAN_HAND, n=1
     )
     assert res.n == 2
+
+
+def test_green_delta_is_never_negative_by_construction() -> None:
+    # best-of-N selects over a superset that includes the greedy draw, and is_green is
+    # _rank's top key, so best-of-N green >= best-of-1 green ALWAYS (structural).
+    res = paired_best_of_n(
+        [_ITEM], ArrangeGoal(), lambda: FakeLLM(_SCRIPT), MEDIAN_HAND, n=2
+    )
+    assert res.green_delta >= 0.0
+    assert res.best_of_n.green_rate >= res.best_of_1.green_rate

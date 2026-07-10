@@ -68,7 +68,8 @@ lead sheet / MIDI / IR
 | − best-of-N | 0.94 | 1.00 | [0.72, 0.99] |
 
 - **修复是承重能力**：去掉它，成功率 0.81→0.31、melody-F1 1.00→0.56，两个 Wilson 区间**不重叠**；两个 seed 合并（n=32）仍不重叠（full [0.72,0.95] vs −修复 [0.18,0.49]）。
-- **诚实的负结果**：critic 与完整 agent 打平/仅 +1 项、best-of-N **在两 seed 间符号翻转**（非配对采样混淆）——两者仍在 agent 里但**未挣得存在**，公开挂账，配对式消融列为后续。
+- **best-of-N 挣得一份薄利**：非配对臂符号在两 seed 间翻转（采样混淆），但**配对消融**（同一提议池，只变选择宽度）两 seed 一致 **+0.125 GREEN**——薄但真。
+- **critic 仍在观察名单**：与完整 agent 打平/仅 +1 项，区间与 full 重叠，尚未挣得存在，公开挂账。完整记分卡见 [`docs/BENCHMARK_RESULTS.md`](docs/BENCHMARK_RESULTS.md)。
 - 一个 **"谁检查语料"** 的发现：一次 `joint_success=0` 追到的是**语料标注 bug**（0 索引音级把 `C:deg5` 误写成 V），非 agent/度量的错。全部经过见 [`docs/BENCHMARK_RESULTS.md`](docs/BENCHMARK_RESULTS.md)。
 
 ## 状态
