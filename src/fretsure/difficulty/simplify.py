@@ -15,10 +15,11 @@ from fretsure.agent.edit_dsl import MelodyProtected, apply_edit, parse_edit
 from fretsure.agent.tools import diagnostics_to_prompt, edit_schema_prompt
 from fretsure.agent.trace import Trace
 from fretsure.difficulty.checker import TierResult, check_tier
-from fretsure.difficulty.tiers import Tier
+from fretsure.difficulty.tiers import Tier, snapshot_tier
 from fretsure.ir import Note
 from fretsure.llm.client import LLMClient, extract_json
 from fretsure.oracle.core import check_playability
+from fretsure.oracle.input import ensure_repair_iterations, ensure_solver_input
 from fretsure.solver.api import solve_fingering
 from fretsure.tab import Tab
 
@@ -65,9 +66,18 @@ def simplify_to_tier(
     tempo_bpm: float = 90.0,
     max_iters: int = 8,
 ) -> SimplifyResult:
+    tier = snapshot_tier(tier)
+    max_iters = ensure_repair_iterations(max_iters)
+    target, tuning, capo, profile, tempo_bpm, _beam = ensure_solver_input(
+        target,
+        tuning,
+        capo,
+        tier.profile,
+        tempo_bpm=tempo_bpm,
+    )
+    tier = snapshot_tier(tier, profile=profile)
     current = tuple(sorted(target, key=lambda n: (n.onset, n.pitch)))
     trace = Trace()
-    max_iters = max(0, max_iters)
     for iterations in range(max_iters + 1):
         solved = solve_fingering(current, tuning, capo, tier.profile, tempo_bpm=tempo_bpm)
         if isinstance(solved, Tab):

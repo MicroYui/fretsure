@@ -42,7 +42,8 @@ def diagnostics_to_prompt(
 ) -> str:
     if isinstance(result, Infeasible):
         head = (
-            f"The arrangement is INFEASIBLE at onset {result.onset}: {result.reason}. "
+            f"The arrangement is INFEASIBLE ({result.code.value}) at onset "
+            f"{result.onset}: {result.reason}. "
             f"Offending pitches: {result.pitches}."
         )
     elif result.verdict == "GREEN":

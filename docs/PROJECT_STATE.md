@@ -3,11 +3,11 @@
 > 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-16。
 
 ## 0. 现状一句话
-设计已锁定；**Plan 1–5 与 Pre-Plan 6 的未压缩 MusicXML-first 文件纵切已经实现并独立闭门**，当前是一套可运行的后端研究原型。此提交的版本边界是 package=`0.1.0`、playability=`oracle@0.1.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.1.0`、profile=`median@0.1`。`.mxl`、Oracle 0.2 公共信任门、Web/API/MCP、MIDI 与音频尚未进入本提交。
+设计已锁定；**Plan 1–5、Pre-Plan 6 的未压缩 MusicXML-first 文件纵切与 Oracle 0.2 软件信任门已经实现并各自闭门**，当前是一套可运行的后端研究原型。此提交的版本边界是 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.1.0`、profile=`median@0.1`。安全 `.mxl`、Web/API/MCP、MIDI 与音频尚未进入本提交。
 - **Plan 1**（`plan-1-core-oracle`）：可弹性 oracle + 自验证台。终审 Ready。
 - **Plan 2**（`plan-2-solver-m0`）：beam 求解器（永不返回 RED）+ M0。复核 Ready。
 - **Plan 3**（`plan-3-agent-loop`）：oracle 当环境、LLM 当策略——修复脊柱 + 提议器 + critic + best-of-N。真 LLM 端到端。Ready-with-minor（已修）。
-- **Plan 4**（`plan-4-benchmark`）：checker 打分 benchmark——程序生成器 + 忠实度 DTW + pass^k/Wilson + leave-one-out 消融 + checker-vs-judge + baselines + `fretsure-bench` CLI。Ready-with-minor（已修）。
+- **Plan 4**（`plan-4-benchmark`）：checker 打分 benchmark——程序生成器 + `fidelity@0.2.0` exact-onset melody/bass 与 chord-segment harmony Jaccard + pass^k/Wilson + leave-one-out 消融 + checker-vs-judge + baselines + `fretsure-bench` CLI。Ready-with-minor（已修）。
 - **Plan 5**（`plan-5-difficulty-accompaniment`）：**可验证难度简化**（tier/check_tier 门/measured_tier/simplify_to_tier，真 LLM 简化到 beginner 档保旋律）+ **伴奏**（声位 + arpeggio/strum 过 oracle）。独立审查 Ready-with-minor（I1/I2/M1/M2/M3/M5 已修）。
 - **收敛打磨（2026-07-10，`consolidation`→已 ff 并入 `master`）**：
   - `fretsure-demo` 一条命令端到端 demo（离线确定性；`--llm` 用真代理）。
@@ -22,11 +22,17 @@
   - 全曲固定的 `divisions` 与 `duration` 按 MusicXML 4.0 的 decimal 类型用 bounded XSD-decimal grammar + exact `Fraction` 处理；`divisions` 变化 typed fail-closed。raw note/harmony event timeline 是时间权威，music21 只做逐事件语义交叉验证。非法 exponent/分数/underscore、过长 numeric/time token、浮点归一化失真、note attack/release、standalone tempo change、stacked harmony 与含糊 direction words 均已 fail-closed 回归。
   - producer artifact/provenance gate 已闭合：`tests/fixtures/producers/provenance.json` 冻结 music21 10.5.0 与 musicxml 1.6.1 两个未经手改的 library/toolkit 正例，以及 MuseScore Studio 4.7.4 的原样负例和 exporter/version/hash/license。MuseScore 因省略 key mode 稳定 `UNSUPPORTED_KEY`；当前没有常见 notation application 的正兼容证据，该兼容性仍 open，不能从 provenance gate 推导。
   - `.mxl` 仍返回 `COMPRESSED_MXL_UNSUPPORTED`；它属于后继独立 safe-container 计划。
+- **Oracle 0.2 软件信任门（DONE）**：公共 Tab/profile/solver/MusicIR/tier/benchmark/gold/statistics 边界统一 typed fail-closed；非法输入不伪装成判决。validation/use 使用 detached snapshot，Tab serializer 与标准 JSON trace 在分配/编码前受资源门保护，直接 agent 循环与 pipeline 共用固定上限。MusicIR 限 20,000 notes + 20,000 chords、10 Mi 文本和 256-bit Fraction；benchmark 控制在建 corpus/调用 factory 前受 signed-63 seed、items/bars/乘积门保护。每个有效判决绑定 checker、profile version、profile canonical SHA-256 与 `tab-input@0.2.0`。
+  - active sounding notes 进入全部左手几何；同弦半开区间 overlap 为 `STRING_SUSTAIN_CONFLICT`；换把使用 release-before-attack 事件流与连续 reachable hand-centre interval，实际消费 `reach_mm`。
+  - solver 不静默 clamp beam/覆盖重复 onset+pitch；12,000,000 weighted-work 门在高分支枚举前拒绝，有限 finalist 重建后仍须通过完整 oracle。`Infeasible` 是 bounded search 结果，不宣称数学无解。
+  - Trace 在 `json.dumps` 前精确计算含 escaping 的 compact UTF-8 字节数并与 encoder 结果交叉核对；tier 控制先深快照，横按 overlap 用保持诊断语义的 `O(6n)` 反向扫描。
+  - gold 文件/内存输入具有累计 bytes/rows/notes/checker-work/lines/JSON-nodes 上限、深快照与 digest provenance；zero-GREEN false-accept 结果为 `status="no_green"` 且 rate/bound=`None`，退化 κ 与空 pass^k 同样显式 undefined。
+  - 真人 gold/calibration 不阻塞软件主线，但继续阻塞现实世界 GREEN 误接受率、profile/tier→真人映射、AMBER 经验带宽、真人 musicality 与更强对外保证。
 - **诚实记分卡**：历史 repair 强正信号；best-of-N 薄利；**critic 未挣得（观察/待砍）**。这些旧数来自 legacy/unversioned harmony metric，不是 `fidelity@0.2.0` benchmark 基线。
-- **当前质量门**：离线 `516 passed, 6 deselected`，本地代理全量 `522 passed`；`522 collected`。ruff、mypy(strict, 59 source files)、`uv lock --check` 与 `git diff --check` 全绿；wheel/sdist、clean core/no-extra typed failure、clean `[musicxml]` 安装、真实 producer CLI 双跑/6-row JSONL 与 benchmark stamp smoke 全绿。6 项 integration 依赖本地 LLM 代理，本次已实跑通过。
+- **当前质量门**：离线 `1092 passed, 6 deselected`，本地代理全量 `1098 passed`；`1098 collected`。ruff、mypy(strict, 60 source files)、`uv lock --check` 与 `git diff --check` 全绿；`fretsure_oracle-0.2.0` wheel/sdist 从最终树重建，sdist 160-entry allowlist 审计排除了本地配置与缓存；clean core/no-extra typed `MISSING_DEPENDENCY`、clean `[musicxml]` 安装、真实 producer CLI 双跑/6-row JSONL 与 stub benchmark smoke 全绿。stdout、JSONL metadata row 与 benchmark JSON 均盖 `oracle@0.2.0`、`fidelity@0.2.0`、`tab-input@0.2.0`、`median@0.1` 及 profile SHA-256。
 - **分支**：plan-1→2→3→4→5→`consolidation` 已**全部 ff 并入 `master`（trunk）**（trunk 原只有 spec 脚手架；现含完整后端）。
-- **下一步已冻结**：先独立实现、验收并提交 Oracle 0.2 公共输入/判决/统计信任门；随后才进入安全 `.mxl` container reader。每项闭门并提交后才开启下一项。
-- **已知点**：solve_fingering 长片段仍偏慢（快路径已缓解）；tier/忠实度/难度参数占位待 design partner 校准；leave-one-out 各臂对随机 LLM **非配对**（大效应 repair 不受影响；best-of-N/critic 已另有**配对**测量，见 RESULTS）。
+- **下一步已冻结**：Oracle 0.2 独立提交后进入安全 `.mxl` container reader，把 importer 从 `musicxml@0.1.0` 升到 `musicxml@0.2.0`；它闭门并提交后才进入 Plan 6A。
+- **已知点**：solve_fingering 是资源有界、非完备搜索；tier/忠实度/难度参数占位待 design partner 校准；leave-one-out 各臂对随机 LLM **非配对**（大效应 repair 不受影响；best-of-N/critic 已另有**配对**测量，见 RESULTS）。
 
 ## 1. 这是什么
 一个 agent，把一首歌的**音乐内容**（符号：MusicXML/MIDI/lead sheet 为保证路径；mp3 为 best-effort 前端）编配成一份在指定难度/调弦/变调夹下**人手可证明弹得出来**的吉他谱：
@@ -74,6 +80,6 @@
 
 ## 7. 下一步（用户说"继续"时）
 - 不重做 Plan 1–5 或 MusicXML-first 纵切。
-- 下一项是 `docs/superpowers/plans/2026-07-13-oracle-0.2-trust-gate.md`；在独立 Git tree 中重放公共 Tab/profile/solver/gold/statistics 信任门，完成全部验收并提交。
-- Oracle 0.2 提交全绿后，才进入 `2026-07-13-safe-mxl-container.md`，把 importer 从 `musicxml@0.1.0` 升到 `musicxml@0.2.0`。
+- Oracle 0.2 软件信任门已经完成；不要重做。
+- 下一项是安全 `.mxl` container reader；它须保持 root MusicXML 语义子集不变，并把 importer 单独升为 `musicxml@0.2.0`。
 - 真人 gold/calibration 可并行，不阻塞上述软件实现；它仍阻塞现实世界 GREEN 误接受率、profile/tier 校准与“真实琴手一定能弹”的强主张。

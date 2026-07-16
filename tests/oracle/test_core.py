@@ -1,11 +1,14 @@
 from fractions import Fraction as F
 
+import pytest
+
 from fretsure.oracle.core import (
     CHECKER_VERSION,
     OracleResult,
     check_playability,
     passes_optimistic,
 )
+from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION, OracleInputError
 from fretsure.oracle.profiles import MEDIAN_HAND
 from fretsure.tab import Tab, TabNote
 
@@ -42,6 +45,8 @@ def test_version_stamp() -> None:
     assert isinstance(r, OracleResult)
     assert r.checker_version == CHECKER_VERSION
     assert r.profile_version == MEDIAN_HAND.version
+    assert r.profile_fingerprint == MEDIAN_HAND.fingerprint
+    assert r.input_schema_version == ORACLE_INPUT_SCHEMA_VERSION
 
 
 def test_deterministic() -> None:
@@ -83,19 +88,15 @@ def test_capo_past_neck_end_is_red() -> None:
     assert any(d.violation_type == "RANGE" for d in r.diagnostics)
 
 
-def test_out_of_domain_finger_is_red() -> None:
-    # left_finger 5 does not exist; must not inflate d_max into a false GREEN.
-    # fret1<->fret4 span is ~100.8mm > pessimistic d_max(1,4)=90, unreachable.
+def test_out_of_domain_finger_is_invalid_not_a_playability_verdict() -> None:
+    # left_finger 5 is outside the public Tab schema, so it must not inflate
+    # d_max or be counted as a model-relative RED in a confusion matrix.
     t = _t([TabNote(F(0), F(1), 0, 1, 1, "p"), TabNote(F(0), F(1), 1, 4, 5, "i")])
-    r = check_playability(t, MEDIAN_HAND)
-    assert r.verdict == "RED"
-    assert any(d.violation_type == "MALFORMED_FINGERING" for d in r.diagnostics)
+    with pytest.raises(OracleInputError, match="LEFT_FINGER"):
+        check_playability(t, MEDIAN_HAND)
 
 
-def test_invalid_right_finger_is_red_without_crashing() -> None:
+def test_invalid_right_finger_is_typed_invalid_without_crashing() -> None:
     t = _t([TabNote(F(0), F(1), 0, 3, 1, "z")])  # 'z' is not a right finger
-    r = check_playability(t, MEDIAN_HAND)
-    assert r.verdict == "RED"
-    assert any(d.violation_type == "MALFORMED_FINGERING" for d in r.diagnostics)
-
-
+    with pytest.raises(OracleInputError, match="RIGHT_FINGER"):
+        check_playability(t, MEDIAN_HAND)

@@ -1,19 +1,21 @@
-"""Three-state playability verdict.
+"""Three-state, model-relative playability verdict.
 
-Soundness by construction:
-- RED   = fails even the *optimistic* profile (provably unplayable),
-- GREEN = passes even the *pessimistic* profile (provably playable, err safe),
-- AMBER = in between (send to repair / human; never a certified output).
+Direction inside the versioned model:
+- RED   = fails even the *optimistic* profile,
+- GREEN = passes even the *pessimistic* profile,
+- AMBER = in between (send to repair / human; never a GREEN-certified output).
 
 The verdict never relaxes the GREEN threshold; uncertainty is absorbed by AMBER.
 Diagnostics are computed on the median profile for localization, and the whole
-result is deterministic and version-stamped.
+result is deterministic and version-stamped. Real-player error rates require a
+separate human-played gold set.
 """
 
 from dataclasses import dataclass
 from fractions import Fraction
 
 from fretsure.oracle.diagnostics import Diagnostic, Verdict
+from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION, ensure_oracle_input
 from fretsure.oracle.predicates import (
     check_barre,
     check_finger_count,
@@ -23,13 +25,14 @@ from fretsure.oracle.predicates import (
     check_range,
     check_right_hand,
     check_shift_speed,
+    check_string_sustain,
     check_sustain,
     check_wellformed,
 )
 from fretsure.oracle.profiles import Profile, optimistic, pessimistic
 from fretsure.tab import Tab
 
-CHECKER_VERSION = "oracle@0.1.0"
+CHECKER_VERSION = "oracle@0.2.0"
 
 
 @dataclass(frozen=True)
@@ -38,6 +41,8 @@ class OracleResult:
     diagnostics: tuple[Diagnostic, ...]
     checker_version: str
     profile_version: str
+    profile_fingerprint: str
+    input_schema_version: str
 
 
 def _sort_key(d: Diagnostic) -> tuple[int, Fraction, str, tuple[int, ...]]:
@@ -56,6 +61,7 @@ def _all_diagnostics(
     diags += check_fret_span(tab, profile, beats_per_bar=beats_per_bar)
     diags += check_barre(tab, profile, beats_per_bar=beats_per_bar)
     diags += check_shift_speed(tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar)
+    diags += check_string_sustain(tab, profile, beats_per_bar=beats_per_bar)
     diags += check_sustain(tab, profile, beats_per_bar=beats_per_bar)
     diags += check_right_hand(tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar)
     return sorted(diags, key=_sort_key)
@@ -64,6 +70,12 @@ def _all_diagnostics(
 def check_playability(
     tab: Tab, profile: Profile, *, tempo_bpm: float = 90.0, beats_per_bar: int = 4
 ) -> OracleResult:
+    tab, profile, tempo_bpm, beats_per_bar = ensure_oracle_input(
+        tab,
+        profile,
+        tempo_bpm=tempo_bpm,
+        beats_per_bar=beats_per_bar,
+    )
     fails_optimistic = bool(
         _all_diagnostics(
             tab, optimistic(profile), tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar
@@ -86,7 +98,12 @@ def check_playability(
         tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar
     )
     return OracleResult(
-        verdict, tuple(diagnostics), CHECKER_VERSION, profile.version
+        verdict=verdict,
+        diagnostics=tuple(diagnostics),
+        checker_version=CHECKER_VERSION,
+        profile_version=profile.version,
+        profile_fingerprint=profile.fingerprint,
+        input_schema_version=ORACLE_INPUT_SCHEMA_VERSION,
     )
 
 
@@ -114,6 +131,8 @@ def _any_violation(
         return True
     if check_shift_speed(tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar):
         return True
+    if check_string_sustain(tab, profile, beats_per_bar=beats_per_bar):
+        return True
     return bool(check_sustain(tab, profile, beats_per_bar=beats_per_bar))
 
 
@@ -123,6 +142,12 @@ def passes_optimistic(
     """True iff the tab is NOT RED (passes the optimistic profile). A fast path for
     the solver's inner loop: one profile evaluation with first-violation exit,
     equivalent to ``check_playability(...).verdict != "RED"``."""
+    tab, profile, tempo_bpm, beats_per_bar = ensure_oracle_input(
+        tab,
+        profile,
+        tempo_bpm=tempo_bpm,
+        beats_per_bar=beats_per_bar,
+    )
     return not _any_violation(
         tab, optimistic(profile), tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar
     )

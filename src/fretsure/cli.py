@@ -16,13 +16,13 @@ from fretsure.importers import (
 from fretsure.ir import MusicIR
 from fretsure.llm.client import ConstantLLM, LLMClient
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION, FaithfulnessGate
-from fretsure.pipeline import (
-    MAX_PIPELINE_TEMPO_BPM,
-    MIN_PIPELINE_TEMPO_BPM,
-    PipelineOptions,
-    PipelineResult,
-    run_pipeline,
+from fretsure.oracle.input import (
+    MAX_TEMPO_BPM as MAX_PIPELINE_TEMPO_BPM,
 )
+from fretsure.oracle.input import (
+    MIN_TEMPO_BPM as MIN_PIPELINE_TEMPO_BPM,
+)
+from fretsure.pipeline import PipelineOptions, PipelineResult, run_pipeline
 
 EXIT_OK = 0
 EXIT_IMPORT_ERROR = 2
@@ -180,6 +180,8 @@ def _oracle_lines(result: PipelineResult) -> list[str]:
     return [
         f"  {oracle.verdict} — {meaning}",
         f"  checker {oracle.checker_version}, profile {oracle.profile_version}",
+        f"  profile SHA-256 {oracle.profile_fingerprint}",
+        f"  input schema {oracle.input_schema_version}",
     ]
 
 

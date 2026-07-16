@@ -1,7 +1,7 @@
 # Fretsure —— 可证明可弹的吉他谱智能体（设计文档 / Design Spec）
 
 > 产品名 **Fretsure**（fret + ensure，已定）。备选 PlayProof / Fretwright 仅存档。
-> 状态（2026-07-16）：设计已锁定；Plan 1–5 与 `musicxml@0.1.0` 的受限未压缩文件纵切已实现。当前独立质量门为离线 `516 passed, 6 deselected`、本地代理全量 `522 passed / 522 collected`，ruff、strict mypy、lock/diff 全绿；Oracle 0.2 与安全 `.mxl` 是后继独立计划。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+> 状态（2026-07-16）：设计已锁定；Plan 1–5、`musicxml@0.1.0` 的受限未压缩文件纵切与 Oracle 0.2 软件信任门已实现。当前组合树为 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.1.0`；收集 `1098` 项测试（离线 `1092 passed, 6 deselected`，本地代理全量 `1098 passed`）。安全 `.mxl` 是下一独立计划。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
 
 ---
 
@@ -83,13 +83,13 @@
 │ (符号=保证,  │   │ (统一表示)│   │ (选音/声位/  │   │ (弦,品,左手指,  │   │ Oracle       │
 │  音频=尽力)  │   │           │   │  织体/难度)  │   │  右手指)         │   │ (硬门+定位)  │
 └──────────────┘   └───────────┘   └──────────────┘   └──────────────────┘   └──────┬──────┘
-                                          ↑                                          │ FAIL: 定位到帧/拍+违反项
+                                          ↑                                          │ RED/AMBER: 定位到帧/拍+违反项
                                           │                                          ▼
                                    ┌──────┴───────────────────────────────────┐  ┌────────────┐
                                    │ 修复回路 Repair (verifier-guided search)  │← │  否决      │
                                    │ 换声位/换把位/掉内声部/简化,保旋律&低音   │  └────────────┘
                                    └──────────────────────────────────────────┘
-                                          │ PASS
+                                          │ GREEN
                                           ▼
 ┌──────────────────────┐   ┌──────────────────────────────┐   ┌────────────────────────────┐
 │ 难度模型 Difficulty  │   │ 渲染/导出 Render/Export      │   │ Benchmark（moat/主角）     │
@@ -119,21 +119,34 @@
 ### 5.2 音乐 IR（Music Intermediate Representation）
 统一、可版本化的中间表示,后续所有组件基于它工作:
 ```python
-@dataclass
+@dataclass(frozen=True)
 class Note:      # 一个音符
     onset: Fraction        # 以拍为单位的起始
     duration: Fraction
     pitch: int             # MIDI number
     voice: Literal["melody", "bass", "harmony"]  # 声部角色（关键:决定修复时哪些必须保）
-@dataclass
-class Chord:      # 和弦标注
-    onset: Fraction; symbol: str; pitch_classes: set[int]
-@dataclass
+@dataclass(frozen=True)
+class ChordSymbol:      # 和弦标注
+    onset: Fraction
+    symbol: str
+    pitch_classes: frozenset[int]
+    root_pc: int
+@dataclass(frozen=True)
+class Meta:
+    key: str
+    time_sig: tuple[int, int]
+    tempo_bpm: float
+    source: str
+    title: str
+    license: str
+    duration_beats: Fraction | None = None
+@dataclass(frozen=True)
 class MusicIR:
-    notes: list[Note]; chords: list[Chord]
-    meta: {key, time_sig, tempo_bpm, source, ...}
+    notes: tuple[Note, ...]
+    chords: tuple[ChordSymbol, ...]
+    meta: Meta
 ```
-- **不变量**:每个 Note 都带 voice 角色;melody = 必须保留的最高声部;bass = 尽量保;harmony = 可增删。
+- **不变量**:每个 Note 都带 voice 角色;melody = 必须保留的最高声部;bass = 尽量保;harmony = 可增删。公共入口只接受上述 exact frozen dataclass/tuple/frozenset 形状，并在使用前做有界深快照（20,000 notes + 20,000 chords、10 Mi 文本、256-bit Fraction、tempo 1..1000、拍号分子/分母 1..32 / 1..64）。
 
 ### 5.3 LLM 编配提议器 Arranger（LLM = proposer,不可信）
 - **职责**:给定 IR + 目标（指弹/伴奏、难度 tier、调弦、变调夹、风格）,**提议**一版吉他编配:
@@ -158,7 +171,8 @@ class MusicIR:
 ### 5.5 可弹性 Oracle（★核心 IP，硬门 + 定位）
 
 > **权威详版见 §14 Part A.7–A.8**：毫米几何模型（用品数跨度是错的）、GREEN/AMBER/RED 三态、语义化版本 profile、"谁来检查检查器"的验证台。下为约束概览。
-返回 `PASS` 或 `FAIL(frame, beat, violated_constraint, notes)`。约束分三类,**全部参数化**（hand_span、skill tier、tuning、capo、tempo）:
+> **当前实现边界（Oracle 0.2）**：`tab-input@0.2.0` 在任何 predicate 前严格验证六弦 Tab、profile、tempo 与资源域；有效判决盖 `oracle@0.2.0`、profile version + canonical SHA-256 与 input schema。全部 active sounding notes 参与左手几何；同弦半开 sustain overlap 单独拒绝；换把用 release-before-attack 事件流传播连续 reachable hand-centre interval。solver 是有明确 work envelope 的 bounded search，返回 Tab 仍须过完整 oracle；`Infeasible` 不证明数学无解。
+返回 `GREEN` / `AMBER` / `RED` 与定位化 diagnostics（frame、beat、violated constraint、notes）。约束分三类,**全部参数化**（hand_span、skill tier、tuning、capo、tempo）:
 
 **A. 左手几何（fretting）**
 - `range`:每个音在该弦音域内 `open_pitch(string,tuning,capo) ≤ pitch ≤ open_pitch+MAX_FRET`。
@@ -177,7 +191,7 @@ class MusicIR:
 
 **D. 难度 tier 约束**(见 §5.7)叠加为额外硬约束。
 
-> **oracle 只判"物理可弹 + 忠实约束",不判"好听"。** 这是保证的边界,写进 UI。
+> **oracle 只判版本化模型内的可弹性，不判忠实或好听。** `fidelity@0.2.0` 是独立来源忠实度门；GREEN 可以同时 fidelity FAIL。品味仍是另一条、尚未获真人校准的轴。
 
 ### 5.6 修复回路 Repair（★真正的护城河，verifier-guided search）
 
@@ -370,7 +384,7 @@ class MusicIR:
 - **自标注(无人)**:可弹性(oracle 即 label,合法因为是物理谓词);忠实度(对符号源精确计算,程序生成输入下完美)。
 - **需人(有界,建一次复用)**:musicality(~40 条×3 人 MOS + 盲 A/B);难度校准(专家排 ~150 条一次,拟合 learn-to-rank);**checker 金标集(~300 条分层,一名琴手逐条实弹 ~2–3 小时)**。**总常备人力 ≈ 每次大改 <1 天。**
 
-**A.5 忠实度指标(公式)**:按 voice-role 用 DTW((onset,pitch))对齐。
+**A.5 忠实度指标（目标规格）**：目标按 voice-role 用 DTW((onset,pitch)) 对齐；DTW 与 1/16 网格宽松匹配尚未实现。当前 `fidelity@0.2.0` 使用 melody/bass exact-onset 与 active chord-segment harmony Jaccard，详见 `docs/BENCHMARK_RESULTS.md`。
 - **Melody-F1** = recall 与 precision 的调和平均,匹配需 MIDI 音高精确 + onset 在 1/16 网格内;另报八度等价宽松版 + 音高误差直方图。
 - **Bass-root-accuracy** = 强拍上"编配最低发声 pitch-class = 源和弦根/记谱低音"的比例。
 - **Harmony-Jaccard** = 逐和弦段"编配 pitch-class 集 vs 源和弦 pitch-class 集"的平均 Jaccard。
@@ -383,13 +397,14 @@ class MusicIR:
 - **毫米建颈**:`x_f = L·(1−2^(−f/12))`(L≈648mm 古典/643mm 钢弦)。**span 谓词必须用毫米——用品数是显然错的,好琴手一眼看穿。**
 - tab 表示为 `(onset,dur,string,fret,left_finger∈{0..4},right_finger∈{p,i,m,a})`;在**语义化版本、区间取值的 profile**(手跨 H/触及/换把速度 v_shift/右手速率 r_max/弦长/调弦/变调夹)上出**三态**:GREEN 可证可弹(悲观 profile 下仍留边界 ε,accept 方向 sound,误接受≈0)/ RED 可证弹不了(乐观 profile 下仍违反)/ AMBER 边缘(送修复或人审,绝不作认证输出)。
 - **硬谓词(可行性门,与难度软分严格分离)**:①range/tuning;②一指一品(横按=同指同品多弦);③手指-品单调/无不可能跨弦;④**span=几何可行性 CSP**(存在指尖指派使两两欧氏距 ≤ d_max(i,j,H),触及随把位压缩);⑤横按可行;⑥**按速换把**(手心位移 Δx/Δt ≤ v_shift + 稳定时间,含 guide-finger 缓解);⑦右手(同时拨弦 ≤ 可用指;单指重复 ≤ r_max);⑧sustain(需保持的音,其手指被别处需要=FAIL)。
-- **输出=布尔 + 定位化类型诊断** `{measure,beat,violation_type,offending_notes,超几毫米/毫秒,suggested_relaxations:[drop_5th,octave_down_bass,shift_to_pos_5]}`。**这份诊断=agent 的环境信号(让修复定点、非盲搜)**。checker 暴露为可调用工具;基准跑 3 个手围百分位报敏感性。
+- **输出=GREEN/AMBER/RED 三态 + 定位化类型诊断** `{measure,beat,violation_type,offending_notes,超几毫米/毫秒,suggested_relaxations:[drop_5th,octave_down_bass,shift_to_pos_5]}`。**这份诊断=agent 的环境信号(让修复定点、非盲搜)**。checker 暴露为可调用工具;基准跑 3 个手围百分位报敏感性。
 - **soundness vs completeness**:**优先 GREEN 的 soundness(误接受≈0)**。承诺是"我认证的就能弹",不是"我找出所有能弹的"。**用 AMBER 带宽吸收不确定,绝不放松 GREEN 阈值。**
+- **Oracle 0.2 已实现修订**：非法公共 Tab/profile/tempo 先 typed fail，不获得三态 verdict；active sustain 进入 finger-count/monotonic/barre/span，换把使用连续 reachable interval 并实际消费 `reach_mm`。solver 的 bounded/non-complete search 有 12,000,000 weighted-work 上限，有限 finalist 重建后必须通过完整 oracle。
 
 **A.8 谁来检查检查器(验证 oracle 本身,方法学核心)**：
 1. **无标签自检**:property-based(旗舰不变量 **monotone-in-resources**:手更大/更慢/更低把位/r_max 更高,只能 FAIL→PASS 绝不反向)、metamorphic(变速单调、音高对 music21、变调/移调几何不变、静态谓词时间反演不变)、mutation(注入故障看测试杀不杀,报 kill rate)、N-version(每谓词写两遍:慢穷举 spec + 快生产版,差分 fuzz)。
 2. **对真实语料差分(头牌信任数)**:DadaGP+GuitarSet 过 checker;**GuitarSet 上每个 RED=bug 单**(人真弹过);再与 Sayegh DP / Radicioni CSP / Fretting-Transformer 三角验证。
-3. **人手实弹金标集(~300 条,~2–3h 一次)**:含对抗近失样本;带**实测手围**的琴手逐条弹;算 oracle 误接受/误拒 + κ;**κ 也定义 AMBER 带宽(诚实量化"可弹"本身模糊)**。
+3. **人手实弹金标集（规模由 pilot/功效决定）**：含对抗近失样本；带实测手围的琴手在规定 tempo 下尝试展示的精确指法。当前尚未采集；没有第二 rater/retest 就不能报 κ，当前固定 AMBER transform 也不能冒充由 κ 学得。
 4. **先校准后留出**:拟合 d_max/v_shift 使 GREEN⊆真弹过、RED⊆全弹不了;人标 train/dev/**test** 切分,test 金标绝不用于校准。
 5. **信任指标=GREEN 上的误接受率**,报 Clopper–Pearson 单侧上界(如 "0/120 已知不可弹被认证 GREEN;97.5% 上界 3%")+ 混淆矩阵 + Wilson CI。
 
@@ -401,7 +416,7 @@ class MusicIR:
 
 **A.12 Baselines**:B1 前沿 LLM 原始(直接要 tab,"到底需不需要 agent"对照);B2 纯确定性求解器(Sayegh 最优路径/Viterbi,无编配步,纯求解上限);B3 学术(SMC-2024 MIDI→tab;TART);B4 商用往返(MusicXML→GuitarPro 自动 tab)。
 
-**A.13 一条命令复现**:`fretsure-bench --seed S` 重建 语料(下载脚本)、程序测试集、oracle 配置+3 预设(hashed)、全指标+CI、checker 验证报告、checker-vs-judge 实验。每个判决盖 `checker_version+profile_version`。
+**A.13 一条命令复现**:`fretsure-bench --seed S` 重建语料与程序测试集；当前 aggregate JSON/trace 盖 checker、fidelity、profile version + SHA-256 与 input schema。完整五层下载/CI/checker-vs-judge runner 与逐 item 配对原始表仍是后续，不得把目标写成现状。
 
 **A.14 构建顺序(第 4 步前下游一律不可信)**:1 归一器+datasheet;2 程序生成器(主测试层);3 oracle 纯函数+类型诊断+3 预设;4 **oracle 验证台(A.8),混淆矩阵领跑排期**;5 忠实度打分;6 难度打分(150 条 learn-to-rank);7 agent(Part B);8 baselines+消融同一 runner;9 统计模块;10 checker-vs-judge;11 复现包。
 

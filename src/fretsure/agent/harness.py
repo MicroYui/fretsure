@@ -17,10 +17,16 @@ from fretsure.agent.arranger import ArrangeGoal, propose_arrangement
 from fretsure.agent.critic import CriticScore, critique
 from fretsure.agent.repair import RepairResult, repair
 from fretsure.agent.trace import Trace
-from fretsure.ir import MusicIR
+from fretsure.ir import MusicIR, snapshot_music_ir
 from fretsure.llm.client import LLMClient
 from fretsure.metrics.fidelity import Fidelity, fidelity
 from fretsure.oracle.core import OracleResult
+from fretsure.oracle.input import (
+    ensure_boolean_control,
+    ensure_candidate_count,
+    ensure_repair_iterations,
+    ensure_solver_domain,
+)
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 from fretsure.tab import Tab
 
@@ -89,7 +95,26 @@ def arrange_pool(
     use_critic: bool = True,
 ) -> ArrangePool:
     """Build the ordered pool of N repaired candidates (no selection)."""
-    n = max(0, n)  # n<=0 -> empty pool (no proposals, no LLM calls), matching best-of-0
+    ir = snapshot_music_ir(ir)
+    n = ensure_candidate_count(n)
+    max_iters = ensure_repair_iterations(max_iters)
+    use_critic = ensure_boolean_control(use_critic, path="use_critic")
+    notes, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
+        ir.notes,
+        goal.tuning,
+        goal.capo,
+        profile,
+        tempo_bpm=goal.tempo_bpm,
+    )
+    ir = MusicIR(notes, tuple(ir.chords), ir.meta)
+    goal = ArrangeGoal(
+        style=goal.style,
+        tier=goal.tier,
+        tuning=tuning,
+        capo=capo,
+        tempo_bpm=tempo_bpm,
+        extras=goal.extras,
+    )
     trace = Trace()
     slots: list[_Candidate | None] = []
     for i in range(n):
@@ -99,6 +124,7 @@ def arrange_pool(
             goal,
             llm,
             temperature=temperature,
+            profile=profile,
         )
         trace.add("PROPOSE", f"candidate {i}", i=i, temperature=temperature)
         rr = repair(
@@ -123,7 +149,9 @@ def best_of_k(pool: ArrangePool, k: int, *, use_critic: bool = True) -> ArrangeR
     ``use_critic=False`` selects while ignoring the critic term — used by the paired
     critic ablation to vary only the ranking objective over a fixed pool.
     """
-    k = max(0, min(k, pool.n))  # k=0 (empty pool) -> no-candidate result, candidates_tried=0
+    pool_n = ensure_candidate_count(pool.n, path="pool.n")
+    k = min(ensure_candidate_count(k, path="k"), pool_n)
+    use_critic = ensure_boolean_control(use_critic, path="use_critic")
     scored = [c for c in pool.candidates[:k] if c is not None]
     trace = Trace()
     trace.steps.extend(pool.trace.steps)

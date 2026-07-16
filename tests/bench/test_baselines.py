@@ -23,13 +23,21 @@ _RAW_RED = (
 
 
 def test_raw_llm_baseline_can_produce_unplayable() -> None:
-    tab = baseline_raw_llm(_IR, ArrangeGoal(), FakeLLM([_RAW_RED]))
+    tab = baseline_raw_llm(_IR, ArrangeGoal(), FakeLLM([_RAW_RED]), MEDIAN_HAND)
     assert isinstance(tab, Tab)
     assert check_playability(tab, MEDIAN_HAND).verdict == "RED"  # not verified/repaired
 
 
 def test_raw_llm_baseline_bad_output_is_none() -> None:
-    assert baseline_raw_llm(_IR, ArrangeGoal(), FakeLLM(["not a tab"])) is None
+    assert (
+        baseline_raw_llm(
+            _IR,
+            ArrangeGoal(),
+            FakeLLM(["not a tab"]),
+            MEDIAN_HAND,
+        )
+        is None
+    )
 
 
 def test_pure_solver_baseline_never_red() -> None:

@@ -36,6 +36,8 @@ def run_m0(
         ir,
         tuning,
         capo,
+        profile=profile,
+        tempo_bpm=tempo_bpm,
     )
     solved = solve_fingering(notes, tuning, capo, profile, tempo_bpm=tempo_bpm)
     if isinstance(solved, Infeasible):

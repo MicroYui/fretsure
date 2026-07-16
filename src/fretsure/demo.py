@@ -97,6 +97,8 @@ def render_demo(demo: DemoResult, ir: MusicIR, *, engine: str) -> str:
         "ORACLE VERDICT",
         f"  {verdict} — {proven}",
         f"  checker {res.oracle.checker_version}, profile {res.oracle.profile_version}",
+        f"  profile SHA-256 {res.oracle.profile_fingerprint}",
+        f"  input schema {res.oracle.input_schema_version}",
     ]
     if gate is not None:
         lines += [

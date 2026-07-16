@@ -5,10 +5,16 @@ Every :class:`Note` carries a ``voice`` role that fixes repair priority:
 ``melody`` must be kept, ``bass`` kept where possible, ``inner`` is editable.
 """
 
+import math
 from collections import defaultdict
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Literal
+from typing import Literal, cast
+
+MAX_IR_NOTES = 20_000
+MAX_IR_CHORDS = 20_000
+MAX_IR_TEXT_CHARS = 10 * 1024 * 1024
+MAX_IR_FRACTION_COMPONENT_BITS = 256
 
 VoiceRole = Literal["melody", "bass", "harmony"]
 
@@ -56,6 +62,190 @@ class IRViolation:
     kind: str
     detail: str
     onset: Fraction | None
+
+
+class IRInputError(ValueError):
+    """Typed rejection for a malformed or out-of-resource MusicIR."""
+
+    def __init__(self, field: str, detail: str) -> None:
+        self.field = field
+        self.detail = detail
+        super().__init__(f"invalid MusicIR {field}: {detail}")
+
+
+def _field(value: object, name: str, path: str) -> object:
+    try:
+        return object.__getattribute__(value, name)
+    except (AttributeError, TypeError):
+        raise IRInputError(path, "required field is missing") from None
+
+
+def _fraction_snapshot(value: object, path: str, *, positive: bool) -> Fraction:
+    if type(value) is not Fraction:
+        raise IRInputError(path, "must be an exact Fraction")
+    try:
+        numerator = object.__getattribute__(value, "_numerator")
+        denominator = object.__getattribute__(value, "_denominator")
+    except (AttributeError, TypeError):
+        raise IRInputError(path, "Fraction components are missing") from None
+    if type(numerator) is not int or type(denominator) is not int:
+        raise IRInputError(path, "Fraction components must be exact integers")
+    if (
+        numerator.bit_length() > MAX_IR_FRACTION_COMPONENT_BITS
+        or denominator.bit_length() > MAX_IR_FRACTION_COMPONENT_BITS
+    ):
+        raise IRInputError(path, "Fraction components exceed the 256-bit limit")
+    if denominator <= 0 or math.gcd(numerator, denominator) != 1:
+        raise IRInputError(path, "Fraction must be reduced with a positive denominator")
+    if (positive and numerator <= 0) or (not positive and numerator < 0):
+        relation = "positive" if positive else "non-negative"
+        raise IRInputError(path, f"must be {relation}")
+    return Fraction(numerator, denominator)
+
+
+def snapshot_music_ir(value: object) -> MusicIR:
+    """Validate structure/resources and return a deeply detached MusicIR."""
+
+    if type(value) is not MusicIR:
+        raise IRInputError("$", "must be an exact MusicIR")
+    raw_notes = _field(value, "notes", "notes")
+    raw_chords = _field(value, "chords", "chords")
+    raw_meta = _field(value, "meta", "meta")
+    if type(raw_notes) is not tuple:
+        raise IRInputError("notes", "must be an exact tuple")
+    if len(raw_notes) > MAX_IR_NOTES:
+        raise IRInputError("notes", f"count exceeds {MAX_IR_NOTES}")
+    if type(raw_chords) is not tuple:
+        raise IRInputError("chords", "must be an exact tuple")
+    if len(raw_chords) > MAX_IR_CHORDS:
+        raise IRInputError("chords", f"count exceeds {MAX_IR_CHORDS}")
+    if type(raw_meta) is not Meta:
+        raise IRInputError("meta", "must be an exact Meta")
+
+    notes: list[Note] = []
+    for index, raw in enumerate(raw_notes):
+        path = f"notes[{index}]"
+        if type(raw) is not Note:
+            raise IRInputError(path, "must be an exact Note")
+        pitch = _field(raw, "pitch", f"{path}.pitch")
+        voice = _field(raw, "voice", f"{path}.voice")
+        if type(pitch) is not int or not 0 <= pitch <= 127:
+            raise IRInputError(f"{path}.pitch", "must be an exact MIDI integer in 0..127")
+        if type(voice) is not str or voice not in ("melody", "bass", "harmony"):
+            raise IRInputError(f"{path}.voice", "must be melody, bass, or harmony")
+        notes.append(
+            Note(
+                _fraction_snapshot(
+                    _field(raw, "onset", f"{path}.onset"),
+                    f"{path}.onset",
+                    positive=False,
+                ),
+                _fraction_snapshot(
+                    _field(raw, "duration", f"{path}.duration"),
+                    f"{path}.duration",
+                    positive=True,
+                ),
+                pitch,
+                cast(VoiceRole, voice),
+            )
+        )
+
+    text_chars = 0
+    chords: list[ChordSymbol] = []
+    for index, raw in enumerate(raw_chords):
+        path = f"chords[{index}]"
+        if type(raw) is not ChordSymbol:
+            raise IRInputError(path, "must be an exact ChordSymbol")
+        symbol = _field(raw, "symbol", f"{path}.symbol")
+        pitch_classes = _field(raw, "pitch_classes", f"{path}.pitch_classes")
+        root_pc = _field(raw, "root_pc", f"{path}.root_pc")
+        if type(symbol) is not str:
+            raise IRInputError(f"{path}.symbol", "must be an exact string")
+        text_chars += len(symbol)
+        if text_chars > MAX_IR_TEXT_CHARS:
+            raise IRInputError("text", f"cumulative text exceeds {MAX_IR_TEXT_CHARS} chars")
+        if type(pitch_classes) is not frozenset or any(
+            type(pc) is not int or not 0 <= pc <= 11 for pc in pitch_classes
+        ):
+            raise IRInputError(
+                f"{path}.pitch_classes",
+                "must be an exact frozenset of pitch classes in 0..11",
+            )
+        if type(root_pc) is not int or not 0 <= root_pc <= 11:
+            raise IRInputError(f"{path}.root_pc", "must be an exact integer in 0..11")
+        chords.append(
+            ChordSymbol(
+                _fraction_snapshot(
+                    _field(raw, "onset", f"{path}.onset"),
+                    f"{path}.onset",
+                    positive=False,
+                ),
+                symbol,
+                frozenset(pitch_classes),
+                root_pc,
+            )
+        )
+
+    meta_values = {
+        name: _field(raw_meta, name, f"meta.{name}")
+        for name in (
+            "key",
+            "time_sig",
+            "tempo_bpm",
+            "source",
+            "title",
+            "license",
+            "duration_beats",
+        )
+    }
+    for name in ("key", "source", "title", "license"):
+        text = meta_values[name]
+        if type(text) is not str:
+            raise IRInputError(f"meta.{name}", "must be an exact string")
+        text_chars += len(text)
+        if text_chars > MAX_IR_TEXT_CHARS:
+            raise IRInputError("text", f"cumulative text exceeds {MAX_IR_TEXT_CHARS} chars")
+    time_sig = meta_values["time_sig"]
+    if (
+        type(time_sig) is not tuple
+        or len(time_sig) != 2
+        or type(time_sig[0]) is not int
+        or not 1 <= time_sig[0] <= 32
+        or type(time_sig[1]) is not int
+        or not 1 <= time_sig[1] <= 64
+    ):
+        raise IRInputError(
+            "meta.time_sig",
+            "must be exact numerator 1..32 and denominator 1..64",
+        )
+    tempo = meta_values["tempo_bpm"]
+    if type(tempo) not in (int, float):
+        raise IRInputError("meta.tempo_bpm", "must be an exact built-in int or float")
+    try:
+        normalized_tempo = float(cast(int | float, tempo))
+    except OverflowError:
+        normalized_tempo = math.inf
+    if not math.isfinite(normalized_tempo) or not 1.0 <= normalized_tempo <= 1_000.0:
+        raise IRInputError("meta.tempo_bpm", "must be finite and within 1..1000 BPM")
+    duration = meta_values["duration_beats"]
+    duration_snapshot = (
+        None
+        if duration is None
+        else _fraction_snapshot(duration, "meta.duration_beats", positive=False)
+    )
+    return MusicIR(
+        notes=tuple(notes),
+        chords=tuple(chords),
+        meta=Meta(
+            key=cast(str, meta_values["key"]),
+            time_sig=cast(tuple[int, int], time_sig),
+            tempo_bpm=normalized_tempo,
+            source=cast(str, meta_values["source"]),
+            title=cast(str, meta_values["title"]),
+            license=cast(str, meta_values["license"]),
+            duration_beats=duration_snapshot,
+        ),
+    )
 
 
 def validate_ir(ir: MusicIR) -> list[IRViolation]:

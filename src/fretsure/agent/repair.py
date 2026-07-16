@@ -14,6 +14,7 @@ from fretsure.agent.trace import Trace
 from fretsure.ir import Note
 from fretsure.llm.client import LLMClient, extract_json
 from fretsure.oracle.core import OracleResult
+from fretsure.oracle.input import ensure_repair_iterations, ensure_solver_input
 from fretsure.oracle.profiles import Profile
 from fretsure.solver.api import Infeasible
 from fretsure.tab import Tab
@@ -58,9 +59,16 @@ def repair(
     tempo_bpm: float = 90.0,
     max_iters: int = 8,
 ) -> RepairResult:
+    max_iters = ensure_repair_iterations(max_iters)
+    target, tuning, capo, profile, tempo_bpm, _beam = ensure_solver_input(
+        target,
+        tuning,
+        capo,
+        profile,
+        tempo_bpm=tempo_bpm,
+    )
     current = tuple(sorted(target, key=lambda n: (n.onset, n.pitch)))
     trace = Trace()
-    max_iters = max(0, max_iters)
     for iterations in range(max_iters + 1):
         solved, oracle = solve_and_check(current, tuning, capo, profile, tempo_bpm=tempo_bpm)
         verdict = oracle.verdict if oracle is not None else "INFEASIBLE"

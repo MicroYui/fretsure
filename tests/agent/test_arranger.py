@@ -5,11 +5,13 @@ import pytest
 from fretsure.agent.arranger import (
     ArrangeGoal,
     ArrangementCapacityError,
+    ensure_llm_capacity,
     propose_arrangement,
 )
 from fretsure.geometry import STANDARD_TUNING
-from fretsure.ir import ChordSymbol, Meta, MusicIR, Note
+from fretsure.ir import ChordSymbol, IRInputError, Meta, MusicIR, Note
 from fretsure.llm.client import ConstantLLM, FakeLLM
+from fretsure.oracle.input import OracleInputCode, SolverInputError
 
 
 def _meta() -> Meta:
@@ -104,6 +106,46 @@ def test_prompt_playable_range_accounts_for_capo() -> None:
     assert "Effective arrangement tempo: 72.0 BPM" in llm.calls[0]["user"]
 
 
+def test_direct_proposer_validates_before_llm_or_min_tuning() -> None:
+    llm = FakeLLM([])
+
+    with pytest.raises(SolverInputError) as caught:
+        propose_arrangement(_leadsheet(), ArrangeGoal(tuning=()), llm)
+
+    assert llm.calls == []
+    assert OracleInputCode.TUNING_LENGTH in {
+        diagnostic.code for diagnostic in caught.value.diagnostics
+    }
+
+
+def test_direct_proposer_rejects_hostile_source_tempo_before_prompt() -> None:
+    class HostileTempo:
+        def __format__(self, _spec: str) -> str:
+            raise AssertionError("hostile source tempo reached prompt formatting")
+
+    ir = _leadsheet()
+    object.__setattr__(ir.meta, "tempo_bpm", HostileTempo())
+    llm = FakeLLM([])
+
+    with pytest.raises(IRInputError, match="meta.tempo_bpm"):
+        propose_arrangement(ir, ArrangeGoal(), llm)
+
+    assert llm.calls == []
+
+
+def test_deterministic_proposer_keeps_structural_validation() -> None:
+    with pytest.raises(SolverInputError) as caught:
+        propose_arrangement(
+            _leadsheet(),
+            ArrangeGoal(tuning=()),
+            ConstantLLM("noop"),
+        )
+
+    assert OracleInputCode.TUNING_LENGTH in {
+        diagnostic.code for diagnostic in caught.value.diagnostics
+    }
+
+
 def test_real_llm_path_rejects_unrepresentable_input_instead_of_truncating() -> None:
     notes = tuple(Note(F(i), F(1), 60 + (i % 12), "melody") for i in range(170))
     ir = MusicIR(notes, (), _meta())
@@ -112,6 +154,18 @@ def test_real_llm_path_rejects_unrepresentable_input_instead_of_truncating() -> 
     with pytest.raises(ArrangementCapacityError, match="chunking is deferred"):
         propose_arrangement(ir, ArrangeGoal(), llm)
     assert llm.calls == []
+
+
+def test_capacity_check_rejects_hostile_notes_before_len_hook() -> None:
+    class HostileNotes:
+        def __len__(self) -> int:
+            raise AssertionError("hostile notes reached capacity arithmetic")
+
+    ir = _leadsheet()
+    object.__setattr__(ir, "notes", HostileNotes())
+
+    with pytest.raises(IRInputError, match="notes"):
+        ensure_llm_capacity(ir)
 
 
 def test_deterministic_path_supports_input_beyond_real_llm_single_call_capacity() -> None:

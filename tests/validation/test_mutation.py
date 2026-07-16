@@ -4,7 +4,7 @@ from fretsure.oracle.validation.mutation import MUTANTS, kill_rate, run_mutation
 
 def test_kill_rate_meets_gate() -> None:
     r = run_mutation_suite()
-    assert r.total >= 8
+    assert r.total >= 10
     assert kill_rate(r) >= 0.9, f"survived: {r.survived}"
 
 

@@ -21,6 +21,7 @@ ViolationType = Literal[
     "BARRE_INFEASIBLE",
     "SHIFT_SPEED",
     "RIGHT_HAND",
+    "STRING_SUSTAIN_CONFLICT",
     "SUSTAIN_CONFLICT",
 ]
 
@@ -31,5 +32,5 @@ class Diagnostic:
     beat: Fraction  # 1-indexed within the bar
     violation_type: ViolationType
     offending_notes: tuple[int, ...]  # indices into Tab.notes
-    overage: float  # how far past the limit (mm, mm/s, or count)
+    overage: float  # how far past the limit (mm, rate units, seconds, or count)
     suggested_relaxations: tuple[str, ...]

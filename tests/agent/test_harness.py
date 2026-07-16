@@ -7,6 +7,7 @@ from fretsure.agent.harness import ArrangeResult, arrange
 from fretsure.geometry import STANDARD_TUNING, note_pitch
 from fretsure.ir import Meta, MusicIR, Note
 from fretsure.llm.client import FakeLLM
+from fretsure.oracle.input import OracleInputCode, SolverInputError
 
 _IR = MusicIR((Note(F(0), F(1), 64, "melody"),), (), Meta("C", (4, 4), 90.0, "t", "t", "PD"))
 
@@ -93,9 +94,45 @@ def test_deterministic() -> None:
 
 
 def test_arrange_zero_n_makes_no_llm_call() -> None:
-    # n<=0 must not propose anything: an empty FakeLLM script would raise on any call.
+    # n=0 must not propose anything: an empty FakeLLM script would raise on any call.
     r = arrange(_IR, ArrangeGoal(), FakeLLM([]), n=0)
     assert r.tab is None and r.oracle is None and r.candidates_tried == 0
+
+
+@pytest.mark.parametrize("n", [-1, True, 1.5, 65])
+def test_harness_rejects_unbounded_candidate_controls_before_llm(n: object) -> None:
+    llm = FakeLLM([])
+    with pytest.raises(SolverInputError) as caught:
+        arrange(_IR, ArrangeGoal(), llm, n=n)  # type: ignore[arg-type]
+    assert llm.calls == []
+    assert {d.code for d in caught.value.diagnostics} == {
+        OracleInputCode.CANDIDATE_COUNT
+    }
+
+
+@pytest.mark.parametrize("use_critic", [0, 1, "false", None])
+def test_harness_rejects_truthy_critic_controls_before_llm(
+    use_critic: object,
+) -> None:
+    llm = FakeLLM([])
+    with pytest.raises(SolverInputError) as caught:
+        arrange(_IR, ArrangeGoal(), llm, use_critic=use_critic)  # type: ignore[arg-type]
+    assert llm.calls == []
+    assert {d.code for d in caught.value.diagnostics} == {
+        OracleInputCode.BOOLEAN_CONTROL
+    }
+
+
+def test_harness_validates_before_candidate_proposal() -> None:
+    llm = FakeLLM([])
+
+    with pytest.raises(SolverInputError) as caught:
+        arrange(_IR, ArrangeGoal(tuning=(40, 45, 50, 55, 55, 64)), llm, n=1)
+
+    assert llm.calls == []
+    assert OracleInputCode.TUNING_ORDER in {
+        diagnostic.code for diagnostic in caught.value.diagnostics
+    }
 
 
 @pytest.mark.integration

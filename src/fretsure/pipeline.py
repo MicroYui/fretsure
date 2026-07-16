@@ -5,23 +5,31 @@ that boundary: IR validation, source/effective tempo selection, arrangement,
 the independent faithfulness gate, rendering, and trace exposure.
 """
 
-import math
 from dataclasses import dataclass, replace
 
 from fretsure.agent.arranger import ArrangeGoal
 from fretsure.agent.harness import ArrangeResult, arrange
 from fretsure.agent.trace import Trace
 from fretsure.geometry import STANDARD_TUNING
-from fretsure.ir import MusicIR, validate_ir
+from fretsure.ir import IRInputError, MusicIR, snapshot_music_ir, validate_ir
 from fretsure.llm.client import LLMClient
-from fretsure.metrics.fidelity import FaithfulnessGate, faithfulness
+from fretsure.metrics.fidelity import (
+    FIDELITY_CHECKER_VERSION,
+    FaithfulnessGate,
+    faithfulness,
+)
+from fretsure.oracle.core import CHECKER_VERSION
+from fretsure.oracle.input import (
+    MAX_AGENT_CANDIDATES,
+    MAX_AGENT_REPAIR_ITERS,
+    ORACLE_INPUT_SCHEMA_VERSION,
+    ensure_instrument_config,
+)
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 from fretsure.render.ascii import render_ascii
 
-MAX_PIPELINE_CANDIDATES = 64
-MAX_PIPELINE_REPAIR_ITERS = 64
-MIN_PIPELINE_TEMPO_BPM = 1.0
-MAX_PIPELINE_TEMPO_BPM = 1_000.0
+MAX_PIPELINE_CANDIDATES = MAX_AGENT_CANDIDATES
+MAX_PIPELINE_REPAIR_ITERS = MAX_AGENT_REPAIR_ITERS
 
 
 @dataclass(frozen=True)
@@ -62,51 +70,42 @@ class PipelineResult:
         return self.faithfulness
 
 
-def _validated_tempo(value: object, *, label: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"{label} must be a real number")
-    tempo = float(value)
-    if (
-        not math.isfinite(tempo)
-        or not MIN_PIPELINE_TEMPO_BPM <= tempo <= MAX_PIPELINE_TEMPO_BPM
-    ):
-        raise ValueError(
-            f"{label} must be finite and in "
-            f"{MIN_PIPELINE_TEMPO_BPM:g}..{MAX_PIPELINE_TEMPO_BPM:g} BPM"
+def _validated_pipeline_options(options: object) -> PipelineOptions:
+    """Capture once and validate controls outside the shared solver contract."""
+
+    if type(options) is not PipelineOptions:
+        raise ValueError("options must be an exact PipelineOptions instance")
+    try:
+        snapshot = PipelineOptions(
+            tuning=object.__getattribute__(options, "tuning"),
+            capo=object.__getattribute__(options, "capo"),
+            profile=object.__getattribute__(options, "profile"),
+            n=object.__getattribute__(options, "n"),
+            max_iters=object.__getattribute__(options, "max_iters"),
+            use_critic=object.__getattribute__(options, "use_critic"),
+            tempo_override_bpm=object.__getattribute__(options, "tempo_override_bpm"),
         )
-    return tempo
-
-
-def _effective_tempo(ir: MusicIR, options: PipelineOptions) -> tuple[float, float]:
-    source = _validated_tempo(ir.meta.tempo_bpm, label="source tempo")
-    effective = (
-        source
-        if options.tempo_override_bpm is None
-        else _validated_tempo(options.tempo_override_bpm, label="tempo override")
-    )
-    return source, effective
-
-
-def _validate_pipeline_controls(options: PipelineOptions) -> None:
-    """Validate controls that are not part of the shared solver contract."""
+    except (AttributeError, TypeError):
+        raise ValueError("PipelineOptions fields are missing") from None
     if (
-        type(options.n) is not int
-        or not 1 <= options.n <= MAX_PIPELINE_CANDIDATES
+        type(snapshot.n) is not int
+        or not 1 <= snapshot.n <= MAX_PIPELINE_CANDIDATES
     ):
         raise ValueError(
             "best-of-N candidate count must be an exact integer in "
             f"1..{MAX_PIPELINE_CANDIDATES}"
         )
     if (
-        type(options.max_iters) is not int
-        or not 0 <= options.max_iters <= MAX_PIPELINE_REPAIR_ITERS
+        type(snapshot.max_iters) is not int
+        or not 0 <= snapshot.max_iters <= MAX_PIPELINE_REPAIR_ITERS
     ):
         raise ValueError(
             "max_iters must be an exact integer in "
             f"0..{MAX_PIPELINE_REPAIR_ITERS}"
         )
-    if type(options.use_critic) is not bool:
+    if type(snapshot.use_critic) is not bool:
         raise ValueError("use_critic must be an exact bool")
+    return snapshot
 
 
 def run_pipeline(
@@ -121,6 +120,26 @@ def run_pipeline(
     override.  The resulting effective tempo enters :class:`ArrangeGoal`, which
     the harness passes unchanged to both solver and oracle during every repair.
     """
+    options = _validated_pipeline_options(options)
+    source_ir = ir
+    try:
+        ir = snapshot_music_ir(source_ir)
+    except IRInputError as error:
+        if error.field == "meta.tempo_bpm":
+            try:
+                raw_meta = object.__getattribute__(source_ir, "meta")
+                raw_tempo = object.__getattribute__(raw_meta, "tempo_bpm")
+            except (AttributeError, TypeError):
+                raise error from None
+            # Preserve the shared public tempo diagnostic/code at the pipeline
+            # boundary while the IR snapshot itself stays safe for direct users.
+            ensure_instrument_config(
+                options.tuning,
+                options.capo,
+                options.profile,
+                tempo_bpm=raw_tempo,
+            )
+        raise
     violations = validate_ir(ir)
     if violations:
         details = "; ".join(
@@ -132,22 +151,40 @@ def run_pipeline(
         raise ValueError(
             f"pipeline currently supports only 4/4, got {ir.meta.time_sig[0]}/{ir.meta.time_sig[1]}"
         )
-    _validate_pipeline_controls(options)
+    n = options.n
+    max_iters = options.max_iters
+    use_critic = options.use_critic
+    tempo_override = options.tempo_override_bpm
 
-    source_tempo, effective_tempo = _effective_tempo(ir, options)
+    # One shared contract owns tuning/capo/profile/tempo validation.  Run it
+    # before arranger/proposer code can inspect tuning or invoke the LLM.
+    tuning, capo, profile, source_tempo = ensure_instrument_config(
+        options.tuning,
+        options.capo,
+        options.profile,
+        tempo_bpm=ir.meta.tempo_bpm,
+    )
+    effective_tempo = source_tempo
+    if tempo_override is not None:
+        tuning, capo, profile, effective_tempo = ensure_instrument_config(
+            tuning,
+            capo,
+            profile,
+            tempo_bpm=tempo_override,
+        )
     goal = ArrangeGoal(
-        tuning=options.tuning,
-        capo=options.capo,
+        tuning=tuning,
+        capo=capo,
         tempo_bpm=effective_tempo,
     )
     raw_arrangement = arrange(
         ir,
         goal,
         llm,
-        profile=options.profile,
-        n=options.n,
-        max_iters=options.max_iters,
-        use_critic=options.use_critic,
+        profile=profile,
+        n=n,
+        max_iters=max_iters,
+        use_critic=use_critic,
     )
     trace = Trace()
     trace.add(
@@ -156,9 +193,14 @@ def run_pipeline(
         source_tempo_bpm=source_tempo,
         effective_tempo_bpm=effective_tempo,
         time_signature="4/4",
-        tuning=options.tuning,
-        capo=options.capo,
-        profile=options.profile.version,
+        tuning=tuning,
+        capo=capo,
+        profile=profile.version,
+        checker_version=CHECKER_VERSION,
+        profile_version=profile.version,
+        profile_fingerprint=profile.fingerprint,
+        input_schema_version=ORACLE_INPUT_SCHEMA_VERSION,
+        fidelity_checker_version=FIDELITY_CHECKER_VERSION,
     )
     trace.steps.extend(raw_arrangement.trace.steps)
     arrangement = replace(raw_arrangement, trace=trace)

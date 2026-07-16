@@ -9,7 +9,7 @@ neutral 0.5 so it can never block the pipeline.
 from dataclasses import dataclass
 from typing import Any
 
-from fretsure.ir import MusicIR
+from fretsure.ir import MusicIR, snapshot_music_ir
 from fretsure.llm.client import LLMClient, extract_json
 from fretsure.render.ascii import render_ascii
 from fretsure.tab import Tab
@@ -36,6 +36,7 @@ def _clamp01(value: Any) -> float:
 
 
 def critique(ir: MusicIR, tab: Tab, llm: LLMClient) -> CriticScore:
+    ir = snapshot_music_ir(ir)
     user = f"Key {ir.meta.key}. Arrangement tab:\n{render_ascii(tab)}\n\nRate its musicality."
     try:
         obj = extract_json(llm.complete(system=_CRITIC_SYSTEM, user=user, max_tokens=512))

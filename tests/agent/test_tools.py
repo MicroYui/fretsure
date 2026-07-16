@@ -7,10 +7,11 @@ from fretsure.agent.tools import (
 )
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import Note
-from fretsure.oracle.core import OracleResult
+from fretsure.oracle.core import CHECKER_VERSION, OracleResult
 from fretsure.oracle.diagnostics import Diagnostic
+from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION
 from fretsure.oracle.profiles import MEDIAN_HAND
-from fretsure.solver.api import Infeasible
+from fretsure.solver.api import Infeasible, InfeasibleCode
 from fretsure.tab import Tab
 
 _TARGET = (Note(F(0), F(1), 60, "melody"), Note(F(0), F(1), 48, "bass"))
@@ -30,7 +31,14 @@ def test_solve_and_check_infeasible() -> None:
 
 
 def test_diagnostics_prompt_green() -> None:
-    green = OracleResult("GREEN", (), "oracle@0.1.0", "median@0.1")
+    green = OracleResult(
+        "GREEN",
+        (),
+        CHECKER_VERSION,
+        MEDIAN_HAND.version,
+        MEDIAN_HAND.fingerprint,
+        ORACLE_INPUT_SCHEMA_VERSION,
+    )
     p = diagnostics_to_prompt(green, _TARGET)
     assert "GREEN" in p
 
@@ -39,8 +47,10 @@ def test_diagnostics_prompt_amber_lists_violations_and_target() -> None:
     amber = OracleResult(
         "AMBER",
         (Diagnostic(1, F(1), "FRET_SPAN", (0, 1), 12.3, ("drop_5th",)),),
-        "oracle@0.1.0",
-        "median@0.1",
+        CHECKER_VERSION,
+        MEDIAN_HAND.version,
+        MEDIAN_HAND.fingerprint,
+        ORACLE_INPUT_SCHEMA_VERSION,
     )
     p = diagnostics_to_prompt(amber, _TARGET)
     assert "AMBER" in p and "FRET_SPAN" in p and "bar 1" in p
@@ -48,9 +58,15 @@ def test_diagnostics_prompt_amber_lists_violations_and_target() -> None:
 
 
 def test_diagnostics_prompt_infeasible() -> None:
-    inf = Infeasible(F(2), "shift too fast", (60, 62))
+    inf = Infeasible(
+        InfeasibleCode.NO_NON_RED_EXTENSION,
+        F(2),
+        "shift too fast",
+        (60, 62),
+    )
     p = diagnostics_to_prompt(inf, _TARGET)
     assert "INFEASIBLE" in p.upper() and "2" in p
+    assert InfeasibleCode.NO_NON_RED_EXTENSION.value in p
 
 
 def test_edit_schema_prompt_lists_ops() -> None:

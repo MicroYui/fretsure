@@ -1,8 +1,11 @@
 from fractions import Fraction as F
 
+import pytest
+
 from fretsure.arrange.propose import propose_fingerstyle
 from fretsure.geometry import STANDARD_TUNING, note_pitch
 from fretsure.ir import ChordSymbol, Meta, MusicIR, Note
+from fretsure.oracle.input import OracleInputCode, SolverInputError
 from fretsure.oracle.profiles import MEDIAN_HAND
 from fretsure.pipeline_m0 import run_m0
 
@@ -28,6 +31,15 @@ def test_propose_drops_harmony_keeps_melody_bass() -> None:
     assert not any(n.voice == "harmony" for n in kept)
     pitches = [n.pitch for n in kept]
     assert 60 in pitches and 48 in pitches
+
+
+def test_direct_rule_proposer_validates_before_min_tuning() -> None:
+    with pytest.raises(SolverInputError) as caught:
+        propose_fingerstyle(_leadsheet(), ())
+
+    assert OracleInputCode.TUNING_LENGTH in {
+        diagnostic.code for diagnostic in caught.value.diagnostics
+    }
 
 
 def test_propose_rearticulates_synthesized_bass_at_melody_attacks() -> None:

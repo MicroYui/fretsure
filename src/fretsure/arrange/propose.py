@@ -14,7 +14,9 @@ from bisect import bisect_left, bisect_right
 from fractions import Fraction
 
 from fretsure.geometry import STANDARD_TUNING
-from fretsure.ir import ChordSymbol, MusicIR, Note
+from fretsure.ir import ChordSymbol, MusicIR, Note, snapshot_music_ir
+from fretsure.oracle.input import ensure_solver_domain
+from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 
 
 def _lowest_pitch_with_pc(lowest: int, pitch_class: int) -> int:
@@ -96,6 +98,9 @@ def propose_fingerstyle(
     ir: MusicIR,
     tuning: tuple[int, ...] = STANDARD_TUNING,
     capo: int = 0,
+    *,
+    profile: Profile = MEDIAN_HAND,
+    tempo_bpm: float = 90.0,
 ) -> tuple[Note, ...]:
     """Build a sparse deterministic target while preserving source bass intent.
 
@@ -103,6 +108,20 @@ def propose_fingerstyle(
     when the source contains no bass voice at all, so imported and authored bass
     lines are never doubled or silently replaced.
     """
+    # This helper is a public arrangement entry point, not merely an internal
+    # implementation detail.  Validate before chord-root seeding reaches
+    # ``min(tuning)`` so malformed configs fail with the same typed contract as
+    # the solver/harness rather than leaking IndexError/ValueError variants.
+    ir = snapshot_music_ir(ir)
+    notes, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
+        ir.notes,
+        tuning,
+        capo,
+        profile,
+        tempo_bpm=tempo_bpm,
+    )
+    ir = MusicIR(notes, tuple(ir.chords), ir.meta)
+
     kept = [n for n in ir.notes if n.voice in ("melody", "bass")]
     if not any(n.voice == "bass" for n in kept):
         occupied = {(n.onset, n.pitch) for n in kept}

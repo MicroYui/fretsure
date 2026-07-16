@@ -4,7 +4,7 @@ import pytest
 
 from fretsure.agent.critic import CriticScore, critique
 from fretsure.geometry import STANDARD_TUNING
-from fretsure.ir import Meta, MusicIR, Note
+from fretsure.ir import IRInputError, Meta, MusicIR, Note
 from fretsure.llm.client import FakeLLM
 from fretsure.tab import Tab, TabNote
 
@@ -27,6 +27,21 @@ def test_bad_output_is_neutral() -> None:
 def test_scores_clamped_to_unit() -> None:
     s = critique(_IR, _TAB, FakeLLM(['{"overall": 1.5, "voice_leading": -0.2}']))
     assert s.overall == 1.0 and s.voice_leading == 0.0
+
+
+def test_critic_rejects_hostile_ir_before_prompt_or_llm() -> None:
+    class HostileKey:
+        def __format__(self, _spec: str) -> str:
+            raise AssertionError("hostile key reached prompt formatting")
+
+    ir = MusicIR(_IR.notes, _IR.chords, Meta("C", (4, 4), 90.0, "t", "t", "PD"))
+    object.__setattr__(ir.meta, "key", HostileKey())
+    llm = FakeLLM([])
+
+    with pytest.raises(IRInputError, match="meta.key"):
+        critique(ir, _TAB, llm)
+
+    assert llm.calls == []
 
 
 @pytest.mark.integration

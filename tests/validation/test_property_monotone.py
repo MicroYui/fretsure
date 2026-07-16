@@ -53,10 +53,19 @@ def test_monotone_in_resources(tab: Tab) -> None:
 def test_monotone_under_uniform_scale_up(tab: Tab, data: st.DataObject) -> None:
     # scaling a random base profile's resources up can only improve the verdict
     hs = data.draw(st.floats(80.0, 120.0))
+    reach = data.draw(st.floats(35.0, 70.0))
     vs = data.draw(st.floats(400.0, 600.0))
     rm = data.draw(st.floats(6.0, 10.0))
-    base = Profile("base", hs, 50.0, vs, rm, 648.0, 22)
-    bigger = Profile("bigger", hs * 1.3, 50.0, vs * 1.3, rm * 1.3, 648.0, 22)
+    base = Profile("base", hs, reach, vs, rm, 648.0, 22)
+    bigger = Profile(
+        "bigger",
+        hs * 1.3,
+        reach * 1.3,
+        vs * 1.3,
+        rm * 1.3,
+        648.0,
+        22,
+    )
     small = check_playability(tab, base).verdict
     large = check_playability(tab, bigger).verdict
     assert _RANK[large] >= _RANK[small], (small, large, tab)

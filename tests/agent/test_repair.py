@@ -1,4 +1,5 @@
 from fractions import Fraction as F
+from typing import Any, cast
 
 import pytest
 
@@ -6,6 +7,7 @@ from fretsure.agent.repair import repair
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import Note
 from fretsure.llm.client import FakeLLM
+from fretsure.oracle.input import OracleInputCode, SolverInputError
 from fretsure.oracle.profiles import MEDIAN_HAND
 
 # 85 (melody) + 86 (harmony) each reach only the high-E string -> infeasible together.
@@ -42,6 +44,44 @@ def test_max_iters_stops_without_crash() -> None:
     r = repair(_INFEASIBLE, STANDARD_TUNING, 0, MEDIAN_HAND, FakeLLM([_DROP_85] * 3), max_iters=2)
     assert r.iterations == 2
     assert r.tab is None and r.infeasible is not None  # never reached GREEN
+
+
+@pytest.mark.parametrize("max_iters", [-1, True, 1.5, 65])
+def test_repair_rejects_unbounded_iteration_controls_before_llm(
+    max_iters: object,
+) -> None:
+    llm = FakeLLM([])
+    with pytest.raises(SolverInputError) as caught:
+        repair(
+            _INFEASIBLE,
+            STANDARD_TUNING,
+            0,
+            MEDIAN_HAND,
+            llm,
+            max_iters=max_iters,  # type: ignore[arg-type]
+        )
+    assert llm.calls == []
+    assert {d.code for d in caught.value.diagnostics} == {
+        OracleInputCode.REPAIR_ITERATIONS
+    }
+
+
+def test_repair_validates_target_before_sorting_or_llm() -> None:
+    llm = FakeLLM([])
+
+    with pytest.raises(SolverInputError) as caught:
+        repair(
+            cast(tuple[Note, ...], (cast(Any, object()),)),
+            STANDARD_TUNING,
+            0,
+            MEDIAN_HAND,
+            llm,
+        )
+
+    assert llm.calls == []
+    assert OracleInputCode.NOTE_TYPE in {
+        diagnostic.code for diagnostic in caught.value.diagnostics
+    }
 
 
 def test_deterministic() -> None:

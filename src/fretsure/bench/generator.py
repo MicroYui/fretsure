@@ -2,9 +2,9 @@
 
 Samples a chord progression from a T->S->D->T functional grammar and a melody
 constrained to chord tones / diatonic passing tones, with a bass on the chord
-root. These pieces never existed before (seeded), so no LLM could have memorized
-their tabs, and the melody/bass/harmony ground truth is exact — the
-contamination-proof layer the benchmark leans its headline results on.
+root. Each seeded item and its corresponding tab are procedurally novel, which
+reduces exact-item memorization risk without proving the model has never learned
+similar musical grammar. The symbolic melody/bass/harmony ground truth is exact.
 """
 
 import random

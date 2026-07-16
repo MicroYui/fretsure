@@ -55,3 +55,19 @@ def test_too_many_shifts_per_bar_for_beginner() -> None:
     notes = [TabNote(F(b), F(1), 0, 1 if b % 2 == 0 else 5, 1, "p") for b in range(4)]
     assert any("shifts" in v for v in tier_violations(_t(notes), BEGINNER))
     assert not any("shifts" in v for v in tier_violations(_t(notes), ADVANCED))
+
+
+def test_no_barre_overlay_is_linear_on_long_nonoverlapping_tab() -> None:
+    notes = [
+        TabNote(
+            F(index),
+            F(1),
+            index % 6,
+            1,
+            1,
+            ("p", "i", "m", "a")[index % 4],  # type: ignore[arg-type]
+        )
+        for index in range(20_000)
+    ]
+
+    assert tier_violations(_t(notes), BEGINNER) == []

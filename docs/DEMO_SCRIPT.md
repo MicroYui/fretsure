@@ -1,13 +1,14 @@
 # 3-Minute Demo Script
 
-A tight, reproducible walkthrough for a screen recording or live demo. Everything
-here runs from a clean checkout; the only non-offline step is the real-LLM
-benchmark, which needs the local proxy. Target length ≈ 3 minutes.
+A tight, reproducible walkthrough for a screen recording or live demo. The default
+path is fully offline, including the MusicXML import. A real-LLM benchmark or
+`--llm` arrangement needs the local proxy. Target length ≈ 3 minutes.
 
 Setup (once, off-camera):
+
 ```bash
-uv sync --extra dev
-# for the --llm / bench segments only:
+uv sync --extra dev --extra musicxml
+# only for optional --llm / real-LLM benchmark segments:
 export ANTHROPIC_BASE_URL=http://localhost:4141 ANTHROPIC_AUTH_TOKEN=<token>
 ```
 
@@ -15,101 +16,140 @@ export ANTHROPIC_BASE_URL=http://localhost:4141 ANTHROPIC_AUTH_TOKEN=<token>
 
 ## Beat 0 — The hook (0:00–0:20)
 
-**Say:** "AI can generate a song in seconds. It cannot tell you whether a human
-can *play* it. Suno hands you audio; Fretsure hands you a guitar tab that a
-deterministic checker has verified against a published hand model — note by note."
+**Say:** "AI can generate a song in seconds. It cannot reliably tell you whether a
+human can *play* it. Fretsure turns symbolic music into guitar tab, then a
+deterministic checker certifies playability against a published model and profile —
+note by note. Source faithfulness is a separate checker, and real-player calibration
+is a separate, still-open measurement."
 
 **Show:** the README first screen (positioning line + architecture diagram).
 
-## Beat 1 — One command, the product runs (0:20–1:00)
+## Beat 1 — The deterministic happy path (0:20–0:55)
 
 **Do:**
+
 ```bash
 uv run fretsure-demo
 ```
 
-**Point at the output, in order:**
-- INPUT — a lead sheet (melody + chord symbols).
-- ARRANGED TAB — a real fingerstyle tab, high-e on top.
-- ORACLE VERDICT — **GREEN**, with the checker + profile version stamped.
-- FAITHFULNESS — melody-F1 / bass-root / harmony, gate PASS.
+**Point at the actual default output, in order:**
 
-**Say:** "This is offline and deterministic — no API key. This run uses the
-deterministic proposal fallback; `--llm` swaps in the real policy. Either way,
-a deterministic oracle checks every fret against a conservatively tightened,
-versioned geometry/timing model. GREEN is a model-relative certification, not
-*the AI thinks so* and not yet a universal real-player guarantee."
+- INPUT — a seeded, internally generated lead sheet (melody + chord symbols).
+- ARRANGED TAB — a fingerstyle tab, high-e on top.
+- ORACLE VERDICT — GREEN, stamped `oracle@0.2.0` / `tab-input@0.2.0` /
+  `median@0.1` plus the canonical profile SHA-256.
+- FAITHFULNESS — melody-F1 `1.00`, bass-root `1.00`, harmony `0.75`, PASS,
+  stamped `fidelity@0.2.0`.
 
-**Optional real-file proof (10–15s):**
+**Say:** "This path is offline and deterministic. A constant stub deliberately
+triggers the rule-based proposal fallback; it proves the complete pipeline without
+pretending an API call happened. The proposal path does not decide feasibility —
+the versioned oracle does. GREEN is certification inside the simplified model and
+profile, not yet a guarantee about every real guitarist."
+
+## Beat 2 — A real file, and two genuinely independent gates (0:55–1:25)
+
+**Do:**
 
 ```bash
-uv run fretsure-arrange tests/fixtures/producers/music21-10.5.0.musicxml \
-  --n 1 --no-critic --trace-jsonl /tmp/fretsure-trace.jsonl
+uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
+  --n 1 --no-critic --trace-jsonl /tmp/fretsure-supported-basic.trace.jsonl
 ```
 
-Call out `musicxml@0.1.0`, source SHA-256, source/effective tempo, the separate
-oracle/fidelity results, and JSONL trace. This is an unedited exporter artifact,
-not a hand-authored compatibility mock.
+**Point at:** `musicxml@0.1.0`, the source SHA-256/provenance, source and effective
+tempo both 96 bpm, the rendered tab, and the JSONL trace location. Then linger on:
 
-## Beat 2 — Why you can trust the GREEN (1:00–1:45)
+```text
+ORACLE VERDICT
+  GREEN ... checker oracle@0.2.0
+FAITHFULNESS TO INPUT
+  melody-F1 1.00   bass-root 1.00   harmony 0.29
+  gate FAIL   checker fidelity@0.2.0
+```
+
+**Say:** "This is not a contradiction or a bug. GREEN answers only whether this
+displayed fingering passes the versioned playability model. The independent fidelity
+gate says the playable arrangement did not preserve enough harmony. Joint success
+requires both GREEN and fidelity PASS. The file is a supported-subset regression
+fixture; unmodified real-exporter fixture coverage is still an open input gate."
+
+## Beat 3 — Who checks the checker? (1:25–2:00)
 
 **Say:** "The whole project gates on one question: *who checks the checker?*"
 
 **Do (fast, let it scroll):**
+
 ```bash
-uv run pytest -q tests/oracle -m "not integration"
+uv run pytest -q tests/oracle tests/validation tests/test_geometry.py -m "not integration"
 ```
 
-**Call out three self-checks (from `docs/PLAN1_ACCEPTANCE.md`):**
-- **Monotone-in-resources** property over 1000 random tabs — more hand never
-  turns a GREEN into a RED.
-- **Mutation** kill-rate 1.0 — deliberately broken oracles are all caught.
-- **N-version** differential — the fast fingering solver matches an exhaustive
-  brute force on 500 random frames.
-- Span is in **millimetres**, not fret count — the same 3-fret stretch is harder
-  low on the neck; a test proves the verdict changes with position.
+**Call out four self-checks (from `docs/PLAN1_ACCEPTANCE.md`):**
 
-**Say:** "It's not a vibe. The checker has extensive model-internal self-tests;
-the real-player false-accept bound is still pending the human gold set."
+- **Monotone-in-resources** over 1000 random tabs — more hand never turns a
+  GREEN into a worse verdict.
+- **Mutation** kill-rate 1.0 — all `12/12` injected mutants are caught.
+- **N-version** differential — fast fingering search agrees with exhaustive search
+  on 500 random frames.
+- Span is measured in **millimetres**, not fret count; the same fret span changes
+  physical distance with neck position.
 
-## Beat 3 — The benchmark, and the honesty (1:45–2:40)
+**Say:** "The final repository gate is 1092 offline tests plus 6 proxy-backed
+integration tests, with ruff, strict mypy, lock and package smokes green. Invalid
+public Tab/profile/solver/gold inputs now fail typed and resource-bounded; a
+zero-GREEN split is explicitly `no_green` with no rate or bound. But the human gold
+set has not been collected, so I still report no real-player false-accept bound.
+Human work can proceed in parallel, but it gates real-world error rates, profile/tier
+calibration, musicality evidence, and stronger human claims."
 
-**Do (legacy experiment shape; do not present the saved values as a current
-`fidelity@0.2.0` baseline):**
+## Beat 4 — Benchmark evidence, with the metric boundary visible (2:00–2:45)
+
+**Do:** show the warning and legacy tables at the top of
+`docs/BENCHMARK_RESULTS.md`. Do not present them as current checker-pair numbers.
+The 2026-07-10/11 runs used `oracle@0.1.0` and the old, unversioned note-onset
+harmony metric; the consolidated historical snapshot is pinned at `bee8a1c`.
+
+**Say:** "The historical two-seed snapshot gives useful directional evidence:
+repair had the largest association, paired best-of-N showed a modest positive joint
+delta, and the critic improved only its own score by about 0.01. But the fidelity
+definition has since changed, so these are legacy numbers, not today's headline.
+Benchmark v2 must rerun every arm under `fidelity@0.2.0`, retain paired item rows,
+and run the appropriate paired tests."
+
+If network behavior itself must be shown, pre-run or use:
+
 ```bash
-uv run fretsure-bench --seed 1 --items 16
+uv run fretsure-bench --seed 1 --items 2 --paired
 ```
-(or show the saved `docs/BENCHMARK_RESULTS.md` table if you don't want to wait on
-the live run).
 
-**Say, pointing at the ablation table:**
-- "Every capability has to *earn its existence* by leave-one-out ablation, scored
-  by the checker — not an LLM judge."
-- "In the archived 2026-07-10/11 legacy metric, **repair had the strongest signal:** remove the verifier-guided repair loop and success
-  falls 0.81 → 0.31, melody-F1 1.00 → 0.56. The Wilson intervals don't overlap."
-- "**And here's the part most demos hide:** critic did not earn its cost; best-of-N
-  only showed a provisional paired gain. Both must be rerun under `fidelity@0.2.0`."
+Explicitly label the result a stochastic smoke under the current metric, not a
+reproduction of the old tables and not a new headline estimate.
 
-**Optional 10-second kicker:** "One `joint_success = 0` run turned out to be a bug
-in my *corpus labels*, not the agent — same 'who checks the checker' discipline,
-turned on the test set. It's in the results doc."
+## Beat 5 — What it means (2:45–3:00)
 
-## Beat 4 — What it means (2:40–3:00)
+**Say:** "So: a policy proposes musical choices; a deterministic oracle gates
+model-relative playability; an independent checker gates source faithfulness; and
+the harness records what is evidence, what is legacy, and what remains open. The
+moat is execution plus an auditable benchmark, not a hidden claim. That's Fretsure."
 
-**Say:** "So: a front-tier LLM for musical taste, a deterministic oracle for
-ground truth, a self-research harness that makes every part prove it belongs.
-The moat isn't a secret algorithm — it's execution and a benchmark I can't
-fool myself with. That's Fretsure."
-
-**Show:** `docs/BENCHMARK_RESULTS.md` headline + the repo.
+**Show:** the MusicXML output, then the `BENCHMARK_RESULTS.md` metric warning.
 
 ---
 
 ## Fallback / troubleshooting
 
-- No proxy? Everything except Beat 3's live run and `--llm` works offline. Show
-  the saved `docs/BENCHMARK_RESULTS.md` table for the numbers.
-- `fretsure-demo` output varies with `--seed N` / `--bars N` if you want a
-  different tab on camera.
-- Full gate for confidence before recording:
-  `uv run ruff check && uv run mypy src && uv run pytest -q -m "not integration"`.
+- No proxy? `fretsure-demo`, MusicXML import/arrangement, checker tests, and the
+  stub benchmark work offline. Only `--llm`, the six integration tests, and a real-LLM
+  benchmark need the proxy.
+- No MusicXML dependency? Run `uv sync --extra musicxml` (or the setup command above).
+- The default `fretsure-demo` is deterministic; changing `--seed N` or `--bars N`
+  intentionally changes its tab and scores.
+- Full gate before recording:
+
+  ```bash
+  uv run ruff check .
+  uv run mypy src
+  uv run pytest -q -m "not integration"  # 1092 passed, 6 deselected
+  ```
+
+- The six integration tests are deliberately excluded from that offline count;
+  `uv run pytest --collect-only -q` currently collects 1098 tests total.

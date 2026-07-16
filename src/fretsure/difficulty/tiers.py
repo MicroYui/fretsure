@@ -30,6 +30,70 @@ class Tier:
     max_shifts_per_bar: int
 
 
+class TierInputError(ValueError):
+    """Typed rejection for a malformed public difficulty-tier model."""
+
+    def __init__(self, field: str, detail: str) -> None:
+        self.field = field
+        self.detail = detail
+        super().__init__(f"invalid tier.{field}: {detail}")
+
+
+def snapshot_tier(tier: object, *, profile: Profile | None = None) -> Tier:
+    """Validate and detach the non-geometric tier controls.
+
+    The profile itself is validated and detached by the oracle/solver input
+    boundary.  Capturing these remaining fields before that barrier prevents a
+    low-level mutation from relaxing the overlay after the geometry was checked.
+    """
+
+    if type(tier) is not Tier:
+        raise TierInputError("$", "must be an exact Tier")
+    fields: dict[str, object] = {}
+    for field in (
+        "name",
+        "profile",
+        "max_simultaneous",
+        "allow_barre",
+        "max_position",
+        "max_shifts_per_bar",
+    ):
+        try:
+            fields[field] = object.__getattribute__(tier, field)
+        except (AttributeError, TypeError):
+            raise TierInputError(field, "required field is missing") from None
+
+    name = fields["name"]
+    if type(name) is not str or not name or len(name) > 128:
+        raise TierInputError("name", "must be a non-empty exact string of at most 128 chars")
+    max_simultaneous = fields["max_simultaneous"]
+    if type(max_simultaneous) is not int or not 1 <= max_simultaneous <= 6:
+        raise TierInputError("max_simultaneous", "must be an exact integer in 1..6")
+    allow_barre = fields["allow_barre"]
+    if type(allow_barre) is not bool:
+        raise TierInputError("allow_barre", "must be an exact bool")
+    max_position = fields["max_position"]
+    if type(max_position) is not int or not 0 <= max_position <= 36:
+        raise TierInputError("max_position", "must be an exact integer in 0..36")
+    max_shifts = fields["max_shifts_per_bar"]
+    if type(max_shifts) is not int or not 0 <= max_shifts <= 10_000:
+        raise TierInputError(
+            "max_shifts_per_bar",
+            "must be an exact integer in 0..10000",
+        )
+    selected_profile = fields["profile"] if profile is None else profile
+    if type(selected_profile) is not Profile:
+        raise TierInputError("profile", "must be an exact Profile")
+    return Tier(
+        name=name,
+        profile=selected_profile,
+        max_simultaneous=max_simultaneous,
+        allow_barre=allow_barre,
+        max_position=max_position,
+        max_shifts_per_bar=max_shifts,
+    )
+
+
 BEGINNER = Tier(
     "beginner",
     replace(MEDIAN_HAND, version="beginner@0.1", max_fret=5, hand_span_mm=90.0,
@@ -56,6 +120,16 @@ def tier_violations(tab: Tab, tier: Tier, *, beats_per_bar: int = 4) -> list[str
     Geometric feasibility under the tier's tightened profile is handled by the
     oracle; this is the tier-specific overlay. Deterministic (onset-sorted).
     """
+    tier = snapshot_tier(tier)
+    # Local import keeps the representation modules acyclic.
+    from fretsure.oracle.input import ensure_oracle_input
+
+    tab, profile, _, beats_per_bar = ensure_oracle_input(
+        tab,
+        tier.profile,
+        beats_per_bar=beats_per_bar,
+    )
+    tier = snapshot_tier(tier, profile=profile)
     out: list[str] = []
     frames: defaultdict[Fraction, list[TabNote]] = defaultdict(list)
     for n in tab.notes:
@@ -74,14 +148,34 @@ def tier_violations(tab: Tab, tier: Tier, *, beats_per_bar: int = 4) -> list[str
             (n for n in tab.notes if n.fret > 0 and n.left_finger > 0),
             key=lambda n: (n.onset, n.string),
         )
-        for i, a in enumerate(fretted):
-            for b in fretted[i + 1 :]:
-                if a.left_finger != b.left_finger or a.fret != b.fret or a.string == b.string:
-                    continue
-                overlap = a.onset < b.onset + b.duration and b.onset < a.onset + a.duration
-                if overlap:
-                    out.append(f"barre_not_allowed@{min(a.onset, b.onset)}")
-                    break
+        groups: defaultdict[tuple[int, int], list[tuple[int, TabNote]]] = defaultdict(list)
+        for index, note in enumerate(fretted):
+            groups[(note.left_finger, note.fret)].append((index, note))
+        flagged = [False] * len(fretted)
+        for group in groups.values():
+            minimum_later_onset: list[Fraction | None] = [None] * 6
+            for index, note in reversed(group):
+                earliest_other = min(
+                    (
+                        onset
+                        for string, onset in enumerate(minimum_later_onset)
+                        if string != note.string and onset is not None
+                    ),
+                    default=None,
+                )
+                if (
+                    earliest_other is not None
+                    and earliest_other < note.onset + note.duration
+                ):
+                    flagged[index] = True
+                current = minimum_later_onset[note.string]
+                if current is None or note.onset < current:
+                    minimum_later_onset[note.string] = note.onset
+        out.extend(
+            f"barre_not_allowed@{note.onset}"
+            for index, note in enumerate(fretted)
+            if flagged[index]
+        )
 
     for n in sorted(tab.notes, key=lambda x: (x.onset, x.string)):
         if n.fret > tier.max_position:

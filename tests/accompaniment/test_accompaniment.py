@@ -1,10 +1,13 @@
 from fractions import Fraction as F
 
+import pytest
+
 from fretsure.accompaniment.api import arrange_accompaniment
 from fretsure.agent.arranger import ArrangeGoal
 from fretsure.geometry import note_pitch
 from fretsure.ir import ChordSymbol, Meta, MusicIR
 from fretsure.oracle.core import check_playability
+from fretsure.oracle.input import OracleInputCode, SolverInputError
 from fretsure.oracle.profiles import MEDIAN_HAND
 from fretsure.tab import Tab
 
@@ -40,3 +43,19 @@ def test_deterministic() -> None:
     a = arrange_accompaniment(ir, ArrangeGoal(), MEDIAN_HAND)
     b = arrange_accompaniment(ir, ArrangeGoal(), MEDIAN_HAND)
     assert a == b
+
+
+def test_accompaniment_validates_config_before_pattern_lookup() -> None:
+    ir = _ir(ChordSymbol(F(0), "C", frozenset({0, 4, 7}), 0))
+
+    with pytest.raises(SolverInputError) as caught:
+        arrange_accompaniment(
+            ir,
+            ArrangeGoal(tuning=()),
+            MEDIAN_HAND,
+            style="not-a-pattern",
+        )
+
+    assert OracleInputCode.TUNING_LENGTH in {
+        diagnostic.code for diagnostic in caught.value.diagnostics
+    }

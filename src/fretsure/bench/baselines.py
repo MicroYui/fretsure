@@ -14,7 +14,7 @@ from fretsure.ir import MusicIR
 from fretsure.llm.client import LLMClient, extract_json
 from fretsure.oracle.profiles import Profile
 from fretsure.solver.api import Infeasible, solve_fingering
-from fretsure.tab import Tab, tab_from_json
+from fretsure.tab import Tab, validated_tab_from_json
 
 _RAW_SYSTEM = (
     "You are a guitar tablature writer. Output ONLY a JSON tab in this exact schema: "
@@ -24,7 +24,12 @@ _RAW_SYSTEM = (
 )
 
 
-def baseline_raw_llm(ir: MusicIR, goal: ArrangeGoal, llm: LLMClient) -> Tab | None:
+def baseline_raw_llm(
+    ir: MusicIR,
+    goal: ArrangeGoal,
+    llm: LLMClient,
+    profile: Profile,
+) -> Tab | None:
     melody = "; ".join(
         f"onset={n.onset} pitch={n.pitch}" for n in ir.notes if n.voice == "melody"
     )
@@ -32,7 +37,11 @@ def baseline_raw_llm(ir: MusicIR, goal: ArrangeGoal, llm: LLMClient) -> Tab | No
         reply = llm.complete(
             system=_RAW_SYSTEM, user=f"Melody: {melody}\nWrite a fingerstyle tab.", max_tokens=2048
         )
-        return tab_from_json(json.dumps(extract_json(reply)))
+        return validated_tab_from_json(
+            json.dumps(extract_json(reply)),
+            profile=profile,
+            tempo_bpm=goal.tempo_bpm,
+        )
     except (ValueError, KeyError, TypeError, RuntimeError):
         return None
 
@@ -40,5 +49,11 @@ def baseline_raw_llm(ir: MusicIR, goal: ArrangeGoal, llm: LLMClient) -> Tab | No
 def baseline_pure_solver(
     ir: MusicIR, goal: ArrangeGoal, profile: Profile
 ) -> Tab | Infeasible:
-    target = propose_fingerstyle(ir)
+    target = propose_fingerstyle(
+        ir,
+        goal.tuning,
+        goal.capo,
+        profile=profile,
+        tempo_bpm=goal.tempo_bpm,
+    )
     return solve_fingering(target, goal.tuning, goal.capo, profile, tempo_bpm=goal.tempo_bpm)

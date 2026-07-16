@@ -12,8 +12,10 @@ from typing import cast
 
 from fretsure.arrange.propose import propose_fingerstyle
 from fretsure.geometry import STANDARD_TUNING
-from fretsure.ir import MusicIR, Note, VoiceRole
+from fretsure.ir import MusicIR, Note, VoiceRole, snapshot_music_ir
 from fretsure.llm.client import ConstantLLM, LLMClient, extract_json
+from fretsure.oracle.input import ensure_solver_domain
+from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 
 _ARRANGE_SYSTEM = (
     "You are a fingerstyle guitar arranger. Given a lead sheet, decide the musical "
@@ -121,6 +123,7 @@ def _output_token_budget(ir: MusicIR) -> int:
 
 def ensure_llm_capacity(ir: MusicIR) -> None:
     """Raise a typed error rather than silently truncating a real-LLM request."""
+    ir = snapshot_music_ir(ir)
     _output_token_budget(ir)
 
 
@@ -130,7 +133,25 @@ def propose_arrangement(
     llm: LLMClient,
     *,
     temperature: float = 0.0,
+    profile: Profile = MEDIAN_HAND,
 ) -> tuple[Note, ...]:
+    ir = snapshot_music_ir(ir)
+    notes, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
+        ir.notes,
+        goal.tuning,
+        goal.capo,
+        profile,
+        tempo_bpm=goal.tempo_bpm,
+    )
+    ir = MusicIR(notes, tuple(ir.chords), ir.meta)
+    goal = ArrangeGoal(
+        style=goal.style,
+        tier=goal.tier,
+        tuning=tuning,
+        capo=capo,
+        tempo_bpm=tempo_bpm,
+        extras=goal.extras,
+    )
     # ``ConstantLLM`` is the documented offline switch that previously reached
     # the same rule path via malformed JSON.  Dispatch directly so the non-LLM
     # vertical slice continues to accept the importer's much larger resource
@@ -140,6 +161,8 @@ def propose_arrangement(
             ir,
             goal.tuning,
             goal.capo,
+            profile=profile,
+            tempo_bpm=goal.tempo_bpm,
         )
     max_tokens = _output_token_budget(ir)
     low = min(goal.tuning) + goal.capo
@@ -168,4 +191,6 @@ def propose_arrangement(
             ir,
             goal.tuning,
             goal.capo,
+            profile=profile,
+            tempo_bpm=goal.tempo_bpm,
         )  # honest deterministic fallback

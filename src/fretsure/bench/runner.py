@@ -26,7 +26,50 @@ from fretsure.bench.generator import GenConfig, generate_leadsheet
 from fretsure.llm.client import LLMClient
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 from fretsure.oracle.core import CHECKER_VERSION
+from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION, ensure_profile
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
+
+MAX_BENCHMARK_ITEMS = 1_000
+MAX_BENCHMARK_BARS = 64
+MAX_BENCHMARK_CORPUS_BARS = 4_096
+MAX_BENCHMARK_SEED = (1 << 63) - 1
+
+
+class BenchmarkInputError(ValueError):
+    """Typed failure for benchmark controls outside the finite run envelope."""
+
+    def __init__(self, field: str, detail: str) -> None:
+        self.field = field
+        self.detail = detail
+        super().__init__(f"invalid benchmark {field}: {detail}")
+
+
+def _validate_controls(
+    seed: object,
+    items: object,
+    bars: object,
+    paired: object,
+) -> tuple[int, int, int, bool]:
+    if type(seed) is not int or not -MAX_BENCHMARK_SEED <= seed <= MAX_BENCHMARK_SEED:
+        raise BenchmarkInputError("seed", "must be an exact signed 63-bit integer")
+    if type(items) is not int or not 1 <= items <= MAX_BENCHMARK_ITEMS:
+        raise BenchmarkInputError(
+            "items",
+            f"must be an exact integer in 1..{MAX_BENCHMARK_ITEMS}",
+        )
+    if type(bars) is not int or not 1 <= bars <= MAX_BENCHMARK_BARS:
+        raise BenchmarkInputError(
+            "bars",
+            f"must be an exact integer in 1..{MAX_BENCHMARK_BARS}",
+        )
+    if items * bars > MAX_BENCHMARK_CORPUS_BARS:
+        raise BenchmarkInputError(
+            "items*bars",
+            f"must not exceed {MAX_BENCHMARK_CORPUS_BARS}",
+        )
+    if type(paired) is not bool:
+        raise BenchmarkInputError("paired", "must be an exact bool")
+    return seed, items, bars, paired
 
 
 @dataclass(frozen=True)
@@ -38,6 +81,8 @@ class BenchReport:
     checker_version: str
     fidelity_checker_version: str
     profile_version: str
+    profile_fingerprint: str
+    input_schema_version: str
     paired: PairedBestOfN | None = None
     paired_crit: PairedCritic | None = None
 
@@ -77,6 +122,8 @@ def run_benchmark(
     best-of-N on one shared proposal pool), which — unlike the unpaired ``-best_of_n``
     arm — is not confounded by independent stochastic draws.
     """
+    seed, items, bars, paired = _validate_controls(seed, items, bars, paired)
+    profile = ensure_profile(profile)
     corpus = _corpus(seed, items, bars)
     goal = ArrangeGoal()
     loo = leave_one_out(corpus, goal, llm_factory, profile, base=AblationConfig(best_of_n=2))
@@ -90,6 +137,8 @@ def run_benchmark(
         checker_version=CHECKER_VERSION,
         fidelity_checker_version=FIDELITY_CHECKER_VERSION,
         profile_version=profile.version,
+        profile_fingerprint=profile.fingerprint,
+        input_schema_version=ORACLE_INPUT_SCHEMA_VERSION,
         paired=pbn,
         paired_crit=pcr,
     )
@@ -102,6 +151,8 @@ def report_to_dict(report: BenchReport) -> dict[str, Any]:
         "checker_version": report.checker_version,
         "fidelity_checker_version": report.fidelity_checker_version,
         "profile_version": report.profile_version,
+        "profile_fingerprint": report.profile_fingerprint,
+        "input_schema_version": report.input_schema_version,
         "ablation": {name: asdict(m) for name, m in report.ablation.items()},
     }
     if report.paired is not None:
