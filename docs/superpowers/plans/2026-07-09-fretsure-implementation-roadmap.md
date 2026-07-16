@@ -8,7 +8,7 @@
 
 **Architecture（范式）**：**oracle 当环境、LLM 当策略（policy）**。确定性 oracle / 指法求解器 / 乐理分析 / 忠实度 diff 是一套工具与环境；LLM 驱动「规划 → 用 edit-DSL 编辑 → 读定位化诊断 → 定点编辑 → 重查到不动点」的自纠回路。深度不在「图里有 LLM」，在「每个 agent 能力都用 leave-one-out 消融证明它挪动了 checker 打分的指标，否则砍掉并公开」。
 
-**Tech Stack**：Python 3.11 + music21(BSD-3) + numpy/networkx（可选 OR-Tools CP-SAT）+ FastAPI；React/TS + Vite + AlphaTab(MPL-2.0) + 自研 SVG/Canvas 指板；FluidSynth(LGPL) + GeneralUser GS soundfont；LLM = Opus 4.8 / GPT-5.5(API)；PyTorch-CPU（stretch RL）；Postgres（可选）。
+**Tech Stack**：Python 3.11 + music21(BSD-3) + numpy/networkx（可选 OR-Tools CP-SAT）+ FastAPI；React/TS + Vite + AlphaTab(MPL-2.0) + 自研 SVG/Canvas 指板；FluidSynth(LGPL) + GeneralUser GS soundfont；LLM = GPT-5.6 Sol (API)；PyTorch-CPU（stretch RL）；Postgres（可选）。
 
 ---
 
@@ -290,7 +290,7 @@ def feasible_fingerings(frame: "Frame", profile: Profile) -> list["FingerAssignm
 - `fretsure/metrics/difficulty.py`：难度打分（150 条专家排序 learn-to-rank）。
 - `fretsure/metrics/reliability.py`：pass@k / **pass^k**（HumanEval 式无偏估计 n≥10/条）+ Wilson CI。
 - `fretsure/bench/runner.py`：**leave-one-out 消融 runner**（统一 runner 跑所有配置）+ baselines（B1 前沿 LLM 原始 / B2 纯求解器 / B3 学术 id55/TART / B4 商用往返）。
-- `fretsure/bench/checker_vs_judge.py`：N≈400 带人金标+对抗近失，oracle vs LLM 评委（Opus 4.8+GPT-5.5，zero-shot/rubric，每条跑 5 次测翻转率），McNemar + 误接受率 + 成本对比。
+- `fretsure/bench/checker_vs_judge.py`：N≈400 带人金标+对抗近失，oracle vs GPT-5.6 Sol 主评 + 独立版本化的跨供应商前沿 comparator（均跑 zero-shot/rubric，每条 5 次测翻转率），McNemar + 误接受率 + 成本对比。
 - `fretsure/bench/stats.py`：Wilson / Clopper–Pearson / **按曲 cluster bootstrap** / McNemar / Holm–Bonferroni / 预注册最小可检效应与 N。
 - `fretsure-bench --seed S`：一条命令重建语料+程序测试集+oracle 配置(3 预设 hashed)+全指标+CI+checker 验证报告+checker-vs-judge。
 

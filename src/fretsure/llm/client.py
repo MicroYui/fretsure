@@ -5,11 +5,45 @@ import os
 import time
 from typing import Any, Protocol
 
+DEFAULT_PROXY_MODEL = "gpt-5.6-sol"
+FAKE_LLM_MODEL_ID = "fake-scripted"
+CONSTANT_LLM_MODEL_ID = "constant-stub"
+MAX_LLM_MODEL_ID_CHARS = 128
+
+
+class LLMModelIdError(ValueError):
+    """The LLM implementation did not expose a safe, stable model identifier."""
+
 
 class LLMClient(Protocol):
+    @property
+    def model_id(self) -> str: ...
+
     def complete(
         self, *, system: str, user: str, max_tokens: int = 1024, temperature: float = 0.0
     ) -> str: ...
+
+
+def validate_llm_model_id(value: object) -> str:
+    """Return one bounded exact model id, or fail without rendering hostile input."""
+    if (
+        type(value) is not str
+        or not 1 <= len(value) <= MAX_LLM_MODEL_ID_CHARS
+        or not value.isprintable()
+    ):
+        raise LLMModelIdError(
+            f"model_id must be a printable exact string of 1..{MAX_LLM_MODEL_ID_CHARS} characters"
+        )
+    return value
+
+
+def snapshot_llm_model_id(llm: LLMClient) -> str:
+    """Read and validate model provenance before the implementation is invoked."""
+    try:
+        value = llm.model_id
+    except Exception:
+        raise LLMModelIdError("model_id could not be read") from None
+    return validate_llm_model_id(value)
 
 
 class FakeLLM:
@@ -19,6 +53,10 @@ class FakeLLM:
         self._scripted = list(scripted)
         self._i = 0
         self._calls: list[dict[str, Any]] = []
+
+    @property
+    def model_id(self) -> str:
+        return FAKE_LLM_MODEL_ID
 
     def complete(
         self, *, system: str, user: str, max_tokens: int = 1024, temperature: float = 0.0
@@ -41,6 +79,10 @@ class ConstantLLM:
     def __init__(self, reply: str = "{}") -> None:
         self._reply = reply
 
+    @property
+    def model_id(self) -> str:
+        return CONSTANT_LLM_MODEL_ID
+
     def complete(
         self, *, system: str, user: str, max_tokens: int = 1024, temperature: float = 0.0
     ) -> str:
@@ -54,7 +96,8 @@ class ProxyLLM:
     imported lazily so the core package does not require it.
     """
 
-    def __init__(self, model: str = "claude-opus-4-8") -> None:
+    def __init__(self, model: str = DEFAULT_PROXY_MODEL) -> None:
+        model = validate_llm_model_id(model)
         import anthropic
 
         self._client = anthropic.Anthropic(
@@ -62,6 +105,10 @@ class ProxyLLM:
             auth_token=os.environ.get("ANTHROPIC_AUTH_TOKEN"),
         )
         self._model = model
+
+    @property
+    def model_id(self) -> str:
+        return self._model
 
     def complete(
         self, *, system: str, user: str, max_tokens: int = 1024, temperature: float = 0.0

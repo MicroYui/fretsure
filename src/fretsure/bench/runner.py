@@ -23,7 +23,14 @@ from fretsure.bench.ablation import (
 )
 from fretsure.bench.corpus import CorpusItem
 from fretsure.bench.generator import GenConfig, generate_leadsheet
-from fretsure.llm.client import LLMClient
+from fretsure.llm.client import (
+    CONSTANT_LLM_MODEL_ID,
+    DEFAULT_PROXY_MODEL,
+    LLMClient,
+    LLMModelIdError,
+    snapshot_llm_model_id,
+    validate_llm_model_id,
+)
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 from fretsure.oracle.core import CHECKER_VERSION
 from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION, ensure_profile
@@ -42,6 +49,13 @@ class BenchmarkInputError(ValueError):
         self.field = field
         self.detail = detail
         super().__init__(f"invalid benchmark {field}: {detail}")
+
+
+def _benchmark_model_id(value: object) -> str:
+    try:
+        return validate_llm_model_id(value)
+    except LLMModelIdError as error:
+        raise BenchmarkInputError("llm_model_id", str(error)) from None
 
 
 def _validate_controls(
@@ -83,6 +97,7 @@ class BenchReport:
     profile_version: str
     profile_fingerprint: str
     input_schema_version: str
+    llm_model_id: str
     paired: PairedBestOfN | None = None
     paired_crit: PairedCritic | None = None
 
@@ -108,6 +123,7 @@ def run_benchmark(
     profile: Profile = MEDIAN_HAND,
     bars: int = 2,
     paired: bool = False,
+    llm_model_id: str | None = None,
 ) -> BenchReport:
     """Rebuild the procedural corpus and run the full agent + leave-one-out ablation.
 
@@ -123,12 +139,44 @@ def run_benchmark(
     arm — is not confounded by independent stochastic draws.
     """
     seed, items, bars, paired = _validate_controls(seed, items, bars, paired)
+    if llm_model_id is not None:
+        _benchmark_model_id(llm_model_id)
     profile = ensure_profile(profile)
     corpus = _corpus(seed, items, bars)
     goal = ArrangeGoal()
-    loo = leave_one_out(corpus, goal, llm_factory, profile, base=AblationConfig(best_of_n=2))
-    pbn = paired_best_of_n(corpus, goal, llm_factory, profile, n=2) if paired else None
-    pcr = paired_critic(corpus, goal, llm_factory, profile, n=2) if paired else None
+    observed_model_id: str | None = None
+
+    def checked_factory() -> LLMClient:
+        nonlocal observed_model_id
+        llm = llm_factory()
+        try:
+            actual_model_id = snapshot_llm_model_id(llm)
+        except LLMModelIdError as error:
+            raise BenchmarkInputError("llm_model_id", str(error)) from None
+        if llm_model_id is not None and actual_model_id != llm_model_id:
+            raise BenchmarkInputError(
+                "llm_model_id",
+                f"expected {llm_model_id!r}, factory returned {actual_model_id!r}",
+            )
+        if observed_model_id is not None and actual_model_id != observed_model_id:
+            raise BenchmarkInputError(
+                "llm_model_id",
+                "factory returned inconsistent model ids across benchmark arms",
+            )
+        observed_model_id = actual_model_id
+        return llm
+
+    loo = leave_one_out(
+        corpus,
+        goal,
+        checked_factory,
+        profile,
+        base=AblationConfig(best_of_n=2),
+    )
+    pbn = paired_best_of_n(corpus, goal, checked_factory, profile, n=2) if paired else None
+    pcr = paired_critic(corpus, goal, checked_factory, profile, n=2) if paired else None
+    if observed_model_id is None:  # items >= 1 means every valid run constructs an LLM
+        raise RuntimeError("benchmark did not construct an LLM")
     return BenchReport(
         seed=seed,
         n_items=items,
@@ -139,6 +187,7 @@ def run_benchmark(
         profile_version=profile.version,
         profile_fingerprint=profile.fingerprint,
         input_schema_version=ORACLE_INPUT_SCHEMA_VERSION,
+        llm_model_id=observed_model_id,
         paired=pbn,
         paired_crit=pcr,
     )
@@ -153,6 +202,7 @@ def report_to_dict(report: BenchReport) -> dict[str, Any]:
         "profile_version": report.profile_version,
         "profile_fingerprint": report.profile_fingerprint,
         "input_schema_version": report.input_schema_version,
+        "llm_model_id": report.llm_model_id,
         "ablation": {name: asdict(m) for name, m in report.ablation.items()},
     }
     if report.paired is not None:
@@ -199,8 +249,14 @@ def main() -> None:
 
         return ProxyLLM()
 
+    llm_model_id = CONSTANT_LLM_MODEL_ID if args.stub else DEFAULT_PROXY_MODEL
     report = run_benchmark(
-        seed=args.seed, items=args.items, llm_factory=factory, bars=args.bars, paired=args.paired
+        seed=args.seed,
+        items=args.items,
+        llm_factory=factory,
+        bars=args.bars,
+        paired=args.paired,
+        llm_model_id=llm_model_id,
     )
     print(json.dumps(report_to_dict(report), indent=2))
 

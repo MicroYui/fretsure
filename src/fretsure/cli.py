@@ -110,8 +110,10 @@ def _make_llm(use_llm: bool) -> tuple[LLMClient, str]:
     if use_llm:
         from fretsure.llm.client import ProxyLLM
 
-        return ProxyLLM(), "ProxyLLM (local proxy)"
-    return ConstantLLM("noop"), "ConstantLLM (deterministic offline fallback)"
+        proxy = ProxyLLM()
+        return proxy, f"ProxyLLM ({proxy.model_id} via local proxy)"
+    stub = ConstantLLM("noop")
+    return stub, f"ConstantLLM ({stub.model_id}; deterministic offline fallback)"
 
 
 def _location(diagnostic: ImportDiagnostic) -> str:

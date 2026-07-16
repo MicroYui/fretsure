@@ -4,7 +4,7 @@ Gate-by-gate evidence for **Plan 1: Core + Oracle** (roadmap §C Plan 1 +
 §14 A.7–A.9). This is a historical acceptance record, updated here to make the
 remaining external-validity gate explicit. After replaying the Oracle 0.2 trust gate
 on the independently closed MusicXML-first tree, the current repository collects
-1242 tests: 1236 offline tests and 6 integration tests requiring the local LLM
+1248 tests: 1242 offline tests and 6 integration tests requiring the local LLM
 proxy. The smaller 91/103/264/445 counts mentioned in
 review history were snapshots at the time of those reviews. Ruff and strict mypy are green. CI
 (`.github/workflows/ci.yml`) runs `ruff check` + `mypy src` + `pytest -q` on
@@ -117,8 +117,8 @@ for the pending human calibration gate.
 
 ```bash
 uv sync --extra dev
-uv run pytest -q -m "not integration"   # 1236 passed, 6 deselected
-uv run pytest --collect-only -q          # 1242 collected
+uv run pytest -q -m "not integration"   # 1242 passed, 6 deselected
+uv run pytest --collect-only -q          # 1248 collected
 uv run ruff check .                        # clean
 uv run mypy src                            # clean (strict)
 uv build

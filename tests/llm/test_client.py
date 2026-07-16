@@ -1,8 +1,9 @@
 import os
+from types import SimpleNamespace
 
 import pytest
 
-from fretsure.llm.client import FakeLLM, extract_json
+from fretsure.llm.client import DEFAULT_PROXY_MODEL, FakeLLM, ProxyLLM, extract_json
 
 
 def test_fake_llm_returns_scripted_in_order() -> None:
@@ -41,13 +42,33 @@ def test_extract_json_bad_raises() -> None:
         extract_json("no json here")
 
 
+def test_proxy_llm_forwards_canonical_gpt_5_6_sol_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request: dict[str, object] = {}
+
+    class FakeMessages:
+        def create(self, **kwargs: object) -> object:
+            request.update(kwargs)
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text="MODEL_OK")])
+
+    class FakeAnthropic:
+        def __init__(self, **kwargs: object) -> None:
+            self.messages = FakeMessages()
+
+    monkeypatch.setattr("anthropic.Anthropic", FakeAnthropic)
+    llm = ProxyLLM()
+
+    assert llm.model_id == DEFAULT_PROXY_MODEL == "gpt-5.6-sol"
+    assert llm.complete(system="s", user="u", max_tokens=20) == "MODEL_OK"
+    assert request["model"] == "gpt-5.6-sol"
+
+
 @pytest.mark.integration
 def test_proxy_llm_real_call() -> None:
     if not os.environ.get("ANTHROPIC_BASE_URL"):
         pytest.skip("no local LLM proxy configured (ANTHROPIC_BASE_URL unset)")
-    from fretsure.llm.client import ProxyLLM
-
     out = ProxyLLM().complete(
         system="You are terse.", user="Reply with exactly the token PROXY_OK.", max_tokens=20
     )
-    assert isinstance(out, str) and out.strip()
+    assert out.strip() == "PROXY_OK"

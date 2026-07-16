@@ -2,7 +2,8 @@
 
 A tight, reproducible walkthrough for a screen recording or live demo. The default
 path is fully offline, including the MusicXML import. A real-LLM benchmark or
-`--llm` arrangement needs the local proxy. Target length ≈ 3 minutes.
+`--llm` arrangement needs the local proxy and defaults to canonical
+`gpt-5.6-sol`. Target length ≈ 3 minutes.
 
 Setup (once, off-camera):
 
@@ -95,7 +96,7 @@ uv run pytest -q tests/oracle tests/validation tests/test_geometry.py -m "not in
 - Span is measured in **millimetres**, not fret count; the same fret span changes
   physical distance with neck position.
 
-**Say:** "The final repository gate is 1236 offline tests plus 6 proxy-backed
+**Say:** "The final repository gate is 1242 offline tests plus 6 proxy-backed
 integration tests, with ruff, strict mypy, lock and package smokes green. Invalid
 public Tab/profile/solver/gold inputs now fail typed and resource-bounded; a
 zero-GREEN split is explicitly `no_green` with no rate or bound. But the human gold
@@ -150,8 +151,8 @@ moat is execution plus an auditable benchmark, not a hidden claim. That's Fretsu
   ```bash
   uv run ruff check .
   uv run mypy src
-  uv run pytest -q -m "not integration"  # 1236 passed, 6 deselected
+  uv run pytest -q -m "not integration"  # 1242 passed, 6 deselected
   ```
 
 - The six integration tests are deliberately excluded from that offline count;
-  `uv run pytest --collect-only -q` currently collects 1242 tests total.
+  `uv run pytest --collect-only -q` currently collects 1248 tests total.

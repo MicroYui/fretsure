@@ -9,7 +9,7 @@ from fretsure.agent.harness import ArrangeResult
 from fretsure.agent.trace import Trace
 from fretsure.demo import sample_ir
 from fretsure.ir import IRInputError
-from fretsure.llm.client import ConstantLLM
+from fretsure.llm.client import ConstantLLM, LLMModelIdError
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 from fretsure.oracle.core import CHECKER_VERSION
 from fretsure.oracle.input import (
@@ -84,6 +84,47 @@ def test_pipeline_uses_one_detached_profile_for_execution_and_trace(
     assert seen_profiles[0] is not source_profile
     assert plan["profile_version"] == "pipeline-snapshot@0.1"
     assert plan["profile_fingerprint"] == expected_fingerprint
+
+
+def test_pipeline_snapshots_model_id_before_calls_and_rejects_invalid_id_before_call() -> None:
+    class DriftingLLM:
+        def __init__(self, model_id: str) -> None:
+            self.current_model_id = model_id
+            self.calls = 0
+
+        @property
+        def model_id(self) -> str:
+            return self.current_model_id
+
+        def complete(
+            self,
+            *,
+            system: str,
+            user: str,
+            max_tokens: int = 1024,
+            temperature: float = 0.0,
+        ) -> str:
+            self.calls += 1
+            self.current_model_id = "claimed-after-call"
+            return "noop"
+
+    drifting = DriftingLLM("actual-before-call")
+    result = run_pipeline(
+        sample_ir(bars=1),
+        drifting,
+        options=PipelineOptions(n=1, use_critic=False),
+    )
+    assert drifting.calls > 0
+    assert result.trace.steps[0].data["llm_model_id"] == "actual-before-call"
+
+    invalid = DriftingLLM("bad\nmodel")
+    with pytest.raises(LLMModelIdError, match="printable exact string"):
+        run_pipeline(
+            sample_ir(bars=1),
+            invalid,
+            options=PipelineOptions(n=1, use_critic=False),
+        )
+    assert invalid.calls == 0
 
 
 def test_pipeline_controls_are_detached_before_instrument_validation(
@@ -281,6 +322,7 @@ def test_pipeline_offline_result_contains_tab_ascii_gate_and_trace() -> None:
         == result.arrangement.oracle.profile_fingerprint
     )
     first_jsonl_row = json.loads(result.trace.to_jsonl().splitlines()[0])
+    assert first_jsonl_row["data"]["llm_model_id"] == "constant-stub"
     assert first_jsonl_row["data"]["checker_version"] == CHECKER_VERSION
     assert (
         first_jsonl_row["data"]["input_schema_version"]

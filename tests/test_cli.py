@@ -49,11 +49,13 @@ def test_cli_success_prints_full_product_result_and_writes_trace(
     assert "profile SHA-256" in captured.out
     assert "input schema tab-input@0.2.0" in captured.out
     assert "checker fidelity@0.2.0" in captured.out
+    assert "ConstantLLM (constant-stub; deterministic offline fallback)" in captured.out
     trace_rows = [
         json.loads(line)
         for line in trace_path.read_text(encoding="utf-8").splitlines()
     ]
     metadata = trace_rows[0]["data"]
+    assert metadata["llm_model_id"] == "constant-stub"
     assert metadata["checker_version"] == "oracle@0.2.0"
     assert metadata["input_schema_version"] == "tab-input@0.2.0"
     assert metadata["fidelity_checker_version"] == "fidelity@0.2.0"

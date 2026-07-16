@@ -3,7 +3,7 @@
 > 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-16。
 
 ## 0. 现状一句话
-设计已锁定；**Plan 1–5、Pre-Plan 6 的 MusicXML-first 文件纵切、Oracle 0.2 软件信任门与安全 `.mxl` container reader 已经实现并各自闭门**，当前是一套可运行的后端研究原型。此提交的版本边界是 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.2.0`、container=`mxl-container@0.1.0`、profile=`median@0.1`。Web/API/MCP、扩展 MusicXML/IR、MIDI 与音频尚未进入本提交。
+设计已锁定；**Plan 1–5、Pre-Plan 6 的 MusicXML-first 文件纵切、Oracle 0.2 软件信任门与安全 `.mxl` container reader 已经实现并各自闭门**，当前是一套可运行的后端研究原型。此提交的版本边界是 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.2.0`、container=`mxl-container@0.1.0`、profile=`median@0.1`；默认真代理模型为 canonical `gpt-5.6-sol`。Web/API/MCP、扩展 MusicXML/IR、MIDI 与音频尚未进入本提交。
 - **Plan 1**（`plan-1-core-oracle`）：可弹性 oracle + 自验证台。终审 Ready。
 - **Plan 2**（`plan-2-solver-m0`）：beam 求解器（永不返回 RED）+ M0。复核 Ready。
 - **Plan 3**（`plan-3-agent-loop`）：oracle 当环境、LLM 当策略——修复脊柱 + 提议器 + critic + best-of-N。真 LLM 端到端。Ready-with-minor（已修）。
@@ -32,7 +32,7 @@
   - gold 文件/内存输入具有累计 bytes/rows/notes/checker-work/lines/JSON-nodes 上限、深快照与 digest provenance；zero-GREEN false-accept 结果为 `status="no_green"` 且 rate/bound=`None`，退化 κ 与空 pass^k 同样显式 undefined。
   - 真人 gold/calibration 不阻塞软件主线，但继续阻塞现实世界 GREEN 误接受率、profile/tier→真人映射、AMBER 经验带宽、真人 musicality 与更强对外保证。
 - **诚实记分卡**：历史 repair 强正信号；best-of-N 薄利；**critic 未挣得（观察/待砍）**。这些旧数来自 legacy/unversioned harmony metric，不是 `fidelity@0.2.0` benchmark 基线。
-- **当前质量门**：离线 `1236 passed, 6 deselected`，本地代理全量 `1242 passed`；`1242 collected`。ruff、mypy(strict, 61 source files)、`uv lock --check` 与 `git diff --check` 全绿；`fretsure_oracle-0.2.0` wheel/sdist 从最终树重建，sdist 163-entry allowlist 审计排除了本地配置与缓存；clean core/no-extra 对有效 `.mxl` typed `MISSING_DEPENDENCY`、clean `[musicxml]` 安装、真实 `.mxl` CLI 双跑/6-row JSONL 与 stub benchmark smoke 全绿。stdout、JSONL metadata row 与 benchmark JSON 均盖 `oracle@0.2.0`、`fidelity@0.2.0`、`tab-input@0.2.0`、`median@0.1` 及 profile SHA-256；CLI 另盖 `musicxml@0.2.0`、raw/root hashes 与 rootfile member。
+- **当前质量门**：离线 `1242 passed, 6 deselected`，本地 `gpt-5.6-sol` 代理全量 `1248 passed`；`1248 collected`。ruff、mypy(strict, 61 source files)、`uv lock --check` 与 `git diff --check` 全绿；`fretsure_oracle-0.2.0` wheel/sdist 从最终树重建，sdist 163-entry allowlist 审计排除了本地配置与缓存；clean core/no-extra 对有效 `.mxl` typed `MISSING_DEPENDENCY`、clean `[musicxml]` 安装、真实 `.mxl` CLI 双跑/6-row JSONL 与 stub benchmark smoke 全绿。stdout、JSONL metadata row 与 benchmark JSON 均盖 `llm_model_id`、`oracle@0.2.0`、`fidelity@0.2.0`、`tab-input@0.2.0`、`median@0.1` 及 profile SHA-256；CLI 另盖 `musicxml@0.2.0`、raw/root hashes 与 rootfile member。
 - **分支**：plan-1→2→3→4→5→`consolidation` 已**全部 ff 并入 `master`（trunk）**（trunk 原只有 spec 脚手架；现含完整后端）。
 - **下一步已冻结**：安全 `.mxl` 独立提交后进入 Plan 6A Web/API/trace viewer/MCP 薄纵切；随后按真实 producer failure 分布扩 MusicXML/IR，再做 MIDI 与 benchmark v2。
 - **已知点**：solve_fingering 是资源有界、非完备搜索；tier/忠实度/难度参数占位待 design partner 校准；leave-one-out 各臂对随机 LLM **非配对**（大效应 repair 不受影响；best-of-N/critic 已另有**配对**测量，见 RESULTS）。
@@ -56,6 +56,7 @@
 9. **RL**：stretch，收口为 CPU 小 **reranker**，允许诚实负结果。
 10. **可展示性**（用户强调）：不能只是数字；**money moment** = 观众点歌→oracle 标红→agent 修复→真人当场弹出。**可展示=真功能**。
 11. **定名**：**Fretsure**（fret+ensure）。备选 PlayProof/Fretwright 存档。
+12. **默认模型迁移（2026-07-16）**：真代理从历史 `claude-opus-4-8` 切到 canonical `gpt-5.6-sol`；代理协议与 prompts 不变，6 项 integration 全绿。工程适配成本近于零，但迁移当日的本地代理 metadata 显示输入价相同、输出价约高 20%；按本项目 API 充足/质量优先约束接受。CLI、trace 与 benchmark 聚合 JSON 盖 `llm_model_id`；legacy Claude 数表只作历史证据，benchmark v2 必须独立重跑。
 
 ## 3. 诚实的新颖性裁决（红队结论，勿自欺）
 - **部分开放**：无成熟上线产品做这套完整组合；但**概念不新**。

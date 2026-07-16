@@ -24,7 +24,9 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
 
 该入口会依次输出 typed import diagnostics、MusicIR 摘要、ASCII tab、
 `oracle@0.2.0` 判决、fingerprinted profile、`tab-input@0.2.0`、独立的
-`fidelity@0.2.0` 门与带完整 checker stamps 的可回放 JSONL trace。
+`fidelity@0.2.0` 门与带完整 checker/model stamps 的可回放 JSONL trace。
+`--llm` 的当前默认是 canonical `gpt-5.6-sol`；CLI、trace 与 benchmark
+聚合 JSON 都显式记录 model id。
 当前只支持单 part/staff/voice 的 4/4 单音旋律、固定显式 major/minor key、
 固定 quarter-note tempo、普通 note/rest/tie 和白名单 root+kind harmony；
 `.mxl` 只扩展容器、不扩展这些 root MusicXML 语义；复调/多声部、MIDI 与音频
@@ -95,8 +97,8 @@ lead sheet / MIDI / IR
 当前 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=
 `tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=
 `musicxml@0.2.0`、container=`mxl-container@0.1.0`。
-当前收集 `1242` 项测试：离线 `1236 passed, 6 deselected`，本地代理全量
-`1242 passed`；ruff、strict mypy（61 source files）、构建与 clean-venv smoke 全绿。
+当前收集 `1248` 项测试：离线 `1242 passed, 6 deselected`，本地代理全量
+`1248 passed`；ruff、strict mypy（61 source files）、构建与 clean-venv smoke 全绿。
 下一项是 Plan 6A Web/API/trace viewer/MCP 薄纵切。
 
 - **Plan 1 核心 + 可弹性 Oracle**：Music IR + strict public Tab schema + 毫米几何/active-sustain/连续换把 oracle（三态 + 定位化诊断）+ fingerprinted profile + 自验证台（property/metamorphic/mutation/N-version + fail-closed gold/statistics）。zero-GREEN 明确是 `no_green`/`None`，不是完美的 `0.0`。见 [`docs/PLAN1_ACCEPTANCE.md`](docs/PLAN1_ACCEPTANCE.md)、[`docs/SCOPE.md`](docs/SCOPE.md)。
@@ -119,7 +121,7 @@ lead sheet / MIDI / IR
 
 ```bash
 uv sync --extra dev              # 建 3.11 venv + 装依赖
-uv run pytest -q -m "not integration"   # 1236 passed；6 integration deselected
+uv run pytest -q -m "not integration"   # 1242 passed；6 integration deselected
 uv run ruff check                # lint
 uv run mypy src                  # 类型检查（strict）
 uv run fretsure-demo             # 一条命令端到端 demo
@@ -127,4 +129,4 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml
 uv run fretsure-bench --seed 1 --items 16   # 复现消融（需本地 LLM 代理）
 ```
 
-集成测试与 `--llm`、`fretsure-bench` 需本地 LLM 代理（`export ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN=...`）；缺省一律走确定性离线路径，保证一条命令可跑。
+集成测试与 `--llm`、`fretsure-bench` 需本地 LLM 代理（`export ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN=...`），默认 model id 为 `gpt-5.6-sol`；缺省一律走确定性离线路径，保证一条命令可跑。

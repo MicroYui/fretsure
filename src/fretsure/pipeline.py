@@ -12,7 +12,7 @@ from fretsure.agent.harness import ArrangeResult, arrange
 from fretsure.agent.trace import Trace
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import IRInputError, MusicIR, snapshot_music_ir, validate_ir
-from fretsure.llm.client import LLMClient
+from fretsure.llm.client import LLMClient, snapshot_llm_model_id
 from fretsure.metrics.fidelity import (
     FIDELITY_CHECKER_VERSION,
     FaithfulnessGate,
@@ -177,6 +177,7 @@ def run_pipeline(
         capo=capo,
         tempo_bpm=effective_tempo,
     )
+    llm_model_id = snapshot_llm_model_id(llm)
     raw_arrangement = arrange(
         ir,
         goal,
@@ -190,6 +191,7 @@ def run_pipeline(
     trace.add(
         "PLAN",
         "pipeline configured from source metadata and explicit options",
+        llm_model_id=llm_model_id,
         source_tempo_bpm=source_tempo,
         effective_tempo_bpm=effective_tempo,
         time_signature="4/4",

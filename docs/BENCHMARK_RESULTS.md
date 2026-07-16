@@ -7,6 +7,10 @@
 > `fidelity@0.2.0`. The historical code/document state is pinned by the
 > consolidated baseline commit `bee8a1c`; a real-LLM benchmark v2 rerun is still
 > required before publishing a current headline number.
+>
+> The active proxy default moved to canonical `gpt-5.6-sol` on 2026-07-16.
+> Current trace and aggregate benchmark JSON stamp `llm_model_id`; the legacy
+> tables below remain attributed to `claude-opus-4-8` and were not rewritten.
 
 Machine-scored, recorded numbers for the Fretsure arrangement agent. The
 scorer is the deterministic oracle + faithfulness gate — **not** an LLM judge.
@@ -43,17 +47,19 @@ uv run fretsure-bench --seed 2 --items 16 --bars 2 --paired
 
 Same seed rebuilds the same procedurally novel corpus, which resists exact-item tab
 memorization but is not an absolute proof against learned generator patterns or
-contamination. The LLM (`claude-opus-4-8` via the
+contamination. The current LLM (`gpt-5.6-sol` via the
 local proxy) is stochastic, so this reproduces the experiment shape, **not the exact
 recorded counts**. More importantly, the command now scores with
 `fidelity@0.2.0`; it cannot reproduce the legacy tables under the same scoring
-semantics. The current CLI stamps both checker versions in its aggregate JSON, but
+semantics. The current CLI stamps the model id and both checker versions in its
+aggregate JSON, but
 does not calculate the Wilson intervals shown below or persist per-item raw rows.
 Its public controls fail closed before corpus construction or LLM-factory calls:
 `seed` is an exact signed 63-bit integer, `items` is 1..1000, `bars` is 1..64,
 `items * bars` is at most 4096, and `paired` is an exact bool.
 
-The legacy tables accumulated in commits `fb5b56a` (first seed), `337ed23`
+The legacy tables used `claude-opus-4-8` via the local proxy and accumulated in
+commits `fb5b56a` (first seed), `337ed23`
 (second seed), `a866aa0` (paired best-of-N), and `c587f75` (paired critic), then
 were consolidated at `bee8a1c`. The exact execution commit and raw per-item rows
 were not stamped into each run artifact, which remains a reproducibility gap.
@@ -76,8 +82,8 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
   independent gates, and GREEN must never be reported as joint success by itself.
 
 These are smoke examples, not corpus-level effect estimates. The current repository
-collects 1242 tests: 1236 offline cases plus 6 proxy-backed integration cases; the
-full local-proxy run passes all 1242. The final ruff, strict mypy, lock and
+collects 1248 tests: 1242 offline cases plus 6 proxy-backed integration cases; the
+full local-proxy run passes all 1248. The final ruff, strict mypy, lock and
 package/install smokes are recorded in
 `docs/PROJECT_STATE.md` and the safe `.mxl` container plan; the preceding Oracle
 0.2 trust-gate plan retains its own independently closed evidence.

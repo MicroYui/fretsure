@@ -129,8 +129,10 @@ def _make_llm(use_llm: bool) -> tuple[LLMClient, str]:
     if use_llm:
         from fretsure.llm.client import ProxyLLM
 
-        return ProxyLLM(), "ProxyLLM (local proxy, real arrangement)"
-    return ConstantLLM("noop"), "ConstantLLM (deterministic stub, offline)"
+        proxy = ProxyLLM()
+        return proxy, f"ProxyLLM ({proxy.model_id} via local proxy; real arrangement)"
+    stub = ConstantLLM("noop")
+    return stub, f"ConstantLLM ({stub.model_id}; deterministic stub, offline)"
 
 
 def main() -> None:

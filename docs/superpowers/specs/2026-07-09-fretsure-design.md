@@ -1,7 +1,7 @@
 # Fretsure —— 可证明可弹的吉他谱智能体（设计文档 / Design Spec）
 
 > 产品名 **Fretsure**（fret + ensure，已定）。备选 PlayProof / Fretwright 仅存档。
-> 状态（2026-07-16）：设计已锁定；Plan 1–5、受限 MusicXML 文件纵切、Oracle 0.2 软件信任门与安全 `.mxl` container reader 已实现。当前组合树为 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.2.0`、container=`mxl-container@0.1.0`；收集 `1242` 项测试（离线 `1236 passed, 6 deselected`，本地代理全量 `1242 passed`）。Plan 6A Web/API/trace viewer/MCP 是下一项。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+> 状态（2026-07-16）：设计已锁定；Plan 1–5、受限 MusicXML 文件纵切、Oracle 0.2 软件信任门与安全 `.mxl` container reader 已实现。当前组合树为 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.2.0`、container=`mxl-container@0.1.0`；默认真代理模型为 `gpt-5.6-sol`，收集 `1248` 项测试（离线 `1242 passed, 6 deselected`，本地代理全量 `1248 passed`）。Plan 6A Web/API/trace viewer/MCP 是下一项。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
 
 ---
 
@@ -154,7 +154,7 @@ class MusicIR:
   - 声位/音区/织体（分解 or 扫弦、bass-melody 交替 pattern 等）;
   - 难度取向（初学=稀疏、首把位）。
 - **输出格式**:结构化 JSON（每拍/每帧的目标音集 + 声部角色 + 建议 pattern）,**不直接输出 tab**——tab 由确定性求解器 + oracle 决定。
-- **模型**:Opus 4.8 / GPT-5.5 via API。可 best-of-N（多次提议,取 oracle 通过且 cost 最低者）。
+- **模型**:GPT-5.6 Sol via API（canonical id `gpt-5.6-sol`）。可 best-of-N（多次提议,取 oracle 通过且 cost 最低者）。
 - **关键设计**:LLM **只决定"音乐意图"**,不决定"手怎么按";把"能不能弹"完全交给下游确定性层。这样 LLM 的幻觉被 oracle 兜住。
 
 ### 5.4 指法求解器 Fingering Solver（确定性）
@@ -244,7 +244,7 @@ class MusicIR:
 - **checker vs LLM-judge**:证明**确定性 checker 与 LLM 评委不一致**(LLM 评委会误判弹不了的 tab 为"能弹")——这是"为什么必须确定性"的头牌结果。
 
 ### 6.3 Baselines 与消融
-- 前沿 LLM 原始 prompt→tab(Opus 4.8、GPT-5.5);
+- 前沿 LLM 原始 prompt→tab（GPT-5.6 Sol）;
 - 转谱工具(照抄,不编配);
 - TemPolor(若能取到输出);学术 id55(若可复现);
 - **消融**:去 oracle / 去 repair / 去难度约束 / dictionary-only(模仿 id55)。
@@ -278,7 +278,7 @@ class MusicIR:
 | 指板动画 | 自研(SVG/Canvas) | 自有 | (string,fret,finger) 动画 + 红/绿标注 |
 | 音频播放 | FluidSynth + GeneralUser GS soundfont | LGPL / 允许商用 | MIDI→WAV |
 | 音频转谱(v2) | Basic Pitch + librosa | 宽松 | best-effort 前端 |
-| LLM | Opus 4.8 / GPT-5.5(API) | 商用 | proposer |
+| LLM | GPT-5.6 Sol (API) | 商用 | proposer |
 | RL(stretch) | PyTorch(CPU) 小模型 | BSD | 学习曲线 |
 | 存储(可选) | Postgres | - | 存 run/benchmark 结果 |
 
@@ -410,13 +410,13 @@ class MusicIR:
 
 **A.9 诚实范围声明**：公布 "凡 Fretsure 认证 GREEN 的谱,在符合公布 profile P(手跨 H/触及 R/换把速 v/右手速率 r)的琴手、指定乐器/调弦/弦长、在我们记录的静态手几何模型 M 下,以记谱速度可弹,实测误接受 ≤X%(95% CI)、真人演奏曲上误拒 Y%。" 把**数学主张**(在 M 上 sound 的判定过程)与**经验主张**(M 对真实校准)分开;列范围限制:profile 相关(出预设,用户选手围)、**仅静态几何**(建模触及+换把动力学,不含肌腱耦合/疲劳/音色——疲劳只标记不认证)、仅记谱速度、认证的是"我们指派的指法存在可行解"而非"最地道"。技巧显式标 IN/OUT(拇指绕/点弦/混合拨弦/推弦/半横按→AMBER/不支持,绝不静默 GREEN)。
 
-**A.10 checker-vs-LLM-judge 实验(基准修辞中心)**：在 N≈400 带人金标+对抗近失的 tab 上,收 (J1) 确定性 oracle 与 (J2) LLM 评委(Opus 4.8 + GPT-5.5,zero-shot 与带 rubric)判决;对人金标报准确率、尤其**误接受率**(评委说能弹其实不能——危险错误)+ κ;LLM 评委每条**跑 5 次(temp>0)测翻转率**(oracle 恰为 0);McNemar 配对检验报 odds ratio+CI;报成本(评委 $/条 vs oracle CPU-ms/条)。**设计目标结果**:LLM 评委在对抗近失上误接受显著更高 + 有非零方差,oracle 确定近完美——这就是"benchmark 用 checker 打分而非评委"的量化理由。(注:LLM 有正当评判角色——**音乐品味**,非可行性,见 Part B 的 critic。)
+**A.10 checker-vs-LLM-judge 实验(基准修辞中心)**：在 N≈400 带人金标+对抗近失的 tab 上,收 (J1) 确定性 oracle 与 (J2) LLM 评委（GPT-5.6 Sol 主评 + 一个独立版本化的跨供应商前沿 comparator，均跑 zero-shot 与带 rubric）判决;对人金标报准确率、尤其**误接受率**(评委说能弹其实不能——危险错误)+ κ;LLM 评委每条**跑 5 次(temp>0)测翻转率**(oracle 恰为 0);McNemar 配对检验报 odds ratio+CI;报成本(评委 $/条 vs oracle CPU-ms/条)。**设计目标结果**:LLM 评委在对抗近失上误接受显著更高 + 有非零方差,oracle 确定近完美——这就是"benchmark 用 checker 打分而非评委"的量化理由。(注:LLM 有正当评判角色——**音乐品味**,非可行性,见 Part B 的 critic。)
 
 **A.11 统计严谨**:Wilson CI;pass@k/pass^k 无偏估计 n≥10/条;配对系统比较用 **McNemar**;**按曲 cluster bootstrap**(不按音/小节,避免伪重复);分层报 + Holm–Bonferroni;预注册最小可检效应与 N(程序生成器让 N 便宜→目标 ±3% CI);发布种子+估计器代码+逐条原始表。**任何无 CI 的单数榜单主张不予采纳。**
 
 **A.12 Baselines**:B1 前沿 LLM 原始(直接要 tab,"到底需不需要 agent"对照);B2 纯确定性求解器(Sayegh 最优路径/Viterbi,无编配步,纯求解上限);B3 学术(SMC-2024 MIDI→tab;TART);B4 商用往返(MusicXML→GuitarPro 自动 tab)。
 
-**A.13 一条命令复现**:`fretsure-bench --seed S` 重建语料与程序测试集；当前 aggregate JSON/trace 盖 checker、fidelity、profile version + SHA-256 与 input schema。完整五层下载/CI/checker-vs-judge runner 与逐 item 配对原始表仍是后续，不得把目标写成现状。
+**A.13 一条命令复现**:`fretsure-bench --seed S` 重建语料与程序测试集；当前 aggregate JSON/trace 盖 LLM model id、checker、fidelity、profile version + SHA-256 与 input schema。完整五层下载/CI/checker-vs-judge runner 与逐 item 配对原始表仍是后续，不得把目标写成现状。
 
 **A.14 构建顺序(第 4 步前下游一律不可信)**:1 归一器+datasheet;2 程序生成器(主测试层);3 oracle 纯函数+类型诊断+3 预设;4 **oracle 验证台(A.8),混淆矩阵领跑排期**;5 忠实度打分;6 难度打分(150 条 learn-to-rank);7 agent(Part B);8 baselines+消融同一 runner;9 统计模块;10 checker-vs-judge;11 复现包。
 
@@ -496,7 +496,7 @@ class MusicIR:
 **以下为参考设计对照(非依赖)**：
 
 1. **LangGraph — 运行时(orchestration)**。*建在上面。* 你的回路是**环(plan→emit edit→oracle→reason→edit→re-check 到不动点)**,环是线性 chain 表达不了的形状,LangGraph 原生支持。节点=`plan/emit_edit/oracle(确定性,永不 LLM)/critic`;条件边"诊断非空则回环、不动点则退出";best-of-N=扇出 N 个种子分支。**关键:它的 checkpointer(状态历史)就是你的执行 trace——你不建 logger,只在 checkpoint 上建 viewer(白送 Part E 的 demo)。** 招聘信号:2026 最可信的开源编排名字(Klarna/Uber 生产用),**可画的状态图本身是作品集和幻灯片素材**。反 LARP:LangGraph 只决定**何时**调 oracle、串状态,**绝不决定可弹性**;oracle/DSL/checker 保持纯手写库。**只用一个运行时。**
-   > 备选:**Claude Agent SDK**(你在跑 Opus 4.8,工具循环+子 agent+MCP 几乎白送)。**要"可画的图 + 白送 trace 底座"选 LangGraph(更利于演示);要极致开发速度选 Claude Agent SDK。二选一,不要都上。**
+   > 历史备选:**Claude Agent SDK**（该记录写于当时使用 Opus 4.8 的背景）。**要"可画的图 + 白送 trace 底座"选 LangGraph(更利于演示);要极致开发速度选 Claude Agent SDK。二选一,不要都上。**
 2. **DSPy 3.x + GEPA — prompt 优化(★皇冠研究信号)**。*建,但用消融把关。* GEPA 用**书面反馈**(而非数值奖励)进化 prompt,是 ICLR 2026 oral、以 ~35× 更少 rollout 胜过 RL(GRPO)、**不需要 GPU**(API+CPU),正好卡你硬件。**契合近乎教科书:你的 oracle 已经吐定位化类型诊断→把诊断原样喂给 GEPA,进化 ①编排者规划 prompt ②critic rubric,用你的确定性 checker 打分。这就是无 GPU 的 RL 风味胜利。** 招聘信号:全栈最高的"我做了真研究工程"。反 LARP:GEPA 只碰自然语言 prompt/rubric,**绝不碰 oracle/DSL/checker**;**用 leave-one-out 消融把关**(手写 prompt vs GEPA),不提升就**砍掉并说明**。先跑一天 spike 再决定。
 3. **Inspect-AI(UK AISI)— eval/verifier 台(可信度倍增器)**。*把 benchmark 建在它上面。* 它的词汇 Task/Solver/Scorer 让你的"checker 打分 + leave-one-out 消融"用标准语言可读:oracle 包成确定性 **Scorer**、每首歌是 **Task**、best-of-N+修复到不动点是 **Solver**。招聘信号:对研究倾向岗比任何厂商可观测工具都高(UK AISI 背书)。
 4. **MCP — 必备、便宜、高信号**。*把 oracle 包成工具。* 暴露 `check_playability/feasible_fingerings/render_notation/render_audio`。叙事:"oracle 是任何 agent 能调的 MCP server"+ bring-your-own-arranger 分发故事。反 LARP:**热循环里进程内直调 oracle,别每次不动点迭代付网络延迟**;MCP server 是互操作/演示用的适配器,不是热路径。

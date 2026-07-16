@@ -1,6 +1,6 @@
 # Safe `.mxl` Container Reader
 
-> **状态（2026-07-16）**：**DONE（安全容器门已关闭）**。前置 Oracle 0.2 软件信任门已经以提交 `82232a7`、`1092 passed, 6 deselected / 1098 collected / 本地代理 1098 passed` 独立关闭；本计划在其后把 importer 升为 `musicxml@0.2.0`，不回写前置闭门证据。当前完整树为 `1236 passed, 6 deselected / 1242 collected / 本地代理 1242 passed`。
+> **状态（2026-07-16）**：**DONE（安全容器门已关闭）**。前置 Oracle 0.2 软件信任门已经以提交 `82232a7`、`1092 passed, 6 deselected / 1098 collected / 本地代理 1098 passed` 独立关闭；本计划在其后把 importer 升为 `musicxml@0.2.0`，不回写前置闭门证据。本计划闭门树为 `1236 passed, 6 deselected / 1242 collected / 本地代理 1242 passed`。
 
 **Goal:** 在不把 ZIP 文件解压到磁盘、也不把 archive 交给 `music21` 自行猜测的前提下，把一个严格受限的 compressed MusicXML `.mxl` 容器解析成唯一 root MusicXML bytes，再交给现有安全 XML envelope/preflight/adapter 管线。
 

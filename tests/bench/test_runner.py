@@ -23,7 +23,12 @@ def test_run_benchmark_reproducible() -> None:
 
 
 def test_run_benchmark_reports_ablation() -> None:
-    r = run_benchmark(seed=3, items=2, bars=1, llm_factory=lambda: ConstantLLM("noop"))
+    r = run_benchmark(
+        seed=3,
+        items=2,
+        bars=1,
+        llm_factory=lambda: ConstantLLM("noop"),
+    )
     assert isinstance(r, BenchReport)
     assert r.full.items == 2
     assert set(r.ablation) >= {"full", "-repair", "-critic", "-best_of_n"}
@@ -31,9 +36,38 @@ def test_run_benchmark_reports_ablation() -> None:
     assert r.fidelity_checker_version == FIDELITY_CHECKER_VERSION
     assert r.profile_fingerprint == MEDIAN_HAND.fingerprint
     assert r.input_schema_version == ORACLE_INPUT_SCHEMA_VERSION
+    assert r.llm_model_id == "constant-stub"
     assert report_to_dict(r)["fidelity_checker_version"] == FIDELITY_CHECKER_VERSION
     assert report_to_dict(r)["profile_fingerprint"] == MEDIAN_HAND.fingerprint
     assert report_to_dict(r)["input_schema_version"] == ORACLE_INPUT_SCHEMA_VERSION
+    assert report_to_dict(r)["llm_model_id"] == "constant-stub"
+
+    with pytest.raises(BenchmarkInputError, match="factory returned 'constant-stub'"):
+        run_benchmark(
+            seed=3,
+            items=1,
+            bars=1,
+            llm_factory=lambda: ConstantLLM("noop"),
+            llm_model_id="wrong-model",
+        )
+
+    class NamedConstant(ConstantLLM):
+        def __init__(self, model_id: str) -> None:
+            super().__init__("noop")
+            self._model_id = model_id
+
+        @property
+        def model_id(self) -> str:
+            return self._model_id
+
+    model_ids = iter(("first-model", "second-model"))
+    with pytest.raises(BenchmarkInputError, match="inconsistent model ids"):
+        run_benchmark(
+            seed=3,
+            items=1,
+            bars=1,
+            llm_factory=lambda: NamedConstant(next(model_ids)),
+        )
 
 
 def test_run_benchmark_full_arranges_generated() -> None:
@@ -82,6 +116,10 @@ def test_run_benchmark_stamps_one_detached_profile_snapshot() -> None:
         ({"bars": MAX_BENCHMARK_BARS + 1}, "bars"),
         ({"items": 100, "bars": 64}, "items*bars"),
         ({"paired": 1}, "paired"),
+        ({"llm_model_id": ""}, "llm_model_id"),
+        ({"llm_model_id": "bad\nmodel"}, "llm_model_id"),
+        ({"llm_model_id": "x" * 129}, "llm_model_id"),
+        ({"llm_model_id": 5}, "llm_model_id"),
     ],
 )
 def test_benchmark_rejects_invalid_or_unbounded_controls_before_factory(
