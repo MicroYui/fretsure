@@ -1,6 +1,6 @@
 [project]
 name = "fretsure-oracle"
-version = "0.2.0"
+version = "0.3.0"
 description = "Deterministic guitar-playability oracle for the Fretsure arrangement agent."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -16,6 +16,13 @@ musicxml = [
     "defusedxml>=0.7.1,<1",
     "music21>=10.5,<11",
 ]
+service = [
+    "fastapi>=0.139,<0.140",
+    "uvicorn[standard]>=0.41,<0.42",
+]
+mcp = [
+    "mcp>=1.28.1,<1.29",
+]
 dev = [
     "pytest>=8",
     "hypothesis>=6",
@@ -23,13 +30,19 @@ dev = [
     "mypy>=1.10",
     "anthropic>=0.40",
     "defusedxml>=0.7.1,<1",
+    "fastapi>=0.139,<0.140",
+    "httpx>=0.28,<0.29",
+    "mcp>=1.28.1,<1.29",
     "music21>=10.5,<11",
+    "uvicorn[standard]>=0.41,<0.42",
 ]
 
 [project.scripts]
 fretsure-bench = "fretsure.bench.runner:main"
 fretsure-demo = "fretsure.demo:main"
 fretsure-arrange = "fretsure.cli:main"
+fretsure-serve = "fretsure.api.cli:main"
+fretsure-mcp = "fretsure.mcp.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -52,12 +65,15 @@ include = [
     "/src",
     "/tests",
     "/uv.lock",
+    "/web",
 ]
 exclude = [
     "**/__pycache__",
     "**/*.py[cod]",
     "**/.DS_Store",
     "**/*.log",
+    "/web/coverage",
+    "/web/node_modules",
 ]
 
 [tool.ruff]

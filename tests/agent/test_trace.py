@@ -1,3 +1,4 @@
+import hashlib
 import inspect
 import json
 import sys
@@ -6,7 +7,22 @@ from fractions import Fraction as F
 import pytest
 
 import fretsure.agent.trace as trace_module
-from fretsure.agent.trace import Trace, TraceInputError, TraceStep
+from fretsure.agent.trace import (
+    TRACE_SCHEMA_VERSION,
+    Trace,
+    TraceInputError,
+    TraceStep,
+    diagnostics_payload,
+    tab_checkpoint,
+    target_checkpoint,
+)
+from fretsure.geometry import STANDARD_TUNING
+from fretsure.ir import Note
+from fretsure.oracle.core import CHECKER_VERSION, OracleResult
+from fretsure.oracle.diagnostics import Diagnostic
+from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION
+from fretsure.oracle.profiles import MEDIAN_HAND
+from fretsure.tab import Tab, TabNote
 
 
 def test_add_accumulates_in_order() -> None:
@@ -27,6 +43,450 @@ def test_to_jsonl_one_parseable_line_per_step() -> None:
     parsed = [json.loads(line) for line in lines]
     assert parsed[0]["kind"] == "ORACLE"
     assert parsed[1]["data"]["onset"] == "1/2"  # Fraction -> string
+
+
+def test_wire_contract_is_versioned_sequenced_and_matches_jsonl() -> None:
+    trace = Trace()
+    trace.add("PLAN", "configured")
+    trace.add(
+        "EDIT",
+        "The targeted edit was applied to the repair state.",
+        event="EDIT_APPLIED",
+        candidate_index=2,
+        iteration=1,
+        edit={
+            "op": "drop_note",
+            "target_onset": "0/1",
+            "target_pitch": 60,
+            "arg": 0,
+        },
+        status="applied",
+        reason_code=None,
+        before_target_sha256="a" * 64,
+        after_target_sha256="b" * 64,
+        state_changed=True,
+    )
+
+    wire = trace.to_wire()
+    rows = wire["steps"]
+    assert wire["schema_version"] == TRACE_SCHEMA_VERSION
+    assert isinstance(rows, list)
+    assert [row["seq"] for row in rows] == [0, 1]
+    assert set(rows[0]) == {
+        "trace_schema_version",
+        "seq",
+        "kind",
+        "event",
+        "candidate_index",
+        "iteration",
+        "detail",
+        "data",
+    }
+    assert rows[1]["event"] == "EDIT_APPLIED"
+    assert rows[1]["candidate_index"] == 2
+    assert rows == [json.loads(line) for line in trace.to_jsonl().splitlines()]
+
+
+def test_empty_wire_retains_schema_version() -> None:
+    assert Trace().to_wire() == {
+        "schema_version": TRACE_SCHEMA_VERSION,
+        "steps": [],
+    }
+
+
+def test_add_takes_a_detached_snapshot() -> None:
+    source = {"nested": [1, {"value": "before"}]}
+    trace = Trace()
+    trace.add("PLAN", "snapshot", source=source)
+
+    source["nested"][1]["value"] = "after"  # type: ignore[index]
+    source["nested"].append(2)  # type: ignore[union-attr]
+
+    assert trace.steps[0].data["source"] == {
+        "nested": [1, {"value": "before"}]
+    }
+
+
+def test_product_events_reject_missing_and_unknown_payload_fields() -> None:
+    trace = Trace()
+    with pytest.raises(TraceInputError, match="missing fields"):
+        trace.add(
+            "PROPOSE",
+            "bad",
+            event="CANDIDATE_PROPOSED",
+            temperature=0.0,
+        )
+    with pytest.raises(TraceInputError, match="unknown fields"):
+        trace.add(
+            "PROPOSE",
+            "bad",
+            event="CANDIDATE_PROPOSED",
+            temperature=0.0,
+            target_checkpoint={},
+            prompt="must never be accepted",
+        )
+
+
+def _product_event(event: str, **changes: object) -> Trace:
+    target = target_checkpoint((Note(F(0), F(1), 60, "melody"),))
+    tab = tab_checkpoint(
+        Tab(
+            (TabNote(F(0), F(1), 1, 3, 1, "i"),),
+            STANDARD_TUNING,
+            0,
+        )
+    )
+    empty_diagnostics_sha = hashlib.sha256(b"[]").hexdigest()
+    edit = {
+        "op": "drop_note",
+        "target_onset": "0/1",
+        "target_pitch": 60,
+        "arg": 0,
+    }
+    rows: dict[str, tuple[str, str, int | None, int | None, dict[str, object]]] = {
+        "PIPELINE_CONFIGURED": (
+            "PLAN",
+            "pipeline configured from source metadata and explicit options",
+            None,
+            None,
+            {
+                "llm_model_id": "constant-stub",
+                "source_tempo_bpm": 90.0,
+                "effective_tempo_bpm": 90.0,
+                "time_signature": "4/4",
+                "tuning": list(STANDARD_TUNING),
+                "capo": 0,
+                "profile": MEDIAN_HAND.version,
+                "checker_version": CHECKER_VERSION,
+                "profile_version": MEDIAN_HAND.version,
+                "profile_fingerprint": MEDIAN_HAND.fingerprint,
+                "input_schema_version": ORACLE_INPUT_SCHEMA_VERSION,
+                "fidelity_checker_version": "fidelity@0.2.0",
+                "candidates": 1,
+                "max_repair_iterations": 1,
+                "critic_enabled": False,
+            },
+        ),
+        "CANDIDATE_PROPOSED": (
+            "PROPOSE",
+            "Candidate 0 produced a bounded target-note checkpoint.",
+            0,
+            None,
+            {"temperature": 0.0, "target_checkpoint": target},
+        ),
+        "CANDIDATE_FINISHED": (
+            "SOLVE",
+            "Candidate 0 finished with GREEN.",
+            0,
+            0,
+            {"verdict": "GREEN", "tab_available": True, "repair_iterations": 0},
+        ),
+        "SOLVER_RETURNED_TAB": (
+            "SOLVE",
+            "Solver returned a tablature candidate.",
+            0,
+            0,
+            {"status": "TAB", "target_sha256": "a" * 64, "target_note_count": 1},
+        ),
+        "SOLVER_RETURNED_NO_TAB": (
+            "SOLVE",
+            "The bounded fingering search returned no candidate (EMPTY_TARGET) at "
+            "an unspecified onset.",
+            None,
+            0,
+            {
+                "status": "NO_TAB",
+                "target_sha256": "a" * 64,
+                "target_note_count": 0,
+                "infeasible": {
+                    "code": "EMPTY_TARGET",
+                    "onset": None,
+                    "pitches": [],
+                    "bounded_search": True,
+                },
+                "terminal_reason": None,
+            },
+        ),
+        "PLAYABILITY_CHECKED": (
+            "ORACLE",
+            "Oracle returned GREEN with 0 diagnostics.",
+            0,
+            0,
+            {
+                "diagnostics": [],
+                "diagnostic_count": 0,
+                "diagnostics_complete": True,
+                "diagnostics_sha256": empty_diagnostics_sha,
+                "verdict": "GREEN",
+                "tab_checkpoint": tab,
+                "checker_version": CHECKER_VERSION,
+                "profile_version": MEDIAN_HAND.version,
+                "profile_fingerprint": MEDIAN_HAND.fingerprint,
+                "input_schema_version": ORACLE_INPUT_SCHEMA_VERSION,
+                "terminal_reason": "GREEN",
+            },
+        ),
+        "TIER_CHECKED": (
+            "ORACLE",
+            "The deterministic tier checker returned meets=True for beginner.",
+            None,
+            0,
+            {
+                "tier": "beginner",
+                "meets": True,
+                "tier_violation_count": 0,
+                "target_sha256": "a" * 64,
+                "tab_checkpoint": tab,
+                "terminal_reason": "TIER_MET",
+            },
+        ),
+        "REPAIR_EDIT_PROPOSED": (
+            "REASON",
+            "Thin one non-melody voice at onset 0/1 and recheck pitch 60.",
+            0,
+            1,
+            {"edit": edit, "based_on_diagnostic_codes": ["FRET_SPAN"]},
+        ),
+        "MODEL_CALL_FAILED": (
+            "REASON",
+            "The model call failed; repair stopped without exposing transport details.",
+            0,
+            1,
+            {"reason_code": "LLM_TRANSPORT_FAILURE", "target_sha256": "a" * 64},
+        ),
+        "EDIT_APPLIED": (
+            "EDIT",
+            "The targeted edit was applied to the repair state.",
+            0,
+            1,
+            {
+                "edit": edit,
+                "status": "applied",
+                "reason_code": None,
+                "before_target_sha256": "a" * 64,
+                "after_target_sha256": "b" * 64,
+                "state_changed": True,
+            },
+        ),
+        "EDIT_REJECTED": (
+            "EDIT",
+            "The edit matched no target note and changed no state.",
+            0,
+            1,
+            {
+                "edit": edit,
+                "status": "noop",
+                "reason_code": "TARGET_NOT_FOUND",
+                "before_target_sha256": "a" * 64,
+                "after_target_sha256": "a" * 64,
+                "state_changed": False,
+            },
+        ),
+        "MODEL_EDIT_INVALID": (
+            "EDIT",
+            "The model JSON did not satisfy the edit schema.",
+            0,
+            1,
+            {
+                "edit": None,
+                "status": "unparseable",
+                "reason_code": "INVALID_EDIT_SCHEMA",
+                "before_target_sha256": "a" * 64,
+                "after_target_sha256": "a" * 64,
+                "state_changed": False,
+            },
+        ),
+        "RECHECK_STARTED": (
+            "RECHECK",
+            "Run the bounded solver and oracle again for the post-edit target.",
+            0,
+            1,
+            {"trigger": "EDIT_APPLIED", "target_checkpoint": target},
+        ),
+        "CANDIDATE_SELECTED": (
+            "SELECT",
+            "Selected candidate 0; playability and fidelity remain separate gates.",
+            0,
+            None,
+            {
+                "winner_candidate_index": 0,
+                "candidates_considered": 1,
+                "verdict": "GREEN",
+                "green_certified": True,
+                "playability_gate": "passed",
+                "faithfulness_passed": True,
+                "melody_recall": 1.0,
+                "bass_preserved": 1.0,
+                "harmony_jaccard": 1.0,
+                "critic_status": "NOT_RUN",
+                "critic_overall": None,
+            },
+        ),
+        "NO_CANDIDATE_SELECTED": (
+            "SELECT",
+            "No candidate returned a tablature result within the bounded search.",
+            None,
+            None,
+            {
+                "winner_candidate_index": None,
+                "candidates_considered": 0,
+                "playability_gate": None,
+                "faithfulness_passed": None,
+            },
+        ),
+    }
+    kind, detail, candidate_index, iteration, data = rows[event]
+    data.update(changes)
+    trace = Trace()
+    trace.add(
+        kind,  # type: ignore[arg-type]
+        detail,
+        event=event,  # type: ignore[arg-type]
+        candidate_index=candidate_index,
+        iteration=iteration,
+        **data,
+    )
+    return trace
+
+
+def test_every_product_event_has_one_frozen_valid_example() -> None:
+    for event in trace_module.PRODUCT_TRACE_EVENTS:
+        wire = _product_event(event).to_wire()
+        assert wire["steps"][0]["event"] == event
+
+
+@pytest.mark.parametrize(
+    ("event", "changes"),
+    [
+        ("PIPELINE_CONFIGURED", {"source_tempo_bpm": True}),
+        ("CANDIDATE_PROPOSED", {"temperature": 0}),
+        ("CANDIDATE_FINISHED", {"verdict": {"raw_prompt": "secret"}}),
+        ("SOLVER_RETURNED_TAB", {"target_note_count": True}),
+        (
+            "SOLVER_RETURNED_NO_TAB",
+            {
+                "infeasible": {
+                    "code": "EMPTY_TARGET",
+                    "onset": None,
+                    "pitches": [],
+                    "bounded_search": False,
+                }
+            },
+        ),
+        ("PLAYABILITY_CHECKED", {"profile_fingerprint": "0" * 63}),
+        ("TIER_CHECKED", {"meets": "true"}),
+        ("REPAIR_EDIT_PROPOSED", {"based_on_diagnostic_codes": "FRET_SPAN"}),
+        ("MODEL_CALL_FAILED", {"reason_code": "MODEL_CALL_FAILED"}),
+        ("EDIT_APPLIED", {"status": "APPLIED"}),
+        ("EDIT_REJECTED", {"status": "rejected"}),
+        ("MODEL_EDIT_INVALID", {"status": "rejected"}),
+        ("RECHECK_STARTED", {"trigger": "RAW_EXCEPTION"}),
+        ("CANDIDATE_SELECTED", {"melody_recall": 99.0}),
+        ("NO_CANDIDATE_SELECTED", {"playability_gate": "not_passed"}),
+    ],
+)
+def test_product_event_semantic_forgery_is_rejected(
+    event: str, changes: dict[str, object]
+) -> None:
+    with pytest.raises(TraceInputError):
+        _product_event(event, **changes)
+
+
+@pytest.mark.parametrize("field", ["sha256", "state_bytes", "note_count", "state"])
+def test_complete_checkpoint_integrity_is_recomputed(field: str) -> None:
+    checkpoint = target_checkpoint((Note(F(0), F(1), 60, "melody"),))
+    if field == "sha256":
+        checkpoint[field] = "0" * 64
+    elif field == "state":
+        checkpoint[field] = {"notes": []}
+    else:
+        checkpoint[field] = 0
+
+    with pytest.raises(TraceInputError, match=field):
+        _product_event("CANDIDATE_PROPOSED", target_checkpoint=checkpoint)
+
+
+@pytest.mark.parametrize(
+    ("detail", "data"),
+    [
+        ("Bearer server-secret", {}),
+        ("API_KEY=/private/token", {}),
+        ("safe", {"prompt": "raw model request"}),
+        ("safe", {"prompt_text": "full user instructions"}),
+        ("safe", {"api_key_value": "redacted"}),
+        ("safe", {"exception_message": "transport failed"}),
+        ("safe", {"modelPromptText": "full model instructions"}),
+        ("safe", {"nested": {"raw_reply": "model output"}}),
+        ("RuntimeError: transport failed", {}),
+    ],
+)
+def test_public_trace_rejects_sensitive_keys_and_content(
+    detail: str, data: dict[str, object]
+) -> None:
+    trace = Trace()
+    with pytest.raises(TraceInputError, match="sensitive|exception"):
+        trace.add("PLAN", detail, **data)
+
+
+def test_sensitive_mutation_after_add_is_rejected_at_public_serialization() -> None:
+    trace = Trace()
+    trace.add("PLAN", "safe", evidence={"status": "bounded"})
+    trace.steps[0].data["raw_response"] = "Bearer mutated-secret"
+
+    with pytest.raises(TraceInputError, match="sensitive"):
+        trace.to_wire()
+
+
+def test_aggregate_checkpoint_budget_omits_whole_later_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checkpoint = target_checkpoint((Note(F(0), F(1), 60, "melody"),))
+    state_bytes = checkpoint["state_bytes"]
+    assert isinstance(state_bytes, int)
+    monkeypatch.setattr(trace_module, "MAX_TRACE_EMBEDDED_STATE_BYTES", state_bytes)
+    trace = Trace()
+    trace.add("PLAN", "first", checkpoint=checkpoint)
+    trace.add("PLAN", "second", checkpoint=checkpoint)
+
+    rows = trace.to_wire()["steps"]
+    assert isinstance(rows, list)
+    first = rows[0]["data"]["checkpoint"]
+    second = rows[1]["data"]["checkpoint"]
+    assert first["complete"] is True and first["state"] is not None
+    assert second["complete"] is False and second["state"] is None
+    assert second["omission"] == {
+        "code": "TRACE_BUDGET",
+        "limit_bytes": state_bytes,
+    }
+
+
+def test_structured_diagnostics_are_bounded_and_digest_the_complete_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = OracleResult(
+        "AMBER",
+        (
+            Diagnostic(1, F(1), "FRET_SPAN", (0, 1), 12.5, ("drop_5th",)),
+            Diagnostic(2, F(3, 2), "SHIFT_SPEED", (2,), 4.0, ("reposition",)),
+        ),
+        CHECKER_VERSION,
+        MEDIAN_HAND.version,
+        MEDIAN_HAND.fingerprint,
+        ORACLE_INPUT_SCHEMA_VERSION,
+    )
+    monkeypatch.setattr(trace_module, "MAX_TRACE_DIAGNOSTICS_PER_STEP", 1)
+
+    payload = diagnostics_payload(result)
+
+    assert payload["diagnostic_count"] == 2
+    assert payload["diagnostics_complete"] is False
+    assert len(payload["diagnostics"]) == 1
+    first = payload["diagnostics"][0]
+    assert first["code"] == "FRET_SPAN"
+    assert first["beat"] == "1/1"
+    assert first["offending_note_indices"] == [0, 1]
+    assert "checker-defined units" in first["message"]
+    assert len(payload["diagnostics_sha256"]) == 64
 
 
 def test_empty_trace_jsonl_is_empty() -> None:
@@ -54,10 +514,8 @@ def test_jsonl_is_canonical_across_mapping_insertion_order() -> None:
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
 def test_non_finite_numbers_fail_closed(value: float) -> None:
     trace = Trace()
-    trace.add("PLAN", "invalid", value=value)
-
     with pytest.raises(TraceInputError, match="finite") as caught:
-        trace.to_jsonl()
+        trace.add("PLAN", "invalid", value=value)
 
     assert caught.value.path.endswith(".value[0]")
 
@@ -129,10 +587,8 @@ class _HostileObject(metaclass=_HostileMeta):
 def test_arbitrary_objects_fail_closed_without_executing_hooks() -> None:
     _HOSTILE_HOOK_CALLS.clear()
     trace = Trace()
-    trace.add("PLAN", "invalid", value=_HostileObject())
-
     with pytest.raises(TraceInputError) as caught:
-        trace.to_jsonl()
+        trace.add("PLAN", "invalid", value=_HostileObject())
 
     assert caught.value.path.endswith(".value[0]")
     assert _HOSTILE_HOOK_CALLS == []
@@ -142,10 +598,8 @@ def test_cyclic_containers_fail_closed() -> None:
     value: list[object] = []
     value.append(value)
     trace = Trace()
-    trace.add("PLAN", "invalid", value=value)
-
     with pytest.raises(TraceInputError, match="cyclic"):
-        trace.to_jsonl()
+        trace.add("PLAN", "invalid", value=value)
 
 
 @pytest.mark.parametrize(
@@ -165,21 +619,18 @@ def test_low_level_corrupted_fraction_is_typed_invalid(
     fraction = F(1, 2)
     object.__setattr__(fraction, field, value)
     trace = Trace()
-    trace.add("PLAN", "invalid", value=fraction)
-
     with pytest.raises(TraceInputError, match="Fraction"):
-        trace.to_jsonl()
+        trace.add("PLAN", "invalid", value=fraction)
 
 
 def test_fraction_rendering_obeys_runtime_integer_string_limit() -> None:
     fraction = F(1 << 3_000, 1)
     trace = Trace()
-    trace.add("PLAN", "large fraction", value=fraction)
     previous = sys.get_int_max_str_digits()
     sys.set_int_max_str_digits(640)
     try:
         with pytest.raises(TraceInputError, match="runtime integer limit"):
-            trace.to_jsonl()
+            trace.add("PLAN", "large fraction", value=fraction)
     finally:
         sys.set_int_max_str_digits(previous)
 
@@ -189,10 +640,8 @@ def test_fraction_with_deleted_component_is_typed_invalid(field: str) -> None:
     fraction = F(1, 2)
     object.__delattr__(fraction, field)
     trace = Trace()
-    trace.add("PLAN", "invalid", value=fraction)
-
     with pytest.raises(TraceInputError, match="components are missing"):
-        trace.to_jsonl()
+        trace.add("PLAN", "invalid", value=fraction)
 
 
 def _source_line(function: object, fragment: str) -> int:
@@ -235,7 +684,7 @@ def test_step_snapshot_is_bounded_if_list_grows_after_length_check(
     ("value", "fragment"),
     [([], "sequence_items = tuple"), ({}, "dict_items: tuple")],
 )
-def test_nested_container_snapshot_is_bounded_if_it_grows_before_copy(
+def test_nested_container_is_detached_before_source_grows_during_serialization(
     value: object,
     fragment: str,
     monkeypatch: pytest.MonkeyPatch,
@@ -266,11 +715,11 @@ def test_nested_container_snapshot_is_bounded_if_it_grows_before_copy(
             mutated = True
         return grow
 
-    monkeypatch.setattr(trace_module, "MAX_TRACE_JSON_NODES", 8)
     sys.settrace(grow)
     try:
-        with pytest.raises(TraceInputError, match="value count"):
-            trace.to_jsonl()
+        encoded = trace.to_jsonl()
     finally:
         sys.settrace(None)
     assert mutated
+    parsed = json.loads(encoded)
+    assert parsed["data"]["value"] == ([1] if type(value) is list else {"one": 1})

@@ -1,5 +1,6 @@
 import json
 from dataclasses import replace
+from fractions import Fraction as F
 
 import pytest
 
@@ -8,8 +9,8 @@ from fretsure.agent.arranger import ArrangeGoal
 from fretsure.agent.harness import ArrangeResult
 from fretsure.agent.trace import Trace
 from fretsure.demo import sample_ir
-from fretsure.ir import IRInputError
-from fretsure.llm.client import ConstantLLM, LLMModelIdError
+from fretsure.ir import IRInputError, Meta, MusicIR, Note
+from fretsure.llm.client import ConstantLLM, FakeLLM, LLMModelIdError
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 from fretsure.oracle.core import CHECKER_VERSION
 from fretsure.oracle.input import (
@@ -196,9 +197,7 @@ def test_pipeline_rejects_invalid_source_tempo_before_arranging(
     monkeypatch.setattr("fretsure.pipeline.arrange", must_not_arrange)
     with pytest.raises(SolverInputError) as caught:
         run_pipeline(ir, ConstantLLM(), options=PipelineOptions())
-    assert OracleInputCode.TEMPO in {
-        diagnostic.code for diagnostic in caught.value.diagnostics
-    }
+    assert OracleInputCode.TEMPO in {diagnostic.code for diagnostic in caught.value.diagnostics}
 
 
 @pytest.mark.parametrize(
@@ -218,9 +217,7 @@ def test_pipeline_rejects_invalid_tempo_override_before_arranging(
             ConstantLLM(),
             options=PipelineOptions(tempo_override_bpm=tempo),  # type: ignore[arg-type]
         )
-    assert OracleInputCode.TEMPO in {
-        diagnostic.code for diagnostic in caught.value.diagnostics
-    }
+    assert OracleInputCode.TEMPO in {diagnostic.code for diagnostic in caught.value.diagnostics}
 
 
 @pytest.mark.parametrize(
@@ -315,6 +312,7 @@ def test_pipeline_offline_result_contains_tab_ascii_gate_and_trace() -> None:
     assert result.faithfulness is not None
     assert result.trace is result.arrangement.trace
     assert result.trace.steps[0].kind == "PLAN"
+    assert result.trace.steps[0].event == "PIPELINE_CONFIGURED"
     assert result.trace.steps[0].data["source_tempo_bpm"] == 90.0
     assert result.trace.steps[0].data["effective_tempo_bpm"] == 90.0
     assert (
@@ -322,16 +320,58 @@ def test_pipeline_offline_result_contains_tab_ascii_gate_and_trace() -> None:
         == result.arrangement.oracle.profile_fingerprint
     )
     first_jsonl_row = json.loads(result.trace.to_jsonl().splitlines()[0])
+    assert first_jsonl_row["trace_schema_version"] == "agent-trace@0.1.0"
+    assert first_jsonl_row["seq"] == 0
     assert first_jsonl_row["data"]["llm_model_id"] == "constant-stub"
     assert first_jsonl_row["data"]["checker_version"] == CHECKER_VERSION
-    assert (
-        first_jsonl_row["data"]["input_schema_version"]
-        == ORACLE_INPUT_SCHEMA_VERSION
+    assert first_jsonl_row["data"]["input_schema_version"] == ORACLE_INPUT_SCHEMA_VERSION
+    assert first_jsonl_row["data"]["fidelity_checker_version"] == FIDELITY_CHECKER_VERSION
+    assert first_jsonl_row["data"]["candidates"] == 1
+    assert first_jsonl_row["data"]["max_repair_iterations"] == 8
+    assert first_jsonl_row["data"]["critic_enabled"] is False
+
+
+def test_pipeline_trace_replays_repair_in_logical_order_and_freezes_both_gates() -> None:
+    ir = MusicIR(
+        (
+            Note(F(0), F(1), 85, "melody"),
+            Note(F(0), F(1), 86, "harmony"),
+        ),
+        (),
+        Meta("C", (4, 4), 90.0, "trace-order", "test", "PD"),
     )
-    assert (
-        first_jsonl_row["data"]["fidelity_checker_version"]
-        == FIDELITY_CHECKER_VERSION
+    proposal = (
+        '{"notes":[{"onset":"0","duration":"1","pitch":85,"voice":"melody"},'
+        '{"onset":"0","duration":"1","pitch":86,"voice":"harmony"}]}'
     )
+    drop_harmony = '{"op":"drop_note","target_onset":"0","target_pitch":86}'
+
+    result = run_pipeline(
+        ir,
+        FakeLLM([proposal, drop_harmony]),
+        options=PipelineOptions(n=1, max_iters=1, use_critic=False),
+    )
+
+    assert [step.event for step in result.trace.steps] == [
+        "PIPELINE_CONFIGURED",
+        "CANDIDATE_PROPOSED",
+        "SOLVER_RETURNED_NO_TAB",
+        "REPAIR_EDIT_PROPOSED",
+        "EDIT_APPLIED",
+        "RECHECK_STARTED",
+        "SOLVER_RETURNED_TAB",
+        "PLAYABILITY_CHECKED",
+        "CANDIDATE_FINISHED",
+        "CANDIDATE_SELECTED",
+    ]
+    terminal = result.trace.steps[-1]
+    assert result.arrangement.oracle is not None
+    assert result.arrangement.oracle.verdict == "GREEN"
+    assert terminal.data["playability_gate"] == "passed"
+    assert result.faithfulness is not None
+    assert terminal.data["faithfulness_passed"] is result.faithfulness.passed
+    assert terminal.data["faithfulness_passed"] is False
+    result.trace.to_public_dict()
 
 
 def test_pipeline_offline_is_deterministic() -> None:

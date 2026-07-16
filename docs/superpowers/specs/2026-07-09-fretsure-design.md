@@ -1,7 +1,7 @@
 # Fretsure —— 可证明可弹的吉他谱智能体（设计文档 / Design Spec）
 
 > 产品名 **Fretsure**（fret + ensure，已定）。备选 PlayProof / Fretwright 仅存档。
-> 状态（2026-07-16）：设计已锁定；Plan 1–5、受限 MusicXML 文件纵切、Oracle 0.2 软件信任门与安全 `.mxl` container reader 已实现。当前组合树为 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.2.0`、container=`mxl-container@0.1.0`；默认真代理模型为 `gpt-5.6-sol`，收集 `1248` 项测试（离线 `1242 passed, 6 deselected`，本地代理全量 `1248 passed`）。Plan 6A Web/API/trace viewer/MCP 是下一项。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+> 状态（2026-07-16）：设计已锁定；Plan 1–5、受限 MusicXML 文件纵切、Oracle 0.2 软件信任门、安全 `.mxl` 与 Plan 6A Web/API/replay trace/MCP 已实现。当前组合树为 package=`0.3.0`、service/API/MCP/trace=`0.1.0`，既有 playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.2.0`、container=`mxl-container@0.1.0` 不改义；默认真代理模型为 `gpt-5.6-sol`，收集 `1500` 项测试（离线 `1494 passed, 6 deselected`，本地代理 integration `6 passed`）。完整 Plan 6 的音频/琴颈/导出/live demo 仍 open；下一项为 producer-driven MusicXML/IR。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
 
 ---
 
@@ -495,18 +495,18 @@ class MusicIR:
 
 **以下为参考设计对照(非依赖)**：
 
-1. **LangGraph — 运行时(orchestration)**。*建在上面。* 你的回路是**环(plan→emit edit→oracle→reason→edit→re-check 到不动点)**,环是线性 chain 表达不了的形状,LangGraph 原生支持。节点=`plan/emit_edit/oracle(确定性,永不 LLM)/critic`;条件边"诊断非空则回环、不动点则退出";best-of-N=扇出 N 个种子分支。**关键:它的 checkpointer(状态历史)就是你的执行 trace——你不建 logger,只在 checkpoint 上建 viewer(白送 Part E 的 demo)。** 招聘信号:2026 最可信的开源编排名字(Klarna/Uber 生产用),**可画的状态图本身是作品集和幻灯片素材**。反 LARP:LangGraph 只决定**何时**调 oracle、串状态,**绝不决定可弹性**;oracle/DSL/checker 保持纯手写库。**只用一个运行时。**
-   > 历史备选:**Claude Agent SDK**（该记录写于当时使用 Opus 4.8 的背景）。**要"可画的图 + 白送 trace 底座"选 LangGraph(更利于演示);要极致开发速度选 Claude Agent SDK。二选一,不要都上。**
+1. **自研 harness — 已采用的运行时(orchestration)**。回路是明确、有界的环（plan→emit edit→oracle→reason→edit→re-check 到不动点）加 best-of-N 扇出；状态、checkpoint、公开 `agent-trace@0.1.0` 与 eval 合同均由项目持有。Plan 6A 已证明它可直接驱动 replay viewer，不需要把 LangGraph/Claude Agent SDK 引入关键路径。LangGraph/Agent SDK 只保留为未来同预算对照实验；没有消融收益就不引入。
+   > 历史备选记录：早期曾在 LangGraph 与 Claude Agent SDK 间二选一；founder 后续决定已覆盖该方向，不能再把历史备选写成当前依赖。
 2. **DSPy 3.x + GEPA — prompt 优化(★皇冠研究信号)**。*建,但用消融把关。* GEPA 用**书面反馈**(而非数值奖励)进化 prompt,是 ICLR 2026 oral、以 ~35× 更少 rollout 胜过 RL(GRPO)、**不需要 GPU**(API+CPU),正好卡你硬件。**契合近乎教科书:你的 oracle 已经吐定位化类型诊断→把诊断原样喂给 GEPA,进化 ①编排者规划 prompt ②critic rubric,用你的确定性 checker 打分。这就是无 GPU 的 RL 风味胜利。** 招聘信号:全栈最高的"我做了真研究工程"。反 LARP:GEPA 只碰自然语言 prompt/rubric,**绝不碰 oracle/DSL/checker**;**用 leave-one-out 消融把关**(手写 prompt vs GEPA),不提升就**砍掉并说明**。先跑一天 spike 再决定。
 3. **Inspect-AI(UK AISI)— eval/verifier 台(可信度倍增器)**。*把 benchmark 建在它上面。* 它的词汇 Task/Solver/Scorer 让你的"checker 打分 + leave-one-out 消融"用标准语言可读:oracle 包成确定性 **Scorer**、每首歌是 **Task**、best-of-N+修复到不动点是 **Solver**。招聘信号:对研究倾向岗比任何厂商可观测工具都高(UK AISI 背书)。
-4. **MCP — 必备、便宜、高信号**。*把 oracle 包成工具。* 暴露 `check_playability/feasible_fingerings/render_notation/render_audio`。叙事:"oracle 是任何 agent 能调的 MCP server"+ bring-your-own-arranger 分发故事。反 LARP:**热循环里进程内直调 oracle,别每次不动点迭代付网络延迟**;MCP server 是互操作/演示用的适配器,不是热路径。
+4. **MCP — 已完成 Plan 6A 软件纵切**。暴露 `check_playability/feasible_fingerings/render_notation`；`render_audio` 明确 deferred，不注册假工具。叙事:"oracle 是任何 agent 能调的 MCP server"+ bring-your-own-arranger 分发故事。反 LARP:**热循环里进程内直调 oracle,别每次不动点迭代付网络延迟**;MCP server 是互操作/演示用的适配器,不是热路径。
 5. **一个 tracing 工具 — 自托管 Langfuse(或 LangSmith)**。发 **OpenTelemetry GenAI spans**,在 Langfuse(开源、自托管、有 Agent Graphs 视图)渲染——**同时是 Part E 的 trace viewer 和你真正的 dev 遥测**。**只用一个,别 Langfuse+LangSmith+Braintrust 同时上。**
 
 **可选加分(真站起来才提)**:**Prime-Intellect `verifiers`——把 oracle 发布成可验证 RL 环境**。把你从"app 作者"重构成"环境+eval 作者"(2026 最高身份信号),且**无需训练大模型就展示 RL-readiness**(你的 oracle 本就是确定性奖励函数)。仅当你能脱稿讲它才做,光提一句=LARP。对 RL 倾向岗强。
 
 **自己建、别引框架**:**测试时搜索**(best-of-N + verifier-guided/DVTS)是你的差异化 IP,从零写远比依赖值钱(可引 HF `search-and-learn` 当借鉴的先例);**记忆/技能库**自建一个"按诊断类型索引已验证编辑模式"的嵌入库(**可选** Mem0 当可插拔检索层,但**消融把关**,且台上说清这是**检索、不是模型"学会"**)。
 
-**明确拒绝(此处不契合/低信号)**:AutoGen(已并入 MS Agent Framework,基本 sunset)、CrewAI/smolagents(demo 级,撑不起旗舰)、Google ADK(非 Gemini/GCP 原生不划算)、Letta 当运行时(自带控制循环,会和 LangGraph 打架=架构异味)、Zep/重型记忆平台(吉他编辑模式用时序知识图=过度工程)、OpenAI 可视化 Agent Builder(2026-11-30 关停;要 OpenAI 信号用**代码版** Agents SDK)。**评委最认的元信号:一个每块都承重的小栈(LangGraph + DSPy/GEPA + Inspect + MCP + 一个 tracer)胜过一长串框架清单。**
+**明确拒绝(此处不契合/低信号)**:AutoGen(已并入 MS Agent Framework,基本 sunset)、CrewAI/smolagents(demo 级,撑不起旗舰)、Google ADK(非 Gemini/GCP 原生不划算)、Letta 当运行时(自带控制循环,会和自研 harness 打架=架构异味)、Zep/重型记忆平台(吉他编辑模式用时序知识图=过度工程)、OpenAI 可视化 Agent Builder(2026-11-30 关停;要 OpenAI 信号用**代码版** Agents SDK)。**评委最认的元信号:一个每块都承重的小栈（自研 harness + 通过消融的优化/eval + MCP + 一个 tracer）胜过一长串框架清单。**
 
 ### Part E — 演示与 Demo 规格（可上台、不只是数字）
 
@@ -541,7 +541,7 @@ class MusicIR:
 
 ### Part G — 求职 Artifact 清单
 
-**必须(先做)**:①**`/oracle` 做成纯确定性、可 pip 安装的库**(property-based 测试 + 绿色 CI,全仓最好覆盖率——皇冠);②**公开 checker 打分榜单**(冻结版本化测试集 + provenance/许可 + 留出切分 + 日期截止,`make bench` 一条命令重生成所有数,明说 checker 验证非模型自报);③**leave-one-out 消融表**(去 oracle/critic/best-of-N/记忆,你最有说服力的单图);④**README 首屏**(架构图 + money-moment GIF + 头牌榜单数 + 消融表);⑤**~3 分钟 demo 视频**(以 失败→修复→播放音频 收尾);⑥**回路由真 harness(LangGraph)驱动**,oracle+edit-DSL 暴露为类型化工具。
+**必须(先做)**:①**`/oracle` 做成纯确定性、可 pip 安装的库**(property-based 测试 + 绿色 CI,全仓最好覆盖率——皇冠);②**公开 checker 打分榜单**(冻结版本化测试集 + provenance/许可 + 留出切分 + 日期截止,`make bench` 一条命令重生成所有数,明说 checker 验证非模型自报);③**leave-one-out 消融表**(去 oracle/critic/best-of-N/记忆,你最有说服力的单图);④**README 首屏**(架构图 + money-moment GIF + 头牌榜单数 + 消融表);⑤**~3 分钟 demo 视频**(以 失败→修复→播放音频 收尾);⑥**回路由真自研 harness 驱动**，oracle+edit-DSL 通过进程内 typed seam 与 MCP adapter 暴露。
 **高价值(其次)**:⑦oracle 打包成 Prime-Intellect `verifiers` 格式可验证环境(Hub 发布尽力而为);⑧OTel-GenAI spans 上的 **trace viewer**(自托管 Langfuse,诊断叠在渲染谱上);⑨**技术写作**(以"oracle 当环境"领起,一个带真实诊断+修复的失败例、消融表+诚实解读,**外加"什么没成功"一节**——读起来很资深)。
 **锦上添花(有时间且诚实)**:⑩CPU-only reranker(在 oracle 验证的 rollout 上训,**精确措辞、绝不叫"RL"**);⑪一条命令 Docker/uv + 托管 live demo URL;⑫可选第二 demo:一个 OpenAI Agents SDK agent 调**同一个** MCP oracle(证明边界跨生态可移植)。
 

@@ -353,6 +353,13 @@ def feasible_fingerings(frame: "Frame", profile: Profile) -> list["FingerAssignm
 
 ### Plan 6 —— UI / trace viewer / demo / MCP（可展示=真功能）
 
+> **分段状态（2026-07-16）**：Plan 6A 薄纵切已完成并独立闭门：bytes-first application seam、
+> typed loopback FastAPI、`agent-trace@0.1.0` replay viewer、三个 stdio MCP tools，以及经用户审美认可的
+> React Web。下面原始 Plan 6 的 AlphaTab、音频、真实琴颈动画、导出互操作、live A/B/榜单与真人
+> money moment 仍全部 open，Plan 6A 不替代这些验收项。闭门证据见
+> [`2026-07-16-plan-6a-web-api-trace-mcp.md`](2026-07-16-plan-6a-web-api-trace-mcp.md) 与
+> [`PLAN6A_ACCEPTANCE.md`](../../PLAN6A_ACCEPTANCE.md)。
+
 **交付里程碑**：M7（音频前端 best-effort + web UI 打磨 + 指板动画 + demo 脚本）。
 
 **Scope**

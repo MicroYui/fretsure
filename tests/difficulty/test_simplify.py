@@ -70,6 +70,42 @@ def test_deterministic() -> None:
     assert a.tab == b.tab and a.iterations == b.iterations
 
 
+def test_simplify_trace_redacts_raw_reply_and_transport_exception() -> None:
+    secret_reply = f"private-before {_DROP} private-after"
+    repaired = simplify_to_tier(
+        _TARGET,
+        BEGINNER,
+        STANDARD_TUNING,
+        0,
+        FakeLLM([secret_reply]),
+    )
+    encoded = repaired.trace.to_jsonl()
+    assert "private-before" not in encoded
+    assert "private-after" not in encoded
+    assert any(step.event == "EDIT_APPLIED" for step in repaired.trace.steps)
+
+    class FailingLLM:
+        @property
+        def model_id(self) -> str:
+            return "failing-test"
+
+        def complete(self, **kwargs: object) -> str:
+            del kwargs
+            raise RuntimeError("Bearer tier-secret via https://proxy.invalid/private")
+
+    failed = simplify_to_tier(
+        _TARGET,
+        BEGINNER,
+        STANDARD_TUNING,
+        0,
+        FailingLLM(),
+    )
+    failed_json = failed.trace.to_jsonl()
+    assert "tier-secret" not in failed_json
+    assert "proxy.invalid" not in failed_json
+    assert any(step.event == "MODEL_CALL_FAILED" for step in failed.trace.steps)
+
+
 def test_simplifier_validates_target_before_sorting_or_llm() -> None:
     llm = FakeLLM([])
 

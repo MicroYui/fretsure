@@ -16,10 +16,10 @@ from dataclasses import dataclass
 from fretsure.agent.arranger import ArrangeGoal, propose_arrangement
 from fretsure.agent.critic import CriticScore, critique
 from fretsure.agent.repair import RepairResult, repair
-from fretsure.agent.trace import Trace
+from fretsure.agent.trace import Trace, TraceStep, target_checkpoint
 from fretsure.ir import MusicIR, snapshot_music_ir
 from fretsure.llm.client import LLMClient
-from fretsure.metrics.fidelity import Fidelity, fidelity
+from fretsure.metrics.fidelity import FaithfulnessGate, Fidelity, faithfulness, fidelity
 from fretsure.oracle.core import OracleResult
 from fretsure.oracle.input import (
     ensure_boolean_control,
@@ -50,8 +50,10 @@ class ArrangeResult:
 
 @dataclass(frozen=True)
 class _Candidate:
+    index: int
     is_green: bool
     fidelity: Fidelity
+    faithfulness: FaithfulnessGate
     critic: CriticScore | None
     repair: RepairResult
 
@@ -67,6 +69,7 @@ class ArrangePool:
     candidates: tuple[_Candidate | None, ...]
     trace: Trace
     n: int
+    candidate_traces: tuple[tuple[TraceStep, ...], ...] = ()
 
 
 def _rank(c: _Candidate, *, use_critic: bool = True) -> tuple[int, float, float, float, float]:
@@ -117,7 +120,9 @@ def arrange_pool(
     )
     trace = Trace()
     slots: list[_Candidate | None] = []
+    candidate_traces: list[tuple[TraceStep, ...]] = []
     for i in range(n):
+        candidate_trace = Trace()
         temperature = min(1.0, 0.2 * i)
         target = propose_arrangement(
             ir,
@@ -126,21 +131,67 @@ def arrange_pool(
             temperature=temperature,
             profile=profile,
         )
-        trace.add("PROPOSE", f"candidate {i}", i=i, temperature=temperature)
-        rr = repair(
-            target, goal.tuning, goal.capo, profile, llm,
-            tempo_bpm=goal.tempo_bpm, max_iters=max_iters,
+        candidate_trace.add(
+            "PROPOSE",
+            f"Candidate {i} produced a bounded target-note checkpoint.",
+            event="CANDIDATE_PROPOSED",
+            candidate_index=i,
+            temperature=temperature,
+            target_checkpoint=target_checkpoint(target),
         )
+        rr = repair(
+            target,
+            goal.tuning,
+            goal.capo,
+            profile,
+            llm,
+            tempo_bpm=goal.tempo_bpm,
+            max_iters=max_iters,
+            candidate_index=i,
+        )
+        candidate_trace.steps.extend(rr.trace.steps)
         verdict = rr.oracle.verdict if rr.oracle is not None else "INFEASIBLE"
-        trace.add("SOLVE", f"candidate {i}: {verdict}", i=i, verdict=verdict)
+        candidate_trace.add(
+            "SOLVE",
+            f"Candidate {i} finished with {verdict}.",
+            event="CANDIDATE_FINISHED",
+            candidate_index=i,
+            iteration=rr.iterations,
+            verdict=verdict,
+            tab_available=rr.tab is not None,
+            repair_iterations=rr.iterations,
+        )
+        trace.steps.extend(candidate_trace.steps)
+        candidate_traces.append(tuple(candidate_trace.steps))
         if rr.tab is None:
             slots.append(None)
             continue
         fid = fidelity(ir, rr.tab)
+        faith = faithfulness(ir, rr.tab)
         is_green = rr.oracle is not None and rr.oracle.verdict == "GREEN"
         crit = critique(ir, rr.tab, llm) if (is_green and use_critic) else None
-        slots.append(_Candidate(is_green, fid, crit, rr))
-    return ArrangePool(tuple(slots), trace, n)
+        slots.append(_Candidate(i, is_green, fid, faith, crit, rr))
+    return ArrangePool(tuple(slots), trace, n, tuple(candidate_traces))
+
+
+def _retained_candidate_steps(pool: ArrangePool, index: int) -> tuple[TraceStep, ...]:
+    """Return one complete candidate replay, tolerating pre-6A pool fixtures."""
+
+    if len(pool.candidate_traces) == pool.n:
+        return pool.candidate_traces[index]
+    return tuple(pool.trace.steps)
+
+
+def _failed_candidate_to_retain(pool: ArrangePool, k: int) -> int | None:
+    """Choose one bounded failure replay, preferring a model-call diagnostic."""
+
+    if k == 0:
+        return None
+    if len(pool.candidate_traces) == pool.n:
+        for index, steps in enumerate(pool.candidate_traces[:k]):
+            if any(step.event == "MODEL_CALL_FAILED" for step in steps):
+                return index
+    return 0
 
 
 def best_of_k(pool: ArrangePool, k: int, *, use_critic: bool = True) -> ArrangeResult:
@@ -154,19 +205,44 @@ def best_of_k(pool: ArrangePool, k: int, *, use_critic: bool = True) -> ArrangeR
     use_critic = ensure_boolean_control(use_critic, path="use_critic")
     scored = [c for c in pool.candidates[:k] if c is not None]
     trace = Trace()
-    trace.steps.extend(pool.trace.steps)
     if not scored:
-        trace.add("SELECT", "no feasible candidate found")
+        failed_index = _failed_candidate_to_retain(pool, k)
+        if failed_index is not None:
+            trace.steps.extend(_retained_candidate_steps(pool, failed_index))
+        trace.add(
+            "SELECT",
+            "No candidate returned a tablature result within the bounded search.",
+            event="NO_CANDIDATE_SELECTED",
+            winner_candidate_index=None,
+            candidates_considered=k,
+            playability_gate=None,
+            faithfulness_passed=None,
+        )
         return ArrangeResult(None, None, None, None, trace, k)
     best = max(scored, key=lambda c: _rank(c, use_critic=use_critic))
-    trace.steps.extend(best.repair.trace.steps)  # surface the winner's repair reasoning
+    # Retain one complete replay in execution order.  This keeps the public
+    # trace bounded independently of N while preserving every winner step from
+    # proposal through repair and finish.
+    trace.steps.extend(_retained_candidate_steps(pool, best.index))
+    verdict = best.repair.oracle.verdict if best.repair.oracle is not None else None
     trace.add(
         "SELECT",
-        f"green={best.is_green} melody_recall={best.fidelity.melody_recall:.2f}",
+        f"Selected candidate {best.index}; playability and fidelity remain separate gates.",
+        event="CANDIDATE_SELECTED",
+        candidate_index=best.index,
+        winner_candidate_index=best.index,
+        candidates_considered=k,
+        verdict=verdict,
+        green_certified=best.is_green,
+        playability_gate="passed" if best.is_green else "not_passed",
+        faithfulness_passed=best.faithfulness.passed,
+        melody_recall=best.fidelity.melody_recall,
+        bass_preserved=best.fidelity.bass_preserved,
+        harmony_jaccard=best.fidelity.harmony_jaccard,
+        critic_status="SCORED" if best.critic is not None else "NOT_RUN",
+        critic_overall=best.critic.overall if best.critic is not None else None,
     )
-    return ArrangeResult(
-        best.repair.tab, best.repair.oracle, best.fidelity, best.critic, trace, k
-    )
+    return ArrangeResult(best.repair.tab, best.repair.oracle, best.fidelity, best.critic, trace, k)
 
 
 def arrange(

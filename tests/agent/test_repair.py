@@ -1,3 +1,4 @@
+import json
 from fractions import Fraction as F
 from typing import Any, cast
 
@@ -14,6 +15,9 @@ from fretsure.oracle.profiles import MEDIAN_HAND
 _INFEASIBLE = (Note(F(0), F(1), 85, "melody"), Note(F(0), F(1), 86, "harmony"))
 _DROP_86 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 86}'
 _DROP_85 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 85}'  # melody -> protected
+_MISS = '{"op": "drop_note", "target_onset": "0", "target_pitch": 84}'
+_AMBER = (Note(F(0), F(1), 41, "harmony"), Note(F(0), F(1), 49, "melody"))
+_DROP_41 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 41}'
 
 
 def test_already_green_returns_immediately() -> None:
@@ -33,11 +37,150 @@ def test_repair_drops_harmony_to_reach_green() -> None:
     assert any(s.kind == "EDIT" for s in r.trace.steps)
 
 
+def test_repair_trace_is_digest_linked_and_candidate_scoped() -> None:
+    r = repair(
+        _INFEASIBLE,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FakeLLM([_DROP_86]),
+        candidate_index=3,
+    )
+    events = [step.event for step in r.trace.steps]
+    assert events == [
+        "SOLVER_RETURNED_NO_TAB",
+        "REPAIR_EDIT_PROPOSED",
+        "EDIT_APPLIED",
+        "RECHECK_STARTED",
+        "SOLVER_RETURNED_TAB",
+        "PLAYABILITY_CHECKED",
+    ]
+    assert {step.candidate_index for step in r.trace.steps} == {3}
+    edit = next(step for step in r.trace.steps if step.event == "EDIT_APPLIED")
+    recheck = next(step for step in r.trace.steps if step.event == "RECHECK_STARTED")
+    solved = next(
+        step
+        for step in r.trace.steps
+        if step.event == "SOLVER_RETURNED_TAB" and step.iteration == 1
+    )
+    after = edit.data["after_target_sha256"]
+    assert after == recheck.data["target_checkpoint"]["sha256"]
+    assert after == solved.data["target_sha256"]
+    oracle = next(step for step in r.trace.steps if step.event == "PLAYABILITY_CHECKED")
+    assert oracle.data["verdict"] == "GREEN"
+    assert oracle.data["diagnostics"] == []
+    assert oracle.data["terminal_reason"] == "GREEN"
+
+
+def test_trace_replays_localized_diagnostic_edit_and_green_recheck() -> None:
+    result = repair(
+        _AMBER,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FakeLLM([_DROP_41]),
+        max_iters=2,
+    )
+
+    events = [step.event for step in result.trace.steps]
+    assert events == [
+        "SOLVER_RETURNED_TAB",
+        "PLAYABILITY_CHECKED",
+        "REPAIR_EDIT_PROPOSED",
+        "EDIT_APPLIED",
+        "RECHECK_STARTED",
+        "SOLVER_RETURNED_TAB",
+        "PLAYABILITY_CHECKED",
+    ]
+    checks = [
+        step for step in result.trace.steps if step.event == "PLAYABILITY_CHECKED"
+    ]
+    assert [step.data["verdict"] for step in checks] == ["AMBER", "GREEN"]
+    first_diagnostics = checks[0].data["diagnostics"]
+    assert {row["code"] for row in first_diagnostics} == {
+        "FRET_SPAN",
+        "SHIFT_SPEED",
+    }
+    assert all(row["measure"] == 1 and row["beat"] == "1/1" for row in first_diagnostics)
+    edit = next(step for step in result.trace.steps if step.event == "EDIT_APPLIED")
+    assert edit.data["edit"] == {
+        "op": "drop_note",
+        "target_onset": "0/1",
+        "target_pitch": 41,
+        "arg": 0,
+    }
+    assert edit.data["status"] == "applied"
+    assert checks[-1].data["terminal_reason"] == "GREEN"
+
+
+def test_repair_trace_never_records_raw_model_reply_or_transport_exception() -> None:
+    secret_reply = f"private-token-before {_DROP_86} private-token-after"
+    repaired = repair(
+        _INFEASIBLE,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FakeLLM([secret_reply]),
+    )
+    encoded = repaired.trace.to_jsonl()
+    assert "private-token" not in encoded
+    assert _DROP_86 not in encoded
+
+    class FailingLLM:
+        @property
+        def model_id(self) -> str:
+            return "failing-test"
+
+        def complete(self, **kwargs: object) -> str:
+            del kwargs
+            raise RuntimeError(
+                "Bearer top-secret at https://proxy.invalid/private?auth=top-secret"
+            )
+
+    failed = repair(
+        _INFEASIBLE,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FailingLLM(),
+    )
+    failed_json = failed.trace.to_jsonl()
+    assert "top-secret" not in failed_json
+    assert "proxy.invalid" not in failed_json
+    failure_rows = [json.loads(line) for line in failed_json.splitlines()]
+    failure = next(row for row in failure_rows if row["event"] == "MODEL_CALL_FAILED")
+    assert failure["data"] == {
+        "reason_code": "LLM_TRANSPORT_FAILURE",
+        "target_sha256": failure["data"]["target_sha256"],
+    }
+
+
+def test_nonmatching_edit_is_explicit_rejection_not_an_applied_edit() -> None:
+    r = repair(
+        _INFEASIBLE,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FakeLLM([_MISS]),
+        max_iters=1,
+    )
+    rejected = next(step for step in r.trace.steps if step.event == "EDIT_REJECTED")
+    assert rejected.data["reason_code"] == "TARGET_NOT_FOUND"
+    assert rejected.data["status"] == "noop"
+    assert rejected.data["state_changed"] is False
+    assert not any(step.event == "EDIT_APPLIED" for step in r.trace.steps)
+
+
 def test_melody_protected_edit_is_skipped_then_valid_edit_applied() -> None:
     r = repair(_INFEASIBLE, STANDARD_TUNING, 0, MEDIAN_HAND, FakeLLM([_DROP_85, _DROP_86]))
     assert r.oracle is not None and r.oracle.verdict == "GREEN"
     assert r.iterations == 2  # first attempt protected, second worked
-    assert any("protect" in s.detail.lower() for s in r.trace.steps)
+    protected = next(
+        step
+        for step in r.trace.steps
+        if step.event == "EDIT_REJECTED" and step.data["reason_code"] == "MELODY_PROTECTED"
+    )
+    assert protected.data["status"] == "rejected"
 
 
 def test_max_iters_stops_without_crash() -> None:

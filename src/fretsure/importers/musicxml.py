@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import stat
+import unicodedata
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
 from importlib import import_module
@@ -41,6 +44,7 @@ IMPORTER_VERSION = "musicxml@0.2.0"
 _MUSICXML_NAMESPACE = "http://www.musicxml.org/ns/musicxml"
 _SUPPORTED_EXTENSIONS = frozenset({".musicxml", ".xml", ".mxl"})
 _FILE_READ_CHUNK = 64 * 1024
+_MAX_SOURCE_FILENAME_BYTES = 1024
 
 
 class _IterParse(Protocol):
@@ -80,56 +84,188 @@ def _one_failure(
 
 
 def _read_bounded(path: Path, limits: ImportLimits) -> bytes | ImportFailure:
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NONBLOCK", 0)
     try:
-        size = path.stat().st_size
+        descriptor = os.open(path, flags)
     except FileNotFoundError:
         return _one_failure(ImportCode.FILE_NOT_FOUND, f"MusicXML file not found: {path}")
     except OSError as exc:
         return _one_failure(
             ImportCode.FILE_READ_ERROR,
-            f"cannot stat MusicXML file {path}: {type(exc).__name__}: {exc}",
+            f"cannot open MusicXML file {path}: {type(exc).__name__}: {exc}",
         )
-    if not path.is_file():
-        return _one_failure(ImportCode.NOT_A_FILE, f"MusicXML path is not a regular file: {path}")
-
-    suffix = path.suffix.lower()
-    if suffix not in _SUPPORTED_EXTENSIONS:
-        return _one_failure(
-            ImportCode.UNSUPPORTED_FILE_TYPE,
-            f"unsupported input suffix {path.suffix!r}; expected .musicxml, .xml, or .mxl",
-        )
-    byte_limit = limits.max_mxl_archive_bytes if suffix == ".mxl" else limits.max_bytes
-    if size > byte_limit:
-        return _one_failure(
-            ImportCode.INPUT_LIMIT_EXCEEDED,
-            f"input is {size} bytes; limit is {byte_limit}",
-            SourceLocation(element="file"),
-        )
+    result: bytes | ImportFailure
     try:
-        with path.open("rb") as handle:
-            output = bytearray()
-            while True:
-                # Read in fixed chunks so a valid signed-63 custom limit never
-                # reaches a platform-sized ``read(n)`` conversion.  Once the
-                # declared limit is reached, read exactly one byte to distinguish
-                # EOF from a concurrently grown/oversized file.
-                read_size = min(_FILE_READ_CHUNK, byte_limit - len(output) + 1)
-                chunk = handle.read(read_size)
-                if not chunk:
-                    break
-                output.extend(chunk)
-                if len(output) > byte_limit:
-                    return _one_failure(
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            result = _one_failure(
+                ImportCode.NOT_A_FILE,
+                f"MusicXML path is not a regular file: {path}",
+            )
+        else:
+            suffix = path.suffix.lower()
+            if suffix not in _SUPPORTED_EXTENSIONS:
+                result = _one_failure(
+                    ImportCode.UNSUPPORTED_FILE_TYPE,
+                    f"unsupported input suffix {path.suffix!r}; "
+                    "expected .musicxml, .xml, or .mxl",
+                )
+            else:
+                byte_limit = (
+                    limits.max_mxl_archive_bytes if suffix == ".mxl" else limits.max_bytes
+                )
+                if before.st_size > byte_limit:
+                    result = _one_failure(
                         ImportCode.INPUT_LIMIT_EXCEEDED,
-                        f"input exceeds {byte_limit} bytes",
+                        f"input is {before.st_size} bytes; limit is {byte_limit}",
                         SourceLocation(element="file"),
                     )
+                else:
+                    output = bytearray()
+                    while True:
+                        # Once the declared limit is reached, read exactly one
+                        # byte to distinguish EOF from a concurrently grown file.
+                        read_size = min(_FILE_READ_CHUNK, byte_limit - len(output) + 1)
+                        chunk = os.read(descriptor, read_size)
+                        if not chunk:
+                            break
+                        output.extend(chunk)
+                        if len(output) > byte_limit:
+                            break
+                    if len(output) > byte_limit:
+                        result = _one_failure(
+                            ImportCode.INPUT_LIMIT_EXCEEDED,
+                            f"input exceeds {byte_limit} bytes",
+                            SourceLocation(element="file"),
+                        )
+                    else:
+                        after = os.fstat(descriptor)
+                        stable_before = (
+                            before.st_dev,
+                            before.st_ino,
+                            stat.S_IFMT(before.st_mode),
+                            before.st_nlink,
+                            before.st_size,
+                            before.st_mtime_ns,
+                            before.st_ctime_ns,
+                        )
+                        stable_after = (
+                            after.st_dev,
+                            after.st_ino,
+                            stat.S_IFMT(after.st_mode),
+                            after.st_nlink,
+                            after.st_size,
+                            after.st_mtime_ns,
+                            after.st_ctime_ns,
+                        )
+                        if stable_after != stable_before or len(output) != before.st_size:
+                            result = _one_failure(
+                                ImportCode.FILE_READ_ERROR,
+                                "MusicXML file changed while it was being read",
+                                SourceLocation(element="file"),
+                            )
+                        else:
+                            result = bytes(output)
     except OSError as exc:
-        return _one_failure(
+        result = _one_failure(
             ImportCode.FILE_READ_ERROR,
             f"cannot read MusicXML file {path}: {type(exc).__name__}: {exc}",
         )
-    return bytes(output)
+    try:
+        os.close(descriptor)
+    except OSError as exc:
+        if not isinstance(result, ImportFailure):
+            return _one_failure(
+                ImportCode.FILE_READ_ERROR,
+                f"cannot close MusicXML file {path}: {type(exc).__name__}: {exc}",
+            )
+    return result
+
+
+def _validate_source_filename(filename: object) -> str | ImportFailure:
+    """Validate an inert source identity and return its normalized suffix."""
+
+    location = SourceLocation(element="filename")
+    if type(filename) is not str:
+        return _one_failure(
+            ImportCode.INVALID_INPUT,
+            "filename must be an exact str",
+            location,
+        )
+    if not filename:
+        return _one_failure(
+            ImportCode.INVALID_INPUT,
+            "filename must not be empty",
+            location,
+        )
+    # Every Unicode scalar consumes at least one UTF-8 byte.  Check this cheap
+    # lower bound before encoding so an already-oversized name cannot force a
+    # second, potentially very large allocation.
+    if len(filename) > _MAX_SOURCE_FILENAME_BYTES:
+        return _one_failure(
+            ImportCode.INPUT_LIMIT_EXCEEDED,
+            f"filename exceeds {_MAX_SOURCE_FILENAME_BYTES} UTF-8 bytes",
+            location,
+        )
+    try:
+        encoded_size = len(filename.encode("utf-8"))
+    except UnicodeEncodeError:
+        return _one_failure(
+            ImportCode.INVALID_INPUT,
+            "filename must be valid Unicode without lone surrogates",
+            location,
+        )
+    if encoded_size > _MAX_SOURCE_FILENAME_BYTES:
+        return _one_failure(
+            ImportCode.INPUT_LIMIT_EXCEEDED,
+            f"filename exceeds {_MAX_SOURCE_FILENAME_BYTES} UTF-8 bytes",
+            location,
+        )
+    if "/" in filename or "\\" in filename:
+        return _one_failure(
+            ImportCode.INVALID_INPUT,
+            "filename must be a basename without path separators",
+            location,
+        )
+    if filename in {".", ".."}:
+        return _one_failure(
+            ImportCode.INVALID_INPUT,
+            "filename must not be '.' or '..'",
+            location,
+        )
+    if (
+        len(filename) >= 2
+        and filename[0].isascii()
+        and filename[0].isalpha()
+        and filename[1] == ":"
+    ):
+        return _one_failure(
+            ImportCode.INVALID_INPUT,
+            "filename must not contain a Windows drive prefix",
+            location,
+        )
+    if any(unicodedata.category(character) in {"Cc", "Cf"} for character in filename):
+        return _one_failure(
+            ImportCode.INVALID_INPUT,
+            "filename must not contain control or format characters",
+            location,
+        )
+
+    dot = filename.rfind(".")
+    suffix = filename[dot:].lower() if dot > 0 else ""
+    if suffix not in _SUPPORTED_EXTENSIONS:
+        return _one_failure(
+            ImportCode.UNSUPPORTED_FILE_TYPE,
+            "unsupported input suffix; expected .musicxml, .xml, or .mxl",
+            location,
+        )
+    return suffix
+
+
+def validate_musicxml_filename(filename: object) -> str | ImportFailure:
+    """Validate one inert public score filename without reading or parsing bytes."""
+
+    return _validate_source_filename(filename)
 
 
 def _safe_parse(data: bytes, limits: ImportLimits) -> ET.Element:
@@ -248,29 +384,30 @@ def _canonical_xml(root: ET.Element) -> bytes:
     return cast(bytes, ET.tostring(root, encoding="utf-8", xml_declaration=True))
 
 
-def import_musicxml(path: Path, *, limits: ImportLimits = DEFAULT_LIMITS) -> MusicXMLImportResult:
-    """Safely import one supported MusicXML or compressed MXL score."""
+def _import_musicxml_bytes_snapshot(
+    data: bytes,
+    filename: str,
+    suffix: str,
+    limits: ImportLimits,
+) -> MusicXMLImportResult:
+    """Import already-snapshotted, exact inputs through the shared semantic path."""
 
-    try:
-        limits = snapshot_import_limits(limits)
-    except ValueError as exc:
+    byte_limit = limits.max_mxl_archive_bytes if suffix == ".mxl" else limits.max_bytes
+    if len(data) > byte_limit:
         return _one_failure(
             ImportCode.INPUT_LIMIT_EXCEEDED,
-            str(exc),
-            SourceLocation(element="limits"),
+            f"input is {len(data)} bytes; limit is {byte_limit}",
+            SourceLocation(element="file"),
         )
 
-    raw = _read_bounded(path, limits)
-    if isinstance(raw, ImportFailure):
-        return raw
-    sha256 = hashlib.sha256(raw).hexdigest()
-    root_bytes = raw
+    sha256 = hashlib.sha256(data).hexdigest()
+    root_bytes = data
     root_path: str | None = None
     container_version: str | None = None
     container_warnings: tuple[ImportDiagnostic, ...] = ()
     source_format: Literal["musicxml", "mxl"] = "musicxml"
-    if path.suffix.lower() == ".mxl":
-        container = read_mxl_container(raw, limits)
+    if suffix == ".mxl":
+        container = read_mxl_container(data, limits)
         if isinstance(container, ImportFailure):
             return container
         assert isinstance(container, MXLContainerPayload)
@@ -312,7 +449,7 @@ def import_musicxml(path: Path, *, limits: ImportLimits = DEFAULT_LIMITS) -> Mus
         ir = music21_to_ir(
             canonical,
             metadata=preflight.metadata,
-            source_filename=path.name,
+            source_filename=filename,
             source_format=source_format,
             sha256=sha256,
             root_member=root_path,
@@ -354,7 +491,7 @@ def import_musicxml(path: Path, *, limits: ImportLimits = DEFAULT_LIMITS) -> Mus
         if diagnostic.severity is DiagnosticSeverity.WARNING
     )
     provenance = ImportProvenance(
-        path.name,
+        filename,
         source_format,
         sha256,
         root_path,
@@ -362,3 +499,53 @@ def import_musicxml(path: Path, *, limits: ImportLimits = DEFAULT_LIMITS) -> Mus
         container_version,
     )
     return ImportSuccess(ir, warnings, IMPORTER_VERSION, sha256, provenance)
+
+
+def _snapshot_limits(limits: object) -> ImportLimits | ImportFailure:
+    try:
+        return snapshot_import_limits(limits)
+    except ValueError as exc:
+        return _one_failure(
+            ImportCode.INPUT_LIMIT_EXCEEDED,
+            str(exc),
+            SourceLocation(element="limits"),
+        )
+
+
+def import_musicxml_bytes(
+    data: bytes,
+    filename: str,
+    *,
+    limits: ImportLimits = DEFAULT_LIMITS,
+) -> MusicXMLImportResult:
+    """Safely import exact in-memory MusicXML/MXL bytes with an inert filename."""
+
+    snapshot = _snapshot_limits(limits)
+    if isinstance(snapshot, ImportFailure):
+        return snapshot
+    if type(data) is not bytes:
+        return _one_failure(
+            ImportCode.INVALID_INPUT,
+            "data must be exact bytes",
+            SourceLocation(element="data"),
+        )
+    suffix = _validate_source_filename(filename)
+    if isinstance(suffix, ImportFailure):
+        return suffix
+    return _import_musicxml_bytes_snapshot(data, filename, suffix, snapshot)
+
+
+def import_musicxml(path: Path, *, limits: ImportLimits = DEFAULT_LIMITS) -> MusicXMLImportResult:
+    """Safely read and import one supported MusicXML or compressed MXL file."""
+
+    snapshot = _snapshot_limits(limits)
+    if isinstance(snapshot, ImportFailure):
+        return snapshot
+    raw = _read_bounded(path, snapshot)
+    if isinstance(raw, ImportFailure):
+        return raw
+    filename = path.name
+    suffix = _validate_source_filename(filename)
+    if isinstance(suffix, ImportFailure):
+        return suffix
+    return _import_musicxml_bytes_snapshot(raw, filename, suffix, snapshot)

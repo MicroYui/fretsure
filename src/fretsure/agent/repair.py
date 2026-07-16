@@ -10,7 +10,17 @@ from dataclasses import dataclass
 
 from fretsure.agent.edit_dsl import MelodyProtected, apply_edit, parse_edit
 from fretsure.agent.tools import diagnostics_to_prompt, edit_schema_prompt, solve_and_check
-from fretsure.agent.trace import Trace
+from fretsure.agent.trace import (
+    Trace,
+    TraceEvent,
+    edit_detail,
+    edit_trace_payload,
+    infeasible_detail,
+    infeasible_trace_payload,
+    oracle_detail,
+    oracle_trace_payload,
+    target_checkpoint,
+)
 from fretsure.ir import Note
 from fretsure.llm.client import LLMClient, extract_json
 from fretsure.oracle.core import OracleResult
@@ -49,6 +59,18 @@ def _terminal(
     return RepairResult(None, target, None, solved, iterations, trace)
 
 
+def _checkpoint_digest(checkpoint: dict[str, object]) -> str:
+    digest = checkpoint["sha256"]
+    assert type(digest) is str
+    return digest
+
+
+def _diagnostic_codes(result: OracleResult | Infeasible) -> list[str]:
+    if isinstance(result, Infeasible):
+        return [result.code.value]
+    return list(dict.fromkeys(item.violation_type for item in result.diagnostics))
+
+
 def repair(
     target: tuple[Note, ...],
     tuning: tuple[int, ...],
@@ -58,6 +80,7 @@ def repair(
     *,
     tempo_bpm: float = 90.0,
     max_iters: int = 8,
+    candidate_index: int | None = None,
 ) -> RepairResult:
     max_iters = ensure_repair_iterations(max_iters)
     target, tuning, capo, profile, tempo_bpm, _beam = ensure_solver_input(
@@ -70,15 +93,60 @@ def repair(
     current = tuple(sorted(target, key=lambda n: (n.onset, n.pitch)))
     trace = Trace()
     for iterations in range(max_iters + 1):
+        target_state = target_checkpoint(current)
+        target_digest = _checkpoint_digest(target_state)
         solved, oracle = solve_and_check(current, tuning, capo, profile, tempo_bpm=tempo_bpm)
-        verdict = oracle.verdict if oracle is not None else "INFEASIBLE"
-        trace.add("SOLVE", verdict, verdict=verdict)
+        if isinstance(solved, Tab):
+            trace.add(
+                "SOLVE",
+                "Solver returned a tablature candidate.",
+                event="SOLVER_RETURNED_TAB",
+                candidate_index=candidate_index,
+                iteration=iterations,
+                status="TAB",
+                target_sha256=target_digest,
+                target_note_count=len(current),
+            )
+            assert oracle is not None
+            terminal_reason = (
+                "GREEN"
+                if oracle.verdict == "GREEN"
+                else "BUDGET_EXHAUSTED"
+                if iterations == max_iters
+                else None
+            )
+            trace.add(
+                "ORACLE",
+                oracle_detail(oracle),
+                event="PLAYABILITY_CHECKED",
+                candidate_index=candidate_index,
+                iteration=iterations,
+                **oracle_trace_payload(
+                    oracle,
+                    solved,
+                    terminal_reason=terminal_reason,
+                ),
+            )
+        else:
+            terminal_reason = (
+                "BUDGET_EXHAUSTED" if iterations == max_iters else None
+            )
+            trace.add(
+                "SOLVE",
+                infeasible_detail(solved),
+                event="SOLVER_RETURNED_NO_TAB",
+                candidate_index=candidate_index,
+                iteration=iterations,
+                status="NO_TAB",
+                target_sha256=target_digest,
+                target_note_count=len(current),
+                infeasible=infeasible_trace_payload(solved),
+                terminal_reason=terminal_reason,
+            )
 
         if isinstance(solved, Tab) and oracle is not None and oracle.verdict == "GREEN":
-            trace.add("ORACLE", "GREEN — done", verdict="GREEN")
             return _terminal(solved, oracle, current, iterations, trace)
         if iterations == max_iters:
-            trace.add("ORACLE", f"budget reached at {verdict}", verdict=verdict)
             return _terminal(solved, oracle, current, iterations, trace)
 
         if isinstance(solved, Tab):
@@ -92,20 +160,124 @@ def repair(
         user = f"{diag}\n\n{edit_schema_prompt()}"
         try:
             reply = llm.complete(system=_SYSTEM, user=user)
-        except Exception as exc:  # noqa: BLE001 - LLM transport failure: stop gracefully
-            trace.add("REASON", f"LLM call failed, stopping repair: {exc}")
+        except Exception:  # noqa: BLE001 - public trace records only a stable code
+            trace.add(
+                "REASON",
+                "The model call failed; repair stopped without exposing transport details.",
+                event="MODEL_CALL_FAILED",
+                candidate_index=candidate_index,
+                iteration=iterations + 1,
+                reason_code="LLM_TRANSPORT_FAILURE",
+                target_sha256=target_digest,
+            )
             return _terminal(solved, oracle, current, iterations, trace)
-        trace.add("REASON", reply[:200])
 
         try:
-            edit = parse_edit(extract_json(reply))
-        except ValueError as exc:
-            trace.add("EDIT", f"unparseable edit skipped: {exc}")
+            edit_object = extract_json(reply)
+        except (AttributeError, TypeError, ValueError):
+            trace.add(
+                "EDIT",
+                "The model response did not contain an accepted JSON edit.",
+                event="MODEL_EDIT_INVALID",
+                candidate_index=candidate_index,
+                iteration=iterations + 1,
+                edit=None,
+                status="unparseable",
+                reason_code="NO_JSON_OBJECT",
+                before_target_sha256=target_digest,
+                after_target_sha256=target_digest,
+                state_changed=False,
+            )
+            trace.add(
+                "RECHECK",
+                "Recheck the unchanged target after the rejected model response.",
+                event="RECHECK_STARTED",
+                candidate_index=candidate_index,
+                iteration=iterations + 1,
+                trigger="MODEL_EDIT_INVALID",
+                target_checkpoint=target_state,
+            )
             continue
         try:
-            current = apply_edit(current, edit)
-            trace.add("EDIT", f"{edit.op} pitch={edit.target_pitch}", op=edit.op)
-        except MelodyProtected as exc:
-            trace.add("EDIT", f"melody-protected, skipped: {exc}")
+            edit = parse_edit(edit_object)
+        except (TypeError, ValueError):
+            trace.add(
+                "EDIT",
+                "The model JSON did not satisfy the edit schema.",
+                event="MODEL_EDIT_INVALID",
+                candidate_index=candidate_index,
+                iteration=iterations + 1,
+                edit=None,
+                status="unparseable",
+                reason_code="INVALID_EDIT_SCHEMA",
+                before_target_sha256=target_digest,
+                after_target_sha256=target_digest,
+                state_changed=False,
+            )
+            trace.add(
+                "RECHECK",
+                "Recheck the unchanged target after the rejected edit.",
+                event="RECHECK_STARTED",
+                candidate_index=candidate_index,
+                iteration=iterations + 1,
+                trigger="MODEL_EDIT_INVALID",
+                target_checkpoint=target_state,
+            )
+            continue
+
+        structured_edit = edit_trace_payload(edit)
+        trace.add(
+            "REASON",
+            edit_detail(edit),
+            event="REPAIR_EDIT_PROPOSED",
+            candidate_index=candidate_index,
+            iteration=iterations + 1,
+            edit=structured_edit,
+            based_on_diagnostic_codes=_diagnostic_codes(prompt_ctx),
+        )
+        try:
+            updated = apply_edit(current, edit)
+        except MelodyProtected:
+            updated = current
+            trace_event: TraceEvent = "EDIT_REJECTED"
+            status = "rejected"
+            reason_code: str | None = "MELODY_PROTECTED"
+            detail = "The edit was rejected because melody notes are protected."
+        else:
+            if updated == current:
+                trace_event = "EDIT_REJECTED"
+                status = "noop"
+                reason_code = "TARGET_NOT_FOUND"
+                detail = "The edit matched no target note and changed no state."
+            else:
+                trace_event = "EDIT_APPLIED"
+                status = "applied"
+                reason_code = None
+                detail = "The targeted edit was applied to the repair state."
+        after_state = target_checkpoint(updated)
+        after_digest = _checkpoint_digest(after_state)
+        trace.add(
+            "EDIT",
+            detail,
+            event=trace_event,
+            candidate_index=candidate_index,
+            iteration=iterations + 1,
+            edit=structured_edit,
+            status=status,
+            reason_code=reason_code,
+            before_target_sha256=target_digest,
+            after_target_sha256=after_digest,
+            state_changed=updated != current,
+        )
+        current = updated
+        trace.add(
+            "RECHECK",
+            "Run the bounded solver and oracle again for the post-edit target.",
+            event="RECHECK_STARTED",
+            candidate_index=candidate_index,
+            iteration=iterations + 1,
+            trigger=trace_event,
+            target_checkpoint=after_state,
+        )
 
     raise AssertionError("unreachable")  # loop always returns at iterations == max_iters

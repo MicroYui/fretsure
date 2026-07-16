@@ -19,6 +19,10 @@ _PROP_B = (
     '{"notes":[{"onset":"0","duration":"1","pitch":64,"voice":"melody"},'
     '{"onset":"0","duration":"1","pitch":47,"voice":"bass"}]}'
 )
+_PROP_INFEASIBLE = (
+    '{"notes":[{"onset":"0","duration":"1","pitch":85,"voice":"melody"},'
+    '{"onset":"0","duration":"1","pitch":86,"voice":"harmony"}]}'
+)
 
 
 def _script() -> list[str]:
@@ -36,6 +40,50 @@ def test_best_of_n_picks_higher_critic_green_candidate() -> None:
     played = {note_pitch(n.string, n.fret, r.tab.tuning, r.tab.capo) for n in r.tab.notes}
     assert 47 in played and 40 not in played  # B (bass 47), not A (bass 40)
     assert any(s.kind == "SELECT" for s in r.trace.steps)
+    selected = next(step for step in r.trace.steps if step.event == "CANDIDATE_SELECTED")
+    assert selected.candidate_index == 1
+    assert selected.data["winner_candidate_index"] == 1
+    assert selected.data["green_certified"] is True
+    assert selected.data["playability_gate"] == "passed"
+    assert selected.data["faithfulness_passed"] is False
+    winner_replay = [
+        step
+        for step in r.trace.steps
+        if step.event in {"SOLVER_RETURNED_TAB", "PLAYABILITY_CHECKED"}
+    ]
+    assert winner_replay and {step.candidate_index for step in winner_replay} == {1}
+    assert [step.event for step in r.trace.steps] == [
+        "CANDIDATE_PROPOSED",
+        "SOLVER_RETURNED_TAB",
+        "PLAYABILITY_CHECKED",
+        "CANDIDATE_FINISHED",
+        "CANDIDATE_SELECTED",
+    ]
+
+
+def test_no_tab_retains_one_complete_bounded_failure_replay() -> None:
+    result = arrange(
+        _IR,
+        ArrangeGoal(),
+        FakeLLM([_PROP_INFEASIBLE]),
+        n=1,
+        max_iters=0,
+        use_critic=False,
+    )
+
+    assert result.tab is None
+    assert [step.event for step in result.trace.steps] == [
+        "CANDIDATE_PROPOSED",
+        "SOLVER_RETURNED_NO_TAB",
+        "CANDIDATE_FINISHED",
+        "NO_CANDIDATE_SELECTED",
+    ]
+    assert {step.candidate_index for step in result.trace.steps[:-1]} == {0}
+    terminal = result.trace.steps[-1]
+    assert terminal.data["playability_gate"] is None
+    assert terminal.data["faithfulness_passed"] is None
+    assert terminal.data["candidates_considered"] == 1
+    result.trace.to_public_dict()
 
 
 def test_melody_preserved_in_selection() -> None:
@@ -105,9 +153,7 @@ def test_harness_rejects_unbounded_candidate_controls_before_llm(n: object) -> N
     with pytest.raises(SolverInputError) as caught:
         arrange(_IR, ArrangeGoal(), llm, n=n)  # type: ignore[arg-type]
     assert llm.calls == []
-    assert {d.code for d in caught.value.diagnostics} == {
-        OracleInputCode.CANDIDATE_COUNT
-    }
+    assert {d.code for d in caught.value.diagnostics} == {OracleInputCode.CANDIDATE_COUNT}
 
 
 @pytest.mark.parametrize("use_critic", [0, 1, "false", None])
@@ -118,9 +164,7 @@ def test_harness_rejects_truthy_critic_controls_before_llm(
     with pytest.raises(SolverInputError) as caught:
         arrange(_IR, ArrangeGoal(), llm, use_critic=use_critic)  # type: ignore[arg-type]
     assert llm.calls == []
-    assert {d.code for d in caught.value.diagnostics} == {
-        OracleInputCode.BOOLEAN_CONTROL
-    }
+    assert {d.code for d in caught.value.diagnostics} == {OracleInputCode.BOOLEAN_CONTROL}
 
 
 def test_harness_validates_before_candidate_proposal() -> None:

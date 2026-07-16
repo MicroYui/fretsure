@@ -10,6 +10,7 @@ from fretsure.ir import MusicIR
 class ImportCode(StrEnum):
     """Stable machine-readable importer diagnostic codes."""
 
+    INVALID_INPUT = "INVALID_INPUT"
     FILE_NOT_FOUND = "FILE_NOT_FOUND"
     NOT_A_FILE = "NOT_A_FILE"
     FILE_READ_ERROR = "FILE_READ_ERROR"

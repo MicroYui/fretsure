@@ -32,6 +32,20 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
 `.mxl` 只扩展容器、不扩展这些 root MusicXML 语义；复调/多声部、MIDI 与音频
 仍 fail-closed 或未实现。
 
+本地 Web、typed HTTP API 与 MCP stdio adapter 已在 Plan 6A 打通：
+
+```bash
+uv run fretsure-serve       # http://127.0.0.1:8000，默认离线确定性 engine
+uv run fretsure-mcp         # stdout 只承载 MCP protocol
+```
+
+Web 可以上传同一受限 MusicXML/MXL 输入或加载 CC0 示例，显示独立的 playability / faithfulness
+证据、ASCII tab、版本 stamps 与 `agent-trace@0.1.0` 回放。API 使用有界 raw body，不使用 multipart 或
+临时文件；proxy 默认禁用，只有有效的 loopback proxy 配置加 `fretsure-serve --allow-proxy` 才可用。
+端点、安装组合、MCP tools 与 Claude Desktop/Cursor 配置格式见
+[`docs/WEB_API_MCP.md`](docs/WEB_API_MCP.md)；最终软件门、独立审计和用户视觉认可记录见
+[`docs/PLAN6A_ACCEPTANCE.md`](docs/PLAN6A_ACCEPTANCE.md)。
+
 把一份 lead sheet 编成一份 **GREEN（通过版本化可弹性模型）** 的指弹谱并打印 ASCII tab、oracle 判决、忠实度门：
 
 ```
@@ -93,13 +107,17 @@ lead sheet / MIDI / IR
 
 ## 状态
 
-**Plan 1–5、Oracle 0.2 软件信任门与安全 `.mxl` container reader 已实现**。
-当前 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=
+**Plan 1–5、Oracle 0.2 软件信任门、安全 `.mxl` container reader 与 Plan 6A
+Web/API/replay trace/MCP 纵切已实现**。
+当前 package=`0.3.0`、service=`fretsure-service@0.1.0`、API=`fretsure-api@0.1.0`、
+MCP=`fretsure-mcp@0.1.0`、trace=`agent-trace@0.1.0`、playability=`oracle@0.2.0`、公共输入=
 `tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=
 `musicxml@0.2.0`、container=`mxl-container@0.1.0`。
-当前收集 `1248` 项测试：离线 `1242 passed, 6 deselected`，本地代理全量
-`1248 passed`；ruff、strict mypy（61 source files）、构建与 clean-venv smoke 全绿。
-下一项是 Plan 6A Web/API/trace viewer/MCP 薄纵切。
+当前收集 `1500` 项测试：离线 `1494 passed, 6 deselected`，本地 `gpt-5.6-sol`
+代理 `6 passed, 1494 deselected`；ruff、strict mypy、前端 20 tests/typecheck/build/audit、
+浏览器 desktop/mobile、wheel/sdist 与四种 clean-install smoke 全绿。完整 Plan 6 的音频、AlphaTab、
+真实琴颈动画、导出、live A/B/榜单与真人 money moment 仍保持 open；下一项是按真实 producer failure
+扩 MusicXML/IR，再做 MIDI 与 benchmark v2。
 
 - **Plan 1 核心 + 可弹性 Oracle**：Music IR + strict public Tab schema + 毫米几何/active-sustain/连续换把 oracle（三态 + 定位化诊断）+ fingerprinted profile + 自验证台（property/metamorphic/mutation/N-version + fail-closed gold/statistics）。zero-GREEN 明确是 `no_green`/`None`，不是完美的 `0.0`。见 [`docs/PLAN1_ACCEPTANCE.md`](docs/PLAN1_ACCEPTANCE.md)、[`docs/SCOPE.md`](docs/SCOPE.md)。
 - **Plan 2 求解器**：beam-search 指法求解，每个部分谱都对真 oracle 核验 → **永不返回 RED**。
@@ -109,6 +127,10 @@ lead sheet / MIDI / IR
 - **Pre-Plan 6 MusicXML**：安全 envelope + fail-closed 语义预检 + raw exact timeline + music21 语义交叉验证 + 文件 CLI。两个未经手改的 library/toolkit exporter 正例（music21 10.5.0、musicxml 1.6.1）冻结了版本、SHA-256 与许可证；MuseScore Studio 4.7.4 原样导出因省略 key mode 被稳定拒绝。尚无常见制谱软件正兼容证据，留给 producer-driven MusicXML 扩展，当前不作该主张。
 - **Oracle 0.2 trust gate**：不可信 Tab/profile/solver/MusicIR/tier/benchmark/gold 输入在任何几何、搜索、生成或统计工作前进入 typed validation + detached snapshot；Trace 在编码前精确核算 escaped UTF-8 大小，solver 有 12,000,000 weighted-work 上限且返回结果仍必须过完整 oracle。真人 gold 尚未采集，因此现实世界误接受率和 profile/tier 校准仍 open。
 - **Safe `.mxl`**：在构造 `ZipFile` 前有界解析 EOCD/central/local records；拒 ZIP64、SFX、路径别名、特殊文件、加密与未知 extra，逐 member 流式解压并双重核对 size/CRC，只把 `container.xml` 唯一指定的 root bytes 交给既有语义管线。raw archive/root 双 SHA-256 与 rootfile provenance 均保留。
+- **Plan 6A Web/API/trace/MCP**：bytes-first application seam；严格 loopback Host/Origin、raw body、typed
+  problem responses 与显式 proxy permission；版本化 replay checkpoint；三个 stdio MCP tools；古典制琴工坊
+  风格的 React UI。用户已于 2026-07-16 明确认可视觉方向；完整 Plan 6 未被提前勾完。见
+  [`docs/PLAN6A_ACCEPTANCE.md`](docs/PLAN6A_ACCEPTANCE.md)。
 
 设计文档是唯一真源：
 - 设计 spec：[`docs/superpowers/specs/2026-07-09-fretsure-design.md`](docs/superpowers/specs/2026-07-09-fretsure-design.md)
@@ -121,7 +143,7 @@ lead sheet / MIDI / IR
 
 ```bash
 uv sync --extra dev              # 建 3.11 venv + 装依赖
-uv run pytest -q -m "not integration"   # 1242 passed；6 integration deselected
+uv run pytest -q -m "not integration"   # 1494 passed；6 integration deselected
 uv run ruff check                # lint
 uv run mypy src                  # 类型检查（strict）
 uv run fretsure-demo             # 一条命令端到端 demo
@@ -129,4 +151,6 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml
 uv run fretsure-bench --seed 1 --items 16   # 复现消融（需本地 LLM 代理）
 ```
 
-集成测试与 `--llm`、`fretsure-bench` 需本地 LLM 代理（`export ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN=...`），默认 model id 为 `gpt-5.6-sol`；缺省一律走确定性离线路径，保证一条命令可跑。
+集成测试与 `--llm`、`fretsure-bench` 需显式本地 LLM 代理（loopback
+`ANTHROPIC_BASE_URL` + 非空 `ANTHROPIC_AUTH_TOKEN`），默认 model id 为 `gpt-5.6-sol`；缺省一律走
+确定性离线路径，且服务端还必须用 `--allow-proxy` 才授权网络 engine。

@@ -4,15 +4,56 @@ import json
 import os
 import time
 from typing import Any, Protocol
+from urllib.parse import urlsplit
 
 DEFAULT_PROXY_MODEL = "gpt-5.6-sol"
 FAKE_LLM_MODEL_ID = "fake-scripted"
 CONSTANT_LLM_MODEL_ID = "constant-stub"
 MAX_LLM_MODEL_ID_CHARS = 128
+PROXY_REQUEST_TIMEOUT_SECONDS = 30.0
+
+
+class LLMProxyConfigurationError(ValueError):
+    """The local credential-backed proxy was not configured fail-closed."""
 
 
 class LLMModelIdError(ValueError):
     """The LLM implementation did not expose a safe, stable model identifier."""
+
+
+def _proxy_environment() -> tuple[str, str]:
+    base_url = os.environ.get("ANTHROPIC_BASE_URL")
+    auth_token = os.environ.get("ANTHROPIC_AUTH_TOKEN")
+    if type(base_url) is not str or not base_url.strip():
+        raise LLMProxyConfigurationError("local proxy base URL is not configured")
+    if type(auth_token) is not str or not auth_token.strip():
+        raise LLMProxyConfigurationError("local proxy authentication is not configured")
+    try:
+        parsed = urlsplit(base_url)
+        port = parsed.port
+    except ValueError:
+        raise LLMProxyConfigurationError("local proxy base URL is invalid") from None
+    if (
+        parsed.scheme not in {"http", "https"}
+        or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or port == 0
+    ):
+        raise LLMProxyConfigurationError("local proxy base URL is invalid")
+    return base_url, auth_token
+
+
+def proxy_environment_configured() -> bool:
+    """Return whether the explicit local proxy URL and token are both valid."""
+
+    try:
+        _proxy_environment()
+    except LLMProxyConfigurationError:
+        return False
+    return True
 
 
 class LLMClient(Protocol):
@@ -98,11 +139,14 @@ class ProxyLLM:
 
     def __init__(self, model: str = DEFAULT_PROXY_MODEL) -> None:
         model = validate_llm_model_id(model)
+        base_url, auth_token = _proxy_environment()
         import anthropic
 
         self._client = anthropic.Anthropic(
-            base_url=os.environ.get("ANTHROPIC_BASE_URL"),
-            auth_token=os.environ.get("ANTHROPIC_AUTH_TOKEN"),
+            base_url=base_url,
+            auth_token=auth_token,
+            max_retries=0,
+            timeout=PROXY_REQUEST_TIMEOUT_SECONDS,
         )
         self._model = model
 
@@ -128,10 +172,12 @@ class ProxyLLM:
                     for block in message.content
                     if getattr(block, "type", None) == "text"
                 )
-            except Exception as exc:  # noqa: BLE001 - transient; retried then re-raised
+            except Exception as exc:  # noqa: BLE001 - transient; retried then redacted
                 last_exc = exc
-                time.sleep(0.5 * (attempt + 1))
-        raise RuntimeError(f"LLM call failed after retries: {last_exc}") from last_exc
+                if attempt < 2:
+                    time.sleep(0.5 * (attempt + 1))
+        assert last_exc is not None
+        raise RuntimeError("LLM call failed after bounded retries") from None
 
 
 def extract_json(text: str) -> dict[str, Any]:

@@ -13,7 +13,16 @@ from dataclasses import dataclass
 
 from fretsure.agent.edit_dsl import MelodyProtected, apply_edit, parse_edit
 from fretsure.agent.tools import diagnostics_to_prompt, edit_schema_prompt
-from fretsure.agent.trace import Trace
+from fretsure.agent.trace import (
+    Trace,
+    TraceEvent,
+    edit_detail,
+    edit_trace_payload,
+    infeasible_detail,
+    infeasible_trace_payload,
+    tab_checkpoint,
+    target_checkpoint,
+)
 from fretsure.difficulty.checker import TierResult, check_tier
 from fretsure.difficulty.tiers import Tier, snapshot_tier
 from fretsure.ir import Note
@@ -37,6 +46,12 @@ class SimplifyResult:
     tier_result: TierResult | None
     iterations: int
     trace: Trace
+
+
+def _checkpoint_digest(checkpoint: dict[str, object]) -> str:
+    digest = checkpoint["sha256"]
+    assert type(digest) is str
+    return digest
 
 
 def _tier_prompt(
@@ -79,17 +94,49 @@ def simplify_to_tier(
     current = tuple(sorted(target, key=lambda n: (n.onset, n.pitch)))
     trace = Trace()
     for iterations in range(max_iters + 1):
+        target_state = target_checkpoint(current)
+        target_digest = _checkpoint_digest(target_state)
         solved = solve_fingering(current, tuning, capo, tier.profile, tempo_bpm=tempo_bpm)
         if isinstance(solved, Tab):
             tr: TierResult | None = check_tier(solved, tier, tempo_bpm=tempo_bpm)
             assert tr is not None
-            trace.add("ORACLE", f"tier={tier.name} meets={tr.meets}", meets=tr.meets)
+            terminal_reason = (
+                "TIER_MET"
+                if tr.meets
+                else "BUDGET_EXHAUSTED"
+                if iterations == max_iters
+                else None
+            )
+            trace.add(
+                "ORACLE",
+                f"The deterministic tier checker returned meets={tr.meets} for {tier.name}.",
+                event="TIER_CHECKED",
+                iteration=iterations,
+                tier=tier.name,
+                meets=tr.meets,
+                tier_violation_count=len(tr.tier_violations),
+                target_sha256=target_digest,
+                tab_checkpoint=tab_checkpoint(solved),
+                terminal_reason=terminal_reason,
+            )
             if tr.meets:
                 return SimplifyResult(solved, current, tr, iterations, trace)
             context = _tier_prompt(solved, tr, current, tier, tempo_bpm)
         else:
             tr = None
-            trace.add("ORACLE", "INFEASIBLE")
+            trace.add(
+                "SOLVE",
+                infeasible_detail(solved),
+                event="SOLVER_RETURNED_NO_TAB",
+                iteration=iterations,
+                status="NO_TAB",
+                target_sha256=target_digest,
+                target_note_count=len(current),
+                infeasible=infeasible_trace_payload(solved),
+                terminal_reason=(
+                    "BUDGET_EXHAUSTED" if iterations == max_iters else None
+                ),
+            )
             context = diagnostics_to_prompt(solved, current)
 
         if iterations == max_iters:
@@ -99,18 +146,116 @@ def simplify_to_tier(
         user = f"{context}\n\n{edit_schema_prompt()}"
         try:
             reply = llm.complete(system=_SIMPLIFY_SYSTEM, user=user)
-        except Exception as exc:  # noqa: BLE001 - LLM transport failure: stop gracefully
-            trace.add("REASON", f"LLM call failed, stopping: {exc}")
+        except Exception:  # noqa: BLE001 - public trace records only a stable code
+            trace.add(
+                "REASON",
+                "The model call failed; simplification stopped without transport details.",
+                event="MODEL_CALL_FAILED",
+                iteration=iterations + 1,
+                reason_code="LLM_TRANSPORT_FAILURE",
+                target_sha256=target_digest,
+            )
             tab = solved if isinstance(solved, Tab) else None
             return SimplifyResult(tab, current, tr, iterations, trace)
-        trace.add("REASON", reply[:200])
         try:
-            edit = parse_edit(extract_json(reply))
-            current = apply_edit(current, edit)
-            trace.add("EDIT", f"{edit.op} pitch={edit.target_pitch}", op=edit.op)
-        except MelodyProtected as exc:
-            trace.add("EDIT", f"melody-protected, skipped: {exc}")
-        except ValueError as exc:
-            trace.add("EDIT", f"unparseable edit skipped: {exc}")
+            edit_object = extract_json(reply)
+        except (AttributeError, TypeError, ValueError):
+            trace.add(
+                "EDIT",
+                "The model response did not contain an accepted JSON edit.",
+                event="MODEL_EDIT_INVALID",
+                iteration=iterations + 1,
+                edit=None,
+                status="unparseable",
+                reason_code="NO_JSON_OBJECT",
+                before_target_sha256=target_digest,
+                after_target_sha256=target_digest,
+                state_changed=False,
+            )
+            trace.add(
+                "RECHECK",
+                "Recheck the unchanged target after the rejected model response.",
+                event="RECHECK_STARTED",
+                iteration=iterations + 1,
+                trigger="MODEL_EDIT_INVALID",
+                target_checkpoint=target_state,
+            )
+            continue
+        try:
+            edit = parse_edit(edit_object)
+        except (TypeError, ValueError):
+            trace.add(
+                "EDIT",
+                "The model JSON did not satisfy the edit schema.",
+                event="MODEL_EDIT_INVALID",
+                iteration=iterations + 1,
+                edit=None,
+                status="unparseable",
+                reason_code="INVALID_EDIT_SCHEMA",
+                before_target_sha256=target_digest,
+                after_target_sha256=target_digest,
+                state_changed=False,
+            )
+            trace.add(
+                "RECHECK",
+                "Recheck the unchanged target after the rejected edit.",
+                event="RECHECK_STARTED",
+                iteration=iterations + 1,
+                trigger="MODEL_EDIT_INVALID",
+                target_checkpoint=target_state,
+            )
+            continue
+
+        structured_edit = edit_trace_payload(edit)
+        trace.add(
+            "REASON",
+            edit_detail(edit),
+            event="REPAIR_EDIT_PROPOSED",
+            iteration=iterations + 1,
+            edit=structured_edit,
+            based_on_diagnostic_codes=["TIER_GATE"],
+        )
+        try:
+            updated = apply_edit(current, edit)
+        except MelodyProtected:
+            updated = current
+            trace_event: TraceEvent = "EDIT_REJECTED"
+            status = "rejected"
+            reason_code: str | None = "MELODY_PROTECTED"
+            detail = "The edit was rejected because melody notes are protected."
+        else:
+            if updated == current:
+                trace_event = "EDIT_REJECTED"
+                status = "noop"
+                reason_code = "TARGET_NOT_FOUND"
+                detail = "The edit matched no target note and changed no state."
+            else:
+                trace_event = "EDIT_APPLIED"
+                status = "applied"
+                reason_code = None
+                detail = "The targeted edit was applied to the simplification state."
+        after_state = target_checkpoint(updated)
+        after_digest = _checkpoint_digest(after_state)
+        trace.add(
+            "EDIT",
+            detail,
+            event=trace_event,
+            iteration=iterations + 1,
+            edit=structured_edit,
+            status=status,
+            reason_code=reason_code,
+            before_target_sha256=target_digest,
+            after_target_sha256=after_digest,
+            state_changed=updated != current,
+        )
+        current = updated
+        trace.add(
+            "RECHECK",
+            "Run the bounded solver and tier checker again for the post-edit target.",
+            event="RECHECK_STARTED",
+            iteration=iterations + 1,
+            trigger=trace_event,
+            target_checkpoint=after_state,
+        )
 
     raise AssertionError("unreachable")

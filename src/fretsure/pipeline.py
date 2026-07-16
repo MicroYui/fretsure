@@ -191,6 +191,7 @@ def run_pipeline(
     trace.add(
         "PLAN",
         "pipeline configured from source metadata and explicit options",
+        event="PIPELINE_CONFIGURED",
         llm_model_id=llm_model_id,
         source_tempo_bpm=source_tempo,
         effective_tempo_bpm=effective_tempo,
@@ -203,6 +204,9 @@ def run_pipeline(
         profile_fingerprint=profile.fingerprint,
         input_schema_version=ORACLE_INPUT_SCHEMA_VERSION,
         fidelity_checker_version=FIDELITY_CHECKER_VERSION,
+        candidates=n,
+        max_repair_iterations=max_iters,
+        critic_enabled=use_critic,
     )
     trace.steps.extend(raw_arrangement.trace.steps)
     arrangement = replace(raw_arrangement, trace=trace)

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from fretsure.agent.trace import TraceInputError
 from fretsure.cli import main
 from fretsure.demo import sample_ir
 from fretsure.importers import (
@@ -85,6 +86,54 @@ def test_cli_import_failure_is_nonzero_and_has_no_traceback(
     assert "Traceback" not in captured.err
 
 
+def test_cli_trace_contract_failure_preserves_existing_file_without_traceback(
+    tmp_path: Path, monkeypatch: object, capsys: object
+) -> None:
+    success = ImportSuccess(sample_ir(bars=1), (), "musicxml@0.1.0", "abc123")
+    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda path: success)  # type: ignore[attr-defined]
+    trace_path = tmp_path / "trace.jsonl"
+    trace_path.write_text("previous-good-trace", encoding="utf-8")
+
+    def fail_trace(_trace: object) -> str:
+        raise TraceInputError("steps[0]", "injected contract failure")
+
+    monkeypatch.setattr("fretsure.agent.trace.Trace.to_jsonl", fail_trace)  # type: ignore[attr-defined]
+    exit_code = main(
+        ["song.musicxml", "--n", "1", "--no-critic", "--trace-jsonl", str(trace_path)]
+    )
+
+    captured = capsys.readouterr()  # type: ignore[attr-defined]
+    assert exit_code == 4
+    assert trace_path.read_text(encoding="utf-8") == "previous-good-trace"
+    assert "injected contract failure" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_cli_atomic_replace_failure_cleans_temp_and_preserves_existing_file(
+    tmp_path: Path, monkeypatch: object, capsys: object
+) -> None:
+    success = ImportSuccess(sample_ir(bars=1), (), "musicxml@0.1.0", "abc123")
+    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda path: success)  # type: ignore[attr-defined]
+    trace_path = tmp_path / "trace.jsonl"
+    trace_path.write_text("previous-good-trace", encoding="utf-8")
+
+    def fail_replace(source: object, destination: object) -> None:
+        del source, destination
+        raise OSError("injected replace failure")
+
+    monkeypatch.setattr("fretsure.cli.os.replace", fail_replace)  # type: ignore[attr-defined]
+    exit_code = main(
+        ["song.musicxml", "--n", "1", "--no-critic", "--trace-jsonl", str(trace_path)]
+    )
+
+    captured = capsys.readouterr()  # type: ignore[attr-defined]
+    assert exit_code == 4
+    assert trace_path.read_text(encoding="utf-8") == "previous-good-trace"
+    assert not list(tmp_path.glob(".trace.jsonl.*.tmp"))
+    assert "injected replace failure" in captured.err
+    assert "Traceback" not in captured.err
+
+
 def test_cli_tempo_override_is_shown(monkeypatch: object, capsys: object) -> None:
     success = ImportSuccess(sample_ir(bars=1), (), "musicxml@0.1.0", "abc123")
     monkeypatch.setattr("fretsure.cli.import_musicxml", lambda path: success)  # type: ignore[attr-defined]
@@ -116,6 +165,63 @@ def test_cli_rejects_nonphysical_tempo_before_import(
     assert exc_info.value.code == 2
     assert "must be finite and in 1..1000 BPM" in captured.err
     assert not called
+
+
+@pytest.mark.parametrize(
+    "control",
+    [
+        ["--n", "0"],
+        ["--n", "65"],
+        ["--max-iters", "-1"],
+        ["--max-iters", "65"],
+    ],
+)
+def test_cli_rejects_out_of_budget_controls_before_import(
+    control: list[str], monkeypatch: object, capsys: object
+) -> None:
+    called = False
+
+    def must_not_import(path: Path) -> ImportSuccess:
+        nonlocal called
+        called = True
+        raise AssertionError(path)
+
+    monkeypatch.setattr("fretsure.cli.import_musicxml", must_not_import)  # type: ignore[attr-defined]
+    with pytest.raises(SystemExit) as exc_info:
+        main(["song.musicxml", *control])
+
+    assert exc_info.value.code == 2
+    assert not called
+    assert "must be in" in capsys.readouterr().err  # type: ignore[attr-defined]
+
+
+def test_cli_redacts_unexpected_importer_and_pipeline_failures(
+    monkeypatch: object, capsys: object
+) -> None:
+    secret = "Bearer TOP_SECRET /private/provider"
+
+    def broken_import(_path: Path) -> ImportSuccess:
+        raise RuntimeError(secret)
+
+    monkeypatch.setattr("fretsure.cli.import_musicxml", broken_import)  # type: ignore[attr-defined]
+    assert main(["song.musicxml"]) == 2
+    importer_error = capsys.readouterr().err  # type: ignore[attr-defined]
+    assert "failed unexpectedly" in importer_error
+    assert secret not in importer_error
+    assert "RuntimeError" not in importer_error
+
+    success = ImportSuccess(sample_ir(bars=1), (), "musicxml@0.1.0", "abc123")
+    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda _path: success)  # type: ignore[attr-defined]
+
+    def broken_pipeline(*_args: object, **_kwargs: object) -> object:
+        raise RuntimeError(secret)
+
+    monkeypatch.setattr("fretsure.cli.run_pipeline", broken_pipeline)  # type: ignore[attr-defined]
+    assert main(["song.musicxml", "--n", "1"]) == 3
+    pipeline_error = capsys.readouterr().err  # type: ignore[attr-defined]
+    assert "failed unexpectedly" in pipeline_error
+    assert secret not in pipeline_error
+    assert "RuntimeError" not in pipeline_error
 
 
 def test_cli_escapes_control_characters_in_untrusted_metadata_and_path(

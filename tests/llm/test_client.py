@@ -3,7 +3,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from fretsure.llm.client import DEFAULT_PROXY_MODEL, FakeLLM, ProxyLLM, extract_json
+from fretsure.llm.client import (
+    DEFAULT_PROXY_MODEL,
+    PROXY_REQUEST_TIMEOUT_SECONDS,
+    FakeLLM,
+    LLMProxyConfigurationError,
+    ProxyLLM,
+    extract_json,
+    proxy_environment_configured,
+)
 
 
 def test_fake_llm_returns_scripted_in_order() -> None:
@@ -52,16 +60,65 @@ def test_proxy_llm_forwards_canonical_gpt_5_6_sol_default(
             request.update(kwargs)
             return SimpleNamespace(content=[SimpleNamespace(type="text", text="MODEL_OK")])
 
+    constructor: dict[str, object] = {}
+
     class FakeAnthropic:
         def __init__(self, **kwargs: object) -> None:
+            constructor.update(kwargs)
             self.messages = FakeMessages()
 
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://127.0.0.1:8317/v1")
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "test-token")
     monkeypatch.setattr("anthropic.Anthropic", FakeAnthropic)
     llm = ProxyLLM()
 
     assert llm.model_id == DEFAULT_PROXY_MODEL == "gpt-5.6-sol"
     assert llm.complete(system="s", user="u", max_tokens=20) == "MODEL_OK"
     assert request["model"] == "gpt-5.6-sol"
+    assert constructor == {
+        "base_url": "http://127.0.0.1:8317/v1",
+        "auth_token": "test-token",
+        "max_retries": 0,
+        "timeout": PROXY_REQUEST_TIMEOUT_SECONDS,
+    }
+
+
+@pytest.mark.parametrize(
+    ("base_url", "token"),
+    [
+        (None, "token"),
+        ("http://127.0.0.1:8317/v1", None),
+        ("https://api.anthropic.com", "token"),
+        ("http://localhost.evil.example/v1", "token"),
+        ("http://user:secret@127.0.0.1:8317/v1", "token"),
+    ],
+)
+def test_proxy_llm_rejects_missing_or_nonlocal_configuration_before_sdk_init(
+    monkeypatch: pytest.MonkeyPatch,
+    base_url: str | None,
+    token: str | None,
+) -> None:
+    if base_url is None:
+        monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    else:
+        monkeypatch.setenv("ANTHROPIC_BASE_URL", base_url)
+    if token is None:
+        monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    else:
+        monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", token)
+
+    called = False
+
+    class ForbiddenAnthropic:
+        def __init__(self, **_kwargs: object) -> None:
+            nonlocal called
+            called = True
+
+    monkeypatch.setattr("anthropic.Anthropic", ForbiddenAnthropic)
+    assert proxy_environment_configured() is False
+    with pytest.raises(LLMProxyConfigurationError):
+        ProxyLLM()
+    assert called is False
 
 
 @pytest.mark.integration

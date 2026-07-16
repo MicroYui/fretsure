@@ -9,8 +9,9 @@ Setup (once, off-camera):
 
 ```bash
 uv sync --extra dev --extra musicxml
+uv run fretsure-serve  # 另开终端并保持运行
 # only for optional --llm / real-LLM benchmark segments:
-export ANTHROPIC_BASE_URL=http://localhost:4141 ANTHROPIC_AUTH_TOKEN=<token>
+export ANTHROPIC_BASE_URL=http://127.0.0.1:4141 ANTHROPIC_AUTH_TOKEN=<token>
 ```
 
 ---
@@ -25,28 +26,29 @@ is a separate, still-open measurement."
 
 **Show:** the README first screen (positioning line + architecture diagram).
 
-## Beat 1 — The deterministic happy path (0:20–0:55)
+## Beat 1 — The deterministic product path (0:20–0:55)
 
 **Do:**
 
-```bash
-uv run fretsure-demo
-```
+Open `http://127.0.0.1:8000/`, click **Or load the CC0 example**, then
+**Arrange and verify**.
 
 **Point at the actual default output, in order:**
 
-- INPUT — a seeded, internally generated lead sheet (melody + chord symbols).
-- ARRANGED TAB — a fingerstyle tab, high-e on top.
+- INPUT — a real, bundled CC0 MusicXML lead sheet sent as a raw request body.
+- ARRANGED TAB — a fingerstyle tab, high-e on top, with source SHA-256 provenance.
 - ORACLE VERDICT — GREEN, stamped `oracle@0.2.0` / `tab-input@0.2.0` /
   `median@0.1` plus the canonical profile SHA-256.
-- FAITHFULNESS — melody-F1 `1.00`, bass-root `1.00`, harmony `0.75`, PASS,
+- FAITHFULNESS — melody-F1 `1.00`, bass-root `1.00`, harmony `0.29`, FAIL,
   stamped `fidelity@0.2.0`.
+- REPLAY — public `agent-trace@0.1.0` steps from plan/proposal through oracle and
+  selection, with typed evidence rather than hidden chain-of-thought.
 
-**Say:** "This path is offline and deterministic. A constant stub deliberately
-triggers the rule-based proposal fallback; it proves the complete pipeline without
-pretending an API call happened. The proposal path does not decide feasibility —
-the versioned oracle does. GREEN is certification inside the simplified model and
-profile, not yet a guarantee about every real guitarist."
+**Say:** "This path is offline and deterministic, but it is the real browser/API/
+application pipeline—not a UI mock. A constant stub deliberately triggers the
+rule-based proposal fallback. The proposal path does not decide feasibility—the
+versioned oracle does. GREEN is certification inside the simplified model and
+profile, while the independent fidelity failure remains visible."
 
 ## Beat 2 — A real file, and two genuinely independent gates (0:55–1:25)
 
@@ -96,7 +98,7 @@ uv run pytest -q tests/oracle tests/validation tests/test_geometry.py -m "not in
 - Span is measured in **millimetres**, not fret count; the same fret span changes
   physical distance with neck position.
 
-**Say:** "The final repository gate is 1242 offline tests plus 6 proxy-backed
+**Say:** "The final repository gate is 1494 offline tests plus 6 proxy-backed
 integration tests, with ruff, strict mypy, lock and package smokes green. Invalid
 public Tab/profile/solver/gold inputs now fail typed and resource-bounded; a
 zero-GREEN split is explicitly `no_green` with no rate or bound. But the human gold
@@ -141,8 +143,9 @@ moat is execution plus an auditable benchmark, not a hidden claim. That's Fretsu
 ## Fallback / troubleshooting
 
 - No proxy? `fretsure-demo`, MusicXML import/arrangement, checker tests, and the
-  stub benchmark work offline. Only `--llm`, the six integration tests, and a real-LLM
-  benchmark need the proxy.
+  Web offline engine and stub benchmark work offline. Only `--llm`, an explicitly
+  `--allow-proxy` Web server, the six integration tests, and a real-LLM benchmark
+  need the proxy.
 - No MusicXML dependency? Run `uv sync --extra musicxml` (or the setup command above).
 - The default `fretsure-demo` is deterministic; changing `--seed N` or `--bars N`
   intentionally changes its tab and scores.
@@ -151,8 +154,8 @@ moat is execution plus an auditable benchmark, not a hidden claim. That's Fretsu
   ```bash
   uv run ruff check .
   uv run mypy src
-  uv run pytest -q -m "not integration"  # 1242 passed, 6 deselected
+  uv run pytest -q -m "not integration"  # 1494 passed, 6 deselected
   ```
 
 - The six integration tests are deliberately excluded from that offline count;
-  `uv run pytest --collect-only -q` currently collects 1248 tests total.
+  `uv run pytest --collect-only -q` currently collects 1500 tests total.

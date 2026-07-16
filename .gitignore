@@ -25,6 +25,8 @@ htmlcov/
 node_modules/
 web/dist/
 web/.vite/
+web/coverage/
+*.tsbuildinfo
 *.log
 
 # Data / artifacts (large; regenerated from seeds/scripts)

@@ -42,8 +42,8 @@ class ConfigMetrics:
 def _score(result: ArrangeResult, item: CorpusItem) -> tuple[bool, bool, float, int]:
     """(is_green, joint_success, melody_f1, applied_edit_steps) for one arrangement."""
     is_green = result.oracle is not None and result.oracle.verdict == "GREEN"
-    # count only APPLIED edits (they carry an "op"), not skipped/melody-protected ones
-    edits = sum(1 for s in result.trace.steps if s.kind == "EDIT" and "op" in s.data)
+    # Count only versioned applied-edit events, never rejected/no-op model output.
+    edits = sum(1 for step in result.trace.steps if step.event == "EDIT_APPLIED")
     if result.tab is None:
         return is_green, False, 0.0, edits
     gate = faithfulness(item.ir, result.tab)
