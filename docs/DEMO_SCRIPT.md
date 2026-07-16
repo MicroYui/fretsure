@@ -56,8 +56,10 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
   --n 1 --no-critic --trace-jsonl /tmp/fretsure-supported-basic.trace.jsonl
 ```
 
-**Point at:** `musicxml@0.1.0`, the source SHA-256/provenance, source and effective
-tempo both 96 bpm, the rendered tab, and the JSONL trace location. Then linger on:
+**Point at:** `musicxml@0.2.0`, the raw/root SHA-256 provenance, source and effective
+tempo both 96 bpm, the rendered tab, and the JSONL trace location. Note that the same
+entry point accepts a strict `.mxl` container and then prints its selected rootfile
+member; the root MusicXML semantic allowlist is unchanged. Then linger on:
 
 ```text
 ORACLE VERDICT
@@ -93,7 +95,7 @@ uv run pytest -q tests/oracle tests/validation tests/test_geometry.py -m "not in
 - Span is measured in **millimetres**, not fret count; the same fret span changes
   physical distance with neck position.
 
-**Say:** "The final repository gate is 1092 offline tests plus 6 proxy-backed
+**Say:** "The final repository gate is 1236 offline tests plus 6 proxy-backed
 integration tests, with ruff, strict mypy, lock and package smokes green. Invalid
 public Tab/profile/solver/gold inputs now fail typed and resource-bounded; a
 zero-GREEN split is explicitly `no_green` with no rate or bound. But the human gold
@@ -148,8 +150,8 @@ moat is execution plus an auditable benchmark, not a hidden claim. That's Fretsu
   ```bash
   uv run ruff check .
   uv run mypy src
-  uv run pytest -q -m "not integration"  # 1092 passed, 6 deselected
+  uv run pytest -q -m "not integration"  # 1236 passed, 6 deselected
   ```
 
 - The six integration tests are deliberately excluded from that offline count;
-  `uv run pytest --collect-only -q` currently collects 1098 tests total.
+  `uv run pytest --collect-only -q` currently collects 1242 tests total.

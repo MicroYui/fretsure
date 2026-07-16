@@ -1,4 +1,4 @@
-"""Safe public entry point for the frozen MusicXML semantic subset."""
+"""Safe public entry point for the frozen MusicXML/MXL semantic subset."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Literal, Protocol, cast
 
 from fretsure.importers._music21_adapter import (
     Music21AdapterError,
@@ -16,6 +16,11 @@ from fretsure.importers._music21_adapter import (
     music21_to_ir,
 )
 from fretsure.importers._musicxml_preflight import preflight_musicxml
+from fretsure.importers._mxl_container import (
+    MXL_CONTAINER_VERSION,
+    MXLContainerPayload,
+    read_mxl_container,
+)
 from fretsure.importers.contracts import (
     DEFAULT_LIMITS,
     DiagnosticSeverity,
@@ -23,16 +28,19 @@ from fretsure.importers.contracts import (
     ImportDiagnostic,
     ImportFailure,
     ImportLimits,
+    ImportProvenance,
     ImportSuccess,
     MusicXMLImportResult,
     SourceLocation,
+    snapshot_import_limits,
 )
 from fretsure.ir import validate_ir
 
-IMPORTER_VERSION = "musicxml@0.1.0"
+IMPORTER_VERSION = "musicxml@0.2.0"
 
 _MUSICXML_NAMESPACE = "http://www.musicxml.org/ns/musicxml"
-_SUPPORTED_EXTENSIONS = frozenset({".musicxml", ".xml"})
+_SUPPORTED_EXTENSIONS = frozenset({".musicxml", ".xml", ".mxl"})
+_FILE_READ_CHUNK = 64 * 1024
 
 
 class _IterParse(Protocol):
@@ -85,17 +93,12 @@ def _read_bounded(path: Path, limits: ImportLimits) -> bytes | ImportFailure:
         return _one_failure(ImportCode.NOT_A_FILE, f"MusicXML path is not a regular file: {path}")
 
     suffix = path.suffix.lower()
-    if suffix == ".mxl":
-        return _one_failure(
-            ImportCode.COMPRESSED_MXL_UNSUPPORTED,
-            "compressed .mxl containers are deferred; provide uncompressed .musicxml or .xml",
-        )
     if suffix not in _SUPPORTED_EXTENSIONS:
         return _one_failure(
             ImportCode.UNSUPPORTED_FILE_TYPE,
-            f"unsupported input suffix {path.suffix!r}; expected .musicxml or .xml",
+            f"unsupported input suffix {path.suffix!r}; expected .musicxml, .xml, or .mxl",
         )
-    byte_limit = limits.max_bytes
+    byte_limit = limits.max_mxl_archive_bytes if suffix == ".mxl" else limits.max_bytes
     if size > byte_limit:
         return _one_failure(
             ImportCode.INPUT_LIMIT_EXCEEDED,
@@ -104,19 +107,29 @@ def _read_bounded(path: Path, limits: ImportLimits) -> bytes | ImportFailure:
         )
     try:
         with path.open("rb") as handle:
-            data = handle.read(byte_limit + 1)
+            output = bytearray()
+            while True:
+                # Read in fixed chunks so a valid signed-63 custom limit never
+                # reaches a platform-sized ``read(n)`` conversion.  Once the
+                # declared limit is reached, read exactly one byte to distinguish
+                # EOF from a concurrently grown/oversized file.
+                read_size = min(_FILE_READ_CHUNK, byte_limit - len(output) + 1)
+                chunk = handle.read(read_size)
+                if not chunk:
+                    break
+                output.extend(chunk)
+                if len(output) > byte_limit:
+                    return _one_failure(
+                        ImportCode.INPUT_LIMIT_EXCEEDED,
+                        f"input exceeds {byte_limit} bytes",
+                        SourceLocation(element="file"),
+                    )
     except OSError as exc:
         return _one_failure(
             ImportCode.FILE_READ_ERROR,
             f"cannot read MusicXML file {path}: {type(exc).__name__}: {exc}",
         )
-    if len(data) > byte_limit:
-        return _one_failure(
-            ImportCode.INPUT_LIMIT_EXCEEDED,
-            f"input exceeds {byte_limit} bytes",
-            SourceLocation(element="file"),
-        )
-    return data
+    return bytes(output)
 
 
 def _safe_parse(data: bytes, limits: ImportLimits) -> ET.Element:
@@ -236,20 +249,45 @@ def _canonical_xml(root: ET.Element) -> bytes:
 
 
 def import_musicxml(path: Path, *, limits: ImportLimits = DEFAULT_LIMITS) -> MusicXMLImportResult:
-    """Safely import one supported uncompressed MusicXML score."""
+    """Safely import one supported MusicXML or compressed MXL score."""
+
+    try:
+        limits = snapshot_import_limits(limits)
+    except ValueError as exc:
+        return _one_failure(
+            ImportCode.INPUT_LIMIT_EXCEEDED,
+            str(exc),
+            SourceLocation(element="limits"),
+        )
 
     raw = _read_bounded(path, limits)
     if isinstance(raw, ImportFailure):
         return raw
     sha256 = hashlib.sha256(raw).hexdigest()
+    root_bytes = raw
+    root_path: str | None = None
+    container_version: str | None = None
+    container_warnings: tuple[ImportDiagnostic, ...] = ()
+    source_format: Literal["musicxml", "mxl"] = "musicxml"
+    if path.suffix.lower() == ".mxl":
+        container = read_mxl_container(raw, limits)
+        if isinstance(container, ImportFailure):
+            return container
+        assert isinstance(container, MXLContainerPayload)
+        root_bytes = container.root_bytes
+        root_path = container.root_path
+        container_warnings = container.warnings
+        container_version = MXL_CONTAINER_VERSION
+        source_format = "mxl"
+    root_sha256 = hashlib.sha256(root_bytes).hexdigest()
     try:
-        root = _safe_parse(raw, limits)
+        root = _safe_parse(root_bytes, limits)
     except _ParseFailure as exc:
-        return ImportFailure((exc.diagnostic,))
+        return ImportFailure((*container_warnings, exc.diagnostic))
 
     envelope_error = _validate_envelope(root)
     if envelope_error is not None:
-        return ImportFailure((envelope_error,))
+        return ImportFailure((*container_warnings, envelope_error))
     canonical = _canonical_xml(root)
     preflight = preflight_musicxml(root, limits)
     errors = tuple(
@@ -258,10 +296,11 @@ def import_musicxml(path: Path, *, limits: ImportLimits = DEFAULT_LIMITS) -> Mus
         if diagnostic.severity is DiagnosticSeverity.ERROR
     )
     if errors:
-        return ImportFailure(preflight.diagnostics)
+        return ImportFailure((*container_warnings, *preflight.diagnostics))
     if preflight.metadata is None:
         return ImportFailure(
             (
+                *container_warnings,
                 _diagnostic(
                     ImportCode.ADAPTER_ERROR,
                     "preflight produced no normalized metadata despite having no errors",
@@ -274,12 +313,17 @@ def import_musicxml(path: Path, *, limits: ImportLimits = DEFAULT_LIMITS) -> Mus
             canonical,
             metadata=preflight.metadata,
             source_filename=path.name,
+            source_format=source_format,
             sha256=sha256,
+            root_member=root_path,
+            root_sha256=root_sha256,
+            container_version=container_version,
             importer_version=IMPORTER_VERSION,
         )
     except MusicXMLDependencyError as exc:
         return ImportFailure(
             (
+                *container_warnings,
                 _diagnostic(
                     ImportCode.MISSING_DEPENDENCY,
                     f"MusicXML input requires {exc.package}; install the 'musicxml' extra",
@@ -288,13 +332,14 @@ def import_musicxml(path: Path, *, limits: ImportLimits = DEFAULT_LIMITS) -> Mus
         )
     except Music21AdapterError as exc:
         return ImportFailure(
-            (_diagnostic(ImportCode.ADAPTER_ERROR, str(exc)),)
+            (*container_warnings, _diagnostic(ImportCode.ADAPTER_ERROR, str(exc)))
         )
 
     violations = validate_ir(ir)
     if violations:
         return ImportFailure(
-            tuple(
+            container_warnings
+            + tuple(
                 _diagnostic(
                     ImportCode.IR_INVALID,
                     f"{violation.kind}: {violation.detail}",
@@ -303,9 +348,17 @@ def import_musicxml(path: Path, *, limits: ImportLimits = DEFAULT_LIMITS) -> Mus
                 for violation in violations
             )
         )
-    warnings = tuple(
+    warnings = container_warnings + tuple(
         diagnostic
         for diagnostic in preflight.diagnostics
         if diagnostic.severity is DiagnosticSeverity.WARNING
     )
-    return ImportSuccess(ir, warnings, IMPORTER_VERSION, sha256)
+    provenance = ImportProvenance(
+        path.name,
+        source_format,
+        sha256,
+        root_path,
+        root_sha256,
+        container_version,
+    )
+    return ImportSuccess(ir, warnings, IMPORTER_VERSION, sha256, provenance)

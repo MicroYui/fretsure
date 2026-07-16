@@ -4,7 +4,7 @@
 
 **产品目标一句话**：一个 agent，把一首歌（符号谱 / MIDI / lead sheet；mp3 作 best-effort 前端）编配成**人手可证明弹得出来**的吉他谱（HERO = 指弹独奏；也做伴奏、难度简化）。核心 = "LLM 提议 → 确定性可弹性 oracle 逐音把关并修复 → checker 打分 benchmark"。
 
-**当前阶段（2026-07-16）**：**Plan 1–5、MusicXML-first 受限未压缩文件纵切和 Oracle 0.2 软件信任门已实现**，形成可运行的后端研究原型。当前 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.1.0`；profile 仍为 `median@0.1`。公共 Tab/solver/profile 输入硬化、active-sustain 几何/连续 shift、gold 资源边界和 zero-GREEN 已关闭；安全 `.mxl` 是下一独立计划。主流 notation application 正兼容证据与真人经验有效性继续 open。最终质量门数字见 `docs/PROJECT_STATE.md`；6 项需本地 LLM 代理的 integration 测试另列。
+**当前阶段（2026-07-16）**：**Plan 1–5、MusicXML-first 受限文件纵切、Oracle 0.2 软件信任门和安全 `.mxl` container reader 已实现**，形成可运行的后端研究原型。当前 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.2.0`、container=`mxl-container@0.1.0`；profile 仍为 `median@0.1`。公共输入/资源/TOCTOU 边界与 ZIP/container 完整性边界已关闭；真实 producer provenance 与真人经验有效性继续 open。最终质量门数字见 `docs/PROJECT_STATE.md`；6 项需本地 LLM 代理的 integration 测试另列。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。
 
@@ -12,14 +12,14 @@
 1. 读 `docs/superpowers/specs/2026-07-09-fretsure-design.md`（设计真源，§14=benchmark/checker/agent 深度详版，§15=harness/demo/求职详版；其中 target 数字不是实测结果）。
 2. 读 `docs/PROJECT_STATE.md`（当前实现状态、决策日志、7 拆分、下一步与未决项）。
 3. 读 `docs/BENCHMARK_RESULTS.md` 与 `docs/PLAN1_ACCEPTANCE.md`（已测结果、诚实限制、真人 gold 延期边界）。
-4. 继续时读 `docs/superpowers/plans/2026-07-13-oracle-0.2-trust-gate.md` 与 pre-Plan6 MusicXML 计划。不要重新二选一 MusicXML/MIDI，也不要重做 Plan 1–5/Oracle 0.2；下一项按 `2026-07-13-safe-mxl-container.md` 实现安全 `.mxl`，闭门提交后再进 Plan 6A。
+4. 继续时读 `docs/superpowers/plans/2026-07-13-oracle-0.2-trust-gate.md`、pre-Plan6 MusicXML 计划与 `2026-07-13-safe-mxl-container.md`。不要重新二选一 MusicXML/MIDI，也不要重做 Plan 1–5/Oracle 0.2/安全 `.mxl`；下一项按 Plan 6A Web/API/trace viewer/MCP 薄纵切推进。
 
 ## 锁定的关键决定（勿重新推翻，除非用户明说）
 - 领域 = 音乐 / 吉他编配（受众广、可听可视）；**领域不硬核、技术尽量硬核**。
 - **核心范式：oracle 当环境、LLM 当策略（policy）**；**harness 自研**，框架（LangGraph/Claude Agent SDK 等）仅作对照基准。
 - HERO = 可证明可弹的**指弹独奏**；难度简化 = 商业楔子；伴奏 = 标配。
 - 输入**符号优先**（MusicXML/MIDI/lead sheet）；mp3 作 best-effort 前端（**不保证**）。
-- **首发输入已冻结为 MusicXML-first**：当前支持未压缩 `.musicxml`/`.xml`，限 3.1/4.0 `score-partwise` 的单 part/staff/voice 单音 lead-sheet 子集，unsupported 语义 typed fail-closed。安全 `.mxl` 只会扩容器、不扩语义；更完整 MusicXML 与 MIDI 明确延后，不是删除。
+- **首发输入已冻结为 MusicXML-first**：当前支持未压缩 `.musicxml`/`.xml` 和安全 `.mxl`，限 3.1/4.0 `score-partwise` 的单 part/staff/voice 单音 lead-sheet 子集，unsupported 语义 typed fail-closed。`.mxl` 只扩容器、不扩语义；更完整 MusicXML 与 MIDI 明确延后，不是删除。
 - **不 overclaim**：只主张"可证明可弹 + 修复 + 机器可检 benchmark"；**不**主张发明校验/编配/指法。
 - benchmark **checker 打分，非 LLM 评委**；每个 agent 能力用 **ablation** 挣存在，随机选择类效应用共享候选池做配对比较，**砍掉的组件公开**。
 - RL = stretch（CPU 小 reranker，允许诚实负结果）；DSPy/GEPA 保留但消融把关；Plan 6 计划通过 MCP 暴露 oracle（当前未实现）。
@@ -36,7 +36,7 @@
 
 ## 目录约定
 - `docs/superpowers/specs/` 设计文档（设计真源）
-- `docs/superpowers/plans/` 路线图、Plan 1–5 历史实现计划、pre-Plan6 MusicXML 与 Oracle 0.2 已执行计划；安全 `.mxl` 是下一计划
+- `docs/superpowers/plans/` 路线图、Plan 1–5 历史实现计划、pre-Plan6 MusicXML、Oracle 0.2 与安全 `.mxl` 已执行计划（Plan 6/7 详细计划待写）
 - `docs/PROJECT_STATE.md` 当前项目状态 / 恢复文档
 - `docs/BENCHMARK_RESULTS.md` 已跑实验与限制
 

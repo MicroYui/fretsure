@@ -39,6 +39,22 @@ def test_public_contract_has_bounded_default_limits() -> None:
     assert DEFAULT_LIMITS.max_notes > 0
     assert DEFAULT_LIMITS.max_harmonies > 0
     assert DEFAULT_LIMITS.max_decimal_chars > 0
+    assert DEFAULT_LIMITS.max_mxl_archive_bytes > 0
+    assert DEFAULT_LIMITS.max_mxl_members > 0
+    assert DEFAULT_LIMITS.max_mxl_central_directory_bytes > 0
+    assert DEFAULT_LIMITS.max_mxl_member_name_bytes > 0
+    assert DEFAULT_LIMITS.max_mxl_path_depth > 0
+    assert DEFAULT_LIMITS.max_mxl_container_bytes > 0
+    assert DEFAULT_LIMITS.max_mxl_member_bytes > 0
+    assert DEFAULT_LIMITS.max_mxl_total_uncompressed_bytes > 0
+    assert DEFAULT_LIMITS.max_mxl_member_ratio > 0
+    assert DEFAULT_LIMITS.max_mxl_total_ratio > 0
+
+
+@pytest.mark.parametrize("value", [True, -1, 1.5, "1", 1 << 63])
+def test_import_limits_require_exact_bounded_integers(value: object) -> None:
+    with pytest.raises(ValueError, match="max_bytes"):
+        ImportLimits(max_bytes=value)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -61,11 +77,12 @@ def test_directory_is_not_accepted_as_a_file(tmp_path: Path) -> None:
     assert _only_code(import_musicxml(directory)) is ImportCode.NOT_A_FILE
 
 
-def test_compressed_mxl_is_explicitly_deferred(tmp_path: Path) -> None:
+def test_non_zip_mxl_is_a_typed_archive_failure(tmp_path: Path) -> None:
     path = tmp_path / "score.mxl"
     path.write_bytes(b"PK\x03\x04")
 
-    assert _only_code(import_musicxml(path)) is ImportCode.COMPRESSED_MXL_UNSUPPORTED
+    assert _only_code(import_musicxml(path)) is ImportCode.MXL_MALFORMED_ARCHIVE
+    assert ImportCode.COMPRESSED_MXL_UNSUPPORTED.value == "COMPRESSED_MXL_UNSUPPORTED"
 
 
 def test_musicxml_and_xml_extensions_are_case_insensitive(tmp_path: Path) -> None:
@@ -81,6 +98,11 @@ def test_size_limit_is_rejection_not_truncation(tmp_path: Path) -> None:
     path.write_bytes(BASIC.read_bytes())
     result = import_musicxml(path, limits=ImportLimits(max_bytes=32))
     assert _only_code(result) is ImportCode.INPUT_LIMIT_EXCEEDED
+
+
+def test_maximum_valid_file_limit_does_not_overflow_read_size() -> None:
+    result = import_musicxml(BASIC, limits=ImportLimits(max_bytes=(1 << 63) - 1))
+    assert isinstance(result, ImportSuccess)
 
 
 def test_malformed_xml_is_typed(tmp_path: Path) -> None:
@@ -186,4 +208,11 @@ def test_missing_music21_extra_is_a_typed_failure(monkeypatch: pytest.MonkeyPatc
 def test_sha256_is_over_original_bytes() -> None:
     result = import_musicxml(BASIC)
     assert isinstance(result, ImportSuccess)
-    assert result.sha256 == hashlib.sha256(BASIC.read_bytes()).hexdigest()
+    source_hash = hashlib.sha256(BASIC.read_bytes()).hexdigest()
+    assert result.sha256 == source_hash
+    assert result.provenance is not None
+    assert result.provenance.source_format == "musicxml"
+    assert result.provenance.raw_sha256 == source_hash
+    assert result.provenance.root_sha256 == source_hash
+    assert result.provenance.root_member is None
+    assert result.provenance.container_version is None

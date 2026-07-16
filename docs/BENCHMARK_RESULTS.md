@@ -76,10 +76,11 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
   independent gates, and GREEN must never be reported as joint success by itself.
 
 These are smoke examples, not corpus-level effect estimates. The current repository
-collects 1098 tests: 1092 offline cases plus 6 proxy-backed integration cases; the
-full local-proxy run passes all 1098. The final ruff, strict mypy, lock and
+collects 1242 tests: 1236 offline cases plus 6 proxy-backed integration cases; the
+full local-proxy run passes all 1242. The final ruff, strict mypy, lock and
 package/install smokes are recorded in
-`docs/PROJECT_STATE.md` and the Oracle 0.2 trust-gate plan.
+`docs/PROJECT_STATE.md` and the safe `.mxl` container plan; the preceding Oracle
+0.2 trust-gate plan retains its own independently closed evidence.
 
 ## Legacy / unversioned fidelity snapshot (2026-07-10–11)
 

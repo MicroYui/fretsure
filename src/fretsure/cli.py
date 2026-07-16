@@ -1,4 +1,4 @@
-"""CLI for the real-file MusicXML product vertical slice."""
+"""CLI for the real-file MusicXML/MXL product vertical slice."""
 
 import argparse
 import math
@@ -78,7 +78,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="fretsure-arrange",
         description=(
-            "Import a supported MusicXML lead sheet, arrange it for guitar, and "
+            "Import a supported MusicXML or MXL lead sheet, arrange it for guitar, and "
             "run the versioned playability and faithfulness checkers."
         ),
     )
@@ -123,6 +123,7 @@ def _location(diagnostic: ImportDiagnostic) -> str:
         ("measure", location.measure),
         ("voice", location.voice),
         ("element", location.element),
+        ("archive-member", location.archive_member),
     )
     rendered = ", ".join(
         f"{name}={_terminal_safe(value)}" for name, value in fields if value is not None
@@ -195,12 +196,20 @@ def _render_success(
 ) -> str:
     lines = [
         "=" * 72,
-        "Fretsure — MusicXML to versioned-model-checked fingerstyle tab",
+        "Fretsure — MusicXML/MXL to versioned-model-checked fingerstyle tab",
         "=" * 72,
         f"FILE              : {_terminal_safe(source_path)}",
         f"IMPORTER          : {_terminal_safe(imported.importer_version)}",
         f"SOURCE SHA-256    : {_terminal_safe(imported.sha256)}",
     ]
+    if imported.provenance is not None:
+        lines.append(
+            f"ROOT XML SHA-256  : {_terminal_safe(imported.provenance.root_sha256)}"
+        )
+        if imported.provenance.root_member is not None:
+            lines.append(
+                f"ROOTFILE MEMBER   : {_terminal_safe(imported.provenance.root_member)}"
+            )
     lines.extend(
         [
             f"LLM engine        : {_terminal_safe(engine)}",

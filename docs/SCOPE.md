@@ -91,16 +91,21 @@ return typed `Infeasible`; that is not proof that no fingering exists. Every ret
 `Tab` still passes a complete final `oracle@0.2.0` check, so incompleteness cannot leak
 a RED result.
 
-The current MusicXML entry point narrows untrusted files before this boundary. It
-accepts only uncompressed `.musicxml`/`.xml` MusicXML 3.1/4.0 `score-partwise`
-files in the frozen single-part/staff/voice monophonic lead-sheet subset, with one
+The current `musicxml@0.2.0` entry point narrows untrusted files before this boundary.
+It accepts uncompressed `.musicxml`/`.xml` and strict `.mxl` containers whose root is
+MusicXML 3.1/4.0 `score-partwise` in the frozen single-part/staff/voice monophonic
+lead-sheet subset, with one
 fixed positive decimal divisions value, fixed major/minor key, 4/4 and quarter-note
 tempo, ordinary notes/rests/ties, and whitelisted root+kind harmony. `defusedxml`
 enforces byte/tree limits and disables entity/external resolution; URI/resource
 elements and `xlink:href` are rejected before canonical XML without DTD/entities is
-handed to `music21`. Unsupported sounding semantics fail closed. Compressed `.mxl`
-still returns `COMPRESSED_MXL_UNSUPPORTED`; its safe container reader is the next
-independent versioned increment. Passing this importer proves only that the file
+handed to `music21`. Unsupported sounding semantics fail closed.
+
+For `.mxl`, `mxl-container@0.1.0` validates bounded raw EOCD/central/local ZIP records
+before constructing `ZipFile`, rejects ZIP64/SFX/encryption/special files/path aliases
+and unsupported metadata, streams every member without extraction, and verifies
+declared/actual size, CRC and deflate completion. Only the unique safe root selected by
+`META-INF/container.xml` reaches the unchanged MusicXML parser. Passing this importer proves only that the file
 fits the frozen input contract—it does not expand the oracle's certification scope.
 
 Producer compatibility is evidence-specific: unedited music21 10.5.0 and
@@ -152,7 +157,7 @@ is not yet positive compatibility evidence for a mainstream notation application
   multi-part/staff/voice scores, repeats/navigation, pickup/incomplete measures,
   key/time/tempo changes, tuplets/grace/cue/unpitched/microtonal/transposing input,
   complex/slash harmony, and performance techniques are rejected by the current
-  importer. Compressed `.mxl`, MIDI, and audio are not current guaranteed inputs.
+  importer. MIDI and audio are not current guaranteed inputs.
 
 ## Techniques outside the current schema
 
@@ -173,8 +178,9 @@ profile SHA-256 fingerprint, and `input_schema_version`; current values are
 `oracle@0.2.0` and `tab-input@0.2.0`, while the bundled preset remains
 `median@0.1` with fingerprint
 `fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62`.
-Current CLI output also names `fidelity@0.2.0`, and successful uncompressed file
-imports carry `musicxml@0.1.0` plus the raw source SHA-256. Exact benchmark
+Current CLI output also names `fidelity@0.2.0`. Successful file imports carry
+`musicxml@0.2.0`, structured provenance and the raw source SHA-256; `.mxl` additionally
+binds the root XML SHA-256, exact rootfile member and `mxl-container@0.1.0`. Exact benchmark
 reproduction still requires the Git commit and corpus artifact hash. In particular, the 2026-07-10/11
 LLM benchmark tables remain stamped `oracle@0.1.0` plus a legacy/unversioned fidelity
 snapshot; they are not results under the current checker pair.

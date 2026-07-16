@@ -53,14 +53,15 @@ def test_basic_score_maps_exactly_to_music_ir() -> None:
         (4, 4),
         96.0,
         (
-            f"filename={BASIC.name};sha256={source_hash};importer={IMPORTER_VERSION}"
+            f"filename={BASIC.name};format=musicxml;sha256={source_hash};"
+            f"root_sha256={source_hash};importer={IMPORTER_VERSION}"
         ),
         "Importer Etude",
         "CC0-1.0",
         duration_beats=Fraction(8),
     )
     assert result.ir.meta.duration_beats == Fraction(8)
-    assert result.importer_version == IMPORTER_VERSION == "musicxml@0.1.0"
+    assert result.importer_version == IMPORTER_VERSION == "musicxml@0.2.0"
     assert max(note.onset + note.duration for note in result.ir.notes) == Fraction(7)
     assert validate_ir(result.ir) == []
     assert {note.voice for note in result.ir.notes} == {"melody"}

@@ -222,4 +222,4 @@ source tempo 默认成为 solver/oracle 的 effective tempo；只有显式 overr
 
 **后继顺序**：先独立关闭 Oracle 0.2 公共输入/判决/统计信任门并提交；再实现安全 `.mxl` container / `musicxml@0.2.0`。两者各自闭门后才进入 Plan 6A。
 
-**后续状态（2026-07-16）**：Oracle 0.2 软件信任门已按独立计划关闭；本段保留的是 `musicxml@0.1.0` 提交当时的顺序和验收数字，不回写历史版本。当前下一项为安全 `.mxl` container reader。
+**后续状态（2026-07-16）**：Oracle 0.2 软件信任门与后继安全 `.mxl` container reader 均已按独立计划关闭；本段保留的是 `musicxml@0.1.0` 提交当时的顺序和验收数字，不回写历史版本。当前下一项为 Plan 6A Web/API/trace viewer/MCP 薄纵切。

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from importlib import import_module
 from typing import Protocol, cast
+from urllib.parse import quote
 
 from fretsure.importers._musicxml_preflight import (
     PreflightHarmonyEvent,
@@ -236,7 +237,11 @@ def music21_to_ir(
     *,
     metadata: PreflightMetadata,
     source_filename: str,
+    source_format: str,
     sha256: str,
+    root_member: str | None,
+    root_sha256: str,
+    container_version: str | None,
     importer_version: str,
 ) -> MusicIR:
     """Parse canonical, DTD-free XML and convert only the frozen typed subset."""
@@ -269,8 +274,27 @@ def music21_to_ir(
     objects = _iter_objects(part.flatten())
     notes = _adapt_notes(objects, note_class, metadata.note_events)
     chords = _adapt_chords(objects, chord_class, metadata.harmony_events)
-    provenance = (
-        f"filename={source_filename};sha256={sha256};importer={importer_version}"
+    def escaped(value: str) -> str:
+        return quote(
+            value,
+            safe="@._-/",
+            encoding="utf-8",
+            errors="surrogatepass",
+        )
+
+    provenance_fields = [
+        ("filename", source_filename),
+        ("format", source_format),
+        ("sha256", sha256),
+        ("root_sha256", root_sha256),
+    ]
+    if root_member is not None:
+        provenance_fields.append(("root_member", root_member))
+    provenance_fields.append(("importer", importer_version))
+    if container_version is not None:
+        provenance_fields.append(("container", container_version))
+    provenance = ";".join(
+        f"{key}={escaped(value)}" for key, value in provenance_fields
     )
     return MusicIR(
         notes,

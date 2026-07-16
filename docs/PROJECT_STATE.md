@@ -3,7 +3,7 @@
 > 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-16。
 
 ## 0. 现状一句话
-设计已锁定；**Plan 1–5、Pre-Plan 6 的未压缩 MusicXML-first 文件纵切与 Oracle 0.2 软件信任门已经实现并各自闭门**，当前是一套可运行的后端研究原型。此提交的版本边界是 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.1.0`、profile=`median@0.1`。安全 `.mxl`、Web/API/MCP、MIDI 与音频尚未进入本提交。
+设计已锁定；**Plan 1–5、Pre-Plan 6 的 MusicXML-first 文件纵切、Oracle 0.2 软件信任门与安全 `.mxl` container reader 已经实现并各自闭门**，当前是一套可运行的后端研究原型。此提交的版本边界是 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.2.0`、container=`mxl-container@0.1.0`、profile=`median@0.1`。Web/API/MCP、扩展 MusicXML/IR、MIDI 与音频尚未进入本提交。
 - **Plan 1**（`plan-1-core-oracle`）：可弹性 oracle + 自验证台。终审 Ready。
 - **Plan 2**（`plan-2-solver-m0`）：beam 求解器（永不返回 RED）+ M0。复核 Ready。
 - **Plan 3**（`plan-3-agent-loop`）：oracle 当环境、LLM 当策略——修复脊柱 + 提议器 + critic + best-of-N。真 LLM 端到端。Ready-with-minor（已修）。
@@ -21,7 +21,10 @@
 - **Pre-Plan 6 MusicXML-first（DONE）**：受限 MusicXML 3.1/4.0 `score-partwise` 单 part/staff/voice 单音 lead-sheet 子集贯通文件→MusicIR→agent/solver/oracle→faithfulness→ASCII/trace；unsupported sounding semantics typed fail-closed，ERROR 不返回部分 IR。
   - 全曲固定的 `divisions` 与 `duration` 按 MusicXML 4.0 的 decimal 类型用 bounded XSD-decimal grammar + exact `Fraction` 处理；`divisions` 变化 typed fail-closed。raw note/harmony event timeline 是时间权威，music21 只做逐事件语义交叉验证。非法 exponent/分数/underscore、过长 numeric/time token、浮点归一化失真、note attack/release、standalone tempo change、stacked harmony 与含糊 direction words 均已 fail-closed 回归。
   - producer artifact/provenance gate 已闭合：`tests/fixtures/producers/provenance.json` 冻结 music21 10.5.0 与 musicxml 1.6.1 两个未经手改的 library/toolkit 正例，以及 MuseScore Studio 4.7.4 的原样负例和 exporter/version/hash/license。MuseScore 因省略 key mode 稳定 `UNSUPPORTED_KEY`；当前没有常见 notation application 的正兼容证据，该兼容性仍 open，不能从 provenance gate 推导。
-  - `.mxl` 仍返回 `COMPRESSED_MXL_UNSUPPORTED`；它属于后继独立 safe-container 计划。
+  - 在该历史提交中，`.mxl` 返回 `COMPRESSED_MXL_UNSUPPORTED`；后继 safe-container 能力未回写这份历史证据。
+- **Safe `.mxl` container（DONE）**：`musicxml@0.2.0` 在不落盘、不调用 extract/extractall、不让 music21 猜 archive 的前提下支持严格 `.mxl`。在 `ZipFile` 前有界验证 EOCD/central/local headers、member 路径/类型/extra/重叠与资源元数据，之后流式读完所有 member，并独立核对实际 size、CRC 与 deflate 完整性；`container.xml` 只能唯一选择一个安全 `.musicxml`/`.xml` root。
+  - SHA-256 继续绑定用户原始输入；`.mxl` 另记录 root SHA-256、percent-escaped rootfile path 与 `mxl-container@0.1.0`。`ImportProvenance`、CLI rootfile 行和 trace/benchmark checker stamps 已冻结。
+  - 容器只扩展 transport：root MusicXML 仍走同一 defused XML → frozen envelope → exact raw timeline/preflight → music21 交叉验证，复杂语义与 URI/resource-bearing XML 继续在 adapter 前 fail-closed。
 - **Oracle 0.2 软件信任门（DONE）**：公共 Tab/profile/solver/MusicIR/tier/benchmark/gold/statistics 边界统一 typed fail-closed；非法输入不伪装成判决。validation/use 使用 detached snapshot，Tab serializer 与标准 JSON trace 在分配/编码前受资源门保护，直接 agent 循环与 pipeline 共用固定上限。MusicIR 限 20,000 notes + 20,000 chords、10 Mi 文本和 256-bit Fraction；benchmark 控制在建 corpus/调用 factory 前受 signed-63 seed、items/bars/乘积门保护。每个有效判决绑定 checker、profile version、profile canonical SHA-256 与 `tab-input@0.2.0`。
   - active sounding notes 进入全部左手几何；同弦半开区间 overlap 为 `STRING_SUSTAIN_CONFLICT`；换把使用 release-before-attack 事件流与连续 reachable hand-centre interval，实际消费 `reach_mm`。
   - solver 不静默 clamp beam/覆盖重复 onset+pitch；12,000,000 weighted-work 门在高分支枚举前拒绝，有限 finalist 重建后仍须通过完整 oracle。`Infeasible` 是 bounded search 结果，不宣称数学无解。
@@ -29,9 +32,9 @@
   - gold 文件/内存输入具有累计 bytes/rows/notes/checker-work/lines/JSON-nodes 上限、深快照与 digest provenance；zero-GREEN false-accept 结果为 `status="no_green"` 且 rate/bound=`None`，退化 κ 与空 pass^k 同样显式 undefined。
   - 真人 gold/calibration 不阻塞软件主线，但继续阻塞现实世界 GREEN 误接受率、profile/tier→真人映射、AMBER 经验带宽、真人 musicality 与更强对外保证。
 - **诚实记分卡**：历史 repair 强正信号；best-of-N 薄利；**critic 未挣得（观察/待砍）**。这些旧数来自 legacy/unversioned harmony metric，不是 `fidelity@0.2.0` benchmark 基线。
-- **当前质量门**：离线 `1092 passed, 6 deselected`，本地代理全量 `1098 passed`；`1098 collected`。ruff、mypy(strict, 60 source files)、`uv lock --check` 与 `git diff --check` 全绿；`fretsure_oracle-0.2.0` wheel/sdist 从最终树重建，sdist 160-entry allowlist 审计排除了本地配置与缓存；clean core/no-extra typed `MISSING_DEPENDENCY`、clean `[musicxml]` 安装、真实 producer CLI 双跑/6-row JSONL 与 stub benchmark smoke 全绿。stdout、JSONL metadata row 与 benchmark JSON 均盖 `oracle@0.2.0`、`fidelity@0.2.0`、`tab-input@0.2.0`、`median@0.1` 及 profile SHA-256。
+- **当前质量门**：离线 `1236 passed, 6 deselected`，本地代理全量 `1242 passed`；`1242 collected`。ruff、mypy(strict, 61 source files)、`uv lock --check` 与 `git diff --check` 全绿；`fretsure_oracle-0.2.0` wheel/sdist 从最终树重建，sdist 163-entry allowlist 审计排除了本地配置与缓存；clean core/no-extra 对有效 `.mxl` typed `MISSING_DEPENDENCY`、clean `[musicxml]` 安装、真实 `.mxl` CLI 双跑/6-row JSONL 与 stub benchmark smoke 全绿。stdout、JSONL metadata row 与 benchmark JSON 均盖 `oracle@0.2.0`、`fidelity@0.2.0`、`tab-input@0.2.0`、`median@0.1` 及 profile SHA-256；CLI 另盖 `musicxml@0.2.0`、raw/root hashes 与 rootfile member。
 - **分支**：plan-1→2→3→4→5→`consolidation` 已**全部 ff 并入 `master`（trunk）**（trunk 原只有 spec 脚手架；现含完整后端）。
-- **下一步已冻结**：Oracle 0.2 独立提交后进入安全 `.mxl` container reader，把 importer 从 `musicxml@0.1.0` 升到 `musicxml@0.2.0`；它闭门并提交后才进入 Plan 6A。
+- **下一步已冻结**：安全 `.mxl` 独立提交后进入 Plan 6A Web/API/trace viewer/MCP 薄纵切；随后按真实 producer failure 分布扩 MusicXML/IR，再做 MIDI 与 benchmark v2。
 - **已知点**：solve_fingering 是资源有界、非完备搜索；tier/忠实度/难度参数占位待 design partner 校准；leave-one-out 各臂对随机 LLM **非配对**（大效应 repair 不受影响；best-of-N/critic 已另有**配对**测量，见 RESULTS）。
 
 ## 1. 这是什么
@@ -81,5 +84,6 @@
 ## 7. 下一步（用户说"继续"时）
 - 不重做 Plan 1–5 或 MusicXML-first 纵切。
 - Oracle 0.2 软件信任门已经完成；不要重做。
-- 下一项是安全 `.mxl` container reader；它须保持 root MusicXML 语义子集不变，并把 importer 单独升为 `musicxml@0.2.0`。
+- 安全 `.mxl` container reader 已完成；不要重做。
+- 下一项是 Plan 6A Web/API/trace viewer/MCP 薄纵切；之后才按 producer failure 扩 MusicXML/IR、实现 MIDI、重跑 benchmark v2。
 - 真人 gold/calibration 可并行，不阻塞上述软件实现；它仍阻塞现实世界 GREEN 误接受率、profile/tier 校准与“真实琴手一定能弹”的强主张。

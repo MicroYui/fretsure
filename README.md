@@ -13,7 +13,8 @@ uv sync --extra dev
 uv run fretsure-demo          # 离线确定性跑通；加 --llm 用真实 LLM 编配
 ```
 
-真实文件纵切已经支持受限、未压缩的 MusicXML 3.1/4.0 lead sheet：
+真实文件纵切已经支持受限的 MusicXML 3.1/4.0 lead sheet：未压缩
+`.musicxml`/`.xml`，以及安全受限、全内存校验的 `.mxl` 容器：
 
 ```bash
 uv sync --extra musicxml
@@ -26,7 +27,8 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
 `fidelity@0.2.0` 门与带完整 checker stamps 的可回放 JSONL trace。
 当前只支持单 part/staff/voice 的 4/4 单音旋律、固定显式 major/minor key、
 固定 quarter-note tempo、普通 note/rest/tie 和白名单 root+kind harmony；
-`.mxl`、复调/多声部、MIDI 与音频仍 fail-closed 或未实现。
+`.mxl` 只扩展容器、不扩展这些 root MusicXML 语义；复调/多声部、MIDI 与音频
+仍 fail-closed 或未实现。
 
 把一份 lead sheet 编成一份 **GREEN（通过版本化可弹性模型）** 的指弹谱并打印 ASCII tab、oracle 判决、忠实度门：
 
@@ -89,12 +91,13 @@ lead sheet / MIDI / IR
 
 ## 状态
 
-**Plan 1–5、`musicxml@0.1.0` 文件纵切与 Oracle 0.2 软件信任门已实现**。
+**Plan 1–5、Oracle 0.2 软件信任门与安全 `.mxl` container reader 已实现**。
 当前 package=`0.2.0`、playability=`oracle@0.2.0`、公共输入=
-`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`；importer 仍为
-`musicxml@0.1.0`，安全 `.mxl` reader 是下一项独立增量。
-当前收集 `1098` 项测试：离线 `1092 passed, 6 deselected`，本地代理全量
-`1098 passed`；ruff、strict mypy（60 source files）、构建与 clean-venv smoke 全绿。
+`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=
+`musicxml@0.2.0`、container=`mxl-container@0.1.0`。
+当前收集 `1242` 项测试：离线 `1236 passed, 6 deselected`，本地代理全量
+`1242 passed`；ruff、strict mypy（61 source files）、构建与 clean-venv smoke 全绿。
+下一项是 Plan 6A Web/API/trace viewer/MCP 薄纵切。
 
 - **Plan 1 核心 + 可弹性 Oracle**：Music IR + strict public Tab schema + 毫米几何/active-sustain/连续换把 oracle（三态 + 定位化诊断）+ fingerprinted profile + 自验证台（property/metamorphic/mutation/N-version + fail-closed gold/statistics）。zero-GREEN 明确是 `no_green`/`None`，不是完美的 `0.0`。见 [`docs/PLAN1_ACCEPTANCE.md`](docs/PLAN1_ACCEPTANCE.md)、[`docs/SCOPE.md`](docs/SCOPE.md)。
 - **Plan 2 求解器**：beam-search 指法求解，每个部分谱都对真 oracle 核验 → **永不返回 RED**。
@@ -103,6 +106,7 @@ lead sheet / MIDI / IR
 - **Plan 5 难度 + 伴奏**：可验证的"简化到目标 tier"（对 `check_tier` 门修复；tier 控制深快照；横按 overlap 为保持诊断语义的 `O(6n)` 扫描）+ 和弦声位/分解/扫弦伴奏。
 - **Pre-Plan 6 MusicXML**：安全 envelope + fail-closed 语义预检 + raw exact timeline + music21 语义交叉验证 + 文件 CLI。两个未经手改的 library/toolkit exporter 正例（music21 10.5.0、musicxml 1.6.1）冻结了版本、SHA-256 与许可证；MuseScore Studio 4.7.4 原样导出因省略 key mode 被稳定拒绝。尚无常见制谱软件正兼容证据，留给 producer-driven MusicXML 扩展，当前不作该主张。
 - **Oracle 0.2 trust gate**：不可信 Tab/profile/solver/MusicIR/tier/benchmark/gold 输入在任何几何、搜索、生成或统计工作前进入 typed validation + detached snapshot；Trace 在编码前精确核算 escaped UTF-8 大小，solver 有 12,000,000 weighted-work 上限且返回结果仍必须过完整 oracle。真人 gold 尚未采集，因此现实世界误接受率和 profile/tier 校准仍 open。
+- **Safe `.mxl`**：在构造 `ZipFile` 前有界解析 EOCD/central/local records；拒 ZIP64、SFX、路径别名、特殊文件、加密与未知 extra，逐 member 流式解压并双重核对 size/CRC，只把 `container.xml` 唯一指定的 root bytes 交给既有语义管线。raw archive/root 双 SHA-256 与 rootfile provenance 均保留。
 
 设计文档是唯一真源：
 - 设计 spec：[`docs/superpowers/specs/2026-07-09-fretsure-design.md`](docs/superpowers/specs/2026-07-09-fretsure-design.md)
@@ -115,7 +119,7 @@ lead sheet / MIDI / IR
 
 ```bash
 uv sync --extra dev              # 建 3.11 venv + 装依赖
-uv run pytest -q -m "not integration"   # 1092 passed；6 integration deselected
+uv run pytest -q -m "not integration"   # 1236 passed；6 integration deselected
 uv run ruff check                # lint
 uv run mypy src                  # 类型检查（strict）
 uv run fretsure-demo             # 一条命令端到端 demo
