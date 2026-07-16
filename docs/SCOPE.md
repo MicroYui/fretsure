@@ -2,6 +2,11 @@
 
 The oracle makes a **narrow, bounded** claim. Read this before trusting a GREEN.
 
+> Current empirical boundary (2026-07-16): no real-player gold/calibration set has
+> been collected. GREEN is a deterministic claim inside `oracle@0.1.0` and the
+> selected profile, not yet a measured population-wide promise. The statistical
+> machinery exists, but the real-player false-accept rate is unknown.
+
 ## What GREEN means
 
 > Any tab Fretsure certifies **GREEN** is, under the published profile P (hand
@@ -17,7 +22,31 @@ Two claims are kept separate:
   metamorphic / mutation / N-version self-checks.
 - **Empirical claim** — M is calibrated to real players. Verified by a
   human-played gold set; reported as the GREEN false-accept rate with a
-  Clopper–Pearson upper bound + confusion matrix + Cohen's κ.
+  Clopper–Pearson upper bound + confusion matrix + Cohen's κ. **This claim is
+  pending; the required human set does not yet exist.**
+
+## Playability and faithfulness are separate
+
+`oracle@0.1.0` only checks the displayed fingering against its playability model.
+`fidelity@0.2.0` separately checks exact-onset melody/bass and active chord-segment
+harmony. A result may therefore be oracle GREEN and still fail faithfulness; only
+GREEN + fidelity PASS is a joint product/benchmark success.
+
+## Current file-input boundary
+
+`musicxml@0.1.0` accepts only uncompressed MusicXML 3.1/4.0 `score-partwise`
+files in the frozen monophonic lead-sheet subset documented in the pre-Plan 6
+plan. Untrusted XML is resource-bounded, entity/external resolution is disabled,
+and unsupported sounding semantics fail before `music21`. Compressed `.mxl`,
+polyphony, multiple parts/staves/voices, repeats/navigation, changing global
+metadata, complex harmony, MIDI and audio are not current guaranteed inputs.
+
+Producer compatibility is evidence-specific: unedited music21 10.5.0 and
+musicxml 1.6.1 library/toolkit exports pass. MuseScore Studio 4.7.4 currently
+omits key mode on the frozen fixture and is rejected with `UNSUPPORTED_KEY`;
+the missing mode is not guessed. There is not yet positive compatibility
+evidence for a mainstream notation application, so no such product-wide claim
+is made.
 
 ## Soundness direction
 

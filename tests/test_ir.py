@@ -67,6 +67,77 @@ def test_bad_chord_root_flagged() -> None:
     assert any(v.kind == "bad_chord_root" for v in validate_ir(ir))
 
 
+def test_note_and_chord_onsets_must_be_nonnegative() -> None:
+    ir = MusicIR(
+        (Note(F(-1), F(1), 60, "melody"),),
+        (ChordSymbol(F(-2), "C", frozenset({0, 4, 7}), 0),),
+        _meta(),
+    )
+
+    violations = validate_ir(ir)
+
+    assert [v.kind for v in violations] == ["negative_onset", "negative_onset"]
+    assert [v.onset for v in violations] == [F(-1), F(-2)]
+
+
+def test_empty_ir_may_have_zero_explicit_piece_duration() -> None:
+    ir = MusicIR((), (), Meta("C", (4, 4), 90.0, "unit", "t", "PD", F(0)))
+
+    assert validate_ir(ir) == []
+
+
+@pytest.mark.parametrize(
+    ("duration", "expected_kind"),
+    [(F(-1), "negative_piece_duration"), (F(0), "nonpositive_piece_duration")],
+)
+def test_explicit_piece_duration_must_be_positive_when_events_exist(
+    duration: F, expected_kind: str
+) -> None:
+    ir = MusicIR(
+        (Note(F(0), F(1), 60, "melody"),),
+        (),
+        Meta("C", (4, 4), 90.0, "unit", "t", "PD", duration),
+    )
+
+    assert [v.kind for v in validate_ir(ir)] == [expected_kind]
+
+
+def test_explicit_piece_duration_must_cover_every_note_end() -> None:
+    ir = MusicIR(
+        (Note(F(1), F(2), 60, "melody"),),
+        (),
+        Meta("C", (4, 4), 90.0, "unit", "t", "PD", F(2)),
+    )
+
+    violations = validate_ir(ir)
+
+    assert [v.kind for v in violations] == ["note_beyond_piece_end"]
+    assert violations[0].onset == F(1)
+
+
+def test_chord_onset_must_be_strictly_before_explicit_piece_end() -> None:
+    ir = MusicIR(
+        (),
+        (ChordSymbol(F(4), "C", frozenset({0, 4, 7}), 0),),
+        Meta("C", (4, 4), 90.0, "unit", "t", "PD", F(4)),
+    )
+
+    violations = validate_ir(ir)
+
+    assert [v.kind for v in violations] == ["chord_outside_piece"]
+    assert violations[0].onset == F(4)
+
+
+def test_legacy_meta_without_piece_duration_keeps_unbounded_timeline_behavior() -> None:
+    ir = MusicIR(
+        (Note(F(8), F(2), 60, "melody"),),
+        (ChordSymbol(F(12), "C", frozenset({0, 4, 7}), 0),),
+        _meta(),
+    )
+
+    assert validate_ir(ir) == []
+
+
 def test_validate_ir_deterministic_exact_order() -> None:
     # melody note has zero duration (nonpositive), chord root not in pcs (bad_chord_root).
     # Pins BOTH determinism and the emission order: per-note first, then chords.

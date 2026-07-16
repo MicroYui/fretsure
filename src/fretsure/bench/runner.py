@@ -24,6 +24,7 @@ from fretsure.bench.ablation import (
 from fretsure.bench.corpus import CorpusItem
 from fretsure.bench.generator import GenConfig, generate_leadsheet
 from fretsure.llm.client import LLMClient
+from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 from fretsure.oracle.core import CHECKER_VERSION
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 
@@ -35,6 +36,7 @@ class BenchReport:
     full: ConfigMetrics
     ablation: dict[str, ConfigMetrics]
     checker_version: str
+    fidelity_checker_version: str
     profile_version: str
     paired: PairedBestOfN | None = None
     paired_crit: PairedCritic | None = None
@@ -80,7 +82,17 @@ def run_benchmark(
     loo = leave_one_out(corpus, goal, llm_factory, profile, base=AblationConfig(best_of_n=2))
     pbn = paired_best_of_n(corpus, goal, llm_factory, profile, n=2) if paired else None
     pcr = paired_critic(corpus, goal, llm_factory, profile, n=2) if paired else None
-    return BenchReport(seed, items, loo["full"], loo, CHECKER_VERSION, profile.version, pbn, pcr)
+    return BenchReport(
+        seed=seed,
+        n_items=items,
+        full=loo["full"],
+        ablation=loo,
+        checker_version=CHECKER_VERSION,
+        fidelity_checker_version=FIDELITY_CHECKER_VERSION,
+        profile_version=profile.version,
+        paired=pbn,
+        paired_crit=pcr,
+    )
 
 
 def report_to_dict(report: BenchReport) -> dict[str, Any]:
@@ -88,6 +100,7 @@ def report_to_dict(report: BenchReport) -> dict[str, Any]:
         "seed": report.seed,
         "n_items": report.n_items,
         "checker_version": report.checker_version,
+        "fidelity_checker_version": report.fidelity_checker_version,
         "profile_version": report.profile_version,
         "ablation": {name: asdict(m) for name, m in report.ablation.items()},
     }

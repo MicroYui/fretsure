@@ -22,6 +22,11 @@ def ir_to_notegraph(ir: MusicIR) -> dict[str, Any]:
             "source": ir.meta.source,
             "title": ir.meta.title,
             "license": ir.meta.license,
+            "duration_beats": (
+                str(ir.meta.duration_beats)
+                if ir.meta.duration_beats is not None
+                else None
+            ),
         },
         "notes": [
             {"onset": str(n.onset), "duration": str(n.duration), "midi": n.pitch, "voice": n.voice}
@@ -59,6 +64,7 @@ def notegraph_to_ir(obj: dict[str, Any]) -> MusicIR:
         for c in obj["chords"]
     )
     m = obj["meta"]
+    raw_duration = m.get("duration_beats")
     meta = Meta(
         m["key"],
         (int(m["time_sig"][0]), int(m["time_sig"][1])),
@@ -66,6 +72,7 @@ def notegraph_to_ir(obj: dict[str, Any]) -> MusicIR:
         m["source"],
         m["title"],
         m["license"],
+        None if raw_duration is None else Fraction(raw_duration),
     )
     return MusicIR(notes, chords, meta)
 

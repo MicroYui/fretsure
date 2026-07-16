@@ -41,6 +41,7 @@ class Meta:
     source: str  # provenance
     title: str
     license: str
+    duration_beats: Fraction | None = None
 
 
 @dataclass(frozen=True)
@@ -60,19 +61,52 @@ class IRViolation:
 def validate_ir(ir: MusicIR) -> list[IRViolation]:
     """Return the list of invariant violations (empty == valid).
 
-    Deterministic: violations are emitted in a stable order (notes in input
-    order, then onset-sorted structural checks, then chords in input order).
+    Deterministic: violations are emitted in a stable order (metadata, notes in
+    input order, onset-sorted structural checks, then chords in input order).
     """
     violations: list[IRViolation] = []
+    piece_end = ir.meta.duration_beats
+    piece_end_is_valid = True
+    if piece_end is not None:
+        if piece_end < 0:
+            violations.append(
+                IRViolation(
+                    "negative_piece_duration", f"duration {piece_end}", None
+                )
+            )
+            piece_end_is_valid = False
+        elif piece_end == 0 and (ir.notes or ir.chords):
+            violations.append(
+                IRViolation(
+                    "nonpositive_piece_duration",
+                    "duration 0 with musical events",
+                    None,
+                )
+            )
+            piece_end_is_valid = False
 
     # Per-note checks (input order).
     for n in ir.notes:
+        if n.onset < 0:
+            violations.append(IRViolation("negative_onset", f"pitch {n.pitch}", n.onset))
         if n.duration <= 0:
             violations.append(
                 IRViolation("nonpositive_duration", f"pitch {n.pitch}", n.onset)
             )
         if not 0 <= n.pitch <= 127:
             violations.append(IRViolation("pitch_range", f"pitch {n.pitch}", n.onset))
+        if (
+            piece_end is not None
+            and piece_end_is_valid
+            and n.onset + n.duration > piece_end
+        ):
+            violations.append(
+                IRViolation(
+                    "note_beyond_piece_end",
+                    f"pitch {n.pitch} ends at {n.onset + n.duration}, piece ends at {piece_end}",
+                    n.onset,
+                )
+            )
 
     # Structural checks.
     melody_pitches: defaultdict[Fraction, set[int]] = defaultdict(set)
@@ -99,9 +133,23 @@ def validate_ir(ir: MusicIR) -> list[IRViolation]:
 
     # Chord checks (input order).
     for c in ir.chords:
+        if c.onset < 0:
+            violations.append(IRViolation("negative_onset", f"chord {c.symbol}", c.onset))
         if not 0 <= c.root_pc <= 11 or c.root_pc not in c.pitch_classes:
             violations.append(
                 IRViolation("bad_chord_root", f"{c.symbol} root {c.root_pc}", c.onset)
+            )
+        if (
+            piece_end is not None
+            and piece_end_is_valid
+            and c.onset >= piece_end
+        ):
+            violations.append(
+                IRViolation(
+                    "chord_outside_piece",
+                    f"{c.symbol} starts at {c.onset}, piece ends at {piece_end}",
+                    c.onset,
+                )
             )
 
     return violations

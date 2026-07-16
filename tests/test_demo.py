@@ -10,7 +10,7 @@ def test_sample_ir_is_legal_and_has_chords() -> None:
     assert ir.chords and any(n.voice == "melody" for n in ir.notes)
 
 
-def test_demo_stub_produces_provably_playable_tab() -> None:
+def test_demo_stub_produces_model_green_tab() -> None:
     ir = sample_ir()
     demo = run_demo(ir, ConstantLLM("noop"), n=2)
     assert isinstance(demo, DemoResult)
@@ -30,10 +30,17 @@ def test_render_demo_has_expected_sections() -> None:
     ir = sample_ir()
     demo = run_demo(ir, ConstantLLM("noop"), n=2)
     text = render_demo(demo, ir, engine="stub")
-    for section in ("INPUT", "ARRANGED TAB", "ORACLE VERDICT", "GREEN", "WHAT THIS PROVES"):
+    for section in (
+        "INPUT",
+        "ARRANGED TAB",
+        "ORACLE VERDICT",
+        "GREEN",
+        "WHAT THIS ESTABLISHES UNDER THE MODEL",
+    ):
         assert section in text
     # the ASCII tab renders 6 strings, each prefixed with a name + bar
     assert text.count("|") >= 12
+    assert "checker fidelity@0.2.0" in text
 
 
 def test_render_demo_amber_does_not_overclaim() -> None:
@@ -55,3 +62,17 @@ def test_render_demo_amber_does_not_overclaim() -> None:
     assert "AMBER" in text
     assert "machine-certified" not in text
     assert "did NOT certify" in text
+
+
+def test_demo_uses_and_displays_source_tempo() -> None:
+    from dataclasses import replace
+
+    ir = sample_ir(bars=1)
+    ir = replace(ir, meta=replace(ir.meta, tempo_bpm=123.0))
+    demo = run_demo(ir, ConstantLLM("noop"), n=1)
+
+    assert demo.source_tempo_bpm == 123.0
+    assert demo.effective_tempo_bpm == 123.0
+    text = render_demo(demo, ir, engine="stub")
+    assert "Source tempo      : 123 bpm" in text
+    assert "Effective tempo   : 123 bpm" in text

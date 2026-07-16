@@ -32,7 +32,11 @@ def run_m0(
     *,
     tempo_bpm: float = 90.0,
 ) -> M0Result:
-    notes = propose_fingerstyle(ir)
+    notes = propose_fingerstyle(
+        ir,
+        tuning,
+        capo,
+    )
     solved = solve_fingering(notes, tuning, capo, profile, tempo_bpm=tempo_bpm)
     if isinstance(solved, Infeasible):
         return M0Result(tab=None, oracle=None, infeasible=solved, ascii=None)

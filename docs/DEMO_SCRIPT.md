@@ -17,7 +17,7 @@ export ANTHROPIC_BASE_URL=http://localhost:4141 ANTHROPIC_AUTH_TOKEN=<token>
 
 **Say:** "AI can generate a song in seconds. It cannot tell you whether a human
 can *play* it. Suno hands you audio; Fretsure hands you a guitar tab that a
-deterministic checker has *proven* your hands can reach — note by note."
+deterministic checker has verified against a published hand model — note by note."
 
 **Show:** the README first screen (positioning line + architecture diagram).
 
@@ -34,10 +34,22 @@ uv run fretsure-demo
 - ORACLE VERDICT — **GREEN**, with the checker + profile version stamped.
 - FAITHFULNESS — melody-F1 / bass-root / harmony, gate PASS.
 
-**Say:** "This is offline and deterministic — no API key. The LLM proposed the
-musical intent; a millimetre-geometry oracle checked every fret against a
-conservatively-tightened hand and signed off. GREEN means *provably playable*,
-not *the AI thinks so*."
+**Say:** "This is offline and deterministic — no API key. This run uses the
+deterministic proposal fallback; `--llm` swaps in the real policy. Either way,
+a deterministic oracle checks every fret against a conservatively tightened,
+versioned geometry/timing model. GREEN is a model-relative certification, not
+*the AI thinks so* and not yet a universal real-player guarantee."
+
+**Optional real-file proof (10–15s):**
+
+```bash
+uv run fretsure-arrange tests/fixtures/producers/music21-10.5.0.musicxml \
+  --n 1 --no-critic --trace-jsonl /tmp/fretsure-trace.jsonl
+```
+
+Call out `musicxml@0.1.0`, source SHA-256, source/effective tempo, the separate
+oracle/fidelity results, and JSONL trace. This is an unedited exporter artifact,
+not a hand-authored compatibility mock.
 
 ## Beat 2 — Why you can trust the GREEN (1:00–1:45)
 
@@ -57,11 +69,13 @@ uv run pytest -q tests/oracle -m "not integration"
 - Span is in **millimetres**, not fret count — the same 3-fret stretch is harder
   low on the neck; a test proves the verdict changes with position.
 
-**Say:** "It's not a vibe. It's a checker with an audited false-accept bound."
+**Say:** "It's not a vibe. The checker has extensive model-internal self-tests;
+the real-player false-accept bound is still pending the human gold set."
 
 ## Beat 3 — The benchmark, and the honesty (1:45–2:40)
 
-**Do:**
+**Do (legacy experiment shape; do not present the saved values as a current
+`fidelity@0.2.0` baseline):**
 ```bash
 uv run fretsure-bench --seed 1 --items 16
 ```
@@ -71,11 +85,10 @@ the live run).
 **Say, pointing at the ablation table:**
 - "Every capability has to *earn its existence* by leave-one-out ablation, scored
   by the checker — not an LLM judge."
-- "**Repair earns it, hard:** remove the verifier-guided repair loop and success
+- "In the archived 2026-07-10/11 legacy metric, **repair had the strongest signal:** remove the verifier-guided repair loop and success
   falls 0.81 → 0.31, melody-F1 1.00 → 0.56. The Wilson intervals don't overlap."
-- "**And here's the part most demos hide:** the critic and best-of-N *don't* earn
-  it on this corpus. I report that too. Components that don't pay their way are
-  on notice, in public."
+- "**And here's the part most demos hide:** critic did not earn its cost; best-of-N
+  only showed a provisional paired gain. Both must be rerun under `fidelity@0.2.0`."
 
 **Optional 10-second kicker:** "One `joint_success = 0` run turned out to be a bug
 in my *corpus labels*, not the agent — same 'who checks the checker' discipline,

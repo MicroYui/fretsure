@@ -12,17 +12,24 @@ dependencies = [
 agent = [
     "anthropic>=0.40",
 ]
+musicxml = [
+    "defusedxml>=0.7.1,<1",
+    "music21>=10.5,<11",
+]
 dev = [
     "pytest>=8",
     "hypothesis>=6",
     "ruff>=0.5",
     "mypy>=1.10",
     "anthropic>=0.40",
+    "defusedxml>=0.7.1,<1",
+    "music21>=10.5,<11",
 ]
 
 [project.scripts]
 fretsure-bench = "fretsure.bench.runner:main"
 fretsure-demo = "fretsure.demo:main"
+fretsure-arrange = "fretsure.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -52,4 +59,8 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "anthropic.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "music21.*"
 ignore_missing_imports = true

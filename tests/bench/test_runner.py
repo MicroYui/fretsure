@@ -1,5 +1,6 @@
-from fretsure.bench.runner import BenchReport, run_benchmark
+from fretsure.bench.runner import BenchReport, report_to_dict, run_benchmark
 from fretsure.llm.client import ConstantLLM
+from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 
 
 def test_run_benchmark_reproducible() -> None:
@@ -14,6 +15,8 @@ def test_run_benchmark_reports_ablation() -> None:
     assert r.full.items == 2
     assert set(r.ablation) >= {"full", "-repair", "-critic", "-best_of_n"}
     assert r.checker_version.startswith("oracle@")
+    assert r.fidelity_checker_version == FIDELITY_CHECKER_VERSION
+    assert report_to_dict(r)["fidelity_checker_version"] == FIDELITY_CHECKER_VERSION
 
 
 def test_run_benchmark_full_arranges_generated() -> None:

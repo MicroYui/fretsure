@@ -5,6 +5,13 @@ scorer is the deterministic oracle + faithfulness gate — **not** an LLM judge.
 Every capability earns its place by leave-one-out ablation; the components that
 *don't* earn it are reported here too.
 
+> **Historical-metric boundary:** every real-LLM number below was recorded on
+> 2026-07-10/11 with `oracle@0.1.0` and the old, then-unversioned note-onset
+> harmony metric. `fidelity@0.2.0` now scores active chord segments, so these
+> tables are legacy descriptive evidence, not the current baseline. The present
+> command reproduces the experiment shape but not the old scoring semantics;
+> benchmark v2 must rerun and publish a new table.
+
 ## How to reproduce
 
 ```bash
@@ -33,7 +40,8 @@ passes the faithfulness gate (melody-F1 ≥ 0.9, bass-root ≥ 0.7, harmony ≥ 
 **Repair is the load-bearing capability.** Removing it drops success from 0.81
 to 0.31 and melody-F1 from 1.00 to 0.56. The two Wilson intervals do **not**
 overlap (full lower bound 0.57 > −repair upper bound 0.56), so at n=16 the
-benefit is already statistically distinguishable, not noise. This is the
+descriptive separation is large in this run. Because the stochastic leave-one-out
+arms are not paired item-for-item, this is not a formal paired significance test. This is the
 verifier-guided repair loop doing exactly its job: the raw LLM proposal is often
 AMBER/RED or drops notes; the oracle's localized diagnostics steer edits back to
 a GREEN, melody-faithful tab.
@@ -80,13 +88,11 @@ draws. Real LLM, N=2, both seeds:
 | 2 | 0.75 | 0.88 | **+0.125** | 0.75 | 0.88 | +0.125 |
 | pooled (n=32) | 0.719 | 0.844 | **+0.125** | 0.656 | 0.812 | +0.156 |
 
-Measured paired, best-of-N is a **consistent, positive** gain: +0.125 GREEN on
-*both* seeds and +0.13–0.19 joint. The sign no longer flips — so best-of-N *does*
-earn a modest keep; the unpaired "no effect / negative" reading was a sampling
-artifact, not the truth. Two independent seeds replicating the same +0.125 is
-itself the evidence (a proper paired significance test is McNemar on the discordant
-item pairs — a small future refinement; the code already exposes the per-arm
-counts needed to add it).
+Measured on a shared proposal pool, best-of-N recorded +0.125 GREEN on both seeds
+and +0.13–0.19 joint, so it receives a **provisional modest keep**. The GREEN
+direction itself is structural because the wider choice contains the greedy draw
+and ranks GREEN first; the joint delta is more informative. Per-item discordant
+rows were not retained, so McNemar cannot be reconstructed from these aggregates.
 
 Note one delta is *structural*, not empirical: because `is_green` is `_rank`'s top
 key and best-of-N selects over a superset that includes the greedy draw,
@@ -159,11 +165,13 @@ checker") turned on the benchmark corpus.
   dense harmony) are the D-layer corpus work and are expected to move critic off
   zero too.
 - The **leave-one-out** arms are unpaired across the stochastic LLM; large effects
-  (repair) survive this, small ones (best-of-N) are confounded by it — which is why
-  best-of-N is measured with the paired ablation above. Critic still lacks a paired
-  measurement; giving it one is the obvious next step.
-- `joint_success` uses exact-onset matching for melody/bass; grid/DTW tolerance
-  for real (human-timed) corpora is a later refinement (see `metrics/fidelity.py`).
+  (repair) survive this, small ones are confounded by it — which is why best-of-N
+  and critic are both measured on shared proposal pools above. The paired critic
+  result is only ≈ +0.01 taste with non-positive joint side effect, so it remains
+  on probation rather than being treated as a missing experiment.
+- The historical `joint_success` snapshot used exact-onset matching; grid/DTW
+  tolerance for real (human-timed) corpora remains a later refinement. Current
+  chord-segment semantics are versioned separately as `fidelity@0.2.0`.
 
 ## Also validated by this harness
 

@@ -1,23 +1,24 @@
-"""One-command demo: arrange a sample lead sheet into a provably-playable tab.
+"""One-command demo: arrange a sample lead sheet and check it under the model.
 
-``fretsure-demo`` runs the whole product on a bundled (procedurally-generated,
-contamination-proof) lead sheet and prints the input, the arranged ASCII tab, the
-oracle verdict, and the faithfulness gate. It defaults to a deterministic stub LLM
-so it always works offline; ``--llm`` uses the local proxy for a real arrangement.
-The guarantee shown is the product's core claim: the printed tab is GREEN, i.e.
-provably playable by the pessimistic hand profile, with melody/bass preserved.
+``fretsure-demo`` runs the whole product on a bundled (procedurally generated,
+exact-item-memorization-resistant) lead sheet and prints the input, the arranged
+ASCII tab, the oracle verdict, and the faithfulness gate. It defaults to a
+deterministic stub LLM so it always works offline; ``--llm`` uses the local proxy
+for a real arrangement.
+GREEN means that the printed tab passes the pessimistically tightened, versioned
+model/profile with the displayed fingering; real-player calibration remains separate.
 """
 
 import argparse
 from dataclasses import dataclass
 
-from fretsure.agent.arranger import ArrangeGoal
-from fretsure.agent.harness import ArrangeResult, arrange
+from fretsure.agent.harness import ArrangeResult
 from fretsure.bench.generator import GenConfig, generate_leadsheet
 from fretsure.ir import MusicIR
 from fretsure.llm.client import ConstantLLM, LLMClient
-from fretsure.metrics.fidelity import FaithfulnessGate, faithfulness
+from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION, FaithfulnessGate
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
+from fretsure.pipeline import PipelineOptions, run_pipeline
 from fretsure.render.ascii import render_ascii
 
 SAMPLE_SEED = 7
@@ -32,14 +33,20 @@ def sample_ir(*, seed: int = SAMPLE_SEED, bars: int = 4) -> MusicIR:
 class DemoResult:
     result: ArrangeResult
     gate: FaithfulnessGate | None
+    source_tempo_bpm: float | None = None
+    effective_tempo_bpm: float | None = None
 
 
 def run_demo(
     ir: MusicIR, llm: LLMClient, *, profile: Profile = MEDIAN_HAND, n: int = 4
 ) -> DemoResult:
-    res = arrange(ir, ArrangeGoal(), llm, profile=profile, n=n)
-    gate = faithfulness(ir, res.tab) if res.tab is not None else None
-    return DemoResult(res, gate)
+    pipeline = run_pipeline(ir, llm, options=PipelineOptions(profile=profile, n=n))
+    return DemoResult(
+        pipeline.arrangement,
+        pipeline.faithfulness,
+        pipeline.source_tempo_bpm,
+        pipeline.effective_tempo_bpm,
+    )
 
 
 def _fmt_input(ir: MusicIR) -> str:
@@ -56,11 +63,17 @@ def _fmt_input(ir: MusicIR) -> str:
 
 def render_demo(demo: DemoResult, ir: MusicIR, *, engine: str) -> str:
     res, gate = demo.result, demo.gate
+    source_tempo = (
+        ir.meta.tempo_bpm if demo.source_tempo_bpm is None else demo.source_tempo_bpm
+    )
+    effective_tempo = source_tempo if demo.effective_tempo_bpm is None else demo.effective_tempo_bpm
     lines = [
         "=" * 66,
-        "  Fretsure demo — lead sheet -> provably-playable fingerstyle tab",
+        "  Fretsure demo — lead sheet -> versioned-model-checked fingerstyle tab",
         "=" * 66,
         f"LLM engine        : {engine}",
+        f"Source tempo      : {source_tempo:g} bpm",
+        f"Effective tempo   : {effective_tempo:g} bpm",
         "",
         "INPUT (lead sheet)",
         _fmt_input(ir),
@@ -75,9 +88,9 @@ def render_demo(demo: DemoResult, ir: MusicIR, *, engine: str) -> str:
     verdict = res.oracle.verdict
     prof = res.oracle.profile_version
     proven = {
-        "GREEN": f"provably playable by the pessimistic hand (a conservative tightening of {prof})",
+        "GREEN": f"passes the pessimistically tightened versioned model/profile ({prof})",
         "AMBER": f"borderline — passes optimistic but NOT the pessimistic tightening of {prof}",
-        "RED": "unplayable (this should never be returned)",
+        "RED": "rejected by the versioned model (this should never be returned)",
     }[verdict]
     lines += [
         "",
@@ -91,18 +104,19 @@ def render_demo(demo: DemoResult, ir: MusicIR, *, engine: str) -> str:
             "FAITHFULNESS TO INPUT",
             f"  melody-F1 {gate.melody_f1:.2f}   bass-root {gate.bass_root:.2f}   "
             f"harmony {gate.harmony:.2f}   gate {'PASS' if gate.passed else 'FAIL'}",
+            f"  checker {FIDELITY_CHECKER_VERSION}",
         ]
     certified = {
-        "GREEN": "The LLM only proposed intent; playability is machine-certified.",
-        "AMBER": "The oracle did NOT certify this tab: it is borderline for the "
-        "pessimistic hand and needs more repair or a human check.",
-        "RED": "The oracle rejected this tab as unplayable (it should never be returned).",
+        "GREEN": "This is a model-relative GREEN certification, not a real-player guarantee.",
+        "AMBER": "The oracle did NOT certify this tab: it is borderline under the "
+        "pessimistically tightened profile and needs more repair or a human check.",
+        "RED": "The oracle rejected this tab under the model (it should never be returned).",
     }[verdict]
     lines += [
         "",
-        "WHAT THIS PROVES" if verdict == "GREEN" else "WHAT THIS MEANS",
-        "  The tab above is not an LLM opinion: a deterministic, millimetre-geometry",
-        "  oracle checked every note/frame against a conservatively-tightened hand and",
+        "WHAT THIS ESTABLISHES UNDER THE MODEL" if verdict == "GREEN" else "WHAT THIS MEANS",
+        "  The proposal path does not decide feasibility: a deterministic oracle checked",
+        "  every note/frame against simplified geometry and limited timing/rate predicates and",
         f"  returned {verdict}. {certified}",
         "=" * 66,
     ]

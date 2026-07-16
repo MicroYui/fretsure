@@ -1,8 +1,9 @@
-"""Faithfulness metrics (STUB).
+"""Deterministic arrangement-faithfulness metrics.
 
-M0-grade preservation checks: whether the arrangement kept the input melody,
-bass, and harmony. STUB: Plan 4 replaces these with the DTW-aligned Melody-F1 /
-bass-root-accuracy / harmony-Jaccard of the roadmap (§B.5). Directions match.
+The public ``fidelity`` score retains the M0 voice-preservation measures used
+by candidate ranking.  ``faithfulness`` is the independent benchmark gate:
+exact-onset top-voice Melody-F1, bass-root accuracy, and chord-segment harmony
+Jaccard.  Real-corpus alignment tolerance remains a later refinement.
 """
 
 from collections import defaultdict
@@ -12,6 +13,8 @@ from fractions import Fraction
 from fretsure.geometry import note_pitch
 from fretsure.ir import MusicIR
 from fretsure.tab import Tab
+
+FIDELITY_CHECKER_VERSION = "fidelity@0.2.0"
 
 
 def _tab_onset_pitches(tab: Tab) -> set[tuple[Fraction, int]]:
@@ -37,8 +40,13 @@ def bass_preserved(ir: MusicIR, tab: Tab) -> float:
     return _voice_recall(ir, tab, "bass")
 
 
-def harmony_jaccard(ir: MusicIR, tab: Tab) -> float:
-    """Mean per-onset pitch-class-set Jaccard between the input and the tab."""
+def _jaccard(expected: set[int], actual: set[int]) -> float:
+    union = expected | actual
+    return len(expected & actual) / len(union) if union else 1.0
+
+
+def _note_onset_harmony_jaccard(ir: MusicIR, tab: Tab) -> float:
+    """Legacy fallback when the source carries no chord annotations."""
     ir_pc: defaultdict[Fraction, set[int]] = defaultdict(set)
     tab_pc: defaultdict[Fraction, set[int]] = defaultdict(set)
     for n in ir.notes:
@@ -50,11 +58,56 @@ def harmony_jaccard(ir: MusicIR, tab: Tab) -> float:
         return 1.0
     total = 0.0
     for onset in onsets:
-        a = ir_pc[onset]
-        b = tab_pc.get(onset, set())
-        union = a | b
-        total += len(a & b) / len(union) if union else 1.0
+        total += _jaccard(ir_pc[onset], tab_pc.get(onset, set()))
     return total / len(onsets)
+
+
+def _chord_segment_harmony_jaccard(ir: MusicIR, tab: Tab) -> float:
+    """Mean chord-PC Jaccard over each annotated chord's active segment.
+
+    A chord is active from its onset to the next *later* chord onset.  The last
+    segment ends at the source IR's musical end, never at an output-only event.
+    Tab notes count in every segment whose half-open interval they actually
+    sound in, so a sustained note crossing a chord boundary affects both
+    harmonies.  Multiple annotations at one onset share the same segment and
+    are scored independently before the unweighted mean.
+    """
+    chord_onsets = sorted({chord.onset for chord in ir.chords})
+    next_onset = dict(zip(chord_onsets, chord_onsets[1:], strict=False))
+    inferred_source_end = max(
+        (note.onset + note.duration for note in ir.notes),
+        default=chord_onsets[-1],
+    )
+    source_end = (
+        ir.meta.duration_beats
+        if ir.meta.duration_beats is not None
+        else inferred_source_end
+    )
+
+    scores: list[float] = []
+    for chord in ir.chords:
+        segment_end = min(next_onset.get(chord.onset, source_end), source_end)
+        actual = {
+            note_pitch(note.string, note.fret, tab.tuning, tab.capo) % 12
+            for note in tab.notes
+            if note.onset < segment_end and note.onset + note.duration > chord.onset
+        }
+        expected = {pitch_class % 12 for pitch_class in chord.pitch_classes}
+        scores.append(_jaccard(expected, actual))
+    return sum(scores) / len(scores)
+
+
+def harmony_jaccard(ir: MusicIR, tab: Tab) -> float:
+    """Measure harmonic preservation with an explicit source-of-truth rule.
+
+    When chord annotations exist, their pitch classes define harmony and the
+    score is computed over their active chord segments.  When they do not, the
+    stable fallback is the legacy mean pitch-class Jaccard at every source-note
+    onset (tab-only onsets are ignored).  An entirely empty source scores 1.0.
+    """
+    if ir.chords:
+        return _chord_segment_harmony_jaccard(ir, tab)
+    return _note_onset_harmony_jaccard(ir, tab)
 
 
 @dataclass(frozen=True)
@@ -104,20 +157,25 @@ def melody_f1(ir: MusicIR, tab: Tab) -> float:
 
 
 def bass_root_accuracy(ir: MusicIR, tab: Tab) -> float:
-    """Fraction of chord onsets where the tab's lowest sounding pitch class equals
-    the chord root."""
+    """Score the lowest *sounding* pitch at every annotated chord onset.
+
+    A note that began before the chord but is still held at its onset participates
+    in the comparison.  This matters for tied or otherwise sustained bass notes;
+    restricting the lookup to notes attacked at the exact chord onset would turn
+    a faithful held root into a false miss.
+    """
     if not ir.chords:
         return 1.0
-    low_pc: dict[Fraction, int] = {}
-    for tn in tab.notes:
-        pitch = note_pitch(tn.string, tn.fret, tab.tuning, tab.capo)
-        if tn.onset not in low_pc or pitch < low_pc[tn.onset]:
-            low_pc[tn.onset] = pitch
-    hits = sum(
-        1
-        for c in ir.chords
-        if c.onset in low_pc and low_pc[c.onset] % 12 == c.root_pc
-    )
+    hits = 0
+    for chord in ir.chords:
+        sounding = (
+            note_pitch(note.string, note.fret, tab.tuning, tab.capo)
+            for note in tab.notes
+            if note.onset <= chord.onset < note.onset + note.duration
+        )
+        lowest = min(sounding, default=None)
+        if lowest is not None and lowest % 12 == chord.root_pc:
+            hits += 1
     return hits / len(ir.chords)
 
 

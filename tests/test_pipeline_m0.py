@@ -30,6 +30,77 @@ def test_propose_drops_harmony_keeps_melody_bass() -> None:
     assert 60 in pitches and 48 in pitches
 
 
+def test_propose_rearticulates_synthesized_bass_at_melody_attacks() -> None:
+    ir = MusicIR(
+        (
+            Note(F(0), F(1), 64, "melody"),
+            Note(F(1), F(1), 65, "melody"),
+            Note(F(2), F(1), 67, "melody"),
+            Note(F(3), F(1), 69, "melody"),
+        ),
+        (
+            ChordSymbol(F(0), "C", frozenset({0, 4, 7}), 0),
+            ChordSymbol(F(2), "G", frozenset({2, 7, 11}), 7),
+        ),
+        _meta(),
+    )
+
+    kept = propose_fingerstyle(ir)
+
+    bass = [n for n in kept if n.voice == "bass"]
+    assert bass == [
+        Note(F(0), F(1), 48, "bass"),
+        Note(F(1), F(1), 48, "bass"),
+        Note(F(2), F(1), 43, "bass"),
+        Note(F(3), F(1), 43, "bass"),
+    ]
+    assert propose_fingerstyle(ir) == kept
+
+
+def test_propose_never_adds_chord_bass_when_source_has_explicit_bass() -> None:
+    kept = propose_fingerstyle(_leadsheet())
+    source_bass = tuple(n for n in _leadsheet().notes if n.voice == "bass")
+    assert tuple(n for n in kept if n.voice == "bass") == source_bass
+
+
+def test_propose_does_not_duplicate_melody_unison_as_derived_bass() -> None:
+    ir = MusicIR(
+        (Note(F(0), F(1), 48, "melody"),),
+        (ChordSymbol(F(0), "C", frozenset({0, 4, 7}), 0),),
+        _meta(),
+    )
+    kept = propose_fingerstyle(ir)
+    assert kept == (Note(F(0), F(1), 48, "melody"),)
+
+
+def test_propose_extends_final_chord_bass_through_notated_trailing_rest() -> None:
+    ir = MusicIR(
+        (Note(F(2), F(1), 64, "melody"),),
+        (ChordSymbol(F(2), "G", frozenset({2, 7, 11}), 7),),
+        Meta("C", (4, 4), 90.0, "unit", "leadsheet", "PD", F(4)),
+    )
+
+    kept = propose_fingerstyle(ir)
+
+    assert tuple(n for n in kept if n.voice == "bass") == (
+        Note(F(2), F(2), 43, "bass"),
+    )
+
+
+def test_propose_legacy_duration_uses_last_source_note_end() -> None:
+    ir = MusicIR(
+        (Note(F(2), F(1), 64, "melody"),),
+        (ChordSymbol(F(2), "G", frozenset({2, 7, 11}), 7),),
+        _meta(),
+    )
+
+    kept = propose_fingerstyle(ir)
+
+    assert tuple(n for n in kept if n.voice == "bass") == (
+        Note(F(2), F(1), 43, "bass"),
+    )
+
+
 def test_run_m0_produces_playable_tab() -> None:
     res = run_m0(_leadsheet(), STANDARD_TUNING, 0, MEDIAN_HAND)
     assert res.tab is not None

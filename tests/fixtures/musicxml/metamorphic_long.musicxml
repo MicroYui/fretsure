@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <work><work-title>Duration Equivalence</work-title></work>
+  <identification><rights>CC0-1.0</rights></identification>
+  <part-list><score-part id="P1"><part-name>Melody</part-name></score-part></part-list>
+  <part id="P1"><measure number="1">
+    <attributes><divisions>1</divisions><key><fifths>0</fifths><mode>major</mode></key><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+    <direction><sound tempo="90"/></direction>
+    <harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>
+    <note><pitch><step>C</step><octave>4</octave></pitch><duration>2</duration><voice>1</voice><type>half</type></note>
+    <note><rest/><duration>2</duration><voice>1</voice><type>half</type></note>
+  </measure></part>
+</score-partwise>

@@ -1,0 +1,37 @@
+{
+  "fixtures": [
+    {
+      "expected": "success",
+      "file": "music21-10.5.0.musicxml",
+      "producer": "music21",
+      "producer_class": "symbolic-music-toolkit",
+      "producer_license": "BSD-3-Clause",
+      "score_license": "CC0-1.0",
+      "sha256": "115f2c2f5353680d34bd49f02c12519511181741cbc1b51e9f1e539335291c70",
+      "version": "10.5.0"
+    },
+    {
+      "expected": "success",
+      "file": "musicxml-1.6.1.musicxml",
+      "producer": "musicxml",
+      "producer_class": "object-model-library",
+      "producer_license": "MIT",
+      "score_license": "CC0-1.0",
+      "sha256": "c814281aa7bf4784421a9c8c53ebeffbe5abf9e897b2f254a1c31560d85100f8",
+      "version": "1.6.1"
+    },
+    {
+      "expected": "UNSUPPORTED_KEY",
+      "export_exit_code": "0",
+      "file": "musescore-4.7.4.musicxml",
+      "producer": "MuseScore Studio",
+      "producer_class": "notation-application",
+      "producer_license": "GPL-3.0-only (external exporter only)",
+      "score_license": "CC0-1.0",
+      "sha256": "8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386",
+      "version": "4.7.4"
+    }
+  ],
+  "note": "Files are unedited exporter output. Success is observed only for the exact fixture and version; the expected field also preserves negative notation-application evidence. GPL software is not a project dependency.",
+  "schema": "fretsure-producer-fixtures@0.2.0"
+}

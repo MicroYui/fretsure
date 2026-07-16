@@ -31,7 +31,7 @@ class ArrangeResult:
 
     NOTE: ``tab`` may be AMBER (borderline, NOT certified playable) when no
     candidate reached GREEN within budget. Check ``oracle.verdict == "GREEN"``
-    before presenting a tab as provably playable.
+    before presenting a tab as carrying a model-relative GREEN certification.
     """
 
     tab: Tab | None
@@ -94,7 +94,12 @@ def arrange_pool(
     slots: list[_Candidate | None] = []
     for i in range(n):
         temperature = min(1.0, 0.2 * i)
-        target = propose_arrangement(ir, goal, llm, temperature=temperature)
+        target = propose_arrangement(
+            ir,
+            goal,
+            llm,
+            temperature=temperature,
+        )
         trace.add("PROPOSE", f"candidate {i}", i=i, temperature=temperature)
         rr = repair(
             target, goal.tuning, goal.capo, profile, llm,

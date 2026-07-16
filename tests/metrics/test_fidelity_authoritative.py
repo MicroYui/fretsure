@@ -3,6 +3,7 @@ from fractions import Fraction as F
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import ChordSymbol, Meta, MusicIR, Note
 from fretsure.metrics.fidelity import (
+    FIDELITY_CHECKER_VERSION,
     FaithfulnessGate,
     bass_root_accuracy,
     faithfulness,
@@ -28,6 +29,8 @@ _FAITHFUL = Tab(
     (
         TabNote(F(0), F(1), 5, 0, 0, "a"),
         TabNote(F(0), F(2), 0, 0, 0, "p"),
+        TabNote(F(0), F(1), 2, 6, 2, "i"),  # G#3, chord third
+        TabNote(F(0), F(1), 4, 0, 0, "m"),  # B3, chord fifth
         TabNote(F(1), F(1), 5, 1, 1, "a"),
     ),
     STANDARD_TUNING,
@@ -54,6 +57,45 @@ def test_bass_root_accuracy_hits_on_strong_beat() -> None:
     assert bass_root_accuracy(_ir(), _FAITHFUL) == 1.0
 
 
+def test_bass_root_accuracy_counts_a_root_sustained_across_chord_onset() -> None:
+    ir = MusicIR(
+        (Note(F(0), F(2), 64, "melody"),),
+        (
+            ChordSymbol(F(0), "E", frozenset({4, 8, 11}), 4),
+            ChordSymbol(F(1), "E", frozenset({4, 8, 11}), 4),
+        ),
+        Meta("E", (4, 4), 90.0, "t", "t", "PD"),
+    )
+    tab = Tab(
+        (
+            TabNote(F(0), F(2), 0, 0, 0, "p"),  # held low E (MIDI 40)
+            TabNote(F(1), F(1), 5, 0, 0, "a"),  # newly attacked high E
+        ),
+        STANDARD_TUNING,
+        0,
+    )
+
+    assert bass_root_accuracy(ir, tab) == 1.0
+
+
+def test_bass_root_accuracy_uses_lowest_of_all_notes_sounding_at_chord_onset() -> None:
+    ir = MusicIR(
+        (Note(F(0), F(2), 64, "melody"),),
+        (ChordSymbol(F(1), "E", frozenset({4, 8, 11}), 4),),
+        Meta("E", (4, 4), 90.0, "t", "t", "PD"),
+    )
+    tab = Tab(
+        (
+            TabNote(F(0), F(2), 0, 1, 1, "p"),  # held F, below the new E
+            TabNote(F(1), F(1), 5, 0, 0, "a"),
+        ),
+        STANDARD_TUNING,
+        0,
+    )
+
+    assert bass_root_accuracy(ir, tab) == 0.0
+
+
 def test_faithfulness_gate_passes_faithful() -> None:
     g = faithfulness(_ir(), _FAITHFUL)
     assert isinstance(g, FaithfulnessGate)
@@ -64,3 +106,7 @@ def test_faithfulness_gate_fails_when_melody_lost() -> None:
     partial = Tab((TabNote(F(0), F(1), 0, 0, 0, "p"),), STANDARD_TUNING, 0)  # bass only, no melody
     g = faithfulness(_ir(), partial)
     assert not g.passed
+
+
+def test_fidelity_checker_version_identifies_changed_harmony_semantics() -> None:
+    assert FIDELITY_CHECKER_VERSION == "fidelity@0.2.0"

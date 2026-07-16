@@ -1,9 +1,9 @@
 # Fretsure — 项目状态 / 恢复文档
 
-> 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-10。
+> 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-16。
 
 ## 0. 现状一句话
-设计完成；**路线图 + Plan 1–5 计划已写**；**Plan 1–5 全部实现**（oracle + 求解器 + agent + benchmark + 难度简化/伴奏 = 整个后端产品）；**已收敛打磨 + merge 到 trunk + 求职 artifact 就位**。
+设计已锁定；**Plan 1–5 与 Pre-Plan 6 的未压缩 MusicXML-first 文件纵切已经实现并独立闭门**，当前是一套可运行的后端研究原型。此提交的版本边界是 package=`0.1.0`、playability=`oracle@0.1.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.1.0`、profile=`median@0.1`。`.mxl`、Oracle 0.2 公共信任门、Web/API/MCP、MIDI 与音频尚未进入本提交。
 - **Plan 1**（`plan-1-core-oracle`）：可弹性 oracle + 自验证台。终审 Ready。
 - **Plan 2**（`plan-2-solver-m0`）：beam 求解器（永不返回 RED）+ M0。复核 Ready。
 - **Plan 3**（`plan-3-agent-loop`）：oracle 当环境、LLM 当策略——修复脊柱 + 提议器 + critic + best-of-N。真 LLM 端到端。Ready-with-minor（已修）。
@@ -18,10 +18,14 @@
   - solver `passes_optimistic` 快路径（~3.5×）。
   - **配对消融（best-of-N + critic）**（`bench.paired_best_of_n`/`paired_critic` + `--paired`）：harness 拆成 `arrange_pool`+`best_of_k`（`use_critic` 可参数化），同一提议池上比选择宽度 / critic 开关，消除非配对采样混淆。实测：best-of-N 两 seed 一致 **+0.125 GREEN**（非配对臂原本符号翻转）→ 挣得薄利；critic 按**本职 taste** 测两 seed 仅 **+0.01**、对 joint ≤0 → **在此语料未挣得存在，留观察/待砍**。各过 **opus 审查 workflow**（best-of-N 3-lens 全清 1 Minor n≤0 已修；critic lens 无 Critical/Important，其 Minor "critic 应按 taste 而非 joint 评判"已采纳并改度量）。
   - **demo overclaim 修**：AMBER 路径原误印 "machine-certified"，改为按判决门控（只 GREEN 才认证）。
-- **诚实记分卡**：repair 决定性挣得存在；best-of-N 薄利；**critic 未挣得（观察/待砍）**——三者公开挂账。
-- **270 单测全绿（264 离线 + 6 真 LLM 集成）、ruff+mypy(strict) clean**；每 Plan / 每重构过独立 opus 审查并修发现。
+- **Pre-Plan 6 MusicXML-first（DONE）**：受限 MusicXML 3.1/4.0 `score-partwise` 单 part/staff/voice 单音 lead-sheet 子集贯通文件→MusicIR→agent/solver/oracle→faithfulness→ASCII/trace；unsupported sounding semantics typed fail-closed，ERROR 不返回部分 IR。
+  - 全曲固定的 `divisions` 与 `duration` 按 MusicXML 4.0 的 decimal 类型用 bounded XSD-decimal grammar + exact `Fraction` 处理；`divisions` 变化 typed fail-closed。raw note/harmony event timeline 是时间权威，music21 只做逐事件语义交叉验证。非法 exponent/分数/underscore、过长 numeric/time token、浮点归一化失真、note attack/release、standalone tempo change、stacked harmony 与含糊 direction words 均已 fail-closed 回归。
+  - producer artifact/provenance gate 已闭合：`tests/fixtures/producers/provenance.json` 冻结 music21 10.5.0 与 musicxml 1.6.1 两个未经手改的 library/toolkit 正例，以及 MuseScore Studio 4.7.4 的原样负例和 exporter/version/hash/license。MuseScore 因省略 key mode 稳定 `UNSUPPORTED_KEY`；当前没有常见 notation application 的正兼容证据，该兼容性仍 open，不能从 provenance gate 推导。
+  - `.mxl` 仍返回 `COMPRESSED_MXL_UNSUPPORTED`；它属于后继独立 safe-container 计划。
+- **诚实记分卡**：历史 repair 强正信号；best-of-N 薄利；**critic 未挣得（观察/待砍）**。这些旧数来自 legacy/unversioned harmony metric，不是 `fidelity@0.2.0` benchmark 基线。
+- **当前质量门**：离线 `516 passed, 6 deselected`，本地代理全量 `522 passed`；`522 collected`。ruff、mypy(strict, 59 source files)、`uv lock --check` 与 `git diff --check` 全绿；wheel/sdist、clean core/no-extra typed failure、clean `[musicxml]` 安装、真实 producer CLI 双跑/6-row JSONL 与 benchmark stamp smoke 全绿。6 项 integration 依赖本地 LLM 代理，本次已实跑通过。
 - **分支**：plan-1→2→3→4→5→`consolidation` 已**全部 ff 并入 `master`（trunk）**（trunk 原只有 spec 脚手架；现含完整后端）。
-- **下一步待定**：Plan 6（UI/web/demo/MCP，前端领域跳转）/ Plan 7（stretch RL/GEPA）/ D 层真实语料 + gold 集 + 参数校准（需 design partner）/ critic 存废（在真实/重口味语料再测 taste，否则砍）/ 配对消融加 McNemar 显著性。
+- **下一步已冻结**：先独立实现、验收并提交 Oracle 0.2 公共输入/判决/统计信任门；随后才进入安全 `.mxl` container reader。每项闭门并提交后才开启下一项。
 - **已知点**：solve_fingering 长片段仍偏慢（快路径已缓解）；tier/忠实度/难度参数占位待 design partner 校准；leave-one-out 各臂对随机 LLM **非配对**（大效应 repair 不受影响；best-of-N/critic 已另有**配对**测量，见 RESULTS）。
 
 ## 1. 这是什么
@@ -69,7 +73,7 @@
 用 workflow 跑过并已内化：① agent 产品赛道 landscape；② 创意向重筛（音乐/游戏谜题/格律写作/视觉/wildcard）；③ 音乐深挖（新颖性 + Azure TTS 可否撑 demo + 免费/付费工具链）；④ AI 编曲成熟度红队（生成成熟 vs 保证不成熟）；⑤ 吉他 tab 具体新颖性红队（TemPolor/SMC id55…）；⑥ benchmark + checker + agent 深度设计（含消融矩阵 + 两个头牌结果）；⑦ SOTA harness 选型 + 可展示 demo + 求职 artifact。**再研究前先看 spec §14/§15,多数问题已答。**
 
 ## 7. 下一步（用户说"继续"时）
-- **Plan 1 已完成**（分支 `plan-1-core-oracle`，99 测试绿，独立终审过并修了 Critical）。
-- 默认下一步：**Plan 2「指法求解器 + M0 端到端纵切」**——写详细 TDD 计划（候选生成 + 帧级 DP/Viterbi 调 `feasible_fingerings` + `solve_fingering` + ASCII/MusicXML 渲染 + lead sheet→提议 stub→solver→oracle→渲染端到端），再逐 task 执行。
-- 或按用户指定的 Plan 切入。
-- 合并 `plan-1-core-oracle` 到主线：待用户决定（PR / 直接 merge）。
+- 不重做 Plan 1–5 或 MusicXML-first 纵切。
+- 下一项是 `docs/superpowers/plans/2026-07-13-oracle-0.2-trust-gate.md`；在独立 Git tree 中重放公共 Tab/profile/solver/gold/statistics 信任门，完成全部验收并提交。
+- Oracle 0.2 提交全绿后，才进入 `2026-07-13-safe-mxl-container.md`，把 importer 从 `musicxml@0.1.0` 升到 `musicxml@0.2.0`。
+- 真人 gold/calibration 可并行，不阻塞上述软件实现；它仍阻塞现实世界 GREEN 误接受率、profile/tier 校准与“真实琴手一定能弹”的强主张。
