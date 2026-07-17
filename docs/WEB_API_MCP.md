@@ -1,6 +1,8 @@
 # Fretsure Web、HTTP API 与 MCP
 
-本页描述 package `0.3.0` / Plan 6A 已实现的本地互操作面。这里的 `GREEN` 始终是
+本页描述 package `0.4.0` 的本地互操作面；Plan 6A 冻结的 service/API/MCP wire 版本仍为
+`0.1.0`，producer-driven MusicXML/IR 只把 score-input importer 升至
+`musicxml@0.3.0`。这里的 `GREEN` 始终是
 `oracle@0.2.0` + 指定 profile 下的版本化模型证据，不是真人保证；faithfulness 是另一道独立门。
 
 ## 本地 Web 与 API
@@ -14,7 +16,9 @@ uv run fretsure-serve
 
 默认只监听 `127.0.0.1:8000`。浏览器打开 `http://127.0.0.1:8000/`。Web 可上传当前受限
 MusicXML lead-sheet 子集的 `.musicxml` / `.xml`，以及严格 `.mxl` container；也可加载页面内的
-CC0 示例。上传是原始 request body，不使用 multipart、临时文件或路径回读。
+CC0 示例。MusicXML 4.0 traditional key 合法省略 `<mode>` 时保留
+`key-signature:fifths=N;mode=unprovided` 并发 `KEY_MODE_UNPROVIDED`，不会猜 major/minor；MusicXML
+3.1 省略 mode 仍拒绝。上传是原始 request body，不使用 multipart、临时文件或路径回读。
 
 安装包用户可安装完整的本地服务组合：
 
@@ -43,9 +47,18 @@ curl --fail-with-body \
   'http://127.0.0.1:8000/api/v1/arrangements?filename=score.musicxml&engine=offline&n=4&max_iters=8&use_critic=true'
 ```
 
-成功结果明确区分 `tab_produced` 与 `no_fingering_within_budget`，并返回 source provenance、独立
-playability / faithfulness、ASCII tab、`agent-trace@0.1.0` replay rows 和全部版本 stamps。失败使用
+成功结果明确区分 `tab_produced` 与 `no_fingering_within_budget`，并返回 source provenance、import
+warnings、独立 playability / faithfulness、ASCII tab、`agent-trace@0.1.0` replay rows 和全部版本
+stamps；score capabilities 与 arrangement 结果会盖 `musicxml@0.3.0`，纯 Tab check/solve/render
+不冒充经过 importer。失败使用
 `application/problem+json`，不会返回 provider exception、traceback、secret 或任意本机路径。
+
+Producer 兼容性只由 exact artifacts 证明：当前 manifest 中冻结的 MuseScore Studio 4.7.4 XML/MXL
+bytes/root 可贯通 Web/API/application；这不代表该版本的任意乐谱、其他 MuseScore 版本或完整
+MusicXML。runtime 精确锁定 `music21==10.5.0`。范围、逐文件 census 与最终门见
+[`SCOPE.md`](SCOPE.md)、
+[`2026-07-16-producer-musicxml-census.json`](experiments/2026-07-16-producer-musicxml-census.json) 与
+[`PRODUCER_MUSICXML_ACCEPTANCE.md`](PRODUCER_MUSICXML_ACCEPTANCE.md)。
 
 ### 显式启用本地代理
 

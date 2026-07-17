@@ -2,36 +2,976 @@
   "fixtures": [
     {
       "expected": "success",
-      "file": "music21-10.5.0.musicxml",
+      "expected_warnings": [],
+      "export_exit_code": 0,
+      "format": "musicxml",
+      "output_file": "music21-10.5.0.musicxml",
+      "output_sha256": "115f2c2f5353680d34bd49f02c12519511181741cbc1b51e9f1e539335291c70",
       "producer": "music21",
       "producer_class": "symbolic-music-toolkit",
       "producer_license": "BSD-3-Clause",
+      "root_member": null,
+      "root_sha256": "115f2c2f5353680d34bd49f02c12519511181741cbc1b51e9f1e539335291c70",
       "score_license": "CC0-1.0",
-      "sha256": "115f2c2f5353680d34bd49f02c12519511181741cbc1b51e9f1e539335291c70",
+      "semantic": {
+        "chords": [
+          {
+            "onset": [
+              0,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              9
+            ],
+            "root_pc": 9,
+            "symbol": "Am"
+          }
+        ],
+        "duration_beats": [
+          4,
+          1
+        ],
+        "key": "Am",
+        "license": "CC0-1.0",
+        "notes": [
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 69,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              1,
+              1
+            ],
+            "pitch": 72,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              2,
+              1
+            ],
+            "pitch": 76,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              3,
+              1
+            ],
+            "pitch": 81,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 96.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Fretsure Producer Etude",
+        "warning_codes": []
+      },
+      "semantic_sha256": "338d3e598b1d6c218522d41e6a051eb5110eac6f19173655dd92f847c8cabcff",
+      "source_file": null,
+      "source_sha256": null,
       "version": "10.5.0"
     },
     {
       "expected": "success",
-      "file": "musicxml-1.6.1.musicxml",
+      "expected_warnings": [],
+      "export_exit_code": 0,
+      "format": "musicxml",
+      "output_file": "musicxml-1.6.1.musicxml",
+      "output_sha256": "c814281aa7bf4784421a9c8c53ebeffbe5abf9e897b2f254a1c31560d85100f8",
       "producer": "musicxml",
       "producer_class": "object-model-library",
       "producer_license": "MIT",
+      "root_member": null,
+      "root_sha256": "c814281aa7bf4784421a9c8c53ebeffbe5abf9e897b2f254a1c31560d85100f8",
       "score_license": "CC0-1.0",
-      "sha256": "c814281aa7bf4784421a9c8c53ebeffbe5abf9e897b2f254a1c31560d85100f8",
+      "semantic": {
+        "chords": [
+          {
+            "onset": [
+              0,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              9
+            ],
+            "root_pc": 9,
+            "symbol": "Am"
+          }
+        ],
+        "duration_beats": [
+          4,
+          1
+        ],
+        "key": "Am",
+        "license": "CC0-1.0",
+        "notes": [
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 69,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              1,
+              1
+            ],
+            "pitch": 72,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              2,
+              1
+            ],
+            "pitch": 76,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              3,
+              1
+            ],
+            "pitch": 81,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 96.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Fretsure XML Library Etude",
+        "warning_codes": []
+      },
+      "semantic_sha256": "c14889002c95d3378f67626acbfdca6ee94d20ad4c4844c9f6eac63d1a42c6b1",
+      "source_file": null,
+      "source_sha256": null,
       "version": "1.6.1"
     },
     {
-      "expected": "UNSUPPORTED_KEY",
-      "export_exit_code": "0",
-      "file": "musescore-4.7.4.musicxml",
+      "expected": "success",
+      "expected_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "export_exit_code": 0,
+      "format": "musicxml",
+      "output_file": "musescore-4.7.4.musicxml",
+      "output_sha256": "8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386",
       "producer": "MuseScore Studio",
       "producer_class": "notation-application",
       "producer_license": "GPL-3.0-only (external exporter only)",
+      "root_member": null,
+      "root_sha256": "8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386",
       "score_license": "CC0-1.0",
-      "sha256": "8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386",
+      "semantic": {
+        "chords": [
+          {
+            "onset": [
+              0,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              9
+            ],
+            "root_pc": 9,
+            "symbol": "Am"
+          }
+        ],
+        "duration_beats": [
+          4,
+          1
+        ],
+        "key": "key-signature:fifths=0;mode=unprovided",
+        "license": "CC0-1.0",
+        "notes": [
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 69,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              1,
+              1
+            ],
+            "pitch": 72,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              2,
+              1
+            ],
+            "pitch": 76,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              3,
+              1
+            ],
+            "pitch": 81,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 96.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Fretsure Producer Etude",
+        "warning_codes": [
+          "KEY_MODE_UNPROVIDED"
+        ]
+      },
+      "semantic_sha256": "72b01780cdd898916fef4c8294f0fea3340acfb841b03c93489a4cc616f524d1",
+      "source_file": "tests/fixtures/producers/music21-10.5.0.musicxml",
+      "source_sha256": "115f2c2f5353680d34bd49f02c12519511181741cbc1b51e9f1e539335291c70",
+      "version": "4.7.4"
+    },
+    {
+      "expected": "success",
+      "expected_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "export_exit_code": 0,
+      "format": "musicxml",
+      "output_file": "musescore-4.7.4-roundtrip-metamorphic_long.musicxml",
+      "output_sha256": "9174a42ca878ad24986f173e961f7ce3b506d60cac47aa120dafbec337381059",
+      "producer": "MuseScore Studio",
+      "producer_class": "notation-application",
+      "producer_license": "GPL-3.0-only (external exporter only)",
+      "root_member": null,
+      "root_sha256": "9174a42ca878ad24986f173e961f7ce3b506d60cac47aa120dafbec337381059",
+      "score_license": "CC0-1.0",
+      "semantic": {
+        "chords": [
+          {
+            "onset": [
+              0,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              7
+            ],
+            "root_pc": 0,
+            "symbol": "C"
+          }
+        ],
+        "duration_beats": [
+          4,
+          1
+        ],
+        "key": "key-signature:fifths=0;mode=unprovided",
+        "license": "CC0-1.0",
+        "notes": [
+          {
+            "duration": [
+              2,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 60,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 90.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Duration Equivalence",
+        "warning_codes": [
+          "KEY_MODE_UNPROVIDED"
+        ]
+      },
+      "semantic_sha256": "e15e2c0940ac6df622ccbfc1525cf49588838e4f88234078c10a9129bdfaef1e",
+      "source_file": "tests/fixtures/musicxml/metamorphic_long.musicxml",
+      "source_sha256": "68a8e8449ba0e552f60b4fb892eab96cd8a754791045b4bcb885b34420f9c77b",
+      "version": "4.7.4"
+    },
+    {
+      "expected": "success",
+      "expected_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "export_exit_code": 0,
+      "format": "musicxml",
+      "output_file": "musescore-4.7.4-roundtrip-metamorphic_tied.musicxml",
+      "output_sha256": "a39a0415304cb1d683f5306b479da784a4eb50a33f766a5bb3519366d79c686d",
+      "producer": "MuseScore Studio",
+      "producer_class": "notation-application",
+      "producer_license": "GPL-3.0-only (external exporter only)",
+      "root_member": null,
+      "root_sha256": "a39a0415304cb1d683f5306b479da784a4eb50a33f766a5bb3519366d79c686d",
+      "score_license": "CC0-1.0",
+      "semantic": {
+        "chords": [
+          {
+            "onset": [
+              0,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              7
+            ],
+            "root_pc": 0,
+            "symbol": "C"
+          }
+        ],
+        "duration_beats": [
+          4,
+          1
+        ],
+        "key": "key-signature:fifths=0;mode=unprovided",
+        "license": "CC0-1.0",
+        "notes": [
+          {
+            "duration": [
+              2,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 60,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 90.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Duration Equivalence",
+        "warning_codes": [
+          "KEY_MODE_UNPROVIDED"
+        ]
+      },
+      "semantic_sha256": "e15e2c0940ac6df622ccbfc1525cf49588838e4f88234078c10a9129bdfaef1e",
+      "source_file": "tests/fixtures/musicxml/metamorphic_tied.musicxml",
+      "source_sha256": "0a373c2da9328af71a8d9a8c9dcb17d18fe59d8dc124dc6a854eff41f2189a44",
+      "version": "4.7.4"
+    },
+    {
+      "expected": "success",
+      "expected_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "export_exit_code": 0,
+      "format": "musicxml",
+      "output_file": "musescore-4.7.4-roundtrip-supported_basic.musicxml",
+      "output_sha256": "e6af1f610580baa3c6a588d738a7aeb690cfd19f684a1dbaa6cc1d91c681a39f",
+      "producer": "MuseScore Studio",
+      "producer_class": "notation-application",
+      "producer_license": "GPL-3.0-only (external exporter only)",
+      "root_member": null,
+      "root_sha256": "e6af1f610580baa3c6a588d738a7aeb690cfd19f684a1dbaa6cc1d91c681a39f",
+      "score_license": "CC0-1.0",
+      "semantic": {
+        "chords": [
+          {
+            "onset": [
+              0,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              7
+            ],
+            "root_pc": 0,
+            "symbol": "C"
+          },
+          {
+            "onset": [
+              4,
+              1
+            ],
+            "pitch_classes": [
+              2,
+              5,
+              7,
+              11
+            ],
+            "root_pc": 7,
+            "symbol": "G7"
+          }
+        ],
+        "duration_beats": [
+          8,
+          1
+        ],
+        "key": "key-signature:fifths=0;mode=unprovided",
+        "license": "CC0-1.0",
+        "notes": [
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 60,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              3,
+              1
+            ],
+            "onset": [
+              2,
+              1
+            ],
+            "pitch": 62,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              5,
+              1
+            ],
+            "pitch": 63,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              6,
+              1
+            ],
+            "pitch": 66,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 96.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Importer Etude",
+        "warning_codes": [
+          "KEY_MODE_UNPROVIDED"
+        ]
+      },
+      "semantic_sha256": "c0595f9b1fa6d8b166e53e17c4c7910e4cc0ea250652e2ea7b84c2e9fdb2e24a",
+      "source_file": "tests/fixtures/musicxml/supported_basic.musicxml",
+      "source_sha256": "a57887bc0373babb8029ef0316e4f6ab91e980576bf67273dabecdd626126984",
+      "version": "4.7.4"
+    },
+    {
+      "expected": "success",
+      "expected_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "export_exit_code": 134,
+      "format": "musicxml",
+      "output_file": "musescore-4.7.4-roundtrip-supported_harmonies.musicxml",
+      "output_sha256": "8bf3826a2948d0a7afff5bb79f258f5ccc1686d8949e254e0700548390ed5edd",
+      "producer": "MuseScore Studio",
+      "producer_class": "notation-application",
+      "producer_license": "GPL-3.0-only (external exporter only)",
+      "root_member": null,
+      "root_sha256": "8bf3826a2948d0a7afff5bb79f258f5ccc1686d8949e254e0700548390ed5edd",
+      "score_license": "CC0-1.0",
+      "semantic": {
+        "chords": [
+          {
+            "onset": [
+              0,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              7
+            ],
+            "root_pc": 0,
+            "symbol": "C"
+          },
+          {
+            "onset": [
+              4,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              9
+            ],
+            "root_pc": 9,
+            "symbol": "Am"
+          },
+          {
+            "onset": [
+              8,
+              1
+            ],
+            "pitch_classes": [
+              2,
+              5,
+              7,
+              11
+            ],
+            "root_pc": 7,
+            "symbol": "G7"
+          },
+          {
+            "onset": [
+              12,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              5,
+              9
+            ],
+            "root_pc": 5,
+            "symbol": "Fmaj7"
+          }
+        ],
+        "duration_beats": [
+          16,
+          1
+        ],
+        "key": "key-signature:fifths=0;mode=unprovided",
+        "license": "CC0-1.0",
+        "notes": [
+          {
+            "duration": [
+              4,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 60,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              4,
+              1
+            ],
+            "onset": [
+              4,
+              1
+            ],
+            "pitch": 69,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              4,
+              1
+            ],
+            "onset": [
+              8,
+              1
+            ],
+            "pitch": 67,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              4,
+              1
+            ],
+            "onset": [
+              12,
+              1
+            ],
+            "pitch": 65,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 100.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Harmony Etude",
+        "warning_codes": [
+          "KEY_MODE_UNPROVIDED"
+        ]
+      },
+      "semantic_sha256": "b2a34e58d38ef9fda6979aa4e6617d0187bcf7bb43730e20b2a79a38cf397647",
+      "source_file": "tests/fixtures/musicxml/supported_harmonies.musicxml",
+      "source_sha256": "da3fd13922aca9b5babb15090259350bd8f5d8f1089b7d6f50e6c476029e3a06",
+      "version": "4.7.4"
+    },
+    {
+      "expected": "success",
+      "expected_warnings": [],
+      "export_exit_code": 0,
+      "format": "musicxml",
+      "output_file": "musescore-4.7.4-roundtrip-supported_minor.musicxml",
+      "output_sha256": "cd14071776a8242e179e03a43881e169a9a9b9b593ef2b3eb7d14ac7216440ed",
+      "producer": "MuseScore Studio",
+      "producer_class": "notation-application",
+      "producer_license": "GPL-3.0-only (external exporter only)",
+      "root_member": null,
+      "root_sha256": "cd14071776a8242e179e03a43881e169a9a9b9b593ef2b3eb7d14ac7216440ed",
+      "score_license": "CC-BY-4.0",
+      "semantic": {
+        "chords": [
+          {
+            "onset": [
+              0,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              3,
+              7
+            ],
+            "root_pc": 0,
+            "symbol": "Cm"
+          }
+        ],
+        "duration_beats": [
+          4,
+          1
+        ],
+        "key": "Cm",
+        "license": "CC-BY-4.0",
+        "notes": [
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 60,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              1,
+              1
+            ],
+            "pitch": 61,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              2,
+              1
+            ],
+            "pitch": 63,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              3,
+              1
+            ],
+            "pitch": 67,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 80.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Minor Etude",
+        "warning_codes": []
+      },
+      "semantic_sha256": "4cbbdf6d963d20973596343a4c4eac247aca1d772a89344da0bda1d082822376",
+      "source_file": "tests/fixtures/musicxml/supported_minor.musicxml",
+      "source_sha256": "15258da224e810099d62aa3a425cf56ec7cacb34eea5ca5ac551e4273a829846",
+      "version": "4.7.4"
+    },
+    {
+      "expected": "success",
+      "expected_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "export_exit_code": 0,
+      "format": "musicxml",
+      "output_file": "musescore-4.7.4-roundtrip-supported_tie_continue.musicxml",
+      "output_sha256": "97ab1ad060d7eff3e967d6e9d2dd8fd0d912df1e1943275f51b2d4ad9e959128",
+      "producer": "MuseScore Studio",
+      "producer_class": "notation-application",
+      "producer_license": "GPL-3.0-only (external exporter only)",
+      "root_member": null,
+      "root_sha256": "97ab1ad060d7eff3e967d6e9d2dd8fd0d912df1e1943275f51b2d4ad9e959128",
+      "score_license": "CC0-1.0",
+      "semantic": {
+        "chords": [
+          {
+            "onset": [
+              0,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              7
+            ],
+            "root_pc": 0,
+            "symbol": "C"
+          }
+        ],
+        "duration_beats": [
+          12,
+          1
+        ],
+        "key": "key-signature:fifths=0;mode=unprovided",
+        "license": "CC0-1.0",
+        "notes": [
+          {
+            "duration": [
+              12,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 60,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 60.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Tie Etude",
+        "warning_codes": [
+          "KEY_MODE_UNPROVIDED"
+        ]
+      },
+      "semantic_sha256": "91b94992234b435f57866d76bd6fe8f04f1b6e48bb1bfb28908c090d74ca9ce5",
+      "source_file": "tests/fixtures/musicxml/supported_tie_continue.musicxml",
+      "source_sha256": "44dc88b64a14e2afadd557d0c57da0ecdf2525defea8b964ff3b4e51169d74fe",
+      "version": "4.7.4"
+    },
+    {
+      "expected": "success",
+      "expected_warnings": [
+        "MXL_ROOTFILE_MEDIA_TYPE_UNPROVIDED",
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "export_exit_code": 0,
+      "format": "mxl",
+      "output_file": "musescore-4.7.4-roundtrip-supported_basic.mxl",
+      "output_sha256": "9fbca0cd86c4110a24a51c46a7982859a3d39e1cadfb50d5ad31a479fafe0cc1",
+      "producer": "MuseScore Studio",
+      "producer_class": "notation-application",
+      "producer_license": "GPL-3.0-only (external exporter only)",
+      "root_member": "score.xml",
+      "root_sha256": "e6af1f610580baa3c6a588d738a7aeb690cfd19f684a1dbaa6cc1d91c681a39f",
+      "score_license": "CC0-1.0",
+      "semantic": {
+        "chords": [
+          {
+            "onset": [
+              0,
+              1
+            ],
+            "pitch_classes": [
+              0,
+              4,
+              7
+            ],
+            "root_pc": 0,
+            "symbol": "C"
+          },
+          {
+            "onset": [
+              4,
+              1
+            ],
+            "pitch_classes": [
+              2,
+              5,
+              7,
+              11
+            ],
+            "root_pc": 7,
+            "symbol": "G7"
+          }
+        ],
+        "duration_beats": [
+          8,
+          1
+        ],
+        "key": "key-signature:fifths=0;mode=unprovided",
+        "license": "CC0-1.0",
+        "notes": [
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 60,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              3,
+              1
+            ],
+            "onset": [
+              2,
+              1
+            ],
+            "pitch": 62,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              5,
+              1
+            ],
+            "pitch": 63,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              6,
+              1
+            ],
+            "pitch": 66,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 96.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Importer Etude",
+        "warning_codes": [
+          "MXL_ROOTFILE_MEDIA_TYPE_UNPROVIDED",
+          "KEY_MODE_UNPROVIDED"
+        ]
+      },
+      "semantic_sha256": "5e1253e8f0a3deb070e880b263d4e027daff4a50e6033216e3bf18a27f4dd985",
+      "source_file": "tests/fixtures/musicxml/supported_basic.musicxml",
+      "source_sha256": "a57887bc0373babb8029ef0316e4f6ab91e980576bf67273dabecdd626126984",
       "version": "4.7.4"
     }
   ],
-  "note": "Files are unedited exporter output. Success is observed only for the exact fixture and version; the expected field also preserves negative notation-application evidence. GPL software is not a project dependency.",
-  "schema": "fretsure-producer-fixtures@0.2.0"
+  "note": "Files are unedited exporter output. Success and exact semantics are observed only for each frozen artifact/version; no broader producer or MusicXML compatibility is implied. GPL software is an external exporter, not a project dependency.",
+  "schema": "fretsure-producer-fixtures@0.3.0"
 }

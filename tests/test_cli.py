@@ -297,3 +297,53 @@ def test_real_musicxml_fixture_cli_is_deterministic(
     assert first.err == second.err == ""
     assert first_trace == second_trace
     assert "effective tempo : 96 bpm" in first.out
+
+
+@pytest.mark.parametrize(
+    ("filename", "warning_codes"),
+    [
+        ("musescore-4.7.4.musicxml", ["KEY_MODE_UNPROVIDED"]),
+        (
+            "musescore-4.7.4-roundtrip-supported_basic.mxl",
+            ["MXL_ROOTFILE_MEDIA_TYPE_UNPROVIDED", "KEY_MODE_UNPROVIDED"],
+        ),
+    ],
+)
+def test_frozen_musescore_cli_is_loss_aware_and_deterministic(
+    filename: str,
+    warning_codes: list[str],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fixture = Path(__file__).parent / "fixtures" / "producers" / filename
+    trace_path = tmp_path / f"{fixture.name}.trace.jsonl"
+    argv = [
+        str(fixture),
+        "--n",
+        "1",
+        "--max-iters",
+        "0",
+        "--no-critic",
+        "--trace-jsonl",
+        str(trace_path),
+    ]
+
+    first_code = main(argv)
+    first = capsys.readouterr()
+    first_trace = trace_path.read_bytes()
+    second_code = main(argv)
+    second = capsys.readouterr()
+    second_trace = trace_path.read_bytes()
+
+    assert first_code == second_code == 0
+    assert first.out == second.out
+    assert first.err == second.err == ""
+    assert first_trace == second_trace
+    assert "IMPORTER          : musicxml@0.3.0" in first.out
+    assert "key / meter     : key-signature:fifths=0;mode=unprovided / 4/4" in first.out
+    assert "key / meter     : C /" not in first.out
+    assert "key / meter     : C major /" not in first.out
+    assert "key / meter     : Am /" not in first.out
+    assert "key / meter     : A minor /" not in first.out
+    for warning_code in warning_codes:
+        assert warning_code in first.out

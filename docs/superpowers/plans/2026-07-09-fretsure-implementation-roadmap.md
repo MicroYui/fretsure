@@ -4,6 +4,13 @@
 >
 > **真源**：设计 spec `docs/superpowers/specs/2026-07-09-fretsure-design.md`（§0–§15）。本路线图**不新增设计决策**，只把 spec 落成可执行的里程碑序列与验收门；任何冲突以 spec 为准。
 
+> **当前执行位置（2026-07-17）**：Plan 1–5、MusicXML-first、Oracle 0.2、安全 MXL、Plan 6A 与
+> [`producer-driven MusicXML/IR`](2026-07-16-producer-driven-musicxml-ir.md) 已各自闭门，最终门见
+> [`PRODUCER_MUSICXML_ACCEPTANCE.md`](../../PRODUCER_MUSICXML_ACCEPTANCE.md)。本阶段提交推送并核对
+> local/remote SHA 后进入 MIDI，MIDI 闭门后再进入 benchmark v2。下面早期章节中的
+> “Plan 1→2 补 MIDI”与“下一步写 Plan 1”只保留为
+> 初始路线历史，不再控制当前顺序。真人 gold/calibration 继续限制经验主张，但不阻塞这三个软件阶段。
+
 **Goal（一句话）**：把一首歌的符号音乐内容编配成「人手可证明弹得出来」的吉他谱——LLM 提议 → 确定性可弹性 oracle 逐音硬门 + 定位化诊断 → verifier-guided 自动修复 → checker 打分 benchmark。
 
 **Architecture（范式）**：**oracle 当环境、LLM 当策略（policy）**。确定性 oracle / 指法求解器 / 乐理分析 / 忠实度 diff 是一套工具与环境；LLM 驱动「规划 → 用 edit-DSL 编辑 → 读定位化诊断 → 定点编辑 → 重查到不动点」的自纠回路。深度不在「图里有 LLM」，在「每个 agent 能力都用 leave-one-out 消融证明它挪动了 checker 打分的指标，否则砍掉并公开」。
@@ -73,6 +80,7 @@ class Meta:
     key: str; time_sig: tuple[int, int]; tempo_bpm: float
     source: str              # provenance
     title: str; license: str
+    duration_beats: Fraction | None = None  # 显式曲尾；兼容旧 positional constructors
 
 @dataclass(frozen=True)
 class MusicIR:
@@ -448,7 +456,8 @@ def feasible_fingerings(frame: "Frame", profile: Profile) -> list["FingerAssignm
 
 ### D.3 诚实延后目录（这些是「延后」不是「简化」，前置一满足即即时补齐）
 - 后 6 个 Plan 的**逐行 bite-sized TDD 代码**——被类型依赖强制，其前置 Plan 锁定类型后即时撰写（各自独立 plan 文件）。
-- MIDI 解析 / drop-D / 变调夹变体（Plan 1→2 间补）。
+- MIDI 解析 / drop-D / 变调夹变体（初始设想为 Plan 1→2；当前冻结为 producer-driven
+  MusicXML/IR 闭门后的独立计划）。
 - OR-Tools CP-SAT（仅自研 DP 成瓶颈才引）。
 - 音频前端 mp3→谱（best-effort/v2，Plan 6）。
 - tier 具体参数校准（需 design partner，Plan 5 前）。
@@ -506,6 +515,10 @@ Plan 1 (oracle+验证台) ──┬─→ Plan 2 (solver+M0) ──→ Plan 3 (a
 
 ## 执行入口
 
-- **下一步**：写 **Plan 1「核心 + Oracle」的详细 bite-sized TDD 计划**（`docs/superpowers/plans/2026-07-09-plan-1-core-oracle.md`），因为它是地基且类型现在就能锁定。
-- 后续每个 Plan 在其前置锁定类型后，用 `superpowers:writing-plans` 即时写详细 TDD 计划，用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 执行，Plan 间人审 checkpoint。
+- **当前下一步**：本 producer-driven MusicXML/IR 提交推送并核对 local/remote SHA 后，写/执行 MIDI
+  详细计划；MIDI 闭门后才写 benchmark v2。任何 MIDI 前端新视觉仍先与用户确认，沿用已冻结的
+  “古典制琴工坊 × 验证仪器”基线。
+- 每个阶段在前置提交的 local/remote SHA 一致后才开启；阶段末做独立 scope/security/consumer 审计。
+  用户审计只在新视觉、音频/听感、真人演奏或 calibration gate 出现时暂停，不把普通代码审查误写成
+  用户真人阻塞。
 - **本路线图是活文档**：Plan 落地后如共享契约（§B）需要改名/改签名，先改 §B 再改下游，保持跨 Plan 类型一致性。

@@ -16,6 +16,7 @@ from fretsure.application import (
     CheckOptions,
     RenderOptions,
     SolveOptions,
+    arrange_outcome_to_wire,
     arrange_score_bytes,
     capabilities,
     check_tab_json,
@@ -38,6 +39,10 @@ from fretsure.pipeline import PipelineOptions, run_pipeline
 from fretsure.tab import tab_to_json
 
 _BASIC = Path("tests/fixtures/musicxml/supported_basic.musicxml")
+_PRODUCERS = Path("tests/fixtures/producers")
+_MUSESCORE_XML = _PRODUCERS / "musescore-4.7.4.musicxml"
+_MUSESCORE_MXL = _PRODUCERS / "musescore-4.7.4-roundtrip-supported_basic.mxl"
+_UNPROVIDED_KEY = "key-signature:fifths=0;mode=unprovided"
 
 
 def _application_error(call: Any) -> ApplicationError:
@@ -265,6 +270,86 @@ def test_real_arrangement_matches_the_existing_pipeline_and_pins_model_once() ->
     assert tab_to_json(outcome.tab) == tab_to_json(direct.arrangement.tab)
     assert outcome.oracle.verdict == direct.arrangement.oracle.verdict  # type: ignore[union-attr]
     assert outcome.faithfulness == direct.faithfulness
+
+
+@pytest.mark.parametrize(
+    ("score", "source_format", "warning_codes", "root_member"),
+    [
+        (
+            _MUSESCORE_XML,
+            "musicxml",
+            ["KEY_MODE_UNPROVIDED"],
+            None,
+        ),
+        (
+            _MUSESCORE_MXL,
+            "mxl",
+            ["MXL_ROOTFILE_MEDIA_TYPE_UNPROVIDED", "KEY_MODE_UNPROVIDED"],
+            "score.xml",
+        ),
+    ],
+)
+def test_frozen_musescore_inputs_cross_the_application_seam_deterministically(
+    score: Path,
+    source_format: str,
+    warning_codes: list[str],
+    root_member: str | None,
+) -> None:
+    options = ArrangeOptions(n=1, max_iters=0, use_critic=False)
+
+    first = arrange_score_bytes(
+        score.read_bytes(),
+        filename=score.name,
+        options=options,
+        llm=ConstantLLM("noop"),
+    )
+    second = arrange_score_bytes(
+        score.read_bytes(),
+        filename=score.name,
+        options=options,
+        llm=ConstantLLM("noop"),
+    )
+    first_wire = arrange_outcome_to_wire(first)
+    second_wire = arrange_outcome_to_wire(second)
+
+    assert first_wire == second_wire
+    assert first.imported.ir.meta.key == _UNPROVIDED_KEY
+    assert [item.code.value for item in first.imported.warnings] == warning_codes
+    assert first_wire["score"]["key"] == _UNPROVIDED_KEY
+    assert first_wire["score"]["key"] not in {"C", "C major", "Am", "A minor"}
+    assert first_wire["source"]["format"] == source_format
+    assert first_wire["source"]["root_member"] == root_member
+    assert [item["code"] for item in first_wire["source"]["warnings"]] == warning_codes
+    assert first_wire["source"]["importer_version"] == "musicxml@0.3.0"
+    assert first_wire["stamps"]["importer_version"] == "musicxml@0.3.0"
+
+
+@pytest.mark.integration
+def test_real_proxy_arranges_frozen_musescore_and_stamps_every_contract() -> None:
+    import os
+
+    if not os.environ.get("ANTHROPIC_BASE_URL"):
+        pytest.skip("no local LLM proxy configured")
+    from fretsure.llm.client import ProxyLLM
+
+    outcome = arrange_score_bytes(
+        _MUSESCORE_XML.read_bytes(),
+        filename=_MUSESCORE_XML.name,
+        options=ArrangeOptions(n=1, max_iters=0, use_critic=False),
+        llm=ProxyLLM(),
+    )
+    wire = arrange_outcome_to_wire(outcome)
+
+    assert outcome.status in {"tab_produced", "no_fingering_within_budget"}
+    assert wire["score"]["key"] == _UNPROVIDED_KEY
+    assert [item["code"] for item in wire["source"]["warnings"]] == [
+        "KEY_MODE_UNPROVIDED"
+    ]
+    assert wire["model"] == {"model_id": "gpt-5.6-sol"}
+    assert wire["stamps"]["model_id"] == "gpt-5.6-sol"
+    assert wire["stamps"]["importer_version"] == "musicxml@0.3.0"
+    assert wire["stamps"]["oracle_checker_version"] == "oracle@0.2.0"
+    assert wire["stamps"]["profile_version"] == "median@0.1"
 
 
 def test_arrange_outcome_is_frozen_and_trace_is_an_immutable_snapshot() -> None:

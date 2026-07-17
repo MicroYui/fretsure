@@ -1,4 +1,5 @@
 from fractions import Fraction as F
+from pathlib import Path
 
 import pytest
 
@@ -9,6 +10,7 @@ from fretsure.agent.arranger import (
     propose_arrangement,
 )
 from fretsure.geometry import STANDARD_TUNING
+from fretsure.importers import ImportSuccess, import_musicxml
 from fretsure.ir import ChordSymbol, IRInputError, Meta, MusicIR, Note
 from fretsure.llm.client import ConstantLLM, FakeLLM
 from fretsure.oracle.input import OracleInputCode, SolverInputError
@@ -31,6 +33,8 @@ _VALID = (
     '{"onset":"0","duration":"1","pitch":47,"voice":"bass"},'
     '{"onset":"0","duration":"1","pitch":55,"voice":"harmony"}]}'
 )
+
+_PRODUCERS = Path(__file__).parents[1] / "fixtures" / "producers"
 
 
 def test_parses_valid_arrangement_with_melody() -> None:
@@ -104,6 +108,28 @@ def test_prompt_playable_range_accounts_for_capo() -> None:
     assert "Playable range on this tuning: MIDI 42-88" in llm.calls[0]["user"]
     assert "source tempo 90.0 BPM" in llm.calls[0]["user"]
     assert "Effective arrangement tempo: 72.0 BPM" in llm.calls[0]["user"]
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "musescore-4.7.4.musicxml",
+        "musescore-4.7.4-roundtrip-supported_basic.mxl",
+    ],
+)
+def test_frozen_musescore_prompt_preserves_unprovided_mode(filename: str) -> None:
+    imported = import_musicxml(_PRODUCERS / filename)
+    assert isinstance(imported, ImportSuccess)
+    llm = FakeLLM([_VALID])
+
+    propose_arrangement(imported.ir, ArrangeGoal(), llm)
+
+    prompt = llm.calls[0]["user"]
+    assert "Key key-signature:fifths=0;mode=unprovided, 4/4" in prompt
+    assert "Key C," not in prompt
+    assert "Key C major," not in prompt
+    assert "Key Am," not in prompt
+    assert "Key A minor," not in prompt
 
 
 def test_direct_proposer_validates_before_llm_or_min_tuning() -> None:

@@ -37,14 +37,15 @@ from fretsure.importers.contracts import (
     SourceLocation,
     snapshot_import_limits,
 )
-from fretsure.ir import validate_ir
+from fretsure.ir import IRInputError, snapshot_music_ir, validate_ir
 
-IMPORTER_VERSION = "musicxml@0.2.0"
+IMPORTER_VERSION = "musicxml@0.3.0"
 
 _MUSICXML_NAMESPACE = "http://www.musicxml.org/ns/musicxml"
 _SUPPORTED_EXTENSIONS = frozenset({".musicxml", ".xml", ".mxl"})
 _FILE_READ_CHUNK = 64 * 1024
 _MAX_SOURCE_FILENAME_BYTES = 1024
+_MAX_ADAPTER_VALIDATION_DIAGNOSTICS = 256
 
 
 class _IterParse(Protocol):
@@ -373,15 +374,92 @@ def _validate_envelope(root: ET.Element) -> ImportDiagnostic | None:
     return None
 
 
-def _canonical_xml(root: ET.Element) -> bytes:
-    # Envelope validation has already proved every element is in the same
-    # supported namespace.  Removing that optional namespace gives music21 a
-    # producer-independent canonical form, while serialization drops DTDs,
-    # entity declarations, comments and processing instructions.
+def _strip_namespaces(root: ET.Element) -> None:
+    """Normalize the already-validated optional MusicXML namespace in place."""
+
     for element in root.iter():
         _namespace, local = _split_tag(element.tag)
         element.tag = local
-    return cast(bytes, ET.tostring(root, encoding="utf-8", xml_declaration=True))
+
+
+def _append_text(parent: ET.Element, tag: str, source: ET.Element | None) -> None:
+    if source is None:
+        return
+    child = ET.SubElement(parent, tag)
+    child.text = (source.text or "").strip(" \t\r\n")
+
+
+def _music21_adapter_xml(root: ET.Element, note_part_id: str) -> bytes:
+    """Build the minimum preflight-approved event tree handed to music21.
+
+    Raw preflight remains the semantic and diagnostic authority.  Metadata,
+    visual annotations, instruments, credits, and ignored notation never need
+    to enter the third-party parser and are intentionally absent here.
+    """
+
+    adapter_root = ET.Element("score-partwise", {"version": root.get("version", "4.0")})
+    part_list = ET.SubElement(adapter_root, "part-list")
+    score_part = ET.SubElement(part_list, "score-part", {"id": "P1"})
+    part_name = ET.SubElement(score_part, "part-name")
+    part_name.text = "Fretsure adapter input"
+    adapter_part = ET.SubElement(adapter_root, "part", {"id": "P1"})
+
+    source_parts = [
+        part
+        for part in root.findall("part")
+        if (part.get("id") or "") == note_part_id
+        and any(note.find("pitch") is not None for note in part.iter("note"))
+    ]
+    if len(source_parts) != 1:
+        raise ValueError("preflight note part is not uniquely available for adapter input")
+    source_part = source_parts[0]
+
+    for measure_index, source_measure in enumerate(source_part.findall("measure"), start=1):
+        adapter_measure = ET.SubElement(
+            adapter_part,
+            "measure",
+            {"number": str(measure_index)},
+        )
+        for source_child in source_measure:
+            if source_child.tag == "attributes":
+                divisions = source_child.findall("divisions")
+                if divisions:
+                    adapter_attributes = ET.SubElement(adapter_measure, "attributes")
+                    _append_text(adapter_attributes, "divisions", divisions[0])
+            elif source_child.tag == "harmony":
+                adapter_harmony = ET.SubElement(adapter_measure, "harmony")
+                source_root = source_child.find("root")
+                if source_root is not None:
+                    adapter_root_note = ET.SubElement(adapter_harmony, "root")
+                    _append_text(adapter_root_note, "root-step", source_root.find("root-step"))
+                    _append_text(
+                        adapter_root_note,
+                        "root-alter",
+                        source_root.find("root-alter"),
+                    )
+                _append_text(adapter_harmony, "kind", source_child.find("kind"))
+            elif source_child.tag == "note":
+                adapter_note = ET.SubElement(adapter_measure, "note")
+                source_pitch = source_child.find("pitch")
+                if source_pitch is not None:
+                    adapter_pitch = ET.SubElement(adapter_note, "pitch")
+                    for pitch_tag in ("step", "alter", "octave"):
+                        _append_text(adapter_pitch, pitch_tag, source_pitch.find(pitch_tag))
+                elif source_child.find("rest") is not None:
+                    ET.SubElement(adapter_note, "rest")
+                _append_text(adapter_note, "duration", source_child.find("duration"))
+
+                sound_ties = source_child.findall("tie")
+                tie_sources = sound_ties or source_child.findall("notations/tied")
+                for source_tie in tie_sources:
+                    tie_type = source_tie.get("type")
+                    if tie_type is not None:
+                        ET.SubElement(adapter_note, "tie", {"type": tie_type})
+
+    return cast(
+        bytes,
+        ET.tostring(adapter_root, encoding="utf-8", xml_declaration=True),
+    )
 
 
 def _import_musicxml_bytes_snapshot(
@@ -425,7 +503,7 @@ def _import_musicxml_bytes_snapshot(
     envelope_error = _validate_envelope(root)
     if envelope_error is not None:
         return ImportFailure((*container_warnings, envelope_error))
-    canonical = _canonical_xml(root)
+    _strip_namespaces(root)
     preflight = preflight_musicxml(root, limits)
     errors = tuple(
         diagnostic
@@ -441,6 +519,19 @@ def _import_musicxml_bytes_snapshot(
                 _diagnostic(
                     ImportCode.ADAPTER_ERROR,
                     "preflight produced no normalized metadata despite having no errors",
+                ),
+            )
+        )
+
+    try:
+        canonical = _music21_adapter_xml(root, preflight.metadata.note_part_id)
+    except (TypeError, ValueError) as exc:
+        return ImportFailure(
+            (
+                *container_warnings,
+                _diagnostic(
+                    ImportCode.ADAPTER_ERROR,
+                    f"cannot construct bounded MusicXML adapter input: {type(exc).__name__}",
                 ),
             )
         )
@@ -471,19 +562,56 @@ def _import_musicxml_bytes_snapshot(
         return ImportFailure(
             (*container_warnings, _diagnostic(ImportCode.ADAPTER_ERROR, str(exc)))
         )
+    except Exception as exc:
+        return ImportFailure(
+            (
+                *container_warnings,
+                _diagnostic(
+                    ImportCode.ADAPTER_ERROR,
+                    f"unexpected MusicXML adapter failure: {type(exc).__name__}",
+                ),
+            )
+        )
+
+    try:
+        ir = snapshot_music_ir(ir)
+    except IRInputError as exc:
+        return ImportFailure(
+            (
+                *container_warnings,
+                _diagnostic(
+                    ImportCode.IR_INVALID,
+                    f"{exc.field}: {exc.detail}",
+                    SourceLocation(element="MusicIR"),
+                ),
+            )
+        )
 
     violations = validate_ir(ir)
     if violations:
-        return ImportFailure(
-            container_warnings
-            + tuple(
-                _diagnostic(
-                    ImportCode.IR_INVALID,
-                    f"{violation.kind}: {violation.detail}",
-                    SourceLocation(element="MusicIR"),
-                )
-                for violation in violations
+        violation_diagnostics = tuple(
+            _diagnostic(
+                ImportCode.IR_INVALID,
+                f"{violation.kind}: {violation.detail}",
+                SourceLocation(element="MusicIR"),
             )
+            for violation in violations[:_MAX_ADAPTER_VALIDATION_DIAGNOSTICS]
+        )
+        overflow = (
+            (
+                _diagnostic(
+                    ImportCode.INPUT_LIMIT_EXCEEDED,
+                    "MusicIR validation produced more than "
+                    f"{_MAX_ADAPTER_VALIDATION_DIAGNOSTICS} diagnostics; "
+                    "remaining diagnostics were omitted",
+                    SourceLocation(element="diagnostics"),
+                ),
+            )
+            if len(violations) > _MAX_ADAPTER_VALIDATION_DIAGNOSTICS
+            else ()
+        )
+        return ImportFailure(
+            container_warnings + violation_diagnostics + overflow
         )
     warnings = container_warnings + tuple(
         diagnostic

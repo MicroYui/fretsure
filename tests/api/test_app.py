@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import stat
 import zipfile
@@ -30,12 +31,17 @@ from fretsure.application import (
     check_tab_json,
     solve_target_json,
 )
+from fretsure.importers import IMPORTER_VERSION
 from fretsure.llm.client import CONSTANT_LLM_MODEL_ID, ConstantLLM
 from fretsure.tab import MAX_TAB_JSON_BYTES, tab_to_json
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "musicxml"
+PRODUCER_FIXTURES = Path(__file__).parents[1] / "fixtures" / "producers"
 BASIC = FIXTURES / "supported_basic.musicxml"
 LONG = FIXTURES / "metamorphic_long.musicxml"
+MUSESCORE_XML = PRODUCER_FIXTURES / "musescore-4.7.4.musicxml"
+MUSESCORE_MXL = PRODUCER_FIXTURES / "musescore-4.7.4-roundtrip-supported_basic.mxl"
+UNPROVIDED_KEY = "key-signature:fifths=0;mode=unprovided"
 XML_MEDIA_TYPE = "application/vnd.recordare.musicxml+xml"
 TEST_BASE_URL = "http://127.0.0.1"
 
@@ -205,6 +211,8 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
     assert body["api_version"] == API_VERSION
     assert body["service_version"] == "fretsure-service@0.1.0"
     assert body["trace_schema_version"] == "agent-trace@0.1.0"
+    assert body["package_version"] == "0.4.0"
+    assert body["stamps"]["importer_version"] == IMPORTER_VERSION == "musicxml@0.3.0"
     assert body["controls"]["arrange"]["n"] == {"min": 1, "max": 8}
     assert body["controls"]["arrange"]["max_iters"] == {"min": 0, "max": 16}
     assert body["controls"]["arrange"]["tempo_bpm"] == {
@@ -244,6 +252,8 @@ def test_arrangement_endpoint_matches_application_service(client: TestClient) ->
     assert response.json() == expected
     assert response.json()["playability"] is not None
     assert response.json()["faithfulness"] is not None
+    assert response.json()["source"]["importer_version"] == IMPORTER_VERSION
+    assert response.json()["stamps"]["importer_version"] == IMPORTER_VERSION
 
 
 def test_arrangement_response_is_byte_deterministic(client: TestClient) -> None:
@@ -251,6 +261,78 @@ def test_arrangement_response_is_byte_deterministic(client: TestClient) -> None:
     second = _arrangement_request(client)
     assert first.status_code == second.status_code == 200
     assert first.content == second.content
+
+
+@pytest.mark.parametrize(
+    ("score", "media_type", "source_format", "warning_codes", "root_member"),
+    [
+        (
+            MUSESCORE_XML,
+            XML_MEDIA_TYPE,
+            "musicxml",
+            ["KEY_MODE_UNPROVIDED"],
+            None,
+        ),
+        (
+            MUSESCORE_MXL,
+            "application/vnd.recordare.musicxml",
+            "mxl",
+            ["MXL_ROOTFILE_MEDIA_TYPE_UNPROVIDED", "KEY_MODE_UNPROVIDED"],
+            "score.xml",
+        ),
+    ],
+)
+def test_frozen_musescore_raw_uploads_preserve_unknown_mode_and_provenance(
+    client: TestClient,
+    score: Path,
+    media_type: str,
+    source_format: str,
+    warning_codes: list[str],
+    root_member: str | None,
+) -> None:
+    def request() -> Response:
+        return cast(
+            Response,
+            client.post(
+                "/api/v1/arrangements",
+                params={
+                    "filename": score.name,
+                    "engine": "offline",
+                    "n": "1",
+                    "max_iters": "0",
+                    "use_critic": "false",
+                },
+                content=score.read_bytes(),
+                headers={"content-type": media_type},
+            ),
+        )
+
+    first = request()
+    second = request()
+    assert first.status_code == second.status_code == 200
+    assert first.content == second.content
+
+    body = first.json()
+    raw = score.read_bytes()
+    expected_root = raw
+    if root_member is not None:
+        with zipfile.ZipFile(BytesIO(raw)) as archive:
+            expected_root = archive.read(root_member)
+    assert body["score"]["key"] == UNPROVIDED_KEY
+    assert body["score"]["key"] not in {"C", "C major", "Am", "A minor"}
+    assert body["source"]["filename"] == score.name
+    assert body["source"]["format"] == source_format
+    assert body["source"]["root_member"] == root_member
+    assert body["source"]["raw_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert body["source"]["root_sha256"] == hashlib.sha256(expected_root).hexdigest()
+    assert body["source"]["container_version"] == (
+        "mxl-container@0.1.0" if source_format == "mxl" else None
+    )
+    if source_format == "mxl":
+        assert body["source"]["raw_sha256"] != body["source"]["root_sha256"]
+    assert [item["code"] for item in body["source"]["warnings"]] == warning_codes
+    assert body["source"]["importer_version"] == IMPORTER_VERSION
+    assert body["stamps"]["importer_version"] == IMPORTER_VERSION
 
 
 def test_arrangement_endpoint_accepts_safe_mxl_bytes(client: TestClient) -> None:

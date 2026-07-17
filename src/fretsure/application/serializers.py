@@ -31,6 +31,7 @@ from fretsure.application.target import (
     TARGET_INPUT_SCHEMA_VERSION,
 )
 from fretsure.geometry import STANDARD_TUNING
+from fretsure.importers import IMPORTER_VERSION
 from fretsure.importers.contracts import ImportDiagnostic, ImportSuccess, SourceLocation
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION, FaithfulnessGate
 from fretsure.oracle.core import CHECKER_VERSION, OracleResult
@@ -120,6 +121,8 @@ def _import_diagnostic_wire(diagnostic: ImportDiagnostic) -> Wire:
 
 
 def _source_wire(imported: ImportSuccess) -> Wire:
+    if imported.importer_version != IMPORTER_VERSION:
+        raise _serialization_error("source.importer_version")
     provenance = imported.provenance
     return {
         "filename": None if provenance is None else provenance.source_filename,
@@ -430,6 +433,8 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
         raise _serialization_error("capabilities")
     try:
         profile = validated_profile_snapshot(MEDIAN_HAND)
+        stamps = _base_stamps(profile)
+        stamps["importer_version"] = IMPORTER_VERSION
         return {
             "service_version": value.service_version,
             "profile_registry_version": value.profile_registry_version,
@@ -488,7 +493,7 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
                     }
                 },
             },
-            "stamps": _base_stamps(profile),
+            "stamps": stamps,
             "implemented": [
                 "arrange_score_bytes",
                 "check_playability",

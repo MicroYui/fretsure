@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+import fretsure
 from fretsure.application import (
     ApplicationCode,
     ApplicationDiagnostic,
@@ -25,6 +26,7 @@ from fretsure.application import (
     solve_outcome_to_wire,
     solve_target_json,
 )
+from fretsure.importers import IMPORTER_VERSION
 from fretsure.llm.client import ConstantLLM
 from fretsure.solver.api import Infeasible
 from fretsure.tab import tab_to_json
@@ -79,6 +81,8 @@ def test_arrangement_wire_stamps_actual_model_and_all_public_contracts(
     assert stamps["fidelity_checker_version"] == "fidelity@0.2.0"
     assert stamps["target_input_schema_version"] == "target-input@0.1.0"
     assert stamps["trace_schema_version"] == "agent-trace@0.1.0"
+    assert stamps["package_version"] == fretsure.__version__ == "0.4.0"
+    assert stamps["importer_version"] == IMPORTER_VERSION == "musicxml@0.3.0"
     assert len(str(stamps["profile_fingerprint"])) == 64
 
 
@@ -139,6 +143,8 @@ def test_check_solve_and_render_wires_share_canonical_tab() -> None:
     assert check_wire["status"] == "checked"
     assert check_wire["tab"] == solve_wire["tab"]
     assert check_wire["playability"] == solve_wire["playability"]
+    for wire in (solve_wire, check_wire):
+        assert "importer_version" not in wire["stamps"]  # type: ignore[operator]
 
     render = render_tab_json(tab_to_json(solve.tab), options=RenderOptions())
     render_wire = render_outcome_to_wire(render)
@@ -146,6 +152,7 @@ def test_check_solve_and_render_wires_share_canonical_tab() -> None:
     assert render_wire["tab"] == solve_wire["tab"]
     assert render_wire["format"] == "ascii"
     assert render_wire["content"] == solve_wire["ascii"]
+    assert "importer_version" not in render_wire["stamps"]  # type: ignore[operator]
 
 
 def test_not_found_wire_never_exposes_free_form_solver_reason(
@@ -180,6 +187,22 @@ def test_capabilities_wire_is_transport_neutral_and_honest() -> None:
     assert inputs["target_json"]["max_nodes"] == 250_000
     assert "render_audio" in wire["deferred"]  # type: ignore[operator]
     assert "render_audio" not in wire["implemented"]  # type: ignore[operator]
+    assert wire["stamps"]["package_version"] == "0.4.0"  # type: ignore[index]
+    assert wire["stamps"]["importer_version"] == IMPORTER_VERSION  # type: ignore[index]
+
+
+def test_arrangement_serializer_rejects_a_stale_importer_stamp() -> None:
+    outcome = arrange_score_bytes(
+        _BASIC.read_bytes(),
+        filename=_BASIC.name,
+        options=ArrangeOptions(n=1, max_iters=0, use_critic=False),
+        llm=ConstantLLM("noop"),
+    )
+    object.__setattr__(outcome.imported, "importer_version", "musicxml@stale")
+    with pytest.raises(ApplicationError) as caught:
+        arrange_outcome_to_wire(outcome)
+    assert caught.value.code is ApplicationCode.SERIALIZATION_FAILED
+    assert caught.value.path == "source.importer_version"
 
 
 def test_application_error_wire_contains_only_stable_fields() -> None:

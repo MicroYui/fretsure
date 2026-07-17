@@ -221,11 +221,11 @@ def snapshot_music_ir(value: object) -> MusicIR:
     tempo = meta_values["tempo_bpm"]
     if type(tempo) not in (int, float):
         raise IRInputError("meta.tempo_bpm", "must be an exact built-in int or float")
-    try:
-        normalized_tempo = float(cast(int | float, tempo))
-    except OverflowError:
-        normalized_tempo = math.inf
-    if not math.isfinite(normalized_tempo) or not 1.0 <= normalized_tempo <= 1_000.0:
+    exact_tempo = cast(int | float, tempo)
+    if not 1 <= exact_tempo <= 1_000:
+        raise IRInputError("meta.tempo_bpm", "must be finite and within 1..1000 BPM")
+    normalized_tempo = float(exact_tempo)
+    if not math.isfinite(normalized_tempo):
         raise IRInputError("meta.tempo_bpm", "must be finite and within 1..1000 BPM")
     duration = meta_values["duration_beats"]
     duration_snapshot = (

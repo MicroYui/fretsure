@@ -2,7 +2,15 @@ from fractions import Fraction as F
 
 import pytest
 
-from fretsure.ir import ChordSymbol, Meta, MusicIR, Note, validate_ir
+from fretsure.ir import (
+    ChordSymbol,
+    IRInputError,
+    Meta,
+    MusicIR,
+    Note,
+    snapshot_music_ir,
+    validate_ir,
+)
 
 
 def _meta() -> Meta:
@@ -16,6 +24,14 @@ def test_valid_ir_has_no_violations() -> None:
         meta=_meta(),
     )
     assert validate_ir(ir) == []
+
+
+@pytest.mark.parametrize("tempo", [1 << 4096, -(1 << 4096)])
+def test_snapshot_rejects_huge_exact_tempo_before_float_conversion(tempo: int) -> None:
+    ir = MusicIR((), (), Meta("C", (4, 4), tempo, "unit", "t", "PD"))
+
+    with pytest.raises(IRInputError, match="meta.tempo_bpm"):
+        snapshot_music_ir(ir)
 
 
 def test_nonpositive_duration_flagged() -> None:

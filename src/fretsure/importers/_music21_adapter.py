@@ -265,7 +265,8 @@ def music21_to_ir(
         )
     except Exception as exc:
         raise Music21AdapterError(
-            f"music21 rejected preflight-approved canonical XML: {type(exc).__name__}: {exc}"
+            "music21 rejected preflight-approved canonical XML: "
+            f"{type(exc).__name__}"
         ) from exc
 
     note_class = cast(type[object], note_module.Note)

@@ -61,16 +61,116 @@ def test_basic_score_maps_exactly_to_music_ir() -> None:
         duration_beats=Fraction(8),
     )
     assert result.ir.meta.duration_beats == Fraction(8)
-    assert result.importer_version == IMPORTER_VERSION == "musicxml@0.2.0"
+    assert result.importer_version == IMPORTER_VERSION == "musicxml@0.3.0"
+    assert result.warnings == ()
     assert max(note.onset + note.duration for note in result.ir.notes) == Fraction(7)
     assert validate_ir(result.ir) == []
     assert {note.voice for note in result.ir.notes} == {"melody"}
+
+
+def test_music21_receives_only_the_preflight_approved_event_projection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep the raw/preflight-to-third-party trust boundary directly observable."""
+
+    import fretsure.importers.musicxml as musicxml_module
+
+    raw = BASIC.read_text(encoding="utf-8")
+    raw = raw.replace("Importer Etude", "DROP_RAW_METADATA")
+    raw = raw.replace(
+        "<score-part id=\"P1\"><part-name>Melody</part-name></score-part>",
+        (
+            '<score-part id="P1"><part-name>Melody</part-name>'
+            '<score-instrument id="DROP_INSTRUMENT"><instrument-name>'
+            "DROP_INSTRUMENT_TEXT</instrument-name></score-instrument>"
+            '<midi-instrument id="DROP_MIDI"><midi-channel>1</midi-channel>'
+            "<midi-program>25</midi-program></midi-instrument></score-part>"
+            '<score-part id="P2"><part-name>DROP_EMPTY_PART</part-name></score-part>'
+        ),
+    )
+    raw = raw.replace("</score-partwise>", '<part id="P2"/></score-partwise>')
+    raw = raw.replace(
+        '<score-partwise version="4.0">',
+        (
+            '<score-partwise version="4.0"><defaults><scaling><millimeters>7'
+            "</millimeters><tenths>40</tenths></scaling></defaults>"
+            '<credit page="1"><credit-words>DROP_CREDIT</credit-words></credit>'
+        ),
+    )
+    raw = raw.replace(
+        "<key><fifths>0</fifths><mode>major</mode></key>",
+        '<key id="DROP_KEY_ID" color="#112233"><fifths>0</fifths>'
+        "<mode>major</mode></key>",
+    )
+    raw = raw.replace(
+        '<measure number="1">',
+        '<measure number="raw-marker"><print new-system="yes"><staff-layout number="1">'
+        "<staff-distance>80</staff-distance></staff-layout></print>",
+    )
+    raw = raw.replace("<voice>1</voice>", "<voice>lead</voice>")
+    raw = raw.replace(
+        "<type>quarter</type>",
+        "<type>quarter</type><lyric><syllabic>single</syllabic>"
+        "<text>DROP_LYRIC</text></lyric>",
+        1,
+    )
+    path = tmp_path / "adapter-boundary.musicxml"
+    path.write_text(raw, encoding="utf-8")
+
+    captured: list[bytes] = []
+    real_adapter = musicxml_module.music21_to_ir
+
+    def adapter_spy(canonical_xml: bytes, **kwargs: object) -> MusicIR:
+        captured.append(canonical_xml)
+        return real_adapter(canonical_xml, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(musicxml_module, "music21_to_ir", adapter_spy)
+    result = import_musicxml(path)
+
+    assert isinstance(result, ImportSuccess), getattr(result, "diagnostics", None)
+    assert result.ir.meta.title == "DROP_RAW_METADATA"
+    assert len(captured) == 1
+    adapter_bytes = captured[0]
+    for marker in (
+        b"DROP_RAW_METADATA",
+        b"DROP_INSTRUMENT",
+        b"DROP_MIDI",
+        b"DROP_EMPTY_PART",
+        b"DROP_CREDIT",
+        b"DROP_KEY_ID",
+        b"DROP_LYRIC",
+        b"raw-marker",
+        b"<voice",
+        b"<print",
+        b"<credit",
+    ):
+        assert marker not in adapter_bytes
+
+    adapter_root = ET.fromstring(adapter_bytes)
+    assert [part.get("id") for part in adapter_root.findall("part")] == ["P1"]
+    measures = adapter_root.findall("part/measure")
+    assert [measure.get("number") for measure in measures] == ["1", "2"]
+    assert [child.tag for child in measures[0]] == [
+        "attributes",
+        "harmony",
+        "note",
+        "note",
+        "note",
+    ]
+    assert adapter_root.findtext("part/measure/attributes/divisions") == "4"
+    assert adapter_root.find(".//rest") is not None
+    assert [tie.get("type") for tie in adapter_root.findall(".//tie")] == ["start", "stop"]
+    assert [kind.text for kind in adapter_root.findall(".//harmony/kind")] == [
+        "major",
+        "dominant",
+    ]
 
 
 def test_major_minor_keys_accidentals_and_sound_only_tempo() -> None:
     result = _success(FIXTURES / "supported_minor.musicxml")
     assert result.ir.meta.key == "Cm"
     assert result.ir.meta.tempo_bpm == 80.0
+    assert result.warnings == ()
     assert [note.pitch for note in result.ir.notes] == [60, 61, 63, 67]
     assert result.ir.chords == (ChordSymbol(Fraction(0), "Cm", frozenset({0, 3, 7}), 0),)
 

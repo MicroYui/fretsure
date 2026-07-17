@@ -3,7 +3,8 @@
 A tight, reproducible walkthrough for a screen recording or live demo. The default
 path is fully offline, including the MusicXML import. A real-LLM benchmark or
 `--llm` arrangement needs the local proxy and defaults to canonical
-`gpt-5.6-sol`. Target length ≈ 3 minutes.
+`gpt-5.6-sol`. The current package/importer pair is `0.4.0` /
+`musicxml@0.3.0`, with `music21==10.5.0` pinned exactly. Target length ≈ 3 minutes.
 
 Setup (once, off-camera):
 
@@ -50,33 +51,36 @@ rule-based proposal fallback. The proposal path does not decide feasibility—th
 versioned oracle does. GREEN is certification inside the simplified model and
 profile, while the independent fidelity failure remains visible."
 
-## Beat 2 — A real file, and two genuinely independent gates (0:55–1:25)
+## Beat 2 — An exact producer artifact, without guessing its key (0:55–1:25)
 
 **Do:**
 
 ```bash
-uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
-  --n 1 --no-critic --trace-jsonl /tmp/fretsure-supported-basic.trace.jsonl
+uv run fretsure-arrange tests/fixtures/producers/musescore-4.7.4.musicxml \
+  --n 1 --max-iters 0 --no-critic \
+  --trace-jsonl /tmp/fretsure-musescore.trace.jsonl
 ```
 
-**Point at:** `musicxml@0.2.0`, the raw/root SHA-256 provenance, source and effective
-tempo both 96 bpm, the rendered tab, and the JSONL trace location. Note that the same
-entry point accepts a strict `.mxl` container and then prints its selected rootfile
-member; the root MusicXML semantic allowlist is unchanged. Then linger on:
+**Point at:** `musicxml@0.3.0`, the exact raw/root SHA-256 provenance,
+`KEY_MODE_UNPROVIDED`, and
+`key-signature:fifths=0;mode=unprovided`. The importer preserved what the file said;
+it did not turn the missing mode into C major or A minor. Source and effective tempo
+are both 96 bpm. A second frozen MuseScore 4.7.4 `.mxl` artifact traverses the same
+semantic gate and additionally prints its selected rootfile member. Then linger on:
 
 ```text
 ORACLE VERDICT
   GREEN ... checker oracle@0.2.0
 FAITHFULNESS TO INPUT
-  melody-F1 1.00   bass-root 1.00   harmony 0.29
-  gate FAIL   checker fidelity@0.2.0
+  melody-F1 1.00   bass-root 1.00   harmony 1.00
+  gate PASS   checker fidelity@0.2.0
 ```
 
-**Say:** "This is not a contradiction or a bug. GREEN answers only whether this
-displayed fingering passes the versioned playability model. The independent fidelity
-gate says the playable arrangement did not preserve enough harmony. Joint success
-requires both GREEN and fidelity PASS. The file is a supported-subset regression
-fixture; unmodified real-exporter fixture coverage is still an open input gate."
+**Say:** "This is one exact, unedited MuseScore Studio 4.7.4 artifact, not a claim
+about every score or every MuseScore version. MusicXML 4.0 makes mode optional, so
+Fretsure keeps the loss visible and warns instead of inventing a mode. MusicXML 3.1
+without mode still fails closed. The frozen producer census and source-to-output
+differential gate define the claim."
 
 ## Beat 3 — Who checks the checker? (1:25–2:00)
 
@@ -98,8 +102,8 @@ uv run pytest -q tests/oracle tests/validation tests/test_geometry.py -m "not in
 - Span is measured in **millimetres**, not fret count; the same fret span changes
   physical distance with neck position.
 
-**Say:** "The final repository gate is 1494 offline tests plus 6 proxy-backed
-integration tests, with ruff, strict mypy, lock and package smokes green. Invalid
+**Say:** "The acceptance record reports the exact final offline and proxy-backed
+repository gates, with ruff, strict mypy, lock and package smokes. Invalid
 public Tab/profile/solver/gold inputs now fail typed and resource-bounded; a
 zero-GREEN split is explicitly `no_green` with no rate or bound. But the human gold
 set has not been collected, so I still report no real-player false-accept bound.
@@ -144,7 +148,7 @@ moat is execution plus an auditable benchmark, not a hidden claim. That's Fretsu
 
 - No proxy? `fretsure-demo`, MusicXML import/arrangement, checker tests, and the
   Web offline engine and stub benchmark work offline. Only `--llm`, an explicitly
-  `--allow-proxy` Web server, the six integration tests, and a real-LLM benchmark
+  `--allow-proxy` Web server, the seven integration tests, and a real-LLM benchmark
   need the proxy.
 - No MusicXML dependency? Run `uv sync --extra musicxml` (or the setup command above).
 - The default `fretsure-demo` is deterministic; changing `--seed N` or `--bars N`
@@ -154,8 +158,10 @@ moat is execution plus an auditable benchmark, not a hidden claim. That's Fretsu
   ```bash
   uv run ruff check .
   uv run mypy src
-  uv run pytest -q -m "not integration"  # 1494 passed, 6 deselected
+  uv run pytest -q -m "not integration"
   ```
 
-- The six integration tests are deliberately excluded from that offline count;
-  `uv run pytest --collect-only -q` currently collects 1500 tests total.
+- The proxy integration tests are deliberately excluded from that offline command;
+  use `uv run pytest --collect-only -q` and
+  [`PRODUCER_MUSICXML_ACCEPTANCE.md`](PRODUCER_MUSICXML_ACCEPTANCE.md) for the exact
+  closure count rather than copying an older Plan 6A number.

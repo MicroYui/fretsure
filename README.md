@@ -27,8 +27,11 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
 `fidelity@0.2.0` 门与带完整 checker/model stamps 的可回放 JSONL trace。
 `--llm` 的当前默认是 canonical `gpt-5.6-sol`；CLI、trace 与 benchmark
 聚合 JSON 都显式记录 model id。
-当前只支持单 part/staff/voice 的 4/4 单音旋律、固定显式 major/minor key、
-固定 quarter-note tempo、普通 note/rest/tie 和白名单 root+kind harmony；
+当前只支持单 part/staff/voice 的 4/4 单音旋律、固定传统调号、
+固定 quarter-note tempo、普通 note/rest/tie 和白名单 root+kind harmony。MusicXML 4.0
+可以省略 `<mode>`：importer 不猜 major/minor，而是保留
+`key-signature:fifths=N;mode=unprovided` 并发出 `KEY_MODE_UNPROVIDED`；MusicXML 3.1
+省略 `<mode>` 仍 fail-closed，显式 major/minor 继续保留原来的 key 表示。
 `.mxl` 只扩展容器、不扩展这些 root MusicXML 语义；复调/多声部、MIDI 与音频
 仍 fail-closed 或未实现。
 
@@ -107,24 +110,30 @@ lead sheet / MIDI / IR
 
 ## 状态
 
-**Plan 1–5、Oracle 0.2 软件信任门、安全 `.mxl` container reader 与 Plan 6A
-Web/API/replay trace/MCP 纵切已实现**。
-当前 package=`0.3.0`、service=`fretsure-service@0.1.0`、API=`fretsure-api@0.1.0`、
+**Plan 1–5、Oracle 0.2 软件信任门、安全 `.mxl` container reader、Plan 6A
+Web/API/replay trace/MCP 与 producer-driven MusicXML/IR 实现边界已落地**。
+当前 package=`0.4.0`、service=`fretsure-service@0.1.0`、API=`fretsure-api@0.1.0`、
 MCP=`fretsure-mcp@0.1.0`、trace=`agent-trace@0.1.0`、playability=`oracle@0.2.0`、公共输入=
 `tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=
-`musicxml@0.2.0`、container=`mxl-container@0.1.0`。
-当前收集 `1500` 项测试：离线 `1494 passed, 6 deselected`，本地 `gpt-5.6-sol`
-代理 `6 passed, 1494 deselected`；ruff、strict mypy、前端 20 tests/typecheck/build/audit、
-浏览器 desktop/mobile、wheel/sdist 与四种 clean-install smoke 全绿。完整 Plan 6 的音频、AlphaTab、
-真实琴颈动画、导出、live A/B/榜单与真人 money moment 仍保持 open；下一项是按真实 producer failure
-扩 MusicXML/IR，再做 MIDI 与 benchmark v2。
+`musicxml@0.3.0`、container=`mxl-container@0.1.0`；MusicXML runtime 精确锁定
+`music21==10.5.0`。本阶段的最终门与可复核证据集中在
+[`docs/PRODUCER_MUSICXML_ACCEPTANCE.md`](docs/PRODUCER_MUSICXML_ACCEPTANCE.md)。完整 Plan 6 的音频、
+AlphaTab、真实琴颈动画、导出、live A/B/榜单与真人 money moment 仍保持 open；下一项是 MIDI，
+其闭门后再做 benchmark v2。
 
 - **Plan 1 核心 + 可弹性 Oracle**：Music IR + strict public Tab schema + 毫米几何/active-sustain/连续换把 oracle（三态 + 定位化诊断）+ fingerprinted profile + 自验证台（property/metamorphic/mutation/N-version + fail-closed gold/statistics）。zero-GREEN 明确是 `no_green`/`None`，不是完美的 `0.0`。见 [`docs/PLAN1_ACCEPTANCE.md`](docs/PLAN1_ACCEPTANCE.md)、[`docs/SCOPE.md`](docs/SCOPE.md)。
 - **Plan 2 求解器**：beam-search 指法求解，每个部分谱都对真 oracle 核验 → **永不返回 RED**。
 - **Plan 3 agent 循环**：LLM 编配 + 编辑 DSL（旋律保护）+ verifier-guided 修复到不动点 + best-of-N + 乐感 critic。
 - **Plan 4 benchmark**：程序生成语料 + pass@k/pass^k 无偏估计 + leave-one-out 消融 + checker-vs-LLM-judge + 一条命令 `fretsure-bench`。
 - **Plan 5 难度 + 伴奏**：可验证的"简化到目标 tier"（对 `check_tier` 门修复；tier 控制深快照；横按 overlap 为保持诊断语义的 `O(6n)` 扫描）+ 和弦声位/分解/扫弦伴奏。
-- **Pre-Plan 6 MusicXML**：安全 envelope + fail-closed 语义预检 + raw exact timeline + music21 语义交叉验证 + 文件 CLI。两个未经手改的 library/toolkit exporter 正例（music21 10.5.0、musicxml 1.6.1）冻结了版本、SHA-256 与许可证；MuseScore Studio 4.7.4 原样导出因省略 key mode 被稳定拒绝。尚无常见制谱软件正兼容证据，留给 producer-driven MusicXML 扩展，当前不作该主张。
+- **Pre-Plan 6 MusicXML（历史闭门记录）**：安全 envelope + fail-closed 语义预检 + raw exact timeline + music21 语义交叉验证 + 文件 CLI。该阶段的两个未经手改的 library/toolkit exporter 正例（music21 10.5.0、musicxml 1.6.1）冻结了版本、SHA-256 与许可证；MuseScore Studio 4.7.4 原样导出在当时的 importer 中因省略 key mode 被稳定拒绝。这条历史行为不覆盖下面的后继实现。
+- **Producer-driven MusicXML/IR**：`musicxml@0.3.0` 只扩 MusicXML 4.0 traditional key 中合法省略
+  `<mode>` 的已观测 failure bucket；它保留 `mode=unprovided` 并发 warning，不从音符、和弦或
+  music21 推断调式。MusicXML 3.1 省略 mode、其他 mode、复调与其余延后语义仍拒绝。兼容性主张只覆盖
+  manifest 中精确冻结的 MuseScore Studio 4.7.4 原样 artifacts，不外推到该版本任意乐谱、其他版本或
+  “完整 MusicXML”。详见[实现计划](docs/superpowers/plans/2026-07-16-producer-driven-musicxml-ir.md)、
+  [producer census](docs/experiments/2026-07-16-producer-musicxml-census.json)与
+  [验收记录](docs/PRODUCER_MUSICXML_ACCEPTANCE.md)。
 - **Oracle 0.2 trust gate**：不可信 Tab/profile/solver/MusicIR/tier/benchmark/gold 输入在任何几何、搜索、生成或统计工作前进入 typed validation + detached snapshot；Trace 在编码前精确核算 escaped UTF-8 大小，solver 有 12,000,000 weighted-work 上限且返回结果仍必须过完整 oracle。真人 gold 尚未采集，因此现实世界误接受率和 profile/tier 校准仍 open。
 - **Safe `.mxl`**：在构造 `ZipFile` 前有界解析 EOCD/central/local records；拒 ZIP64、SFX、路径别名、特殊文件、加密与未知 extra，逐 member 流式解压并双重核对 size/CRC，只把 `container.xml` 唯一指定的 root bytes 交给既有语义管线。raw archive/root 双 SHA-256 与 rootfile provenance 均保留。
 - **Plan 6A Web/API/trace/MCP**：bytes-first application seam；严格 loopback Host/Origin、raw body、typed
@@ -143,7 +152,7 @@ MCP=`fretsure-mcp@0.1.0`、trace=`agent-trace@0.1.0`、playability=`oracle@0.2.0
 
 ```bash
 uv sync --extra dev              # 建 3.11 venv + 装依赖
-uv run pytest -q -m "not integration"   # 1494 passed；6 integration deselected
+uv run pytest -q -m "not integration"
 uv run ruff check                # lint
 uv run mypy src                  # 类型检查（strict）
 uv run fretsure-demo             # 一条命令端到端 demo

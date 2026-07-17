@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { arrangeScore, FretsureAPIError, getCapabilities } from "../src/api";
-import { arrangement, capabilities, jsonResponse } from "./fixtures";
+import {
+  arrangement,
+  capabilities,
+  jsonResponse,
+  producerMxlArrangement,
+  producerXmlArrangement,
+} from "./fixtures";
 
 const controls = {
   engine: "offline" as const,
@@ -40,7 +46,23 @@ describe("API client", () => {
     };
     Reflect.deleteProperty(missingProfile.profiles[0], "fingerprint");
 
-    for (const document of [invalidDefault, duplicateEngine, missingProfile]) {
+    const stalePackageStamp = structuredClone(capabilities);
+    stalePackageStamp.stamps.package_version = "0.3.0";
+
+    const missingImporterStamp = structuredClone(capabilities);
+    Reflect.deleteProperty(missingImporterStamp.stamps, "importer_version");
+
+    const staleImporterStamp = structuredClone(capabilities);
+    staleImporterStamp.stamps.importer_version = "musicxml@0.2.0";
+
+    for (const document of [
+      invalidDefault,
+      duplicateEngine,
+      missingProfile,
+      stalePackageStamp,
+      missingImporterStamp,
+      staleImporterStamp,
+    ]) {
       vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(document)));
       await expect(getCapabilities()).rejects.toThrow("incompatible capabilities");
     }
@@ -81,6 +103,17 @@ describe("API client", () => {
         tempoBpm: 87.5,
       }),
     ).resolves.toEqual(arrangement);
+  });
+
+  it.each([
+    ["musescore-4.7.4.musicxml", producerXmlArrangement],
+    ["musescore-4.7.4-roundtrip-supported_basic.mxl", producerMxlArrangement],
+  ])("accepts loss-aware producer evidence for %s", async (filename, document) => {
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(document)));
+
+    await expect(
+      arrangeScore(new File(["producer"], filename), controls),
+    ).resolves.toEqual(document);
   });
 
   it("rejects malformed nested arrangement evidence before render", async () => {
@@ -129,6 +162,10 @@ describe("API client", () => {
     const mismatchedStamp = structuredClone(arrangement);
     mismatchedStamp.stamps.model_id = "another-model";
 
+    const staleImporter = structuredClone(arrangement);
+    staleImporter.source.importer_version = "musicxml@0.2.0";
+    staleImporter.stamps.importer_version = "musicxml@0.2.0";
+
     for (const document of [
       invalidTimeSignature,
       invalidDiagnostic,
@@ -138,6 +175,7 @@ describe("API client", () => {
       invalidEngine,
       missingStamp,
       mismatchedStamp,
+      staleImporter,
     ]) {
       await expect(requestArrangement(document)).rejects.toThrow("incompatible arrangement");
     }

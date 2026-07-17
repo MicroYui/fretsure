@@ -91,15 +91,35 @@ return typed `Infeasible`; that is not proof that no fingering exists. Every ret
 `Tab` still passes a complete final `oracle@0.2.0` check, so incompleteness cannot leak
 a RED result.
 
-The current `musicxml@0.2.0` entry point narrows untrusted files before this boundary.
+The current `musicxml@0.3.0` entry point narrows untrusted files before this boundary.
 It accepts uncompressed `.musicxml`/`.xml` and strict `.mxl` containers whose root is
-MusicXML 3.1/4.0 `score-partwise` in the frozen single-part/staff/voice monophonic
+MusicXML 3.1/4.0 `score-partwise` in the frozen single-note-bearing-part/staff/voice monophonic
 lead-sheet subset, with one
-fixed positive decimal divisions value, fixed major/minor key, 4/4 and quarter-note
+fixed positive decimal divisions value, one fixed traditional key signature, 4/4 and quarter-note
 tempo, ordinary notes/rests/ties, and whitelisted root+kind harmony. `defusedxml`
 enforces byte/tree limits and disables entity/external resolution; URI/resource
 elements and `xlink:href` are rejected before canonical XML without DTD/entities is
-handed to `music21`. Unsupported sounding semantics fail closed.
+handed to `music21`. Unsupported sounding semantics fail closed. After the complete
+raw tree passes preflight, the importer reconstructs a bounded event-only XML with
+only divisions, harmony roots/kinds, and note/rest/duration/tie events for `music21`
+cross-validation. Credits, instruments/MIDI, layout/print, lyrics/voice, key visual
+metadata, and legal non-note-bearing parts stay outside that third-party boundary;
+raw warnings and normalized metadata remain authoritative.
+
+An explicit `major` or `minor` remains the only interpreted key mode. MusicXML 4.0
+may legally omit `<mode>` from a traditional `<key>` with exactly one bounded
+`<fifths>`; the importer preserves that loss as
+`key-signature:fifths=N;mode=unprovided` and emits a located
+`KEY_MODE_UNPROVIDED` warning. It does not infer mode or tonic from notes, spelling,
+harmony, or `music21`. MusicXML 3.1 with omitted mode, empty/other modes, duplicate
+key children/elements, and key changes remain typed failures. Every successful
+import is revalidated against the public 256-bit exact-Fraction MusicIR boundary.
+Repeated authoritative scalars, non-ASCII XSD integers in semantic numeric fields,
+malformed traditional-key shape, non-XML Unicode whitespace around authoritative
+numeric tokens, oversized locations, and
+diagnostic amplification are bounded typed failures. This makes omitted mode the only
+new sounding-semantic success domain; visual metadata that the frozen loss policy
+already ignores no longer succeeds or fails according to incidental `music21` parsing.
 
 For `.mxl`, `mxl-container@0.1.0` validates bounded raw EOCD/central/local ZIP records
 before constructing `ZipFile`, rejects ZIP64/SFX/encryption/special files/path aliases
@@ -108,10 +128,15 @@ declared/actual size, CRC and deflate completion. Only the unique safe root sele
 `META-INF/container.xml` reaches the unchanged MusicXML parser. Passing this importer proves only that the file
 fits the frozen input contract—it does not expand the oracle's certification scope.
 
-Producer compatibility is evidence-specific: unedited music21 10.5.0 and
-musicxml 1.6.1 library/toolkit exports pass, while the frozen MuseScore Studio
-4.7.4 export is rejected with `UNSUPPORTED_KEY` because it omits key mode. There
-is not yet positive compatibility evidence for a mainstream notation application.
+Producer compatibility is evidence-specific: the runtime is pinned exactly to
+`music21==10.5.0`; unedited music21 10.5.0 and musicxml 1.6.1 library/toolkit exports
+pass. The exact frozen MuseScore Studio 4.7.4 XML/MXL artifacts in the producer
+manifest also pass; those with omitted mode carry the descriptor and warning above.
+This is not a claim that arbitrary MuseScore 4.7.4 scores, any other MuseScore
+version, or full MusicXML are supported. The exact census, source/output differential
+gate, and limitations are recorded in
+[`2026-07-16-producer-musicxml-census.json`](experiments/2026-07-16-producer-musicxml-census.json)
+and [`PRODUCER_MUSICXML_ACCEPTANCE.md`](PRODUCER_MUSICXML_ACCEPTANCE.md).
 
 ## In scope
 
@@ -153,10 +178,11 @@ is not yet positive compatibility evidence for a mainstream notation application
   arbitrary values describe an ordinary human or guitar. The permissive numeric
   lower bound exists for deterministic API validation, not biological calibration.
 - **Audio transcription** is out of the guaranteed path (best-effort, v2).
-- **Deferred file semantics are not approximated.** Polyphony,
-  multi-part/staff/voice scores, repeats/navigation, pickup/incomplete measures,
+- **Deferred file semantics are not approximated.** Polyphony, multiple note-bearing
+  parts/staves/voices, repeats/navigation, pickup/incomplete measures,
   key/time/tempo changes, tuplets/grace/cue/unpitched/microtonal/transposing input,
-  complex/slash harmony, and performance techniques are rejected by the current
+  nontraditional keys and modes other than explicit major/minor, complex/slash harmony,
+  and performance techniques are rejected by the current
   importer. MIDI and audio are not current guaranteed inputs.
 
 ## Techniques outside the current schema
@@ -179,7 +205,7 @@ profile SHA-256 fingerprint, and `input_schema_version`; current values are
 `median@0.1` with fingerprint
 `fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62`.
 Current CLI output also names `fidelity@0.2.0`. Successful file imports carry
-`musicxml@0.2.0`, structured provenance and the raw source SHA-256; `.mxl` additionally
+`musicxml@0.3.0`, structured provenance and the raw source SHA-256; `.mxl` additionally
 binds the root XML SHA-256, exact rootfile member and `mxl-container@0.1.0`. Exact benchmark
 reproduction still requires the Git commit and corpus artifact hash. In particular, the 2026-07-10/11
 LLM benchmark tables remain stamped `oracle@0.1.0` plus a legacy/unversioned fidelity

@@ -6,6 +6,8 @@ import socket
 import stat
 import urllib.request
 import zipfile
+from dataclasses import replace
+from fractions import Fraction
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
@@ -24,6 +26,7 @@ from fretsure.importers import (
     import_musicxml,
     import_musicxml_bytes,
 )
+from fretsure.ir import IRViolation, MusicIR, Note
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "musicxml"
 BASIC = FIXTURES / "supported_basic.musicxml"
@@ -83,6 +86,18 @@ def _valid_mxl(root: bytes | None = None) -> bytes:
     return output.getvalue()
 
 
+def _mode_unprovided_root(fifths: int = 0) -> bytes:
+    return BASIC.read_bytes().replace(
+        b"<key><fifths>0</fifths><mode>major</mode></key>",
+        f"<key><fifths>{fifths}</fifths></key>".encode(),
+        1,
+    )
+
+
+def _ir_without_source(result: ImportSuccess) -> MusicIR:
+    return replace(result.ir, meta=replace(result.ir.meta, source=""))
+
+
 def test_bytes_import_is_identical_to_path_import_for_musicxml() -> None:
     raw = BASIC.read_bytes()
 
@@ -103,6 +118,75 @@ def test_bytes_import_is_identical_to_path_import_for_mxl(tmp_path: Path) -> Non
 
     assert isinstance(from_path, ImportSuccess)
     assert from_bytes == from_path
+
+
+@pytest.mark.parametrize("filename", ["mode-unprovided.musicxml", "mode-unprovided.xml"])
+def test_mode_unprovided_path_and_bytes_are_identical_for_plain_xml(
+    tmp_path: Path, filename: str
+) -> None:
+    raw = _mode_unprovided_root(-2)
+    path = tmp_path / filename
+    path.write_bytes(raw)
+
+    from_path = import_musicxml(path)
+    from_bytes = import_musicxml_bytes(raw, filename)
+
+    assert isinstance(from_path, ImportSuccess), getattr(from_path, "diagnostics", None)
+    assert from_bytes == from_path
+    assert from_path.ir.meta.key == "key-signature:fifths=-2;mode=unprovided"
+    assert [warning.code for warning in from_path.warnings] == [
+        ImportCode.KEY_MODE_UNPROVIDED
+    ]
+
+
+def test_mode_unprovided_path_bytes_and_synthetic_mxl_have_semantic_parity(
+    tmp_path: Path,
+) -> None:
+    root = _mode_unprovided_root(6)
+    xml_path = tmp_path / "score.musicxml"
+    mxl_path = tmp_path / "score.mxl"
+    xml_path.write_bytes(root)
+    mxl = _valid_mxl(root)
+    mxl_path.write_bytes(mxl)
+
+    xml_result = import_musicxml(xml_path)
+    mxl_from_path = import_musicxml(mxl_path)
+    mxl_from_bytes = import_musicxml_bytes(mxl, mxl_path.name)
+
+    assert isinstance(xml_result, ImportSuccess), getattr(xml_result, "diagnostics", None)
+    assert isinstance(mxl_from_path, ImportSuccess), getattr(
+        mxl_from_path, "diagnostics", None
+    )
+    assert mxl_from_bytes == mxl_from_path
+    assert _ir_without_source(xml_result) == _ir_without_source(mxl_from_path)
+    assert xml_result.warnings == mxl_from_path.warnings
+    assert xml_result.ir.meta.key == "key-signature:fifths=6;mode=unprovided"
+
+
+def test_mxl_image_in_ignored_visual_subtree_fails_before_music21(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = BASIC.read_bytes().replace(
+        b'<measure number="1">',
+        (
+            b'<measure number="1"><print><image source="file:///etc/passwd" '
+            b'type="image/png"/></print>'
+        ),
+        1,
+    )
+
+    def adapter_must_not_run(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("nested external image reached music21")
+
+    monkeypatch.setattr(musicxml_module, "music21_to_ir", adapter_must_not_run)
+    result = import_musicxml_bytes(_valid_mxl(root), "nested-image.mxl")
+
+    error = _only_error(result)
+    assert error.code is ImportCode.UNSAFE_XML
+    assert error.location is not None
+    assert error.location.part_id == "P1"
+    assert error.location.measure == "1"
+    assert error.location.element == "image"
 
 
 @pytest.mark.parametrize("filename", ["score.musicxml", "score.XML", "作品.MUSICXML"])
@@ -346,6 +430,107 @@ def test_bytes_import_reports_missing_semantic_parser_dependency(
     monkeypatch.setattr(music21_adapter_module, "import_module", missing)
     diagnostic = _only_error(import_musicxml_bytes(BASIC.read_bytes(), BASIC.name))
     assert diagnostic.code is ImportCode.MISSING_DEPENDENCY
+
+
+def test_adapter_output_is_strictly_snapshotted_before_import_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real = import_musicxml_bytes(BASIC.read_bytes(), BASIC.name)
+    assert isinstance(real, ImportSuccess)
+    invalid = MusicIR(
+        (
+            Note(
+                Fraction(1 << 256),
+                Fraction(1),
+                60,
+                "melody",
+            ),
+        ),
+        real.ir.chords,
+        real.ir.meta,
+    )
+
+    def invalid_adapter(*_args: object, **_kwargs: object) -> MusicIR:
+        return invalid
+
+    def validate_must_not_run(_ir: MusicIR) -> list[object]:
+        raise AssertionError("non-snapshottable adapter output reached validate_ir")
+
+    monkeypatch.setattr(musicxml_module, "music21_to_ir", invalid_adapter)
+    monkeypatch.setattr(musicxml_module, "validate_ir", validate_must_not_run)
+
+    diagnostic = _only_error(import_musicxml_bytes(BASIC.read_bytes(), BASIC.name))
+
+    assert diagnostic.code is ImportCode.IR_INVALID
+    assert "256-bit" in diagnostic.message
+    assert diagnostic.location is not None
+    assert diagnostic.location.element == "MusicIR"
+
+
+@pytest.mark.parametrize("violation_count", [256, 257])
+def test_adapter_validation_diagnostics_are_bounded_at_the_exact_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+    violation_count: int,
+) -> None:
+    real = import_musicxml_bytes(BASIC.read_bytes(), BASIC.name)
+    assert isinstance(real, ImportSuccess)
+
+    def adapter(*_args: object, **_kwargs: object) -> MusicIR:
+        return real.ir
+
+    def many_violations(_ir: MusicIR) -> list[IRViolation]:
+        return [
+            IRViolation("synthetic", f"violation-{index}", None)
+            for index in range(violation_count)
+        ]
+
+    monkeypatch.setattr(musicxml_module, "music21_to_ir", adapter)
+    monkeypatch.setattr(musicxml_module, "validate_ir", many_violations)
+    result = import_musicxml_bytes(BASIC.read_bytes(), BASIC.name)
+
+    assert isinstance(result, ImportFailure)
+    assert len(result.diagnostics) == violation_count
+    assert all(
+        diagnostic.code is ImportCode.IR_INVALID
+        for diagnostic in result.diagnostics[:256]
+    )
+    if violation_count == 257:
+        assert result.diagnostics[-1].code is ImportCode.INPUT_LIMIT_EXCEEDED
+        assert result.diagnostics[-1].location is not None
+        assert result.diagnostics[-1].location.element == "diagnostics"
+
+
+def test_unexpected_adapter_exception_is_typed_and_redacted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unexpected_adapter(*_args: object, **_kwargs: object) -> None:
+        raise ValueError("provider payload must not cross the importer boundary")
+
+    monkeypatch.setattr(musicxml_module, "music21_to_ir", unexpected_adapter)
+    diagnostic = _only_error(import_musicxml_bytes(BASIC.read_bytes(), BASIC.name))
+
+    assert diagnostic.code is ImportCode.ADAPTER_ERROR
+    assert diagnostic.message == "unexpected MusicXML adapter failure: ValueError"
+    assert "provider payload" not in diagnostic.message
+
+
+def test_music21_parser_exception_is_typed_and_redacted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    music21 = import_module("music21")
+    converter = music21.converter
+
+    def rejected(*_args: object, **_kwargs: object) -> None:
+        raise ValueError("parser payload must not cross the importer boundary")
+
+    monkeypatch.setattr(converter, "parseData", rejected)
+    diagnostic = _only_error(import_musicxml_bytes(BASIC.read_bytes(), BASIC.name))
+
+    assert diagnostic.code is ImportCode.ADAPTER_ERROR
+    assert diagnostic.message == (
+        "music21 rejected preflight-approved canonical XML: ValueError"
+    )
+    assert "parser payload" not in diagnostic.message
 
 
 def test_bytes_import_rejects_external_entity_without_io(

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit Fretsure wheel/sdist contents against the Plan 6A allowlist invariants."""
+"""Audit Fretsure release artifacts against runtime and source-evidence invariants."""
 
 from __future__ import annotations
 
@@ -70,6 +70,20 @@ def _audit_sdist(path: Path) -> int:
         "/web/public/licenses/OFL-1.1.txt",
         "/src/fretsure/web_static/index.html",
         "/docs/WEB_API_MCP.md",
+        "/docs/superpowers/plans/2026-07-16-producer-driven-musicxml-ir.md",
+        "/docs/PRODUCER_MUSICXML_ACCEPTANCE.md",
+        "/docs/experiments/2026-07-16-producer-musicxml-census.json",
+        "/scripts/generate_producer_fixtures.py",
+        "/scripts/replay_producer_census.py",
+        "/tests/fixtures/producers/provenance.json",
+        "/tests/fixtures/producers/musescore-4.7.4.musicxml",
+        "/tests/fixtures/producers/musescore-4.7.4-roundtrip-metamorphic_long.musicxml",
+        "/tests/fixtures/producers/musescore-4.7.4-roundtrip-metamorphic_tied.musicxml",
+        "/tests/fixtures/producers/musescore-4.7.4-roundtrip-supported_basic.musicxml",
+        "/tests/fixtures/producers/musescore-4.7.4-roundtrip-supported_harmonies.musicxml",
+        "/tests/fixtures/producers/musescore-4.7.4-roundtrip-supported_minor.musicxml",
+        "/tests/fixtures/producers/musescore-4.7.4-roundtrip-supported_tie_continue.musicxml",
+        "/tests/fixtures/producers/musescore-4.7.4-roundtrip-supported_basic.mxl",
     ):
         _require_suffix(names, suffix, artifact=path.name)
     return len(names)

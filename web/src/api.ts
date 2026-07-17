@@ -15,6 +15,8 @@ export class FretsureAPIError extends Error {
   }
 }
 
+const CURRENT_IMPORTER_VERSION = "musicxml@0.3.0";
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -145,6 +147,7 @@ function isCapabilities(value: unknown): value is CapabilitiesResponse {
   const engineIds = engines.map((engine) => engine.id);
   const profileNames = profiles.map((profile) => profile.name);
   const defaults = value.controls.arrange.defaults;
+  const stamps = value.stamps;
   const candidateRange = value.controls.arrange.n as { min: number; max: number };
   const repairRange = value.controls.arrange.max_iters as { min: number; max: number };
   const tempoRange = value.controls.arrange.tempo_bpm as { min: number; max: number };
@@ -154,6 +157,10 @@ function isCapabilities(value: unknown): value is CapabilitiesResponse {
     !engineIds.includes("proxy") ||
     !hasUniqueStrings(profileNames) ||
     !hasUniqueStrings(value.inputs.score_suffixes) ||
+    !requiredStampMatches(stamps, "package_version", value.package_version) ||
+    !requiredStampMatches(stamps, "service_version", value.service_version) ||
+    stamps.importer_version !== CURRENT_IMPORTER_VERSION ||
+    !isNonEmptyString(stamps.trace_schema_version) ||
     !isNonEmptyString(defaults.profile) ||
     !profileNames.includes(defaults.profile) ||
     !isIntegerAtLeast(defaults.n, 1) ||
@@ -444,6 +451,7 @@ function isArrangement(value: unknown): value is ArrangementResponse {
     !requiredStampMatches(stamps, "service_version", value.service_version) ||
     !requiredStampMatches(stamps, "trace_schema_version", trace.schema_version as string) ||
     !requiredStampMatches(stamps, "importer_version", source.importer_version as string) ||
+    source.importer_version !== CURRENT_IMPORTER_VERSION ||
     !requiredStampMatches(stamps, "model_id", model.model_id as string) ||
     !requiredStampMatches(stamps, "profile_version", profile.version as string) ||
     !requiredStampMatches(stamps, "profile_fingerprint", profile.fingerprint as string)

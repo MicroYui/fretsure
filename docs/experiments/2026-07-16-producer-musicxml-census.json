@@ -1,0 +1,295 @@
+{
+  "schema": "fretsure-producer-musicxml-census@0.1.0",
+  "date": "2026-07-16",
+  "question": "Which failures in the frozen producer corpus can be fixed without inference or a broader MusicXML envelope?",
+  "environment": {
+    "architecture": "arm64",
+    "defusedxml_runtime": "0.7.1",
+    "musescore_executable": "/opt/homebrew/bin/mscore",
+    "musescore_identity": "MuseScore4 4.7.4",
+    "music21_runtime": "10.5.0",
+    "operating_system": "macOS 26.5.2 (25F84)",
+    "python": "CPython 3.11.15"
+  },
+  "scope": {
+    "artifact_count": 10,
+    "existing_artifact_count": 3,
+    "musescore_artifact_count": 8,
+    "musescore_roundtrip_mxl_count": 1,
+    "musescore_roundtrip_xml_count": 6,
+    "official_musicxml_4_key_reference": "https://www.w3.org/2021/06/musicxml40/musicxml-reference/elements/key/",
+    "statement": "This is an exact-artifact census, not a MuseScore-version or MusicXML-compatibility rate."
+  },
+  "baseline": {
+    "commit": "b27a798ac2a6c088bcc6bfd9b3ebfc9689498c6c",
+    "importer_version": "musicxml@0.2.0",
+    "package_version": "0.3.0",
+    "replay_command": [
+      "before=$(mktemp -d /tmp/fretsure-census-before.XXXXXX)",
+      "git archive b27a798ac2a6c088bcc6bfd9b3ebfc9689498c6c | tar -x -C \"$before\"",
+      "uv run --project \"$before\" --frozen --extra musicxml python \"$PWD/scripts/replay_producer_census.py\" --fixtures \"$PWD/tests/fixtures/producers\""
+    ],
+    "replay_result": {
+      "artifact_count": 10,
+      "failures": 7,
+      "successes": 3
+    },
+    "summary": {
+      "all": "3/10 success",
+      "existing": "2/3 success",
+      "musescore": "1/8 success",
+      "musescore_roundtrip_mxl": "0/1 success",
+      "musescore_roundtrip_xml": "1/6 success",
+      "missing_mode_failures": 7
+    }
+  },
+  "artifacts": [
+    {
+      "after": "success",
+      "after_warnings": [],
+      "before": "success",
+      "before_diagnostics": [],
+      "file": "music21-10.5.0.musicxml",
+      "output_sha256": "115f2c2f5353680d34bd49f02c12519511181741cbc1b51e9f1e539335291c70"
+    },
+    {
+      "after": "success",
+      "after_warnings": [],
+      "before": "success",
+      "before_diagnostics": [],
+      "file": "musicxml-1.6.1.musicxml",
+      "output_sha256": "c814281aa7bf4784421a9c8c53ebeffbe5abf9e897b2f254a1c31560d85100f8"
+    },
+    {
+      "after": "success",
+      "after_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "before": "failure",
+      "before_diagnostics": [
+        "UNSUPPORTED_KEY"
+      ],
+      "file": "musescore-4.7.4.musicxml",
+      "output_sha256": "8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386"
+    },
+    {
+      "after": "success",
+      "after_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "before": "failure",
+      "before_diagnostics": [
+        "UNSUPPORTED_KEY"
+      ],
+      "file": "musescore-4.7.4-roundtrip-metamorphic_long.musicxml",
+      "output_sha256": "9174a42ca878ad24986f173e961f7ce3b506d60cac47aa120dafbec337381059"
+    },
+    {
+      "after": "success",
+      "after_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "before": "failure",
+      "before_diagnostics": [
+        "UNSUPPORTED_KEY"
+      ],
+      "file": "musescore-4.7.4-roundtrip-metamorphic_tied.musicxml",
+      "output_sha256": "a39a0415304cb1d683f5306b479da784a4eb50a33f766a5bb3519366d79c686d"
+    },
+    {
+      "after": "success",
+      "after_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "before": "failure",
+      "before_diagnostics": [
+        "UNSUPPORTED_KEY"
+      ],
+      "file": "musescore-4.7.4-roundtrip-supported_basic.musicxml",
+      "output_sha256": "e6af1f610580baa3c6a588d738a7aeb690cfd19f684a1dbaa6cc1d91c681a39f"
+    },
+    {
+      "after": "success",
+      "after_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "before": "failure",
+      "before_diagnostics": [
+        "UNSUPPORTED_KEY"
+      ],
+      "file": "musescore-4.7.4-roundtrip-supported_harmonies.musicxml",
+      "output_sha256": "8bf3826a2948d0a7afff5bb79f258f5ccc1686d8949e254e0700548390ed5edd"
+    },
+    {
+      "after": "success",
+      "after_warnings": [],
+      "before": "success",
+      "before_diagnostics": [],
+      "file": "musescore-4.7.4-roundtrip-supported_minor.musicxml",
+      "output_sha256": "cd14071776a8242e179e03a43881e169a9a9b9b593ef2b3eb7d14ac7216440ed"
+    },
+    {
+      "after": "success",
+      "after_warnings": [
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "before": "failure",
+      "before_diagnostics": [
+        "UNSUPPORTED_KEY"
+      ],
+      "file": "musescore-4.7.4-roundtrip-supported_tie_continue.musicxml",
+      "output_sha256": "97ab1ad060d7eff3e967d6e9d2dd8fd0d912df1e1943275f51b2d4ad9e959128"
+    },
+    {
+      "after": "success",
+      "after_warnings": [
+        "MXL_ROOTFILE_MEDIA_TYPE_UNPROVIDED",
+        "KEY_MODE_UNPROVIDED"
+      ],
+      "before": "failure",
+      "before_diagnostics": [
+        "MXL_ROOTFILE_MEDIA_TYPE_UNPROVIDED",
+        "UNSUPPORTED_KEY"
+      ],
+      "file": "musescore-4.7.4-roundtrip-supported_basic.mxl",
+      "output_sha256": "9fbca0cd86c4110a24a51c46a7982859a3d39e1cadfb50d5ad31a479fafe0cc1",
+      "root_member": "score.xml",
+      "root_sha256": "e6af1f610580baa3c6a588d738a7aeb690cfd19f684a1dbaa6cc1d91c681a39f"
+    }
+  ],
+  "after": {
+    "importer_version": "musicxml@0.3.0",
+    "package_version": "0.4.0",
+    "replay_command": "uv run --frozen python scripts/replay_producer_census.py --fixtures tests/fixtures/producers",
+    "replay_result": {
+      "artifact_count": 10,
+      "failures": 0,
+      "successes": 10
+    },
+    "summary": {
+      "all": "10/10 success",
+      "key_mode_unprovided_warning_occurrences": 7,
+      "musescore": "8/8 success",
+      "mxl_media_type_warning_occurrences": 1,
+      "zero_warning_explicit_mode_artifacts": 3
+    },
+    "unknown_mode_representation": "key-signature:fifths=N;mode=unprovided"
+  },
+  "resource_boundary": {
+    "before": "With D=2**332 (100 decimal digits), divisions=D and four duration tokens [1,D,D,2D-1] sum to a valid 4/4 measure. importer 0.2 returned ImportSuccess whose first note duration was 1/D with a 333-bit denominator; snapshot_music_ir then rejected that IR.",
+    "baseline_replay_result": {
+      "first_note_duration": "1/8749002899132047697490008908470485461412677723572849745703082425639811996797503692894052708092215296",
+      "import_outcome": "success",
+      "snapshot_outcome": "IRInputError: fraction components exceed 256-bit limit"
+    },
+    "after": "Every success is snapshot_music_ir-valid. Reduced numerator and denominator components are each limited to 256 bits before music21 for both lexical decimals and derived note onsets/durations, coalesced tie durations, chord onsets, and total duration; raw or derived 257-bit and 333-bit components return INPUT_LIMIT_EXCEEDED.",
+    "evidence": [
+      "tests/importers/test_musicxml_preflight.py::test_256_bit_decimal_components_are_accepted_at_the_ir_boundary",
+      "tests/importers/test_musicxml_preflight.py::test_256_bit_decimal_denominator_is_accepted_at_the_ir_boundary",
+      "tests/importers/test_musicxml_preflight.py::test_257_bit_decimal_denominator_fails_before_music21",
+      "tests/importers/test_musicxml_preflight.py::test_decimal_components_beyond_ir_envelope_fail_before_music21",
+      "tests/importers/test_musicxml_preflight.py::test_old_fraction_boundary_exploit_fails_before_music21",
+      "tests/importers/test_musicxml_preflight.py::test_derived_note_onset_beyond_ir_envelope_fails_before_music21",
+      "tests/importers/test_musicxml_preflight.py::test_derived_tied_duration_beyond_ir_envelope_fails_before_music21",
+      "tests/importers/test_musicxml_preflight.py::test_derived_harmony_onset_beyond_ir_envelope_fails_before_music21",
+      "tests/importers/test_musicxml_bytes.py::test_adapter_output_is_strictly_snapshotted_before_import_success"
+    ]
+  },
+  "security_boundary": {
+    "semantic_authority": "The complete raw tree is resource-checked and fail-closed preflighted before any music21 call. Raw exact events, warnings, and normalized metadata remain authoritative.",
+    "third_party_projection": "Only after a zero-error preflight, the importer reconstructs a fixed single-part, sequential-measure event XML containing divisions, harmony root/kind, and note/rest/duration/tie. Credits, instruments/MIDI, layout/print, lyrics/voice, key visual metadata, and legal extra non-note-bearing parts are absent from music21 input.",
+    "success_domain_statement": "The only new sounding-semantic success domain is a completely absent mode element on a traditional MusicXML 4.0 key. Visual values already covered by the frozen loss policy no longer succeed or fail according to incidental music21 parsing, so the byte-level success set can also change without a sounding-semantic expansion.",
+    "pre_adapter_gates": [
+      "External image/resource elements and xlink:href fail before music21, including inside otherwise ignored visual subtrees.",
+      "Authoritative note, pitch, harmony, tempo, divisions, time, and staff scalars reject ambiguous repetition.",
+      "Small integers use bounded ASCII XSD lexing; numeric normalization trims only XML whitespace, not NBSP or other Unicode whitespace.",
+      "Traditional keys require the exact fifths then optional mode element-only shape, only documented visual key attributes, canonical single-staff selection, and no mixed character data.",
+      "Part identity selects exactly one note-bearing part with one matching direct score-part while preserving and then projecting away legal extra non-note-bearing parts.",
+      "Raw and derived exact Fractions, location scalars, and diagnostic floods have fixed limits."
+    ],
+    "post_adapter_gates": "Every result is snapshotted before validate_ir. Adapter exceptions expose only a fixed category and exception type. validate_ir mapping preserves at most 256 violations and adds one INPUT_LIMIT_EXCEEDED sentinel at the 257 boundary.",
+    "evidence": [
+      "tests/importers/test_musicxml_adapter.py::test_music21_receives_only_the_preflight_approved_event_projection",
+      "tests/importers/test_musicxml_preflight.py::test_note_part_identity_is_validated_before_adapter_reconstruction",
+      "tests/importers/test_musicxml_preflight.py::test_traditional_key_rejects_non_element_only_or_out_of_order_shapes",
+      "tests/importers/test_musicxml_preflight.py::test_decimal_lexing_does_not_trim_non_xml_unicode_whitespace",
+      "tests/importers/test_musicxml_preflight.py::test_warning_flood_becomes_bounded_typed_failure_before_music21",
+      "tests/importers/test_musicxml_bytes.py::test_adapter_validation_diagnostics_are_bounded_at_the_exact_boundary",
+      "tests/importers/test_musicxml_bytes.py::test_music21_parser_exception_is_typed_and_redacted",
+      "tests/importers/test_musicxml_external_refs.py::test_external_resource_references_fail_before_music21_adapter"
+    ],
+    "independent_review": "Security/resource review: 0 blocker, 0 important, 2 non-blocking maintenance-script minors. Scope implementation review: 0 blocker and no unrelated semantic narrowing; its sole important finding was this documentation update.",
+    "maintenance_script_minors": [
+      "The trusted local fixture generator subprocess still has no timeout or captured-output cap.",
+      "The census replay command relies on the separately tested manifest validator instead of revalidating schema, hashes, and basenames itself."
+    ]
+  },
+  "reproduction": {
+    "command": "uv run --isolated --with defusedxml==0.7.1 --with music21==10.5.0 python scripts/generate_producer_fixtures.py --output-dir $FRESH_DIR --musescore /opt/homebrew/bin/mscore",
+    "frozen_manifest_sha256": "ef550ee80c6e7cd9d33eef4f4b66b07dd8798d6719173ddf938c283afce91f2d",
+    "legacy_policy": "The original three artifacts are immutable inputs. The generator copies their exact bytes only after hash, source binding, importer semantics, and complete manifest rows match.",
+    "legacy_raw_hashes_equal": "3/3",
+    "same_day_observation": "On 2026-07-16 the six re-exported XML raw/root/semantic hashes matched 6/6. This was a same-day observation, not a cross-day reproducibility claim.",
+    "cross_day_replay": {
+      "timestamp": "2026-07-17T09:41:10+08:00",
+      "environment": "arm64 macOS 26.5.2 (25F84), CPython 3.11.15, defusedxml 0.7.1, music21 10.5.0, MuseScore4 4.7.4",
+      "fresh_manifest_sha256": "78247437a1db44724d1185cebaeb0bbebd75b531df0bfa35fefd5ce1c7a704fa",
+      "xml_raw_root_equal": "0/6",
+      "semantic_equal": "7/7",
+      "observed_xml_difference": "Every re-exported XML and the MXL root changed only encoding-date and miscellaneous-field name=creationDate from 2026-07-16 to 2026-07-17.",
+      "mxl_difference": "The MXL root changed for the same embedded producer dates; the raw archive also changed ZIP metadata.",
+      "fresh_hashes": [
+        {
+          "file": "musescore-4.7.4-roundtrip-metamorphic_long.musicxml",
+          "raw_and_root_sha256": "04e4bae83949ffaf769c36c2554fdcd9c05df8e04ad4e3792d4c2d9953e5663e",
+          "semantic_sha256": "e15e2c0940ac6df622ccbfc1525cf49588838e4f88234078c10a9129bdfaef1e"
+        },
+        {
+          "file": "musescore-4.7.4-roundtrip-metamorphic_tied.musicxml",
+          "raw_and_root_sha256": "5aff12da8499d5da6f9173df5de788d202ee44eae7dc564600cc4c42d9cd8d2c",
+          "semantic_sha256": "e15e2c0940ac6df622ccbfc1525cf49588838e4f88234078c10a9129bdfaef1e"
+        },
+        {
+          "file": "musescore-4.7.4-roundtrip-supported_basic.musicxml",
+          "raw_and_root_sha256": "d9af93b7f87ce683f891f8826dbdfa24c738425cea163a24f559a1fc74da4cfd",
+          "semantic_sha256": "c0595f9b1fa6d8b166e53e17c4c7910e4cc0ea250652e2ea7b84c2e9fdb2e24a"
+        },
+        {
+          "file": "musescore-4.7.4-roundtrip-supported_harmonies.musicxml",
+          "raw_and_root_sha256": "ca32019f2bda561a957bb30bb24e4b3fb45e18d407538398bf10271893fe0b2d",
+          "semantic_sha256": "b2a34e58d38ef9fda6979aa4e6617d0187bcf7bb43730e20b2a79a38cf397647"
+        },
+        {
+          "file": "musescore-4.7.4-roundtrip-supported_minor.musicxml",
+          "raw_and_root_sha256": "ca9b132ed9eebff112261f9960073f035d62bfc35c81a95fd206ad8826e9edbd",
+          "semantic_sha256": "4cbbdf6d963d20973596343a4c4eac247aca1d772a89344da0bda1d082822376"
+        },
+        {
+          "file": "musescore-4.7.4-roundtrip-supported_tie_continue.musicxml",
+          "raw_and_root_sha256": "56e629dee71c394ffad42ae2daf194376663b440d92012d7b389252b2cbc0378",
+          "semantic_sha256": "91b94992234b435f57866d76bd6fe8f04f1b6e48bb1bfb28908c090d74ca9ce5"
+        },
+        {
+          "file": "musescore-4.7.4-roundtrip-supported_basic.mxl",
+          "raw_sha256": "e94b8ff87dc45cd320087a5d320c6b198507d9a96cac60f855dc767b7d1295e3",
+          "root_sha256": "d9af93b7f87ce683f891f8826dbdfa24c738425cea163a24f559a1fc74da4cfd",
+          "semantic_sha256": "5e1253e8f0a3deb070e880b263d4e027daff4a50e6033216e3bf18a27f4dd985"
+        }
+      ]
+    },
+    "reproducibility_conclusion": "Fresh producer outputs are preserved exactly. Semantic hashes were stable across the observed date boundary, but XML raw/root bytes and MXL raw/root bytes are date-sensitive exact evidence, not reproducible-build artifacts.",
+    "musescore_exit_note": "MuseScore 4.7.4 on this host variably returned 0 or shell-normalized 134 after complete output. Nonzero teardown is accepted only after complete XML/ZIP validation, exact exporter marker validation, source immutability, and recording the actual exit code."
+  },
+  "causal_check": {
+    "diagnostic_only_mutation": "In-memory insertion of <mode>major</mode> made each omitted-mode failure match its source for notes, chords, meter, tempo, duration, title, and license. The mutation was never frozen or used as imported evidence.",
+    "implemented_behavior": "The importer does not insert or infer a mode. It preserves mode=unprovided and emits a located warning.",
+    "source_to_output_gate": "For each source-bound artifact, tests compare source and output semantics. Omitted-mode rows may differ only in key descriptor and expected warnings; the explicit-minor row must be identical."
+  },
+  "limitations": [
+    "Only the exact frozen artifacts and exact producer versions are demonstrated.",
+    "The only newly accepted sounding-semantic case is an omitted mode on a MusicXML 4.0 traditional key signature; MusicXML 3.1 omitted mode remains fail-closed in this release. Byte-level acceptance may also change for visual metadata covered by the frozen loss policy and removed from the music21 projection.",
+    "No major/minor mode is inferred from harmony, note spelling, melody, or music21.",
+    "Multiple note-bearing parts, staves, or voices; key changes; nontraditional keys; other modes; navigation; pickup; non-4/4 meters; MIDI; and audio remain outside this compatibility claim.",
+    "A successful model-relative GREEN result is not evidence that an arbitrary real player can perform the arrangement."
+  ]
+}

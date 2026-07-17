@@ -53,6 +53,17 @@ def _write_case(tmp_path: Path, xml: str, name: str) -> Path:
             "1",
         ),
         (
+            "print_image",
+            '    <measure number="1">',
+            (
+                '    <measure number="1"><print><image source="file:///etc/passwd" '
+                'type="image/png"/></print>'
+            ),
+            "image",
+            "P1",
+            "1",
+        ),
+        (
             "metadata_xlink_href",
             "  <identification>",
             (

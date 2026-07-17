@@ -1,8 +1,19 @@
+/// <reference types="node" />
+
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
-import { arrangement, capabilities, jsonResponse } from "./fixtures";
+import {
+  arrangement,
+  capabilities,
+  jsonResponse,
+  producerMxlArrangement,
+  producerXmlArrangement,
+} from "./fixtures";
 
 describe("Fretsure product flow", () => {
   beforeEach(() => {
@@ -42,6 +53,56 @@ describe("Fretsure product flow", () => {
     expect(new Headers(init?.headers).get("content-type")).toBe(
       "application/vnd.recordare.musicxml+xml",
     );
+  });
+
+  it.each([
+    {
+      filename: "musescore-4.7.4.musicxml",
+      mediaType: "application/vnd.recordare.musicxml+xml",
+      path: "../../tests/fixtures/producers/musescore-4.7.4.musicxml",
+      response: producerXmlArrangement,
+      sha256: "8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386",
+    },
+    {
+      filename: "musescore-4.7.4-roundtrip-supported_basic.mxl",
+      mediaType: "application/vnd.recordare.musicxml",
+      path: "../../tests/fixtures/producers/musescore-4.7.4-roundtrip-supported_basic.mxl",
+      response: producerMxlArrangement,
+      sha256: "9fbca0cd86c4110a24a51c46a7982859a3d39e1cadfb50d5ad31a479fafe0cc1",
+    },
+  ])("renders loss-aware evidence for frozen $filename upload", async (producer) => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(capabilities))
+      .mockResolvedValueOnce(jsonResponse(producer.response));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await screen.findByText("Oracle ready");
+    const frozenBytes = readFileSync(new URL(producer.path, import.meta.url));
+    expect(createHash("sha256").update(frozenBytes).digest("hex")).toBe(producer.sha256);
+    const file = new File([frozenBytes], producer.filename);
+    await user.upload(screen.getByLabelText("Choose a MusicXML or MXL score"), file);
+    await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
+
+    expect(
+      await screen.findByText("key-signature:fifths=0;mode=unprovided"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/KEY_MODE_UNPROVIDED/)).toBeInTheDocument();
+    expect(screen.queryByText("C major")).not.toBeInTheDocument();
+    expect(screen.queryByText("A minor")).not.toBeInTheDocument();
+    expect(screen.getAllByText("musicxml@0.3.0").length).toBeGreaterThanOrEqual(1);
+
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(String(url)).toContain(`filename=${producer.filename}`);
+    expect(init?.body).toBe(file);
+    expect(
+      createHash("sha256")
+        .update(Buffer.from(await (init?.body as File).arrayBuffer()))
+        .digest("hex"),
+    ).toBe(producer.sha256);
+    expect(new Headers(init?.headers).get("content-type")).toBe(producer.mediaType);
   });
 
   it("keeps hostile metadata and trace text inert", async () => {

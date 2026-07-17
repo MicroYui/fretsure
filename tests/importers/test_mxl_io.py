@@ -31,7 +31,7 @@ from fretsure.importers._mxl_container import read_mxl_container
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "musicxml"
 BASIC = FIXTURES / "supported_basic.musicxml"
 
-IMPORTER_VERSION = "musicxml@0.2.0"
+IMPORTER_VERSION = "musicxml@0.3.0"
 CONTAINER_VERSION = "mxl-container@0.1.0"
 ROOT_MEDIA_TYPE = "application/vnd.recordare.musicxml+xml"
 MIMETYPE = b"application/vnd.recordare.musicxml"
@@ -388,6 +388,20 @@ def test_missing_rootfile_media_type_is_a_stable_warning(tmp_path: Path) -> None
     assert matching[0].severity is DiagnosticSeverity.WARNING
     assert matching[0].location is not None
     assert matching[0].location.archive_member == "META-INF/container.xml"
+
+
+def test_mode_unprovided_warning_follows_container_warning(tmp_path: Path) -> None:
+    root = BASIC.read_bytes().replace(
+        b"<key><fifths>0</fifths><mode>major</mode></key>",
+        b"<key><fifths>0</fifths></key>",
+        1,
+    )
+    result = _success(_write(tmp_path, _mxl(root=root, media_type=None)))
+
+    assert [warning.code for warning in result.warnings] == [
+        ImportCode.MXL_ROOTFILE_MEDIA_TYPE_UNPROVIDED,
+        ImportCode.KEY_MODE_UNPROVIDED,
+    ]
 
 
 def test_optional_standard_mimetype_member_is_accepted(tmp_path: Path) -> None:
@@ -1312,5 +1326,5 @@ def test_real_mxl_cli_and_trace_are_deterministic(
     assert first.out == second.out
     assert first.err == second.err == ""
     assert first_trace == second_trace
-    assert "IMPORTER          : musicxml@0.2.0" in first.out
+    assert "IMPORTER          : musicxml@0.3.0" in first.out
     assert "ROOTFILE MEMBER   : scores/lead.musicxml" in first.out

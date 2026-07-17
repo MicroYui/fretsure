@@ -1,7 +1,7 @@
 # Fretsure —— 可证明可弹的吉他谱智能体（设计文档 / Design Spec）
 
 > 产品名 **Fretsure**（fret + ensure，已定）。备选 PlayProof / Fretwright 仅存档。
-> 状态（2026-07-16）：设计已锁定；Plan 1–5、受限 MusicXML 文件纵切、Oracle 0.2 软件信任门、安全 `.mxl` 与 Plan 6A Web/API/replay trace/MCP 已实现。当前组合树为 package=`0.3.0`、service/API/MCP/trace=`0.1.0`，既有 playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0`、importer=`musicxml@0.2.0`、container=`mxl-container@0.1.0` 不改义；默认真代理模型为 `gpt-5.6-sol`，收集 `1500` 项测试（离线 `1494 passed, 6 deselected`，本地代理 integration `6 passed`）。完整 Plan 6 的音频/琴颈/导出/live demo 仍 open；下一项为 producer-driven MusicXML/IR。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+> 状态（2026-07-16）：设计已锁定；Plan 1–5、受限 MusicXML 文件纵切、Oracle 0.2 软件信任门、安全 `.mxl`、Plan 6A Web/API/replay trace/MCP 与 producer-driven MusicXML/IR 实现边界已落地。当前组合树为 package=`0.4.0`、service/API/MCP/trace=`0.1.0`，playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0` 保持不变，importer=`musicxml@0.3.0`，container=`mxl-container@0.1.0` 保持不变；MusicXML runtime 精确锁定 `music21==10.5.0`，默认真代理模型为 `gpt-5.6-sol`。完整 Plan 6 的音频/琴颈/导出/live demo 仍 open；producer 阶段独立验收、提交推送后依次进入 MIDI、benchmark v2。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
 
 ---
 
@@ -111,8 +111,8 @@
 
 ### 5.1 输入解析 Input Parser
 - **目标保证路径（符号）**：MusicXML / MIDI / MusicXML-lite / lead sheet（旋律+和弦符号）/ 纯和弦谱。这里是目标集合，不表示当前全部实现。
-- **当前 `musicxml@0.2.0`**：安全 envelope + fail-closed 原始语义预检后，才把 canonical、无 DTD/entity 的 XML 交给 **music21**（BSD-3）。支持 MusicXML 3.1/4.0 `score-partwise` 的未压缩 `.musicxml`/`.xml`，以及由 `mxl-container@0.1.0` 有界校验、全内存解压和逐 member size/CRC/完整性核验后选出的唯一 `.mxl` root。语义仍限单 note-bearing part/staff/voice、普通 note/rest/tie、全曲固定的 bounded XSD-decimal divisions 与 decimal duration、固定显式 major/minor key、4/4、1–1000 BPM quarter tempo 与白名单 root+kind harmony。raw exact event timeline 是权威，music21 只做逐事件语义交叉验证；`.mxl` 不扩语义。复调、多 part/staff/voice、导航/重复、pickup、变拍/变调/变速、复杂 harmony/技巧、MIDI 与 audio 均延后并 typed fail-closed。
-- producer 证据：music21 10.5.0 与 musicxml 1.6.1 原样 library/toolkit 导出为正例；MuseScore Studio 4.7.4 原样输出因省略 key mode 被明确拒绝。尚无常见 notation application 正兼容证据，不得据此声称 MuseScore 或制谱软件普遍兼容。
+- **当前 `musicxml@0.3.0`**：安全 envelope + fail-closed 完整 raw 语义预检后，才重建一个 bounded event-only XML 交给精确锁定的 **music21 10.5.0**（BSD-3）做交叉验证；第三方只接收 divisions、harmony root/kind 与 note/rest/duration/tie，credit、instrument/MIDI、layout/print、lyrics/voice、key visual metadata 和合法额外 non-note-bearing part 不进入该边界。支持 MusicXML 3.1/4.0 `score-partwise` 的未压缩 `.musicxml`/`.xml`，以及由 `mxl-container@0.1.0` 有界校验、全内存解压和逐 member size/CRC/完整性核验后选出的唯一 `.mxl` root。语义仍限单 note-bearing part/staff/voice、普通 note/rest/tie、全曲固定的 bounded XSD-decimal divisions 与 decimal duration、固定传统 key、4/4、1–1000 BPM quarter tempo 与白名单 root+kind harmony。显式 major/minor 维持原 key；MusicXML 4.0 traditional key 省略 `<mode>` 时保留 `key-signature:fifths=N;mode=unprovided` 并发 located `KEY_MODE_UNPROVIDED`，不从音符、和弦、spelling 或 music21 猜 mode。MusicXML 3.1 省略 mode、空/其他 mode、重复权威 scalar、错误 key shape 与 key change 继续拒绝；外部资源、权威语义数值字段中的非 ASCII/XSD 值、location/diagnostic amplification 与派生 Fraction 均在 adapter 前有界失败。raw exact event timeline 是权威，music21 只做逐事件语义交叉验证；每个 success 还须满足 256-bit Fraction 的 public MusicIR snapshot；`.mxl` 不扩语义。复调、多 note-bearing part/staff/voice、导航/重复、pickup、变拍/变调/变速、复杂 harmony/技巧、MIDI 与 audio 均延后并 typed fail-closed。
+- producer 证据只覆盖 manifest 中未经手改、精确冻结的 artifacts：music21 10.5.0、musicxml 1.6.1 与 MuseScore Studio 4.7.4 XML/MXL rows。它不证明任意 MuseScore 4.7.4 乐谱、其他版本或完整 MusicXML 兼容；逐文件 census 与限制见 [`2026-07-16-producer-musicxml-census.json`](../../experiments/2026-07-16-producer-musicxml-census.json)，闭门证据见 [`PRODUCER_MUSICXML_ACCEPTANCE.md`](../../PRODUCER_MUSICXML_ACCEPTANCE.md)。
 - **尽力路径（音频,v2）**：mp3/wav → 转谱（旋律+和弦+节拍）。候选免费工具：Spotify **Basic Pitch**、librosa 节拍/和弦识别。**明确标注"近似、需校对、不保证"**;提供校对 UI。转谱错误不计入产品的"保证"。
 - 输出：统一 **Music IR**。
 

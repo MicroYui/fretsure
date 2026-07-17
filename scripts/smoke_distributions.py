@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clean-install smoke matrix for the built Plan 6A wheel and optional extras."""
+"""Clean-install smoke matrix for the current release wheel and optional extras."""
 
 from __future__ import annotations
 
@@ -42,7 +42,10 @@ def main() -> int:
                 "import importlib.util, fretsure; "
                 f"assert fretsure.__version__ == '{version}'; "
                 "assert importlib.util.find_spec('fastapi') is None; "
-                "assert importlib.util.find_spec('mcp') is None"
+                "assert importlib.util.find_spec('mcp') is None; "
+                "assert importlib.util.find_spec('music21') is None; "
+                "assert importlib.util.find_spec('defusedxml') is None; "
+                "assert importlib.util.find_spec('anthropic') is None"
             ),
         )
         _environment(
@@ -52,9 +55,14 @@ def main() -> int:
             "musicxml",
             (
                 "from pathlib import Path; "
-                "from fretsure.importers import ImportSuccess, import_musicxml; "
-                "assert isinstance(import_musicxml(Path('tests/fixtures/musicxml/"
-                "supported_basic.musicxml')), ImportSuccess)"
+                "from fretsure.importers import IMPORTER_VERSION, ImportSuccess, "
+                "import_musicxml; "
+                "score = Path('tests/fixtures/producers/musescore-4.7.4.musicxml'); "
+                "result = import_musicxml(score); "
+                "assert isinstance(result, ImportSuccess); "
+                "assert result.importer_version == IMPORTER_VERSION; "
+                "assert result.ir.meta.key == "
+                "'key-signature:fifths=0;mode=unprovided'"
             ),
         )
         _environment(
@@ -63,10 +71,19 @@ def main() -> int:
             wheel,
             "service,musicxml,agent",
             (
-                "from fretsure.api import create_app; "
-                "from fretsure.llm.client import CONSTANT_LLM_MODEL_ID; "
-                "assert create_app().state.fretsure_config.offline_model_id == "
-                "CONSTANT_LLM_MODEL_ID"
+                "from pathlib import Path; "
+                "from fretsure.application import ArrangeOptions, arrange_outcome_to_wire, "
+                "arrange_score_bytes; "
+                "from fretsure.importers import IMPORTER_VERSION; "
+                "from fretsure.llm.client import ConstantLLM; "
+                "score = Path('tests/fixtures/producers/musescore-4.7.4.musicxml'); "
+                "outcome = arrange_score_bytes(score.read_bytes(), filename=score.name, "
+                "options=ArrangeOptions(n=1, max_iters=0, use_critic=False), "
+                "llm=ConstantLLM('noop')); "
+                "wire = arrange_outcome_to_wire(outcome); "
+                "assert outcome.status == 'tab_produced'; "
+                "assert wire['source']['importer_version'] == IMPORTER_VERSION; "
+                "assert wire['stamps']['importer_version'] == IMPORTER_VERSION"
             ),
         )
         _environment(
