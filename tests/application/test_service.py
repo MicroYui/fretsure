@@ -42,7 +42,19 @@ _BASIC = Path("tests/fixtures/musicxml/supported_basic.musicxml")
 _PRODUCERS = Path("tests/fixtures/producers")
 _MUSESCORE_XML = _PRODUCERS / "musescore-4.7.4.musicxml"
 _MUSESCORE_MXL = _PRODUCERS / "musescore-4.7.4-roundtrip-supported_basic.mxl"
+_MIDI_PRODUCERS = Path("tests/fixtures/midi/producers")
+_MUSIC21_MIDI = _MIDI_PRODUCERS / "music21-10.5.0-melody_only.mid"
 _UNPROVIDED_KEY = "key-signature:fifths=0;mode=unprovided"
+_MINIMAL_MIDI = bytes.fromhex(
+    "4d546864000000060000000101e0"  # format 0, one track, PPQN 480
+    "4d54726b00000022"
+    "00ff510307a120"  # tick 0: 120 BPM
+    "00ff580404021808"  # tick 0: 4/4
+    "00ff59020000"  # tick 0: C major
+    "00903c40"  # tick 0: C4 note on
+    "8360803c00"  # tick 480: C4 note off
+    "00ff2f00"  # tick 480: end of track
+)
 
 
 def _application_error(call: Any) -> ApplicationError:
@@ -64,12 +76,54 @@ class _CountingLLM(ConstantLLM):
 
 def test_capabilities_freeze_service_target_and_profile_contracts() -> None:
     value = capabilities()
-    assert value.service_version == SERVICE_VERSION == "fretsure-service@0.1.0"
+    assert value.service_version == SERVICE_VERSION == "fretsure-service@0.2.0"
+    assert value.score_input_version == "score-input@0.1.0"
+    assert dict(value.score_format_registry) == {
+        "musicxml": "musicxml@0.3.0",
+        "mxl": "musicxml@0.3.0",
+        "midi": "midi@0.1.0",
+    }
+    assert value.input_suffixes == (".musicxml", ".xml", ".mxl", ".mid", ".midi")
     assert value.target_input_schema_version == "target-input@0.1.0"
     assert value.profiles == ("median",)
     assert value.render_formats == ("ascii",)
     with pytest.raises(FrozenInstanceError):
         value.service_version = "mutated"  # type: ignore[misc]
+    with pytest.raises(TypeError):
+        value.score_format_registry["midi"] = "mutated"  # type: ignore[index]
+
+
+def test_arrange_uses_generic_score_router_with_exact_filename(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[bytes, str]] = []
+    failure = ImportFailure(
+        (
+            ImportDiagnostic(
+                ImportCode.MALFORMED_XML,
+                DiagnosticSeverity.ERROR,
+                "deliberate test rejection",
+            ),
+        )
+    )
+
+    def route(data: bytes, filename: str) -> ImportFailure:
+        calls.append((data, filename))
+        return failure
+
+    monkeypatch.setattr(service_module, "import_score_bytes", route)
+    error = _application_error(
+        lambda: arrange_score_bytes(
+            b"exact-midi-bytes",
+            filename="melody.MID",
+            options=ArrangeOptions(),
+            llm=ConstantLLM(),
+        )
+    )
+
+    assert calls == [(b"exact-midi-bytes", "melody.MID")]
+    assert error.code is ApplicationCode.IMPORT_REJECTED
+    assert error.detail == "score bytes were rejected by the selected score importer"
 
 
 def test_invalid_arrange_options_fail_before_importer_or_llm(
@@ -82,7 +136,7 @@ def test_invalid_arrange_options_fail_before_importer_or_llm(
         raise AssertionError
 
     llm = _CountingLLM()
-    monkeypatch.setattr(service_module, "import_musicxml_bytes", must_not_import)
+    monkeypatch.setattr(service_module, "import_score_bytes", must_not_import)
     error = _application_error(
         lambda: arrange_score_bytes(
             b"irrelevant",
@@ -100,7 +154,7 @@ def test_non_bytes_fail_before_importer(monkeypatch: pytest.MonkeyPatch) -> None
     def must_not_import(*args: object, **kwargs: object) -> ImportSuccess:
         raise AssertionError
 
-    monkeypatch.setattr(service_module, "import_musicxml_bytes", must_not_import)
+    monkeypatch.setattr(service_module, "import_score_bytes", must_not_import)
     error = _application_error(
         lambda: arrange_score_bytes(
             bytearray(b"xml"),  # type: ignore[arg-type]
@@ -126,7 +180,7 @@ def test_import_failure_is_redacted_at_the_application_boundary(
             ),
         )
     )
-    monkeypatch.setattr(service_module, "import_musicxml_bytes", lambda *a, **k: failure)
+    monkeypatch.setattr(service_module, "import_score_bytes", lambda *a, **k: failure)
     error = _application_error(
         lambda: arrange_score_bytes(
             b"<bad>",
@@ -152,7 +206,7 @@ def test_missing_optional_importer_dependency_has_a_distinct_stable_code(
             ),
         )
     )
-    monkeypatch.setattr(service_module, "import_musicxml_bytes", lambda *a, **k: failure)
+    monkeypatch.setattr(service_module, "import_score_bytes", lambda *a, **k: failure)
     error = _application_error(
         lambda: arrange_score_bytes(
             b"<score/>",
@@ -183,7 +237,7 @@ def test_pipeline_failure_is_safe_and_drops_raw_provider_text(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     imported = ImportSuccess(sample_ir(bars=1), (), "musicxml@test", "a" * 64)
-    monkeypatch.setattr(service_module, "import_musicxml_bytes", lambda *a, **k: imported)
+    monkeypatch.setattr(service_module, "import_score_bytes", lambda *a, **k: imported)
 
     def fail_pipeline(*args: object, **kwargs: object) -> object:
         raise RuntimeError("provider secret token and traceback")
@@ -272,6 +326,52 @@ def test_real_arrangement_matches_the_existing_pipeline_and_pins_model_once() ->
     assert outcome.faithfulness == direct.faithfulness
 
 
+def test_minimal_midi_crosses_application_with_dynamic_stamps_and_na_evidence() -> None:
+    outcome = arrange_score_bytes(
+        _MINIMAL_MIDI,
+        filename="minimal.mid",
+        options=ArrangeOptions(n=1, max_iters=0, use_critic=False),
+        llm=ConstantLLM("noop"),
+    )
+    wire = arrange_outcome_to_wire(outcome)
+
+    assert outcome.imported.provenance is not None
+    assert outcome.imported.provenance.source_format == "midi"
+    assert outcome.imported.ir.chords == ()
+    assert wire["source"]["format"] == "midi"
+    assert wire["source"]["importer_version"] == "midi@0.1.0"
+    assert wire["stamps"]["score_input_version"] == "score-input@0.1.0"
+    assert wire["stamps"]["importer_version"] == "midi@0.1.0"
+    assert wire["faithfulness"] == {
+        "melody_f1": 1.0,
+        "bass_root_accuracy": None,
+        "harmony_jaccard": None,
+        "evaluated_dimensions": ["melody"],
+        "unavailable_dimensions": ["bass_root", "harmony"],
+        "passed": True,
+        "checker_version": "fidelity@0.3.0",
+    }
+    selected = next(
+        step for step in wire["trace"]["steps"] if step["event"] == "CANDIDATE_SELECTED"
+    )
+    selected_data = selected["data"]
+    for field in (
+        "melody_f1",
+        "bass_root_accuracy",
+        "harmony_jaccard",
+        "evaluated_dimensions",
+        "unavailable_dimensions",
+    ):
+        assert selected_data[field] == wire["faithfulness"][field]
+    assert selected_data["faithfulness_passed"] is wire["faithfulness"]["passed"]
+    assert {
+        "ranking_melody_recall",
+        "ranking_bass_preserved",
+        "ranking_harmony_jaccard",
+    } <= set(selected_data)
+    assert not {"melody_recall", "bass_preserved"} & set(selected_data)
+
+
 @pytest.mark.parametrize(
     ("score", "source_format", "warning_codes", "root_member"),
     [
@@ -350,6 +450,42 @@ def test_real_proxy_arranges_frozen_musescore_and_stamps_every_contract() -> Non
     assert wire["stamps"]["importer_version"] == "musicxml@0.3.0"
     assert wire["stamps"]["oracle_checker_version"] == "oracle@0.2.0"
     assert wire["stamps"]["profile_version"] == "median@0.1"
+
+
+@pytest.mark.integration
+def test_real_proxy_arranges_exact_frozen_midi_with_na_source_evidence() -> None:
+    import os
+
+    if not os.environ.get("ANTHROPIC_BASE_URL"):
+        pytest.skip("no local LLM proxy configured")
+    from fretsure.llm.client import ProxyLLM
+
+    outcome = arrange_score_bytes(
+        _MUSIC21_MIDI.read_bytes(),
+        filename=_MUSIC21_MIDI.name,
+        options=ArrangeOptions(n=1, max_iters=0, use_critic=False),
+        llm=ProxyLLM(),
+    )
+    wire = arrange_outcome_to_wire(outcome)
+
+    assert outcome.status in {"tab_produced", "no_fingering_within_budget"}
+    assert wire["source"]["raw_sha256"] == (
+        "9d6dff16ad49f7a2cb75f43b60af4a85bd86797f505d7f5e7f5efd7a06ea227c"
+    )
+    assert wire["source"]["format"] == "midi"
+    assert wire["source"]["importer_version"] == "midi@0.1.0"
+    assert wire["score"]["chord_count"] == 0
+    assert wire["model"] == {"model_id": "gpt-5.6-sol"}
+    assert wire["stamps"]["score_input_version"] == "score-input@0.1.0"
+    assert wire["stamps"]["importer_version"] == "midi@0.1.0"
+    if wire["faithfulness"] is not None:
+        assert wire["faithfulness"]["evaluated_dimensions"] == ["melody"]
+        assert wire["faithfulness"]["unavailable_dimensions"] == [
+            "bass_root",
+            "harmony",
+        ]
+        assert wire["faithfulness"]["bass_root_accuracy"] is None
+        assert wire["faithfulness"]["harmony_jaccard"] is None
 
 
 def test_arrange_outcome_is_frozen_and_trace_is_an_immutable_snapshot() -> None:

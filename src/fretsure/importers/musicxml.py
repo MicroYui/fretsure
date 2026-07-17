@@ -39,7 +39,9 @@ from fretsure.importers.contracts import (
 )
 from fretsure.ir import IRInputError, snapshot_music_ir, validate_ir
 
-IMPORTER_VERSION = "musicxml@0.3.0"
+MUSICXML_IMPORTER_VERSION = "musicxml@0.3.0"
+# Backwards-compatible alias retained for callers of the original single-format API.
+IMPORTER_VERSION = MUSICXML_IMPORTER_VERSION
 
 _MUSICXML_NAMESPACE = "http://www.musicxml.org/ns/musicxml"
 _SUPPORTED_EXTENSIONS = frozenset({".musicxml", ".xml", ".mxl"})

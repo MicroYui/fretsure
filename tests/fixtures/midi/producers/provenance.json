@@ -1,0 +1,564 @@
+{
+  "fixtures": [
+    {
+      "command": [
+        "mscore",
+        "-o",
+        "{output_file}",
+        "{source_file}"
+      ],
+      "diagnostics": [],
+      "diagnostics_sha256": null,
+      "expected": "success",
+      "importer_version": "midi@0.1.0",
+      "observation": "MuseScore emits the note-bearing EOT at 7 beats, dropping the source's final beat of silence, and releases each sounding note one PPQN tick early; those raw durations are authoritative.",
+      "output_file": "musescore-4.7.4-melody_only.mid",
+      "producer": "MuseScore Studio",
+      "producer_class": "notation-application",
+      "producer_license": "GPL-3.0-only (external exporter only)",
+      "raw_bytes": 147,
+      "raw_sha256": "f28ca58259125af6f7aa11388dd26a9c2fc01dba833798843b182f59f82605b7",
+      "score_license": "CC0-1.0",
+      "semantic": {
+        "chords": [],
+        "duration_beats": [
+          7,
+          1
+        ],
+        "key": "C",
+        "license": "unprovided",
+        "notes": [
+          {
+            "duration": [
+              479,
+              480
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 60,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1439,
+              480
+            ],
+            "onset": [
+              2,
+              1
+            ],
+            "pitch": 62,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              479,
+              480
+            ],
+            "onset": [
+              5,
+              1
+            ],
+            "pitch": 63,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              479,
+              480
+            ],
+            "onset": [
+              6,
+              1
+            ],
+            "pitch": 66,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 96.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Melody",
+        "warnings": [
+          {
+            "code": "MIDI_HARMONY_UNPROVIDED",
+            "location": {
+              "element": "harmony"
+            },
+            "severity": "warning"
+          },
+          {
+            "code": "MIDI_PERFORMANCE_DATA_IGNORED",
+            "location": {
+              "element": "performance-data"
+            },
+            "severity": "warning"
+          },
+          {
+            "code": "RIGHTS_UNPROVIDED",
+            "location": {
+              "element": "rights"
+            },
+            "severity": "warning"
+          }
+        ]
+      },
+      "semantic_sha256": "844d0ee97b08166a97fe15aac5af6addc971473691c1c74dc88733933ad7008d",
+      "smf": {
+        "format": 1,
+        "ticks_per_quarter": 480,
+        "tracks": 1
+      },
+      "source_bytes": 2096,
+      "source_file": "tests/fixtures/midi/sources/melody_only.musicxml",
+      "source_sha256": "253cb68bb88db194d899a7e36f8702bb9691f33309c1692c9c57aa8c5f71893d",
+      "version": "4.7.4"
+    },
+    {
+      "command": [
+        "python",
+        "-c",
+        "<frozen-music21-export>",
+        "{source_file}",
+        "{output_file}"
+      ],
+      "diagnostics": [],
+      "diagnostics_sha256": null,
+      "expected": "success",
+      "importer_version": "midi@0.1.0",
+      "observation": "music21 preserves notation-exact note durations and the note-track EOT as 8 beats; no equality with the MuseScore MusicIR is claimed.",
+      "output_file": "music21-10.5.0-melody_only.mid",
+      "producer": "music21",
+      "producer_class": "python-library",
+      "producer_license": "BSD-3-Clause (external exporter only)",
+      "raw_bytes": 116,
+      "raw_sha256": "9d6dff16ad49f7a2cb75f43b60af4a85bd86797f505d7f5e7f5efd7a06ea227c",
+      "score_license": "CC0-1.0",
+      "semantic": {
+        "chords": [],
+        "duration_beats": [
+          8,
+          1
+        ],
+        "key": "C",
+        "license": "unprovided",
+        "notes": [
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              0,
+              1
+            ],
+            "pitch": 60,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              3,
+              1
+            ],
+            "onset": [
+              2,
+              1
+            ],
+            "pitch": 62,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              5,
+              1
+            ],
+            "pitch": 63,
+            "voice": "melody"
+          },
+          {
+            "duration": [
+              1,
+              1
+            ],
+            "onset": [
+              6,
+              1
+            ],
+            "pitch": 66,
+            "voice": "melody"
+          }
+        ],
+        "tempo_bpm": 96.0,
+        "time_sig": [
+          4,
+          4
+        ],
+        "title": "Melody",
+        "warnings": [
+          {
+            "code": "MIDI_HARMONY_UNPROVIDED",
+            "location": {
+              "element": "harmony"
+            },
+            "severity": "warning"
+          },
+          {
+            "code": "MIDI_PERFORMANCE_DATA_IGNORED",
+            "location": {
+              "element": "performance-data"
+            },
+            "severity": "warning"
+          },
+          {
+            "code": "RIGHTS_UNPROVIDED",
+            "location": {
+              "element": "rights"
+            },
+            "severity": "warning"
+          }
+        ]
+      },
+      "semantic_sha256": "4673b46cc2dea5baf36697dfa5b741ce408c40ca4ab2d2b370ae11de231f59d7",
+      "smf": {
+        "format": 1,
+        "ticks_per_quarter": 10080,
+        "tracks": 2
+      },
+      "source_bytes": 2096,
+      "source_file": "tests/fixtures/midi/sources/melody_only.musicxml",
+      "source_sha256": "253cb68bb88db194d899a7e36f8702bb9691f33309c1692c9c57aa8c5f71893d",
+      "version": "10.5.0"
+    },
+    {
+      "command": [
+        "mscore",
+        "-o",
+        "{output_file}",
+        "{source_file}"
+      ],
+      "diagnostics": [
+        {
+          "code": "MULTIPLE_NOTE_BEARING_STREAMS",
+          "location": {
+            "channel": 2,
+            "element": "note-on",
+            "event_index": 30,
+            "tick": 0,
+            "track_index": 0
+          },
+          "severity": "error"
+        }
+      ],
+      "diagnostics_sha256": "19dd90ad09dc32f9ca592d6c70560f5c5665d5fa7b97712b5536b054dba37de3",
+      "expected": "failure",
+      "importer_version": "midi@0.1.0",
+      "observation": "Realized harmony creates multiple note-bearing streams and is rejected.",
+      "output_file": "musescore-4.7.4-supported_basic.mid",
+      "producer": "MuseScore Studio",
+      "producer_class": "notation-application",
+      "producer_license": "GPL-3.0-only (external exporter only)",
+      "raw_bytes": 246,
+      "raw_sha256": "5906383876caa705d525e92e331107ac65b148f1b8c07ed3aabb24fd15b5cf91",
+      "score_license": "CC0-1.0",
+      "semantic": null,
+      "semantic_sha256": null,
+      "smf": {
+        "format": 1,
+        "ticks_per_quarter": 480,
+        "tracks": 1
+      },
+      "source_bytes": 2308,
+      "source_file": "tests/fixtures/musicxml/supported_basic.musicxml",
+      "source_sha256": "a57887bc0373babb8029ef0316e4f6ab91e980576bf67273dabecdd626126984",
+      "version": "4.7.4"
+    },
+    {
+      "command": [
+        "python",
+        "-c",
+        "<frozen-music21-export>",
+        "{source_file}",
+        "{output_file}"
+      ],
+      "diagnostics": [
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-off",
+            "event_index": 1,
+            "tick": 0,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-off",
+            "event_index": 2,
+            "tick": 0,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-off",
+            "event_index": 3,
+            "tick": 0,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_POLYPHONY_UNSUPPORTED",
+          "location": {
+            "channel": 1,
+            "element": "notes",
+            "tick": 0,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_POLYPHONY_UNSUPPORTED",
+          "location": {
+            "channel": 1,
+            "element": "notes",
+            "tick": 10080,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_POLYPHONY_UNSUPPORTED",
+          "location": {
+            "channel": 1,
+            "element": "notes",
+            "tick": 20160,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-off",
+            "event_index": 12,
+            "tick": 40320,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-off",
+            "event_index": 13,
+            "tick": 40320,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-off",
+            "event_index": 14,
+            "tick": 40320,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-off",
+            "event_index": 15,
+            "tick": 40320,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_POLYPHONY_UNSUPPORTED",
+          "location": {
+            "channel": 1,
+            "element": "notes",
+            "tick": 40320,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_POLYPHONY_UNSUPPORTED",
+          "location": {
+            "channel": 1,
+            "element": "notes",
+            "tick": 50400,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_POLYPHONY_UNSUPPORTED",
+          "location": {
+            "channel": 1,
+            "element": "notes",
+            "tick": 60480,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_POLYPHONY_UNSUPPORTED",
+          "location": {
+            "channel": 1,
+            "element": "notes",
+            "tick": 70560,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-on",
+            "event_index": 6,
+            "tick": 0,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-on",
+            "event_index": 7,
+            "tick": 0,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-on",
+            "event_index": 8,
+            "tick": 0,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-on",
+            "event_index": 16,
+            "tick": 40320,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-on",
+            "event_index": 17,
+            "tick": 40320,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-on",
+            "event_index": 18,
+            "tick": 40320,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_NOTE_PAIRING_ERROR",
+          "location": {
+            "channel": 1,
+            "element": "note-on",
+            "event_index": 19,
+            "tick": 40320,
+            "track_index": 1
+          },
+          "severity": "error"
+        },
+        {
+          "code": "MIDI_HARMONY_UNPROVIDED",
+          "location": {
+            "element": "harmony"
+          },
+          "severity": "warning"
+        },
+        {
+          "code": "MIDI_PERFORMANCE_DATA_IGNORED",
+          "location": {
+            "element": "performance-data"
+          },
+          "severity": "warning"
+        },
+        {
+          "code": "RIGHTS_UNPROVIDED",
+          "location": {
+            "element": "rights"
+          },
+          "severity": "warning"
+        }
+      ],
+      "diagnostics_sha256": "84ad57751a79a5109771ad8734836ca2aa848692279d059bf8a7a838e8a3e50e",
+      "expected": "failure",
+      "importer_version": "midi@0.1.0",
+      "observation": "Realized harmony is polyphonic and fails the strict single-stream contract.",
+      "output_file": "music21-10.5.0-supported_basic.mid",
+      "producer": "music21",
+      "producer_class": "python-library",
+      "producer_license": "BSD-3-Clause (external exporter only)",
+      "raw_bytes": 173,
+      "raw_sha256": "6110193b34647adcf9f3968d7b3a46be192ef97a802a7ba35026764430bd88b6",
+      "score_license": "CC0-1.0",
+      "semantic": null,
+      "semantic_sha256": null,
+      "smf": {
+        "format": 1,
+        "ticks_per_quarter": 10080,
+        "tracks": 2
+      },
+      "source_bytes": 2308,
+      "source_file": "tests/fixtures/musicxml/supported_basic.musicxml",
+      "source_sha256": "a57887bc0373babb8029ef0316e4f6ab91e980576bf67273dabecdd626126984",
+      "version": "10.5.0"
+    }
+  ],
+  "note": "Artifacts are unedited exact producer output. Raw tick timelines are authoritative per artifact. MuseScore and music21 durations intentionally differ, so no cross-producer MusicIR equivalence is claimed. Producer licenses describe external exporters, not project dependencies.",
+  "schema": "fretsure-midi-producer-fixtures@0.1.0"
+}

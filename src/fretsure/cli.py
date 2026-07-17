@@ -1,4 +1,4 @@
-"""CLI for the real-file MusicXML/MXL product vertical slice."""
+"""CLI for the real-file symbolic-score product vertical slice."""
 
 import argparse
 import math
@@ -11,10 +11,11 @@ from pathlib import Path
 from fretsure.agent.arranger import ArrangementCapacityError, ensure_llm_capacity
 from fretsure.agent.trace import TraceInputError
 from fretsure.importers import (
+    SCORE_INPUT_VERSION,
     ImportDiagnostic,
     ImportFailure,
     ImportSuccess,
-    import_musicxml,
+    import_score,
 )
 from fretsure.ir import MusicIR
 from fretsure.llm.client import ConstantLLM, LLMClient
@@ -89,8 +90,9 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="fretsure-arrange",
         description=(
-            "Import a supported MusicXML or MXL lead sheet, arrange it for guitar, and "
-            "run the versioned playability and faithfulness checkers."
+            "Import a supported symbolic score (MusicXML, MXL, or strict melody-only "
+            "MIDI), arrange it for guitar, and run the versioned playability and "
+            "faithfulness checkers."
         ),
     )
     parser.add_argument("file", type=Path, metavar="SCORE")
@@ -137,6 +139,10 @@ def _location(diagnostic: ImportDiagnostic) -> str:
         ("voice", location.voice),
         ("element", location.element),
         ("archive-member", location.archive_member),
+        ("track-index", location.track_index),
+        ("event-index", location.event_index),
+        ("channel", location.channel),
+        ("tick", location.tick),
     )
     rendered = ", ".join(
         f"{name}={_terminal_safe(value)}" for name, value in fields if value is not None
@@ -174,10 +180,18 @@ def _faithfulness_lines(gate: FaithfulnessGate | None) -> list[str]:
             "  unavailable — no tablature was produced",
             f"  checker {FIDELITY_CHECKER_VERSION}",
         ]
+    def score(value: float | None) -> str:
+        return "N/A" if value is None else f"{value:.2f}"
+
+    evaluated = ", ".join(gate.evaluated_dimensions) or "none"
+    unavailable = ", ".join(gate.unavailable_dimensions) or "none"
     return [
-        f"  melody-F1 {gate.melody_f1:.2f}   bass-root {gate.bass_root:.2f}   "
-        f"harmony {gate.harmony:.2f}",
-        f"  gate {'PASS' if gate.passed else 'FAIL'}   checker {FIDELITY_CHECKER_VERSION}",
+        f"  melody-F1 {score(gate.melody_f1)}   bass-root {score(gate.bass_root)}   "
+        f"harmony {score(gate.harmony)}",
+        f"  available-dimension gate {'PASS' if gate.passed else 'FAIL'} "
+        f"({len(gate.evaluated_dimensions)}/3 evaluated)",
+        f"  evaluated: {evaluated}; unavailable: {unavailable}",
+        f"  checker {FIDELITY_CHECKER_VERSION}",
     ]
 
 
@@ -209,15 +223,16 @@ def _render_success(
 ) -> str:
     lines = [
         "=" * 72,
-        "Fretsure — MusicXML/MXL to versioned-model-checked fingerstyle tab",
+        "Fretsure — symbolic score to versioned-model-checked fingerstyle tab",
         "=" * 72,
         f"FILE              : {_terminal_safe(source_path)}",
+        f"SCORE ROUTER      : {SCORE_INPUT_VERSION}",
         f"IMPORTER          : {_terminal_safe(imported.importer_version)}",
         f"SOURCE SHA-256    : {_terminal_safe(imported.sha256)}",
     ]
     if imported.provenance is not None:
         lines.append(
-            f"ROOT XML SHA-256  : {_terminal_safe(imported.provenance.root_sha256)}"
+            f"ROOT SCORE SHA-256: {_terminal_safe(imported.provenance.root_sha256)}"
         )
         if imported.provenance.root_member is not None:
             lines.append(
@@ -293,13 +308,13 @@ def _write_trace(path: Path, result: PipelineResult) -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
-        imported = import_musicxml(args.file)
+        imported = import_score(args.file)
     except Exception:  # noqa: BLE001 - redact unexpected importer internals
         print("fretsure-arrange: importer failed unexpectedly", file=sys.stderr)
         return EXIT_IMPORT_ERROR
 
     if isinstance(imported, ImportFailure):
-        print("fretsure-arrange: MusicXML import failed", file=sys.stderr)
+        print("fretsure-arrange: score import failed", file=sys.stderr)
         for diagnostic in imported.diagnostics:
             print(f"  {_diagnostic_line(diagnostic)}", file=sys.stderr)
         return EXIT_IMPORT_ERROR

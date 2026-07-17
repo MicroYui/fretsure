@@ -13,7 +13,7 @@ from fretsure.application import (
     application_error_to_wire,
 )
 
-API_VERSION = "fretsure-api@0.1.0"
+API_VERSION = "fretsure-api@0.2.0"
 PROBLEM_MEDIA_TYPE = "application/problem+json"
 
 

@@ -31,7 +31,7 @@ from fretsure.application import (
     solve_target_json,
 )
 
-MCP_VERSION = "fretsure-mcp@0.1.0"
+MCP_VERSION = "fretsure-mcp@0.2.0"
 CAPABILITIES_URI = "fretsure://capabilities"
 
 _TOOL_NAMES = (

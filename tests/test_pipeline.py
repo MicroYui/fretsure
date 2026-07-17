@@ -320,7 +320,7 @@ def test_pipeline_offline_result_contains_tab_ascii_gate_and_trace() -> None:
         == result.arrangement.oracle.profile_fingerprint
     )
     first_jsonl_row = json.loads(result.trace.to_jsonl().splitlines()[0])
-    assert first_jsonl_row["trace_schema_version"] == "agent-trace@0.1.0"
+    assert first_jsonl_row["trace_schema_version"] == "agent-trace@0.2.0"
     assert first_jsonl_row["seq"] == 0
     assert first_jsonl_row["data"]["llm_model_id"] == "constant-stub"
     assert first_jsonl_row["data"]["checker_version"] == CHECKER_VERSION
@@ -371,6 +371,11 @@ def test_pipeline_trace_replays_repair_in_logical_order_and_freezes_both_gates()
     assert result.faithfulness is not None
     assert terminal.data["faithfulness_passed"] is result.faithfulness.passed
     assert terminal.data["faithfulness_passed"] is False
+    assert terminal.data["melody_f1"] == result.faithfulness.melody_f1
+    assert terminal.data["bass_root_accuracy"] is result.faithfulness.bass_root
+    assert terminal.data["harmony_jaccard"] == result.faithfulness.harmony
+    assert terminal.data["evaluated_dimensions"] == ["melody", "harmony"]
+    assert terminal.data["unavailable_dimensions"] == ["bass_root"]
     result.trace.to_public_dict()
 
 

@@ -3,6 +3,8 @@ import type {
   ArrangeControls,
   ArrangementResponse,
   CapabilitiesResponse,
+  FaithfulnessDimension,
+  ScoreFormat,
 } from "./types";
 
 export class FretsureAPIError extends Error {
@@ -15,7 +17,18 @@ export class FretsureAPIError extends Error {
   }
 }
 
-const CURRENT_IMPORTER_VERSION = "musicxml@0.3.0";
+const CURRENT_API_VERSION = "fretsure-api@0.2.0";
+const CURRENT_PACKAGE_VERSION = "0.5.0";
+const CURRENT_SERVICE_VERSION = "fretsure-service@0.2.0";
+const CURRENT_SCORE_INPUT_VERSION = "score-input@0.1.0";
+const CURRENT_FIDELITY_VERSION = "fidelity@0.3.0";
+const CURRENT_TRACE_VERSION = "agent-trace@0.2.0";
+const SCORE_SUFFIXES = [".musicxml", ".xml", ".mxl", ".mid", ".midi"] as const;
+const FORMAT_IMPORTERS: Readonly<Record<ScoreFormat, string>> = {
+  musicxml: "musicxml@0.3.0",
+  mxl: "musicxml@0.3.0",
+  midi: "midi@0.1.0",
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -64,6 +77,29 @@ function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): 
 
 function hasUniqueStrings(values: readonly string[]): boolean {
   return new Set(values).size === values.length;
+}
+
+function arraysEqual<T>(left: readonly T[], right: readonly T[]): boolean {
+  return left.length === right.length && left.every((item, index) => item === right[index]);
+}
+
+function isScoreInputCapability(
+  value: unknown,
+): value is CapabilitiesResponse["inputs"]["score_input"] {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["router_version", "format_importers"]) ||
+    value.router_version !== CURRENT_SCORE_INPUT_VERSION
+  ) {
+    return false;
+  }
+  const registry = value.format_importers;
+  if (!isRecord(registry) || !hasExactKeys(registry, Object.keys(FORMAT_IMPORTERS))) {
+    return false;
+  }
+  return Object.entries(FORMAT_IMPORTERS).every(
+    ([format, importer]) => registry[format] === importer,
+  );
 }
 
 function isProfileIdentity(
@@ -116,9 +152,10 @@ function isPositiveNumberRange(
 function isCapabilities(value: unknown): value is CapabilitiesResponse {
   if (
     !isRecord(value) ||
-    !isNonEmptyString(value.api_version) ||
-    !isNonEmptyString(value.package_version) ||
-    !isNonEmptyString(value.service_version) ||
+    value.api_version !== CURRENT_API_VERSION ||
+    value.package_version !== CURRENT_PACKAGE_VERSION ||
+    value.service_version !== CURRENT_SERVICE_VERSION ||
+    value.trace_schema_version !== CURRENT_TRACE_VERSION ||
     !Array.isArray(value.engines) ||
     value.engines.length !== 2 ||
     !value.engines.every(isEngineCapability) ||
@@ -127,8 +164,8 @@ function isCapabilities(value: unknown): value is CapabilitiesResponse {
     !value.profiles.every(isProfileIdentity) ||
     !isRecord(value.inputs) ||
     !isStringArray(value.inputs.score_suffixes) ||
-    value.inputs.score_suffixes.length === 0 ||
-    !value.inputs.score_suffixes.every((suffix) => suffix.startsWith(".")) ||
+    !arraysEqual(value.inputs.score_suffixes, SCORE_SUFFIXES) ||
+    !isScoreInputCapability(value.inputs.score_input) ||
     !isRecord(value.controls) ||
     !isRecord(value.controls.arrange) ||
     !isRecord(value.controls.arrange.defaults) ||
@@ -157,10 +194,11 @@ function isCapabilities(value: unknown): value is CapabilitiesResponse {
     !engineIds.includes("proxy") ||
     !hasUniqueStrings(profileNames) ||
     !hasUniqueStrings(value.inputs.score_suffixes) ||
-    !requiredStampMatches(stamps, "package_version", value.package_version) ||
-    !requiredStampMatches(stamps, "service_version", value.service_version) ||
-    stamps.importer_version !== CURRENT_IMPORTER_VERSION ||
-    !isNonEmptyString(stamps.trace_schema_version) ||
+    !requiredStampMatches(stamps, "package_version", CURRENT_PACKAGE_VERSION) ||
+    !requiredStampMatches(stamps, "service_version", CURRENT_SERVICE_VERSION) ||
+    !requiredStampMatches(stamps, "score_input_version", CURRENT_SCORE_INPUT_VERSION) ||
+    !requiredStampMatches(stamps, "fidelity_checker_version", CURRENT_FIDELITY_VERSION) ||
+    !requiredStampMatches(stamps, "trace_schema_version", CURRENT_TRACE_VERSION) ||
     !isNonEmptyString(defaults.profile) ||
     !profileNames.includes(defaults.profile) ||
     !isIntegerAtLeast(defaults.n, 1) ||
@@ -250,9 +288,65 @@ const ARRANGEMENT_KEYS = [
   "stamps",
 ] as const;
 const MODEL_KEYS = ["model_id", "engine"] as const;
+const FAITHFULNESS_KEYS = [
+  "melody_f1",
+  "bass_root_accuracy",
+  "harmony_jaccard",
+  "evaluated_dimensions",
+  "unavailable_dimensions",
+  "passed",
+  "checker_version",
+] as const;
+const CANDIDATE_SELECTED_KEYS = [
+  "winner_candidate_index",
+  "candidates_considered",
+  "verdict",
+  "green_certified",
+  "playability_gate",
+  "faithfulness_passed",
+  "ranking_melody_recall",
+  "ranking_bass_preserved",
+  "ranking_harmony_jaccard",
+  "melody_f1",
+  "bass_root_accuracy",
+  "harmony_jaccard",
+  "evaluated_dimensions",
+  "unavailable_dimensions",
+  "critic_status",
+  "critic_overall",
+] as const;
+const FAITHFULNESS_DIMENSIONS = ["melody", "bass_root", "harmony"] as const;
+const FAITHFULNESS_THRESHOLDS: Readonly<Record<FaithfulnessDimension, number>> = {
+  melody: 0.9,
+  bass_root: 0.7,
+  harmony: 0.6,
+};
+const SOURCE_KEYS = [
+  "filename",
+  "format",
+  "raw_sha256",
+  "root_member",
+  "root_sha256",
+  "container_version",
+  "importer_version",
+  "warnings",
+] as const;
+const WARNING_KEYS = ["code", "severity", "message", "location"] as const;
+const IMPORT_LOCATION_KEYS = [
+  "part_id",
+  "measure",
+  "voice",
+  "element",
+  "archive_member",
+  "track_index",
+  "event_index",
+  "channel",
+  "tick",
+] as const;
 const REQUIRED_ARRANGEMENT_STAMPS = [
   "package_version",
   "service_version",
+  "score_input_version",
   "profile_registry_version",
   "profile_version",
   "profile_fingerprint",
@@ -266,34 +360,54 @@ const REQUIRED_ARRANGEMENT_STAMPS = [
 ] as const;
 
 function isImportLocation(value: unknown): boolean {
+  if (value === null) return true;
   return (
-    value === null ||
-    (isRecord(value) && Object.values(value).every((item) => item === null || isString(item)))
+    isRecord(value) &&
+    hasExactKeys(value, IMPORT_LOCATION_KEYS) &&
+    isNullableString(value.part_id) &&
+    isNullableString(value.measure) &&
+    isNullableString(value.voice) &&
+    isNullableString(value.element) &&
+    isNullableString(value.archive_member) &&
+    (value.track_index === null || isIntegerAtLeast(value.track_index, 0)) &&
+    (value.event_index === null || isIntegerAtLeast(value.event_index, 0)) &&
+    (value.channel === null ||
+      (isIntegerAtLeast(value.channel, 1) && value.channel <= 16)) &&
+    (value.tick === null || isIntegerAtLeast(value.tick, 0))
   );
 }
 
 function isSourceEvidence(value: unknown): boolean {
-  return (
-    isRecord(value) &&
-    isNullableString(value.filename) &&
-    isNullableString(value.format) &&
-    isString(value.raw_sha256) &&
-    SHA256.test(value.raw_sha256) &&
-    isNullableString(value.root_member) &&
-    isString(value.root_sha256) &&
-    SHA256.test(value.root_sha256) &&
-    isNullableString(value.container_version) &&
-    isNonEmptyString(value.importer_version) &&
-    Array.isArray(value.warnings) &&
-    value.warnings.every(
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, SOURCE_KEYS) ||
+    !isNonEmptyString(value.filename) ||
+    !(value.format === "musicxml" || value.format === "mxl" || value.format === "midi") ||
+    !isString(value.raw_sha256) ||
+    !SHA256.test(value.raw_sha256) ||
+    !isNullableString(value.root_member) ||
+    !isString(value.root_sha256) ||
+    !SHA256.test(value.root_sha256) ||
+    !isNullableString(value.container_version) ||
+    !isNonEmptyString(value.importer_version) ||
+    !Array.isArray(value.warnings) ||
+    !value.warnings.every(
       (warning) =>
         isRecord(warning) &&
+        hasExactKeys(warning, WARNING_KEYS) &&
         isNonEmptyString(warning.code) &&
-        isNonEmptyString(warning.severity) &&
+        warning.severity === "warning" &&
         isString(warning.message) &&
         isImportLocation(warning.location),
     )
-  );
+  ) {
+    return false;
+  }
+  if (value.format === "mxl") {
+    return isNonEmptyString(value.root_member) && isNonEmptyString(value.container_version);
+  }
+  if (value.root_member !== null || value.container_version !== null) return false;
+  return value.format !== "midi" || value.raw_sha256 === value.root_sha256;
 }
 
 function isScoreSummary(value: unknown): boolean {
@@ -365,20 +479,44 @@ function isPlayability(value: unknown): boolean {
 }
 
 function isFaithfulness(value: unknown): boolean {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, FAITHFULNESS_KEYS) ||
+    !(value.melody_f1 === null || isUnitInterval(value.melody_f1)) ||
+    !(value.bass_root_accuracy === null || isUnitInterval(value.bass_root_accuracy)) ||
+    !(value.harmony_jaccard === null || isUnitInterval(value.harmony_jaccard)) ||
+    !isStringArray(value.evaluated_dimensions) ||
+    !isStringArray(value.unavailable_dimensions) ||
+    typeof value.passed !== "boolean" ||
+    value.checker_version !== CURRENT_FIDELITY_VERSION
+  ) {
+    return false;
+  }
+
+  const scores: Readonly<Record<FaithfulnessDimension, number | null>> = {
+    melody: value.melody_f1,
+    bass_root: value.bass_root_accuracy,
+    harmony: value.harmony_jaccard,
+  };
+  const evaluated = FAITHFULNESS_DIMENSIONS.filter((dimension) => scores[dimension] !== null);
+  const unavailable = FAITHFULNESS_DIMENSIONS.filter((dimension) => scores[dimension] === null);
+  const expectedPassed =
+    evaluated.length > 0 &&
+    evaluated.every((dimension) => {
+      const score = scores[dimension];
+      return score !== null && score >= FAITHFULNESS_THRESHOLDS[dimension];
+    });
   return (
-    isRecord(value) &&
-    isUnitInterval(value.melody_f1) &&
-    isUnitInterval(value.bass_root_accuracy) &&
-    isUnitInterval(value.harmony_jaccard) &&
-    typeof value.passed === "boolean" &&
-    isNonEmptyString(value.checker_version)
+    arraysEqual(value.evaluated_dimensions, evaluated) &&
+    arraysEqual(value.unavailable_dimensions, unavailable) &&
+    value.passed === expectedPassed
   );
 }
 
 function isPublicTrace(value: unknown): boolean {
   if (
     !isRecord(value) ||
-    !isNonEmptyString(value.schema_version) ||
+    value.schema_version !== CURRENT_TRACE_VERSION ||
     !Array.isArray(value.steps)
   ) {
     return false;
@@ -400,6 +538,53 @@ function isPublicTrace(value: unknown): boolean {
   );
 }
 
+function candidateSelectionMatchesGates(
+  trace: ArrangementResponse["trace"],
+  playability: Record<string, unknown>,
+  faithfulness: Record<string, unknown>,
+): boolean {
+  const selections = trace.steps.filter((step) => step.event === "CANDIDATE_SELECTED");
+  if (selections.length !== 1) return false;
+
+  const selection = selections[0];
+  const data = selection.data;
+  if (
+    !hasExactKeys(data, CANDIDATE_SELECTED_KEYS) ||
+    !isIntegerAtLeast(data.winner_candidate_index, 0) ||
+    !isIntegerAtLeast(data.candidates_considered, 1) ||
+    data.winner_candidate_index >= data.candidates_considered ||
+    selection.candidate_index !== data.winner_candidate_index ||
+    selection.iteration !== null ||
+    (data.verdict !== "GREEN" && data.verdict !== "AMBER" && data.verdict !== "RED") ||
+    data.verdict !== playability.verdict ||
+    typeof data.green_certified !== "boolean" ||
+    data.green_certified !== (data.verdict === "GREEN") ||
+    (data.playability_gate !== "passed" && data.playability_gate !== "not_passed") ||
+    (data.playability_gate === "passed") !== (data.verdict === "GREEN") ||
+    typeof data.faithfulness_passed !== "boolean" ||
+    data.faithfulness_passed !== faithfulness.passed ||
+    !isUnitInterval(data.ranking_melody_recall) ||
+    !isUnitInterval(data.ranking_bass_preserved) ||
+    !isUnitInterval(data.ranking_harmony_jaccard) ||
+    !Object.is(data.melody_f1, faithfulness.melody_f1) ||
+    !Object.is(data.bass_root_accuracy, faithfulness.bass_root_accuracy) ||
+    !Object.is(data.harmony_jaccard, faithfulness.harmony_jaccard) ||
+    !isStringArray(data.evaluated_dimensions) ||
+    !isStringArray(data.unavailable_dimensions) ||
+    !isStringArray(faithfulness.evaluated_dimensions) ||
+    !isStringArray(faithfulness.unavailable_dimensions) ||
+    !arraysEqual(data.evaluated_dimensions, faithfulness.evaluated_dimensions) ||
+    !arraysEqual(data.unavailable_dimensions, faithfulness.unavailable_dimensions) ||
+    (data.critic_status !== "SCORED" && data.critic_status !== "NOT_RUN") ||
+    (data.critic_status === "SCORED"
+      ? !isUnitInterval(data.critic_overall)
+      : data.critic_overall !== null)
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function requiredStampMatches(
   stamps: Record<string, string>,
   key: string,
@@ -412,9 +597,9 @@ function isArrangement(value: unknown): value is ArrangementResponse {
   if (
     !isRecord(value) ||
     !hasExactKeys(value, ARRANGEMENT_KEYS) ||
-    !isNonEmptyString(value.api_version) ||
+    value.api_version !== CURRENT_API_VERSION ||
     (value.status !== "tab_produced" && value.status !== "no_fingering_within_budget") ||
-    !isNonEmptyString(value.service_version) ||
+    value.service_version !== CURRENT_SERVICE_VERSION ||
     !isSourceEvidence(value.source) ||
     !isScoreSummary(value.score) ||
     !isArrangementOptions(value.options) ||
@@ -445,13 +630,19 @@ function isArrangement(value: unknown): value is ArrangementResponse {
   const profile = options.profile as Record<string, unknown>;
   const model = value.model;
   const trace = value.trace as Record<string, unknown>;
+  const publicTrace = value.trace as ArrangementResponse["trace"];
   const stamps = value.stamps;
+  const sourceFormat = source.format as ScoreFormat;
   if (
     !REQUIRED_ARRANGEMENT_STAMPS.every((key) => isNonEmptyString(stamps[key])) ||
-    !requiredStampMatches(stamps, "service_version", value.service_version) ||
-    !requiredStampMatches(stamps, "trace_schema_version", trace.schema_version as string) ||
+    !requiredStampMatches(stamps, "package_version", CURRENT_PACKAGE_VERSION) ||
+    !requiredStampMatches(stamps, "service_version", CURRENT_SERVICE_VERSION) ||
+    !requiredStampMatches(stamps, "score_input_version", CURRENT_SCORE_INPUT_VERSION) ||
+    !requiredStampMatches(stamps, "fidelity_checker_version", CURRENT_FIDELITY_VERSION) ||
+    !requiredStampMatches(stamps, "trace_schema_version", CURRENT_TRACE_VERSION) ||
+    trace.schema_version !== CURRENT_TRACE_VERSION ||
     !requiredStampMatches(stamps, "importer_version", source.importer_version as string) ||
-    source.importer_version !== CURRENT_IMPORTER_VERSION ||
+    source.importer_version !== FORMAT_IMPORTERS[sourceFormat] ||
     !requiredStampMatches(stamps, "model_id", model.model_id as string) ||
     !requiredStampMatches(stamps, "profile_version", profile.version as string) ||
     !requiredStampMatches(stamps, "profile_fingerprint", profile.fingerprint as string)
@@ -466,10 +657,13 @@ function isArrangement(value: unknown): value is ArrangementResponse {
       playability.profile_fingerprint !== profile.fingerprint ||
       playability.checker_version !== stamps.oracle_checker_version ||
       playability.input_schema_version !== stamps.oracle_input_schema_version ||
-      faithfulness.checker_version !== stamps.fidelity_checker_version
+      faithfulness.checker_version !== stamps.fidelity_checker_version ||
+      !candidateSelectionMatchesGates(publicTrace, playability, faithfulness)
     ) {
       return false;
     }
+  } else if (publicTrace.steps.some((step) => step.event === "CANDIDATE_SELECTED")) {
+    return false;
   }
   return true;
 }
@@ -478,7 +672,7 @@ function isProblem(value: unknown): value is APIProblem {
   return (
     isRecord(value) &&
     typeof value.type === "string" &&
-    typeof value.api_version === "string" &&
+    value.api_version === CURRENT_API_VERSION &&
     typeof value.status === "number" &&
     typeof value.code === "string" &&
     typeof value.title === "string" &&
@@ -525,10 +719,10 @@ export async function getCapabilities(signal?: AbortSignal): Promise<Capabilitie
 }
 
 function mediaTypeFor(file: File): string {
-  const suffix = file.name.toLocaleLowerCase();
-  return suffix.endsWith(".mxl")
-    ? "application/vnd.recordare.musicxml"
-    : "application/vnd.recordare.musicxml+xml";
+  const suffix = file.name.toLowerCase();
+  if (suffix.endsWith(".mid") || suffix.endsWith(".midi")) return "audio/midi";
+  if (suffix.endsWith(".mxl")) return "application/vnd.recordare.musicxml";
+  return "application/vnd.recordare.musicxml+xml";
 }
 
 export async function arrangeScore(

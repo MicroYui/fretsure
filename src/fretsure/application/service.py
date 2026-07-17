@@ -29,7 +29,15 @@ from fretsure.application.target import (
     target_from_json,
 )
 from fretsure.geometry import STANDARD_TUNING
-from fretsure.importers import ImportCode, ImportFailure, ImportSuccess, import_musicxml_bytes
+from fretsure.importers import (
+    SCORE_FORMAT_REGISTRY,
+    SCORE_INPUT_VERSION,
+    SCORE_SUFFIXES,
+    ImportCode,
+    ImportFailure,
+    ImportSuccess,
+    import_score_bytes,
+)
 from fretsure.llm.client import (
     CONSTANT_LLM_MODEL_ID,
     ConstantLLM,
@@ -347,16 +355,18 @@ def capabilities() -> ServiceCapabilities:
     """Return the immutable transport-neutral application capability contract."""
 
     return ServiceCapabilities(
-        SERVICE_VERSION,
-        PROFILE_REGISTRY_VERSION,
-        TARGET_INPUT_SCHEMA_VERSION,
-        PROFILE_NAMES,
-        (".musicxml", ".xml", ".mxl"),
-        ("ascii",),
-        ArrangeOptions(),
-        CheckOptions(),
-        SolveOptions(),
-        RenderOptions(),
+        service_version=SERVICE_VERSION,
+        profile_registry_version=PROFILE_REGISTRY_VERSION,
+        score_input_version=SCORE_INPUT_VERSION,
+        score_format_registry=MappingProxyType(dict(SCORE_FORMAT_REGISTRY)),
+        target_input_schema_version=TARGET_INPUT_SCHEMA_VERSION,
+        profiles=PROFILE_NAMES,
+        input_suffixes=SCORE_SUFFIXES,
+        render_formats=("ascii",),
+        default_arrange_options=ArrangeOptions(),
+        default_check_options=CheckOptions(),
+        default_solve_options=SolveOptions(),
+        default_render_options=RenderOptions(),
     )
 
 
@@ -382,7 +392,7 @@ def arrange_score_bytes(
             "filename",
             "filename must be an exact string",
         )
-    imported = import_musicxml_bytes(data, filename)
+    imported = import_score_bytes(data, filename)
     if isinstance(imported, ImportFailure):
         diagnostics = tuple(
             ApplicationDiagnostic(
@@ -403,9 +413,9 @@ def arrange_score_bytes(
             ),
             "score",
             (
-                "the optional MusicXML runtime dependency is unavailable"
+                "the optional score importer runtime dependency is unavailable"
                 if missing_dependency
-                else "score bytes were rejected by the MusicXML/MXL importer"
+                else "score bytes were rejected by the selected score importer"
             ),
             diagnostics,
         )

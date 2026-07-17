@@ -1,4 +1,6 @@
 export type Verdict = "GREEN" | "AMBER" | "RED";
+export type FaithfulnessDimension = "melody" | "bass_root" | "harmony";
+export type ScoreFormat = "musicxml" | "mxl" | "midi";
 
 export interface TraceStep {
   trace_schema_version: string;
@@ -51,16 +53,30 @@ export interface PlayabilityResult {
 }
 
 export interface FaithfulnessResult {
-  melody_f1: number;
-  bass_root_accuracy: number;
-  harmony_jaccard: number;
+  melody_f1: number | null;
+  bass_root_accuracy: number | null;
+  harmony_jaccard: number | null;
+  evaluated_dimensions: FaithfulnessDimension[];
+  unavailable_dimensions: FaithfulnessDimension[];
   passed: boolean;
   checker_version: string;
 }
 
+export interface SourceLocation {
+  part_id: string | null;
+  measure: string | null;
+  voice: string | null;
+  element: string | null;
+  archive_member: string | null;
+  track_index: number | null;
+  event_index: number | null;
+  channel: number | null;
+  tick: number | null;
+}
+
 export interface SourceEvidence {
-  filename: string | null;
-  format: string | null;
+  filename: string;
+  format: ScoreFormat;
   raw_sha256: string;
   root_member: string | null;
   root_sha256: string;
@@ -68,9 +84,9 @@ export interface SourceEvidence {
   importer_version: string;
   warnings: Array<{
     code: string;
-    severity: string;
+    severity: "warning";
     message: string;
-    location: Record<string, string | null> | null;
+    location: SourceLocation | null;
   }>;
 }
 
@@ -125,10 +141,15 @@ export interface CapabilitiesResponse {
   api_version: string;
   package_version: string;
   service_version: string;
+  trace_schema_version: string;
   engines: EngineCapability[];
   profiles: ProfileIdentity[];
   inputs: {
     score_suffixes: string[];
+    score_input: {
+      router_version: string;
+      format_importers: Record<ScoreFormat, string>;
+    };
     max_xml_bytes?: number;
     max_mxl_bytes?: number;
     [key: string]: unknown;

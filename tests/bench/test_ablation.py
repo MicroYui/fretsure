@@ -4,7 +4,7 @@ from fretsure.agent.arranger import ArrangeGoal
 from fretsure.bench.ablation import AblationConfig, leave_one_out, run_config
 from fretsure.bench.corpus import CorpusItem
 from fretsure.ir import Meta, MusicIR, Note
-from fretsure.llm.client import FakeLLM
+from fretsure.llm.client import ConstantLLM, FakeLLM
 from fretsure.oracle.profiles import MEDIAN_HAND
 
 # proposal: 85 (melody) + 86 (harmony) — infeasible together (both only high-E)
@@ -29,6 +29,28 @@ def test_full_config_reaches_joint_success() -> None:
     m = run_config(_items(), ArrangeGoal(), _factory(), AblationConfig(best_of_n=1), MEDIAN_HAND)
     assert m.green_rate == 1.0
     assert m.joint_success == 1.0
+    assert m.mean_melody_f1 == 1.0
+    assert m.melody_evaluated_items == 1
+
+
+def test_melody_mean_excludes_items_without_source_melody_evidence() -> None:
+    ir = MusicIR(
+        (Note(F(0), F(1), 40, "bass"),),
+        (),
+        Meta("C", (4, 4), 90.0, "t", "t", "PD"),
+    )
+    item = CorpusItem(ir, "test", "generated", 1, "no-melody")
+
+    metrics = run_config(
+        [item],
+        ArrangeGoal(),
+        lambda: ConstantLLM("noop"),
+        AblationConfig(best_of_n=1, critic=False),
+        MEDIAN_HAND,
+    )
+
+    assert metrics.mean_melody_f1 is None
+    assert metrics.melody_evaluated_items == 0
 
 
 def test_ablate_repair_drops_joint_success() -> None:
@@ -36,6 +58,8 @@ def test_ablate_repair_drops_joint_success() -> None:
         _items(), ArrangeGoal(), _factory(), AblationConfig(repair=False, best_of_n=1), MEDIAN_HAND
     )
     assert m.joint_success == 0.0  # infeasible proposal never repaired
+    assert m.mean_melody_f1 == 0.0
+    assert m.melody_evaluated_items == 1
 
 
 def test_leave_one_out_repair_earns_existence() -> None:

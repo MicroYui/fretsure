@@ -1,4 +1,7 @@
+from collections.abc import Callable
 from fractions import Fraction as F
+
+import pytest
 
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import ChordSymbol, Meta, MusicIR, Note
@@ -100,6 +103,8 @@ def test_faithfulness_gate_passes_faithful() -> None:
     g = faithfulness(_ir(), _FAITHFUL)
     assert isinstance(g, FaithfulnessGate)
     assert g.passed and g.melody_f1 == 1.0
+    assert g.evaluated_dimensions == ("melody", "bass_root", "harmony")
+    assert g.unavailable_dimensions == ()
 
 
 def test_faithfulness_gate_fails_when_melody_lost() -> None:
@@ -108,5 +113,84 @@ def test_faithfulness_gate_fails_when_melody_lost() -> None:
     assert not g.passed
 
 
-def test_fidelity_checker_version_identifies_changed_harmony_semantics() -> None:
-    assert FIDELITY_CHECKER_VERSION == "fidelity@0.2.0"
+def test_melody_only_gate_marks_missing_evidence_unavailable() -> None:
+    ir = MusicIR(
+        (Note(F(0), F(1), 64, "melody"),),
+        (),
+        Meta("key-signature:unprovided", (4, 4), 120.0, "midi", "t", "unprovided"),
+    )
+    tab = Tab((TabNote(F(0), F(1), 5, 0, 0, "a"),), STANDARD_TUNING, 0)
+
+    gate = faithfulness(ir, tab)
+
+    assert gate == FaithfulnessGate(
+        1.0,
+        None,
+        None,
+        True,
+        ("melody",),
+        ("bass_root", "harmony"),
+    )
+
+
+def test_gate_with_no_source_evidence_cannot_pass() -> None:
+    ir = MusicIR((), (), Meta("C", (4, 4), 90.0, "t", "t", "PD"))
+
+    gate = faithfulness(ir, Tab((), STANDARD_TUNING, 0))
+
+    assert gate == FaithfulnessGate(
+        None,
+        None,
+        None,
+        False,
+        (),
+        ("melody", "bass_root", "harmony"),
+    )
+
+
+@pytest.mark.parametrize(
+    "gate",
+    [
+        lambda: FaithfulnessGate(
+            1.0,
+            None,
+            None,
+            True,
+            ("melody", "melody"),
+            ("bass_root", "harmony"),
+        ),
+        lambda: FaithfulnessGate(
+            1.0,
+            None,
+            None,
+            True,
+            ("melody",),
+            ("harmony",),
+        ),
+        lambda: FaithfulnessGate(
+            1.0,
+            1.0,
+            None,
+            True,
+            ("melody",),
+            ("bass_root", "harmony"),
+        ),
+        lambda: FaithfulnessGate(
+            0.0,
+            None,
+            None,
+            True,
+            ("melody",),
+            ("bass_root", "harmony"),
+        ),
+    ],
+)
+def test_gate_rejects_forged_availability_or_passed_state(
+    gate: Callable[[], FaithfulnessGate],
+) -> None:
+    with pytest.raises(ValueError):
+        gate()
+
+
+def test_fidelity_checker_version_identifies_availability_semantics() -> None:
+    assert FIDELITY_CHECKER_VERSION == "fidelity@0.3.0"

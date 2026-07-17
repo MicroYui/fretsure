@@ -1,15 +1,16 @@
 # 3-Minute Demo Script
 
 A tight, reproducible walkthrough for a screen recording or live demo. The default
-path is fully offline, including the MusicXML import. A real-LLM benchmark or
+path is fully offline, including the MusicXML and MIDI imports. A real-LLM benchmark or
 `--llm` arrangement needs the local proxy and defaults to canonical
-`gpt-5.6-sol`. The current package/importer pair is `0.4.0` /
-`musicxml@0.3.0`, with `music21==10.5.0` pinned exactly. Target length ≈ 3 minutes.
+`gpt-5.6-sol`. The current package/router/importers are `0.5.0`,
+`score-input@0.1.0`, and `musicxml@0.3.0` / `midi@0.1.0`, with
+`music21==10.5.0` pinned exactly. Target length ≈ 3 minutes.
 
 Setup (once, off-camera):
 
 ```bash
-uv sync --extra dev --extra musicxml
+uv sync --extra dev --extra score
 uv run fretsure-serve  # 另开终端并保持运行
 # only for optional --llm / real-LLM benchmark segments:
 export ANTHROPIC_BASE_URL=http://127.0.0.1:4141 ANTHROPIC_AUTH_TOKEN=<token>
@@ -40,9 +41,9 @@ Open `http://127.0.0.1:8000/`, click **Or load the CC0 example**, then
 - ARRANGED TAB — a fingerstyle tab, high-e on top, with source SHA-256 provenance.
 - ORACLE VERDICT — GREEN, stamped `oracle@0.2.0` / `tab-input@0.2.0` /
   `median@0.1` plus the canonical profile SHA-256.
-- FAITHFULNESS — melody-F1 `1.00`, bass-root `1.00`, harmony `0.29`, FAIL,
-  stamped `fidelity@0.2.0`.
-- REPLAY — public `agent-trace@0.1.0` steps from plan/proposal through oracle and
+- FAITHFULNESS — melody-F1 `1.00`, bass-root `1.00`, harmony `0.29`, REVIEW,
+  stamped `fidelity@0.3.0`; every score is backed by source evidence.
+- REPLAY — public `agent-trace@0.2.0` steps from plan/proposal through oracle and
   selection, with typed evidence rather than hidden chain-of-thought.
 
 **Say:** "This path is offline and deterministic, but it is the real browser/API/
@@ -51,36 +52,37 @@ rule-based proposal fallback. The proposal path does not decide feasibility—th
 versioned oracle does. GREEN is certification inside the simplified model and
 profile, while the independent fidelity failure remains visible."
 
-## Beat 2 — An exact producer artifact, without guessing its key (0:55–1:25)
+## Beat 2 — Exact MIDI evidence without invented harmony (0:55–1:25)
 
 **Do:**
 
 ```bash
-uv run fretsure-arrange tests/fixtures/producers/musescore-4.7.4.musicxml \
+uv run fretsure-arrange tests/fixtures/midi/producers/musescore-4.7.4-melody_only.mid \
   --n 1 --max-iters 0 --no-critic \
-  --trace-jsonl /tmp/fretsure-musescore.trace.jsonl
+  --trace-jsonl /tmp/fretsure-midi.trace.jsonl
 ```
 
-**Point at:** `musicxml@0.3.0`, the exact raw/root SHA-256 provenance,
-`KEY_MODE_UNPROVIDED`, and
-`key-signature:fifths=0;mode=unprovided`. The importer preserved what the file said;
-it did not turn the missing mode into C major or A minor. Source and effective tempo
-are both 96 bpm. A second frozen MuseScore 4.7.4 `.mxl` artifact traverses the same
-semantic gate and additionally prints its selected rootfile member. Then linger on:
+**Point at:** `score-input@0.1.0`, `midi@0.1.0`, exact raw/root SHA-256 equality,
+the located loss warnings, and 96 bpm. Briefly open
+`tests/fixtures/midi/producers/provenance.json`: the frozen row records exactly 7
+beats and each MuseScore note released one PPQN tick early. Fretsure preserves that
+performance instead of quantizing it back to notation. Then linger on:
 
 ```text
 ORACLE VERDICT
   GREEN ... checker oracle@0.2.0
 FAITHFULNESS TO INPUT
-  melody-F1 1.00   bass-root 1.00   harmony 1.00
-  gate PASS   checker fidelity@0.2.0
+  melody-F1 1.00   bass-root N/A   harmony N/A
+  available-dimension gate PASS (1/3 evaluated)
+  checker fidelity@0.3.0
 ```
 
 **Say:** "This is one exact, unedited MuseScore Studio 4.7.4 artifact, not a claim
-about every score or every MuseScore version. MusicXML 4.0 makes mode optional, so
-Fretsure keeps the loss visible and warns instead of inventing a mode. MusicXML 3.1
-without mode still fails closed. The frozen producer census and source-to-output
-differential gate define the claim."
+about every MIDI file or producer version. Standard MIDI supplied a melody, not
+authoritative bass or chord roles, so those fidelity dimensions are N/A—not 100% and
+not inferred. The frozen music21 10.5.0 positive retains an 8-beat performance; the
+two harmony-realized producer files are typed negatives. The importer keeps those
+differences visible instead of choosing a melody or repairing timing."
 
 ## Beat 3 — Who checks the checker? (1:25–2:00)
 
@@ -121,8 +123,10 @@ harmony metric; the consolidated historical snapshot is pinned at `bee8a1c`.
 repair had the largest association, paired best-of-N showed a modest positive joint
 delta, and the critic improved only its own score by about 0.01. But the fidelity
 definition has since changed, so these are legacy numbers, not today's headline.
-Benchmark v2 must rerun every arm under `fidelity@0.2.0`, retain paired item rows,
-and run the appropriate paired tests."
+Benchmark v2 must rerun every arm under availability-aware `fidelity@0.3.0`, retain
+paired item rows, report availability counts, and run the appropriate paired tests.
+It starts only after the MIDI phase is committed, pushed, and has matching
+local/tracking/remote SHA."
 
 If network behavior itself must be shown, pre-run or use:
 
@@ -148,9 +152,9 @@ moat is execution plus an auditable benchmark, not a hidden claim. That's Fretsu
 
 - No proxy? `fretsure-demo`, MusicXML import/arrangement, checker tests, and the
   Web offline engine and stub benchmark work offline. Only `--llm`, an explicitly
-  `--allow-proxy` Web server, the seven integration tests, and a real-LLM benchmark
+  `--allow-proxy` Web server, the proxy integration tests, and a real-LLM benchmark
   need the proxy.
-- No MusicXML dependency? Run `uv sync --extra musicxml` (or the setup command above).
+- No score dependency? Run `uv sync --extra score` (or the setup command above).
 - The default `fretsure-demo` is deterministic; changing `--seed N` or `--bars N`
   intentionally changes its tab and scores.
 - Full gate before recording:
@@ -163,5 +167,5 @@ moat is execution plus an auditable benchmark, not a hidden claim. That's Fretsu
 
 - The proxy integration tests are deliberately excluded from that offline command;
   use `uv run pytest --collect-only -q` and
-  [`PRODUCER_MUSICXML_ACCEPTANCE.md`](PRODUCER_MUSICXML_ACCEPTANCE.md) for the exact
-  closure count rather than copying an older Plan 6A number.
+  [`MIDI_ACCEPTANCE.md`](MIDI_ACCEPTANCE.md) for the current exact closure counts
+  rather than copying an older Plan 6A or producer number.

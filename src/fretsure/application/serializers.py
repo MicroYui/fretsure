@@ -31,7 +31,7 @@ from fretsure.application.target import (
     TARGET_INPUT_SCHEMA_VERSION,
 )
 from fretsure.geometry import STANDARD_TUNING
-from fretsure.importers import IMPORTER_VERSION
+from fretsure.importers import SCORE_FORMAT_REGISTRY, SCORE_INPUT_VERSION, SCORE_SUFFIXES
 from fretsure.importers.contracts import ImportDiagnostic, ImportSuccess, SourceLocation
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION, FaithfulnessGate
 from fretsure.oracle.core import CHECKER_VERSION, OracleResult
@@ -51,6 +51,27 @@ from fretsure.solver.api import Infeasible, InfeasibleCode
 from fretsure.tab import MAX_TAB_JSON_BYTES, Tab, tab_to_json
 
 Wire = dict[str, object]
+
+_CANDIDATE_SELECTED_DATA_FIELDS = frozenset(
+    {
+        "winner_candidate_index",
+        "candidates_considered",
+        "verdict",
+        "green_certified",
+        "playability_gate",
+        "faithfulness_passed",
+        "ranking_melody_recall",
+        "ranking_bass_preserved",
+        "ranking_harmony_jaccard",
+        "melody_f1",
+        "bass_root_accuracy",
+        "harmony_jaccard",
+        "evaluated_dimensions",
+        "unavailable_dimensions",
+        "critic_status",
+        "critic_overall",
+    }
+)
 
 _INFEASIBLE_MESSAGES = {
     InfeasibleCode.EMPTY_TARGET: "the target contains no notes to finger",
@@ -102,12 +123,37 @@ def _profile_wire(name: str, profile: Profile) -> Wire:
 def _location_wire(location: SourceLocation | None) -> Wire | None:
     if location is None:
         return None
+    if type(location) is not SourceLocation:
+        raise _serialization_error("source.warnings.location")
+    string_fields = (
+        location.part_id,
+        location.measure,
+        location.voice,
+        location.element,
+        location.archive_member,
+    )
+    if any(value is not None and type(value) is not str for value in string_fields):
+        raise _serialization_error("source.warnings.location")
+    index_fields = (location.track_index, location.event_index, location.tick)
+    if any(
+        value is not None and (type(value) is not int or value < 0)
+        for value in index_fields
+    ):
+        raise _serialization_error("source.warnings.location")
+    if location.channel is not None and (
+        type(location.channel) is not int or not 1 <= location.channel <= 16
+    ):
+        raise _serialization_error("source.warnings.location")
     return {
         "part_id": location.part_id,
         "measure": location.measure,
         "voice": location.voice,
         "element": location.element,
         "archive_member": location.archive_member,
+        "track_index": location.track_index,
+        "event_index": location.event_index,
+        "channel": location.channel,
+        "tick": location.tick,
     }
 
 
@@ -121,20 +167,21 @@ def _import_diagnostic_wire(diagnostic: ImportDiagnostic) -> Wire:
 
 
 def _source_wire(imported: ImportSuccess) -> Wire:
-    if imported.importer_version != IMPORTER_VERSION:
-        raise _serialization_error("source.importer_version")
     provenance = imported.provenance
+    if provenance is None or type(provenance.source_format) is not str:
+        raise _serialization_error("source.format")
+    expected_importer = SCORE_FORMAT_REGISTRY.get(provenance.source_format)
+    if expected_importer is None:
+        raise _serialization_error("source.format")
+    if imported.importer_version != expected_importer:
+        raise _serialization_error("source.importer_version")
     return {
-        "filename": None if provenance is None else provenance.source_filename,
-        "format": None if provenance is None else provenance.source_format,
-        "raw_sha256": (
-            imported.sha256 if provenance is None else provenance.raw_sha256
-        ),
-        "root_member": None if provenance is None else provenance.root_member,
-        "root_sha256": imported.sha256 if provenance is None else provenance.root_sha256,
-        "container_version": (
-            None if provenance is None else provenance.container_version
-        ),
+        "filename": provenance.source_filename,
+        "format": provenance.source_format,
+        "raw_sha256": provenance.raw_sha256,
+        "root_member": provenance.root_member,
+        "root_sha256": provenance.root_sha256,
+        "container_version": provenance.container_version,
         "importer_version": imported.importer_version,
         "warnings": [_import_diagnostic_wire(item) for item in imported.warnings],
     }
@@ -205,14 +252,26 @@ def _playability_wire(oracle: OracleResult | None) -> Wire | None:
 def _faithfulness_wire(gate: FaithfulnessGate | None) -> Wire | None:
     if gate is None:
         return None
-    values = (gate.melody_f1, gate.bass_root, gate.harmony)
-    if any(not math.isfinite(value) for value in values):
+    if type(gate) is not FaithfulnessGate:
         raise _serialization_error("faithfulness")
+    try:
+        snapshot = FaithfulnessGate(
+            melody_f1=gate.melody_f1,
+            bass_root=gate.bass_root,
+            harmony=gate.harmony,
+            passed=gate.passed,
+            evaluated_dimensions=gate.evaluated_dimensions,
+            unavailable_dimensions=gate.unavailable_dimensions,
+        )
+    except (AttributeError, TypeError, ValueError):
+        raise _serialization_error("faithfulness") from None
     return {
-        "melody_f1": gate.melody_f1,
-        "bass_root_accuracy": gate.bass_root,
-        "harmony_jaccard": gate.harmony,
-        "passed": gate.passed,
+        "melody_f1": snapshot.melody_f1,
+        "bass_root_accuracy": snapshot.bass_root,
+        "harmony_jaccard": snapshot.harmony,
+        "evaluated_dimensions": list(snapshot.evaluated_dimensions),
+        "unavailable_dimensions": list(snapshot.unavailable_dimensions),
+        "passed": snapshot.passed,
         "checker_version": FIDELITY_CHECKER_VERSION,
     }
 
@@ -249,8 +308,43 @@ def _trace_wire(document_json: str) -> Wire:
     return wire
 
 
+def _validate_trace_faithfulness_binding(
+    trace: Wire,
+    faithfulness: Wire | None,
+) -> None:
+    raw_steps = trace.get("steps")
+    if type(raw_steps) is not list:
+        raise _serialization_error("trace")
+    selections = [
+        step
+        for step in raw_steps
+        if type(step) is dict and step.get("event") == "CANDIDATE_SELECTED"
+    ]
+    if faithfulness is None:
+        if selections:
+            raise _serialization_error("trace.faithfulness")
+        return
+    if len(selections) != 1:
+        raise _serialization_error("trace.faithfulness")
+    data = selections[0].get("data")
+    if type(data) is not dict or set(data) != _CANDIDATE_SELECTED_DATA_FIELDS:
+        raise _serialization_error("trace.faithfulness")
+    expected = {
+        "melody_f1": faithfulness["melody_f1"],
+        "bass_root_accuracy": faithfulness["bass_root_accuracy"],
+        "harmony_jaccard": faithfulness["harmony_jaccard"],
+        "evaluated_dimensions": faithfulness["evaluated_dimensions"],
+        "unavailable_dimensions": faithfulness["unavailable_dimensions"],
+        "faithfulness_passed": faithfulness["passed"],
+    }
+    for field_name, expected_value in expected.items():
+        actual = data[field_name]
+        if type(actual) is not type(expected_value) or actual != expected_value:
+            raise _serialization_error("trace.faithfulness")
+
+
 def _trace_schema_version() -> str:
-    value = getattr(trace_module, "TRACE_SCHEMA_VERSION", "agent-trace@0.1.0")
+    value = getattr(trace_module, "TRACE_SCHEMA_VERSION", None)
     if type(value) is not str:
         raise _serialization_error("trace.schema_version")
     return value
@@ -340,10 +434,14 @@ def arrange_outcome_to_wire(outcome: ArrangeOutcome) -> Wire:
         stamps = _base_stamps(outcome.profile)
         stamps.update(
             {
+                "score_input_version": SCORE_INPUT_VERSION,
                 "importer_version": outcome.imported.importer_version,
                 "model_id": outcome.model_id,
             }
         )
+        faithfulness = _faithfulness_wire(outcome.faithfulness)
+        trace = _trace_wire(outcome.trace_document_json)
+        _validate_trace_faithfulness_binding(trace, faithfulness)
         return {
             "service_version": SERVICE_VERSION,
             "status": outcome.status,
@@ -359,8 +457,8 @@ def arrange_outcome_to_wire(outcome: ArrangeOutcome) -> Wire:
             "tab": _tab_wire(outcome.tab),
             "ascii": outcome.ascii,
             "playability": _playability_wire(outcome.oracle),
-            "faithfulness": _faithfulness_wire(outcome.faithfulness),
-            "trace": _trace_wire(outcome.trace_document_json),
+            "faithfulness": faithfulness,
+            "trace": trace,
             "stamps": stamps,
         }
     except ApplicationError:
@@ -434,13 +532,25 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
     try:
         profile = validated_profile_snapshot(MEDIAN_HAND)
         stamps = _base_stamps(profile)
-        stamps["importer_version"] = IMPORTER_VERSION
+        stamps["score_input_version"] = SCORE_INPUT_VERSION
+        registry = dict(value.score_format_registry)
+        if (
+            value.service_version != SERVICE_VERSION
+            or value.score_input_version != SCORE_INPUT_VERSION
+            or registry != dict(SCORE_FORMAT_REGISTRY)
+            or value.input_suffixes != SCORE_SUFFIXES
+        ):
+            raise _serialization_error("capabilities.score_input")
         return {
             "service_version": value.service_version,
             "profile_registry_version": value.profile_registry_version,
             "profiles": [_profile_wire("median", profile)],
             "inputs": {
                 "score_suffixes": list(value.input_suffixes),
+                "score_input": {
+                    "router_version": value.score_input_version,
+                    "format_importers": registry,
+                },
                 "tab_json": {
                     "schema_version": ORACLE_INPUT_SCHEMA_VERSION,
                     "max_bytes": MAX_TAB_JSON_BYTES,
@@ -496,13 +606,13 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
             "stamps": stamps,
             "implemented": [
                 "arrange_score_bytes",
+                "midi_input",
                 "check_playability",
                 "bounded_fingering_search",
                 "render_ascii",
             ],
             "deferred": [
                 "render_audio",
-                "midi_input",
                 "alphatab",
                 "animated_fretboard",
                 "live_ab",

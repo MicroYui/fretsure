@@ -61,6 +61,10 @@ def _fmt_input(ir: MusicIR) -> str:
     )
 
 
+def _faithfulness_score(value: float | None) -> str:
+    return "N/A" if value is None else f"{value:.2f}"
+
+
 def render_demo(demo: DemoResult, ir: MusicIR, *, engine: str) -> str:
     res, gate = demo.result, demo.gate
     source_tempo = (
@@ -101,11 +105,17 @@ def render_demo(demo: DemoResult, ir: MusicIR, *, engine: str) -> str:
         f"  input schema {res.oracle.input_schema_version}",
     ]
     if gate is not None:
+        evaluated = ", ".join(gate.evaluated_dimensions) or "none"
+        unavailable = ", ".join(gate.unavailable_dimensions) or "none"
         lines += [
             "",
             "FAITHFULNESS TO INPUT",
-            f"  melody-F1 {gate.melody_f1:.2f}   bass-root {gate.bass_root:.2f}   "
-            f"harmony {gate.harmony:.2f}   gate {'PASS' if gate.passed else 'FAIL'}",
+            f"  melody-F1 {_faithfulness_score(gate.melody_f1)}   "
+            f"bass-root {_faithfulness_score(gate.bass_root)}   "
+            f"harmony {_faithfulness_score(gate.harmony)}",
+            f"  available-dimension gate {'PASS' if gate.passed else 'FAIL'} "
+            f"({len(gate.evaluated_dimensions)}/3 evaluated)",
+            f"  evaluated: {evaluated}; unavailable: {unavailable}",
             f"  checker {FIDELITY_CHECKER_VERSION}",
         ]
     certified = {

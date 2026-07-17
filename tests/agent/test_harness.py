@@ -45,7 +45,13 @@ def test_best_of_n_picks_higher_critic_green_candidate() -> None:
     assert selected.data["winner_candidate_index"] == 1
     assert selected.data["green_certified"] is True
     assert selected.data["playability_gate"] == "passed"
-    assert selected.data["faithfulness_passed"] is False
+    assert selected.data["faithfulness_passed"] is True
+    assert selected.data["melody_f1"] == 1.0
+    assert selected.data["bass_root_accuracy"] is None
+    assert selected.data["harmony_jaccard"] is None
+    assert selected.data["evaluated_dimensions"] == ["melody"]
+    assert selected.data["unavailable_dimensions"] == ["bass_root", "harmony"]
+    assert selected.data["ranking_harmony_jaccard"] == 0.5
     winner_replay = [
         step
         for step in r.trace.steps

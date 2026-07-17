@@ -315,7 +315,7 @@ def test_checked_in_census_replay_matches_the_current_manifest() -> None:
     replay = REPLAY(FIXTURES)
     assert replay["artifact_count"] == replay["successes"] == 10
     assert replay["failures"] == 0
-    assert replay["package_version"] == "0.4.0"
+    assert replay["package_version"] == "0.5.0"
     assert replay["importer_version"] == "musicxml@0.3.0"
     assert replay["manifest_schema"] == "fretsure-producer-fixtures@0.3.0"
 

@@ -1,6 +1,6 @@
 [project]
 name = "fretsure-oracle"
-version = "0.4.0"
+version = "0.5.0"
 description = "Deterministic guitar-playability oracle for the Fretsure arrangement agent."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -13,6 +13,13 @@ agent = [
     "anthropic>=0.40",
 ]
 musicxml = [
+    "defusedxml>=0.7.1,<1",
+    "music21==10.5.0",
+]
+midi = [
+    "music21==10.5.0",
+]
+score = [
     "defusedxml>=0.7.1,<1",
     "music21==10.5.0",
 ]

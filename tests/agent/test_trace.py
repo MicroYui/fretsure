@@ -161,7 +161,7 @@ def _product_event(event: str, **changes: object) -> Trace:
                 "profile_version": MEDIAN_HAND.version,
                 "profile_fingerprint": MEDIAN_HAND.fingerprint,
                 "input_schema_version": ORACLE_INPUT_SCHEMA_VERSION,
-                "fidelity_checker_version": "fidelity@0.2.0",
+                "fidelity_checker_version": "fidelity@0.3.0",
                 "candidates": 1,
                 "max_repair_iterations": 1,
                 "critic_enabled": False,
@@ -315,9 +315,14 @@ def _product_event(event: str, **changes: object) -> Trace:
                 "green_certified": True,
                 "playability_gate": "passed",
                 "faithfulness_passed": True,
-                "melody_recall": 1.0,
-                "bass_preserved": 1.0,
+                "ranking_melody_recall": 1.0,
+                "ranking_bass_preserved": 1.0,
+                "ranking_harmony_jaccard": 1.0,
+                "melody_f1": 1.0,
+                "bass_root_accuracy": 1.0,
                 "harmony_jaccard": 1.0,
+                "evaluated_dimensions": ["melody", "bass_root", "harmony"],
+                "unavailable_dimensions": [],
                 "critic_status": "NOT_RUN",
                 "critic_overall": None,
             },
@@ -355,6 +360,22 @@ def test_every_product_event_has_one_frozen_valid_example() -> None:
         assert wire["steps"][0]["event"] == event
 
 
+def test_candidate_selection_accepts_canonical_unavailable_fidelity_dimensions() -> None:
+    wire = _product_event(
+        "CANDIDATE_SELECTED",
+        bass_root_accuracy=None,
+        harmony_jaccard=None,
+        evaluated_dimensions=["melody"],
+        unavailable_dimensions=["bass_root", "harmony"],
+    ).to_wire()
+
+    data = wire["steps"][0]["data"]
+    assert data["melody_f1"] == 1.0
+    assert data["bass_root_accuracy"] is None
+    assert data["harmony_jaccard"] is None
+    assert data["faithfulness_passed"] is True
+
+
 @pytest.mark.parametrize(
     ("event", "changes"),
     [
@@ -381,7 +402,18 @@ def test_every_product_event_has_one_frozen_valid_example() -> None:
         ("EDIT_REJECTED", {"status": "rejected"}),
         ("MODEL_EDIT_INVALID", {"status": "rejected"}),
         ("RECHECK_STARTED", {"trigger": "RAW_EXCEPTION"}),
-        ("CANDIDATE_SELECTED", {"melody_recall": 99.0}),
+        ("CANDIDATE_SELECTED", {"ranking_melody_recall": 99.0}),
+        (
+            "CANDIDATE_SELECTED",
+            {"bass_root_accuracy": None},
+        ),
+        (
+            "CANDIDATE_SELECTED",
+            {
+                "evaluated_dimensions": ["melody", "melody"],
+                "unavailable_dimensions": ["bass_root", "harmony"],
+            },
+        ),
         ("NO_CANDIDATE_SELECTED", {"playability_gate": "not_passed"}),
     ],
 )

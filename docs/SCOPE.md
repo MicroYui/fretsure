@@ -2,7 +2,7 @@
 
 The oracle makes a **narrow, bounded** claim. Read this before trusting a GREEN.
 
-> **Current empirical status (2026-07-16):** GREEN is currently a deterministic,
+> **Current empirical status (2026-07-17):** GREEN is currently a deterministic,
 > model-relative certification against `oracle@0.2.0`, `tab-input@0.2.0`, and a
 > versioned, fingerprinted profile. The
 > real human-played gold set has **not** been collected; the repository contains only
@@ -37,11 +37,16 @@ Two claims are kept separate:
 ## GREEN and faithfulness are independent gates
 
 GREEN says **nothing** about whether an arrangement preserved the source melody,
-bass, or harmony. That question is checked separately by `fidelity@0.2.0`:
-melody and bass are aligned at exact onsets, while harmony is scored as
-chord-segment pitch-class Jaccard, including sustained notes across segments. The
-source piece boundary comes from `Meta.duration_beats` when available, so a trailing
-rest and the final chord segment are not silently truncated.
+bass, or harmony. That question is checked separately by `fidelity@0.3.0`: melody
+and bass are aligned at exact onsets, while harmony is scored as chord-segment
+pitch-class Jaccard, including sustained notes across segments. The source piece
+boundary comes from `Meta.duration_beats` when available.
+
+The 0.3 contract also records whether each dimension has source evidence. Scores are
+nullable; `evaluated_dimensions` and `unavailable_dimensions` are canonically ordered,
+complete complements, and `passed` is recomputable over at least one evaluated
+dimension. Missing evidence is `None`/N/A, never a synthetic `1.0`. A melody-only
+MIDI success therefore evaluates melody but makes bass-root and harmony unavailable.
 
 A result can therefore be GREEN and still fail faithfulness. The implemented
 MusicXML vertical slice has exercised exactly that outcome. It means “feasible in
@@ -91,7 +96,9 @@ return typed `Infeasible`; that is not proof that no fingering exists. Every ret
 `Tab` still passes a complete final `oracle@0.2.0` check, so incompleteness cannot leak
 a RED result.
 
-The current `musicxml@0.3.0` entry point narrows untrusted files before this boundary.
+The `score-input@0.1.0` router selects the actual importer from the inert suffix and
+binds its version in provenance. The current `musicxml@0.3.0` entry point narrows
+untrusted MusicXML files before this boundary.
 It accepts uncompressed `.musicxml`/`.xml` and strict `.mxl` containers whose root is
 MusicXML 3.1/4.0 `score-partwise` in the frozen single-note-bearing-part/staff/voice monophonic
 lead-sheet subset, with one
@@ -104,7 +111,8 @@ raw tree passes preflight, the importer reconstructs a bounded event-only XML wi
 only divisions, harmony roots/kinds, and note/rest/duration/tie events for `music21`
 cross-validation. Credits, instruments/MIDI, layout/print, lyrics/voice, key visual
 metadata, and legal non-note-bearing parts stay outside that third-party boundary;
-raw warnings and normalized metadata remain authoritative.
+raw warnings and normalized metadata remain authoritative. This MusicXML contract
+does not approximate MIDI; MIDI has the separate narrow contract below.
 
 An explicit `major` or `minor` remains the only interpreted key mode. MusicXML 4.0
 may legally omit `<mode>` from a traditional `<key>` with exactly one bounded
@@ -137,6 +145,35 @@ version, or full MusicXML are supported. The exact census, source/output differe
 gate, and limitations are recorded in
 [`2026-07-16-producer-musicxml-census.json`](experiments/2026-07-16-producer-musicxml-census.json)
 and [`PRODUCER_MUSICXML_ACCEPTANCE.md`](PRODUCER_MUSICXML_ACCEPTANCE.md).
+
+The separate `midi@0.1.0` entry point accepts only raw `.mid`/`.midi` Standard MIDI
+Files in format 0 or 1 with PPQN timing, exactly one non-percussion monophonic
+note-bearing `(track, channel)`, one fixed tick-zero tempo, fixed 4/4 meter, and an
+optional fixed traditional major/minor key. Every note becomes `voice="melody"` and
+`chords=()`; the importer does not infer track roles, bass, chord symbols, missing
+key, notation grid, or quantized duration. Exact onset/duration comes from raw
+tick/PPQN, and the note-bearing track's EOT defines the source duration.
+
+A first-party complete parser validates SMF header/chunk count and sizes, exact EOF,
+canonical 1–4-byte VLQs, running status, final EOT, data bytes, resource budgets,
+note pairing, monophony, and the frozen event/controller/meta allowlist. Only a
+zero-error parse is rebuilt as a minimal canonical SMF and cross-checked by exact
+`music21==10.5.0` with `quantizePost=False`; music21 never receives raw untrusted
+bytes and does not supply the timeline. Bounds are 10 MiB, 64 tracks, 250,000 events,
+20,000 resolved notes, absolute tick `0..2**31-1`, PPQN `1..32767`, four VLQ bytes,
+a 4096-quarter-note maximum note-track EOT span, 1 KiB per text/meta payload, 64 KiB
+cumulative text/meta, and 256 retained diagnostics plus one overflow sentinel. The
+EOT-span gate precedes music21 and jointly bounds leading rest, sounding duration,
+and trailing silence.
+
+The exact producer corpus contains two successes and two typed failures. MuseScore
+Studio 4.7.4 melody-only output is a 7-beat performance with every note released one
+PPQN tick early; music21 10.5.0 melody-only output retains notation durations and an
+8-beat EOT. Both are authoritative and no cross-producer IR equality is claimed.
+Both producers' frozen harmony-realized `supported_basic` exports fail typed rather
+than triggering melody/chord-role heuristics. Evidence and limitations are recorded
+in [`2026-07-17-midi-census.json`](experiments/2026-07-17-midi-census.json) and the
+in-progress [`MIDI_ACCEPTANCE.md`](MIDI_ACCEPTANCE.md).
 
 ## In scope
 
@@ -178,12 +215,14 @@ and [`PRODUCER_MUSICXML_ACCEPTANCE.md`](PRODUCER_MUSICXML_ACCEPTANCE.md).
   arbitrary values describe an ordinary human or guitar. The permissive numeric
   lower bound exists for deterministic API validation, not biological calibration.
 - **Audio transcription** is out of the guaranteed path (best-effort, v2).
-- **Deferred file semantics are not approximated.** Polyphony, multiple note-bearing
-  parts/staves/voices, repeats/navigation, pickup/incomplete measures,
+- **Deferred file semantics are not approximated.** MusicXML polyphony, multiple
+  note-bearing parts/staves/voices, repeats/navigation, pickup/incomplete measures,
   key/time/tempo changes, tuplets/grace/cue/unpitched/microtonal/transposing input,
   nontraditional keys and modes other than explicit major/minor, complex/slash harmony,
-  and performance techniques are rejected by the current
-  importer. MIDI and audio are not current guaranteed inputs.
+  and performance techniques remain rejected. MIDI format 2/SMPTE, percussion,
+  polyphony/multiple note streams, sustain/sostenuto, non-centre bend/tuning, SysEx,
+  changing tempo/meter/key and unknown system/meta/control events are likewise
+  rejected, not approximated. Audio is not a current guaranteed input.
 
 ## Techniques outside the current schema
 
@@ -199,17 +238,23 @@ Technique-aware AMBER diagnostics are a future requirement, not a current capabi
 
 ## Version stamping
 
-Every oracle verdict carries `checker_version`, `profile_version`, a canonical
+The current distribution package is `0.5.0`. Every oracle verdict carries `checker_version`, `profile_version`, a canonical
 profile SHA-256 fingerprint, and `input_schema_version`; current values are
 `oracle@0.2.0` and `tab-input@0.2.0`, while the bundled preset remains
 `median@0.1` with fingerprint
 `fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62`.
-Current CLI output also names `fidelity@0.2.0`. Successful file imports carry
-`musicxml@0.3.0`, structured provenance and the raw source SHA-256; `.mxl` additionally
-binds the root XML SHA-256, exact rootfile member and `mxl-container@0.1.0`. Exact benchmark
+Current CLI/product output names `fidelity@0.3.0` and `score-input@0.1.0` plus the
+actual importer. Successful MusicXML imports carry `musicxml@0.3.0`; successful MIDI
+imports carry `midi@0.1.0`. Both retain structured provenance and raw SHA-256; `.mxl`
+additionally binds the root XML SHA-256, exact rootfile member and
+`mxl-container@0.1.0`, while MIDI requires raw/root hashes to match and has no root
+member/container version. Public contracts are `agent-trace@0.2.0`,
+`fretsure-service@0.2.0`, `fretsure-api@0.2.0`, `fretsure-mcp@0.2.0`, and
+`fretsure-web@0.2.0`. Exact benchmark
 reproduction still requires the Git commit and corpus artifact hash. In particular, the 2026-07-10/11
 LLM benchmark tables remain stamped `oracle@0.1.0` plus a legacy/unversioned fidelity
-snapshot; they are not results under the current checker pair.
+snapshot; they are not results under the current `oracle@0.2.0` / `fidelity@0.3.0`
+checker pair.
 
 ## Gold/statistics trust boundary
 

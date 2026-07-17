@@ -27,7 +27,7 @@ def test_cli_success_prints_full_product_result_and_writes_trace(
         "lyrics are not represented in MusicIR",
     )
     success = ImportSuccess(sample_ir(bars=1), (warning,), "musicxml@0.1.0", "abc123")
-    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda path: success)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", lambda path: success)  # type: ignore[attr-defined]
     trace_path = tmp_path / "trace.jsonl"
 
     exit_code = main(["song.musicxml", "--n", "1", "--no-critic", "--trace-jsonl", str(trace_path)])
@@ -49,7 +49,9 @@ def test_cli_success_prints_full_product_result_and_writes_trace(
     assert "model-relative GREEN certification" in captured.out
     assert "profile SHA-256" in captured.out
     assert "input schema tab-input@0.2.0" in captured.out
-    assert "checker fidelity@0.2.0" in captured.out
+    assert "checker fidelity@0.3.0" in captured.out
+    assert "symbolic score to versioned-model-checked fingerstyle tab" in captured.out
+    assert "SCORE ROUTER      : score-input@0.1.0" in captured.out
     assert "ConstantLLM (constant-stub; deterministic offline fallback)" in captured.out
     trace_rows = [
         json.loads(line)
@@ -59,8 +61,34 @@ def test_cli_success_prints_full_product_result_and_writes_trace(
     assert metadata["llm_model_id"] == "constant-stub"
     assert metadata["checker_version"] == "oracle@0.2.0"
     assert metadata["input_schema_version"] == "tab-input@0.2.0"
-    assert metadata["fidelity_checker_version"] == "fidelity@0.2.0"
+    assert metadata["fidelity_checker_version"] == "fidelity@0.3.0"
     assert len(metadata["profile_fingerprint"]) == 64
+
+
+def test_cli_marks_unavailable_fidelity_dimensions_as_na(
+    monkeypatch: object, capsys: object
+) -> None:
+    base = sample_ir(bars=1)
+    ir = MusicIR(
+        (Note(F(0), F(1), 64, "melody"),),
+        (),
+        replace(
+            base.meta,
+            key="key-signature:unprovided",
+            duration_beats=F(1),
+        ),
+    )
+    success = ImportSuccess(ir, (), "midi@0.1.0", "abc123")
+    monkeypatch.setattr("fretsure.cli.import_score", lambda path: success)  # type: ignore[attr-defined]
+
+    assert main(["song.mid", "--n", "1", "--no-critic"]) == 0
+
+    output = capsys.readouterr().out  # type: ignore[attr-defined]
+    assert "melody-F1 1.00" in output
+    assert "bass-root N/A" in output
+    assert "harmony N/A" in output
+    assert "available-dimension gate PASS (1/3 evaluated)" in output
+    assert "unavailable: bass_root, harmony" in output
 
 
 def test_cli_import_failure_is_nonzero_and_has_no_traceback(
@@ -75,7 +103,7 @@ def test_cli_import_failure_is_nonzero_and_has_no_traceback(
             ),
         )
     )
-    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda path: failure)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", lambda path: failure)  # type: ignore[attr-defined]
 
     exit_code = main(["missing.musicxml"])
 
@@ -83,14 +111,44 @@ def test_cli_import_failure_is_nonzero_and_has_no_traceback(
     assert exit_code != 0
     assert "FILE_NOT_FOUND" in captured.err
     assert "file does not exist" in captured.err
+    assert "score import failed" in captured.err
     assert "Traceback" not in captured.err
+
+
+def test_cli_real_midi_uses_router_dynamic_importer_and_na_evidence(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    raw = bytes.fromhex(
+        "4d546864000000060000000101e0"
+        "4d54726b00000022"
+        "00ff510307a120"
+        "00ff580404021808"
+        "00ff59020000"
+        "00903c40"
+        "8360803c00"
+        "00ff2f00"
+    )
+    path = tmp_path / "minimal.mid"
+    path.write_bytes(raw)
+
+    exit_code = main([str(path), "--n", "1", "--max-iters", "0", "--no-critic"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.err == ""
+    assert "SCORE ROUTER      : score-input@0.1.0" in captured.out
+    assert "IMPORTER          : midi@0.1.0" in captured.out
+    assert "bass-root N/A" in captured.out
+    assert "harmony N/A" in captured.out
+    assert "available-dimension gate PASS (1/3 evaluated)" in captured.out
 
 
 def test_cli_trace_contract_failure_preserves_existing_file_without_traceback(
     tmp_path: Path, monkeypatch: object, capsys: object
 ) -> None:
     success = ImportSuccess(sample_ir(bars=1), (), "musicxml@0.1.0", "abc123")
-    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda path: success)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", lambda path: success)  # type: ignore[attr-defined]
     trace_path = tmp_path / "trace.jsonl"
     trace_path.write_text("previous-good-trace", encoding="utf-8")
 
@@ -113,7 +171,7 @@ def test_cli_atomic_replace_failure_cleans_temp_and_preserves_existing_file(
     tmp_path: Path, monkeypatch: object, capsys: object
 ) -> None:
     success = ImportSuccess(sample_ir(bars=1), (), "musicxml@0.1.0", "abc123")
-    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda path: success)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", lambda path: success)  # type: ignore[attr-defined]
     trace_path = tmp_path / "trace.jsonl"
     trace_path.write_text("previous-good-trace", encoding="utf-8")
 
@@ -136,7 +194,7 @@ def test_cli_atomic_replace_failure_cleans_temp_and_preserves_existing_file(
 
 def test_cli_tempo_override_is_shown(monkeypatch: object, capsys: object) -> None:
     success = ImportSuccess(sample_ir(bars=1), (), "musicxml@0.1.0", "abc123")
-    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda path: success)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", lambda path: success)  # type: ignore[attr-defined]
 
     exit_code = main(["song.musicxml", "--n", "1", "--no-critic", "--tempo-bpm", "72"])
 
@@ -157,7 +215,7 @@ def test_cli_rejects_nonphysical_tempo_before_import(
         called = True
         raise AssertionError(path)
 
-    monkeypatch.setattr("fretsure.cli.import_musicxml", must_not_import)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", must_not_import)  # type: ignore[attr-defined]
     with pytest.raises(SystemExit) as exc_info:
         main(["song.musicxml", f"--tempo-bpm={tempo}"])
 
@@ -186,7 +244,7 @@ def test_cli_rejects_out_of_budget_controls_before_import(
         called = True
         raise AssertionError(path)
 
-    monkeypatch.setattr("fretsure.cli.import_musicxml", must_not_import)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", must_not_import)  # type: ignore[attr-defined]
     with pytest.raises(SystemExit) as exc_info:
         main(["song.musicxml", *control])
 
@@ -203,7 +261,7 @@ def test_cli_redacts_unexpected_importer_and_pipeline_failures(
     def broken_import(_path: Path) -> ImportSuccess:
         raise RuntimeError(secret)
 
-    monkeypatch.setattr("fretsure.cli.import_musicxml", broken_import)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", broken_import)  # type: ignore[attr-defined]
     assert main(["song.musicxml"]) == 2
     importer_error = capsys.readouterr().err  # type: ignore[attr-defined]
     assert "failed unexpectedly" in importer_error
@@ -211,7 +269,7 @@ def test_cli_redacts_unexpected_importer_and_pipeline_failures(
     assert "RuntimeError" not in importer_error
 
     success = ImportSuccess(sample_ir(bars=1), (), "musicxml@0.1.0", "abc123")
-    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda _path: success)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", lambda _path: success)  # type: ignore[attr-defined]
 
     def broken_pipeline(*_args: object, **_kwargs: object) -> object:
         raise RuntimeError(secret)
@@ -238,7 +296,7 @@ def test_cli_escapes_control_characters_in_untrusted_metadata_and_path(
         ),
     )
     success = ImportSuccess(ir, (), "musicxml@0.1.0", "abc123")
-    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda path: success)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", lambda path: success)  # type: ignore[attr-defined]
 
     exit_code = main(["evil\x1b[2J.musicxml", "--n", "1", "--no-critic"])
 
@@ -259,7 +317,7 @@ def test_cli_real_llm_capacity_failure_is_explicit_before_proxy_creation(
     success = ImportSuccess(
         MusicIR(notes, (), base.meta), (), "musicxml@0.1.0", "abc123"
     )
-    monkeypatch.setattr("fretsure.cli.import_musicxml", lambda path: success)  # type: ignore[attr-defined]
+    monkeypatch.setattr("fretsure.cli.import_score", lambda path: success)  # type: ignore[attr-defined]
 
     exit_code = main(["long.musicxml", "--llm"])
 

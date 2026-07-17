@@ -114,7 +114,17 @@ function GateBadge({ verdict }: { verdict: Verdict }) {
   return <span className={`verdict verdict-${verdict.toLowerCase()}`}>{verdict}</span>;
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value }: { label: string; value: number | null }) {
+  if (value === null) {
+    return (
+      <div aria-label={`${label}: N/A`} className="metric">
+        <div className="metric-head">
+          <span>{label}</span>
+          <strong>N/A</strong>
+        </div>
+      </div>
+    );
+  }
   const percent = Math.round(value * 100);
   return (
     <div className="metric">
@@ -188,7 +198,7 @@ function EvidenceCard({ result }: { result: ArrangementResponse }) {
           <h3>Musical fidelity</h3>
           {faithfulness ? (
             <span className={`pass-pill ${faithfulness.passed ? "is-pass" : "is-fail"}`}>
-              {faithfulness.passed ? "PASS" : "FAIL"}
+              {`${faithfulness.passed ? "PASS" : "REVIEW"} · ${faithfulness.evaluated_dimensions.length}/3 available`}
             </span>
           ) : (
             <span className="na">N/A</span>
@@ -304,16 +314,15 @@ function Arrangement({
   onReset: () => void;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
 }) {
-  const bothGatesPassed =
-    result.playability?.verdict === "GREEN" && result.faithfulness?.passed === true;
+  const fidelityStatus = result.faithfulness
+    ? `available fidelity ${result.faithfulness.passed ? "passed" : "needs review"} (${result.faithfulness.evaluated_dimensions.length}/3)`
+    : "fidelity unavailable";
   const runLabel =
     result.status === "no_fingering_within_budget"
       ? "Arrangement evidence / bounded search ended"
-      : bothGatesPassed
-        ? "Arrangement evidence / both gates passed"
-        : result.playability?.verdict !== "GREEN"
-          ? "Arrangement evidence / playability needs review"
-          : "Arrangement evidence / fidelity needs review";
+      : result.playability?.verdict !== "GREEN"
+        ? "Arrangement evidence / playability needs review"
+        : `Arrangement evidence / playability passed · ${fidelityStatus}`;
   return (
     <main className="result-shell">
       <section className="result-intro">
@@ -357,7 +366,7 @@ function Arrangement({
           <footer className="source-strip">
             <div>
               <span>Input</span>
-              <strong>{result.source.filename ?? "in-memory score"}</strong>
+              <strong>{result.source.filename}</strong>
             </div>
             <div>
               <span>SHA-256</span>
@@ -443,13 +452,19 @@ export default function App(): React.JSX.Element {
     if (result) resultHeadingRef.current?.focus({ preventScroll: true });
   }, [result]);
 
-  const supportedSuffixes = capabilities?.inputs.score_suffixes ?? [".musicxml", ".xml", ".mxl"];
+  const supportedSuffixes = capabilities?.inputs.score_suffixes ?? [
+    ".musicxml",
+    ".xml",
+    ".mxl",
+    ".mid",
+    ".midi",
+  ];
   const proxyEngine = capabilities?.engines.find((engine) => engine.id === "proxy");
   const proxyAvailable = proxyEngine?.available === true;
   const activeEngine = capabilities?.engines.find((engine) => engine.id === controls.engine);
   const fileError = useMemo(() => {
     if (!file) return null;
-    const lower = file.name.toLocaleLowerCase();
+    const lower = file.name.toLowerCase();
     return supportedSuffixes.some((suffix) => lower.endsWith(suffix))
       ? null
       : `Choose ${supportedSuffixes.join(", ")}.`;
@@ -558,9 +573,8 @@ export default function App(): React.JSX.Element {
               <em>Make sure hands can reach it.</em>
             </h1>
             <p className="hero-deck reveal reveal-3">
-              Fretsure turns its supported MusicXML lead-sheet subset—including strict MXL
-              containers—into fingerstyle tablature, then makes every candidate answer to a
-              deterministic physical model.
+              Fretsure turns supported symbolic scores—MusicXML, MXL, and MIDI—into fingerstyle
+              tablature, then makes every candidate answer to a deterministic physical model.
             </p>
             <div className="hero-proof reveal reveal-4">
               <span className="proof-line" />
@@ -641,7 +655,7 @@ export default function App(): React.JSX.Element {
               <input
                 accept={supportedSuffixes.join(",")}
                 aria-hidden="true"
-                aria-label="Choose a MusicXML or MXL score"
+                aria-label="Choose a supported symbolic score"
                 onChange={(event) => chooseFile(event.target.files?.item(0) ?? null)}
                 ref={inputRef}
                 tabIndex={-1}
@@ -664,7 +678,7 @@ export default function App(): React.JSX.Element {
                 ) : (
                   <span>
                     <strong>Drop a symbolic score here</strong>
-                    <small>or choose a MusicXML / MXL file</small>
+                    <small>or choose a MusicXML / MXL / MIDI file</small>
                   </span>
                 )}
                 <span className="browse-label">{file ? "Change" : "Browse"}</span>

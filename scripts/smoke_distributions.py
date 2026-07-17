@@ -69,21 +69,56 @@ def main() -> int:
             root,
             "service",
             wheel,
-            "service,musicxml,agent",
+            "service,score,agent",
             (
                 "from pathlib import Path; "
                 "from fretsure.application import ArrangeOptions, arrange_outcome_to_wire, "
                 "arrange_score_bytes; "
-                "from fretsure.importers import IMPORTER_VERSION; "
                 "from fretsure.llm.client import ConstantLLM; "
-                "score = Path('tests/fixtures/producers/musescore-4.7.4.musicxml'); "
+                "score = Path('tests/fixtures/midi/producers/music21-10.5.0-melody_only.mid'); "
                 "outcome = arrange_score_bytes(score.read_bytes(), filename=score.name, "
                 "options=ArrangeOptions(n=1, max_iters=0, use_critic=False), "
                 "llm=ConstantLLM('noop')); "
                 "wire = arrange_outcome_to_wire(outcome); "
                 "assert outcome.status == 'tab_produced'; "
-                "assert wire['source']['importer_version'] == IMPORTER_VERSION; "
-                "assert wire['stamps']['importer_version'] == IMPORTER_VERSION"
+                "assert wire['source']['importer_version'] == 'midi@0.1.0'; "
+                "assert wire['stamps']['score_input_version'] == 'score-input@0.1.0'; "
+                "assert wire['stamps']['importer_version'] == 'midi@0.1.0'; "
+                "assert wire['faithfulness']['bass_root_accuracy'] is None; "
+                "assert wire['faithfulness']['harmony_jaccard'] is None"
+            ),
+        )
+        _environment(
+            root,
+            "midi",
+            wheel,
+            "midi",
+            (
+                "from pathlib import Path; "
+                "from fretsure.importers import ImportSuccess, MIDI_IMPORTER_VERSION, import_midi; "
+                "score = Path('tests/fixtures/midi/producers/music21-10.5.0-melody_only.mid'); "
+                "result = import_midi(score); "
+                "assert isinstance(result, ImportSuccess); "
+                "assert result.importer_version == MIDI_IMPORTER_VERSION == 'midi@0.1.0'; "
+                "assert result.ir.chords == (); "
+                "assert result.ir.meta.duration_beats.numerator == 8"
+            ),
+        )
+        _environment(
+            root,
+            "score",
+            wheel,
+            "score",
+            (
+                "from pathlib import Path; "
+                "from fretsure.importers import ImportSuccess, SCORE_INPUT_VERSION, import_score; "
+                "xml = import_score(Path('tests/fixtures/producers/musescore-4.7.4.musicxml')); "
+                "midi = import_score(Path('tests/fixtures/midi/producers/"
+                "music21-10.5.0-melody_only.mid')); "
+                "assert isinstance(xml, ImportSuccess) and isinstance(midi, ImportSuccess); "
+                "assert xml.importer_version == 'musicxml@0.3.0'; "
+                "assert midi.importer_version == 'midi@0.1.0'; "
+                "assert SCORE_INPUT_VERSION == 'score-input@0.1.0'"
             ),
         )
         _environment(
@@ -96,7 +131,7 @@ def main() -> int:
                 "assert create_server()._mcp_server.version == MCP_VERSION"
             ),
         )
-    print("Clean wheel install matrix OK (core, musicxml, service, mcp)")
+    print("Clean wheel install matrix OK (core, musicxml, midi, score, service, mcp)")
     return 0
 
 

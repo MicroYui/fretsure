@@ -6,15 +6,45 @@ exact-onset top-voice Melody-F1, bass-root accuracy, and chord-segment harmony
 Jaccard.  Real-corpus alignment tolerance remains a later refinement.
 """
 
+import math
 from collections import defaultdict
 from dataclasses import dataclass
 from fractions import Fraction
+from typing import Literal
 
 from fretsure.geometry import note_pitch
 from fretsure.ir import MusicIR
 from fretsure.tab import Tab
 
-FIDELITY_CHECKER_VERSION = "fidelity@0.2.0"
+FIDELITY_CHECKER_VERSION = "fidelity@0.3.0"
+
+FaithfulnessDimension = Literal["melody", "bass_root", "harmony"]
+FAITHFULNESS_DIMENSIONS: tuple[FaithfulnessDimension, ...] = (
+    "melody",
+    "bass_root",
+    "harmony",
+)
+MELODY_F1_THRESHOLD = 0.9
+BASS_ROOT_THRESHOLD = 0.7
+HARMONY_THRESHOLD = 0.6
+_FAITHFULNESS_THRESHOLDS: dict[FaithfulnessDimension, float] = {
+    "melody": MELODY_F1_THRESHOLD,
+    "bass_root": BASS_ROOT_THRESHOLD,
+    "harmony": HARMONY_THRESHOLD,
+}
+
+
+def _scores_pass(
+    scores: dict[FaithfulnessDimension, float | None],
+    evaluated: tuple[FaithfulnessDimension, ...],
+) -> bool:
+    if not evaluated:
+        return False
+    for dimension in evaluated:
+        score = scores[dimension]
+        if score is None or score < _FAITHFULNESS_THRESHOLDS[dimension]:
+            return False
+    return True
 
 
 def _tab_onset_pitches(tab: Tab) -> set[tuple[Fraction, int]]:
@@ -179,18 +209,86 @@ def bass_root_accuracy(ir: MusicIR, tab: Tab) -> float:
     return hits / len(ir.chords)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FaithfulnessGate:
-    melody_f1: float
-    bass_root: float
-    harmony: float
+    melody_f1: float | None
+    bass_root: float | None
+    harmony: float | None
     passed: bool
+    evaluated_dimensions: tuple[FaithfulnessDimension, ...]
+    unavailable_dimensions: tuple[FaithfulnessDimension, ...]
+
+    def __post_init__(self) -> None:
+        if type(self.evaluated_dimensions) is not tuple:
+            raise ValueError("evaluated_dimensions must be an exact tuple")
+        if type(self.unavailable_dimensions) is not tuple:
+            raise ValueError("unavailable_dimensions must be an exact tuple")
+        evaluated = self.evaluated_dimensions
+        unavailable = self.unavailable_dimensions
+        if any(type(dimension) is not str for dimension in (*evaluated, *unavailable)):
+            raise ValueError("faithfulness dimension names must be exact strings")
+        if evaluated != tuple(
+            dimension for dimension in FAITHFULNESS_DIMENSIONS if dimension in evaluated
+        ):
+            raise ValueError("evaluated_dimensions must be unique and canonically ordered")
+        if unavailable != tuple(
+            dimension for dimension in FAITHFULNESS_DIMENSIONS if dimension in unavailable
+        ):
+            raise ValueError("unavailable_dimensions must be unique and canonically ordered")
+        if set(evaluated).isdisjoint(unavailable) is False or set(evaluated) | set(
+            unavailable
+        ) != set(FAITHFULNESS_DIMENSIONS):
+            raise ValueError("faithfulness dimensions must form a complete partition")
+
+        scores: dict[FaithfulnessDimension, float | None] = {
+            "melody": self.melody_f1,
+            "bass_root": self.bass_root,
+            "harmony": self.harmony,
+        }
+        for dimension, score in scores.items():
+            if dimension in evaluated:
+                if type(score) is not float or not math.isfinite(score) or not 0.0 <= score <= 1.0:
+                    raise ValueError(f"{dimension} score must be an exact finite float in 0..1")
+            elif score is not None:
+                raise ValueError(f"{dimension} score must be None when unavailable")
+
+        if type(self.passed) is not bool:
+            raise ValueError("passed must be an exact bool")
+        expected_passed = _scores_pass(scores, evaluated)
+        if self.passed is not expected_passed:
+            raise ValueError("passed disagrees with the evaluated scores and frozen thresholds")
 
 
-def faithfulness(
-    ir: MusicIR, tab: Tab, *, tau_m: float = 0.9, tau_b: float = 0.7, tau_h: float = 0.6
-) -> FaithfulnessGate:
-    mf = melody_f1(ir, tab)
-    br = bass_root_accuracy(ir, tab)
-    hj = harmony_jaccard(ir, tab)
-    return FaithfulnessGate(mf, br, hj, mf >= tau_m and br >= tau_b and hj >= tau_h)
+def faithfulness_dimensions(ir: MusicIR) -> tuple[FaithfulnessDimension, ...]:
+    """Return the source-evidenced authoritative dimensions in canonical order."""
+
+    has_melody = any(note.voice == "melody" for note in ir.notes)
+    has_chords = bool(ir.chords)
+    has_harmonic_notes = any(note.voice in {"bass", "harmony"} for note in ir.notes)
+    availability: tuple[tuple[FaithfulnessDimension, bool], ...] = (
+        ("melody", has_melody),
+        ("bass_root", has_chords),
+        ("harmony", has_chords or has_harmonic_notes),
+    )
+    return tuple(
+        dimension
+        for dimension, available in availability
+        if available
+    )
+
+
+def faithfulness(ir: MusicIR, tab: Tab) -> FaithfulnessGate:
+    evaluated = faithfulness_dimensions(ir)
+    unavailable = tuple(
+        dimension for dimension in FAITHFULNESS_DIMENSIONS if dimension not in evaluated
+    )
+    mf = melody_f1(ir, tab) if "melody" in evaluated else None
+    br = bass_root_accuracy(ir, tab) if "bass_root" in evaluated else None
+    hj = harmony_jaccard(ir, tab) if "harmony" in evaluated else None
+    scores: dict[FaithfulnessDimension, float | None] = {
+        "melody": mf,
+        "bass_root": br,
+        "harmony": hj,
+    }
+    passed = _scores_pass(scores, evaluated)
+    return FaithfulnessGate(mf, br, hj, passed, evaluated, unavailable)

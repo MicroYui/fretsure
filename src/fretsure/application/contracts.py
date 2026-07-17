@@ -9,6 +9,7 @@ do not belong here.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Literal
@@ -21,7 +22,7 @@ from fretsure.oracle.profiles import Profile
 from fretsure.solver.api import Infeasible
 from fretsure.tab import Tab
 
-SERVICE_VERSION = "fretsure-service@0.1.0"
+SERVICE_VERSION = "fretsure-service@0.2.0"
 PROFILE_REGISTRY_VERSION = "profile-registry@0.1.0"
 
 
@@ -265,6 +266,8 @@ class ServiceCapabilities:
 
     service_version: str
     profile_registry_version: str
+    score_input_version: str
+    score_format_registry: Mapping[str, str]
     target_input_schema_version: str
     profiles: tuple[str, ...]
     input_suffixes: tuple[str, ...]

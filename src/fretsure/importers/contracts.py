@@ -24,6 +24,24 @@ class ImportCode(StrEnum):
     UNSUPPORTED_NAMESPACE = "UNSUPPORTED_NAMESPACE"
     MISSING_DEPENDENCY = "MISSING_DEPENDENCY"
 
+    MALFORMED_MIDI = "MALFORMED_MIDI"
+    UNSUPPORTED_MIDI_FORMAT = "UNSUPPORTED_MIDI_FORMAT"
+    MIDI_TIMING_UNSUPPORTED = "MIDI_TIMING_UNSUPPORTED"
+    MIDI_EVENT_UNSUPPORTED = "MIDI_EVENT_UNSUPPORTED"
+    MIDI_META_EVENT_UNSUPPORTED = "MIDI_META_EVENT_UNSUPPORTED"
+    MIDI_CONTROL_CHANGE_UNSUPPORTED = "MIDI_CONTROL_CHANGE_UNSUPPORTED"
+    MIDI_PITCH_BEND_UNSUPPORTED = "MIDI_PITCH_BEND_UNSUPPORTED"
+    MIDI_SYSEX_UNSUPPORTED = "MIDI_SYSEX_UNSUPPORTED"
+    MIDI_PERCUSSION_UNSUPPORTED = "MIDI_PERCUSSION_UNSUPPORTED"
+    NO_NOTE_BEARING_STREAM = "NO_NOTE_BEARING_STREAM"
+    MULTIPLE_NOTE_BEARING_STREAMS = "MULTIPLE_NOTE_BEARING_STREAMS"
+    MIDI_POLYPHONY_UNSUPPORTED = "MIDI_POLYPHONY_UNSUPPORTED"
+    MIDI_NOTE_PAIRING_ERROR = "MIDI_NOTE_PAIRING_ERROR"
+    MIDI_KEY_UNPROVIDED = "MIDI_KEY_UNPROVIDED"
+    MIDI_HARMONY_UNPROVIDED = "MIDI_HARMONY_UNPROVIDED"
+    MIDI_PERFORMANCE_DATA_IGNORED = "MIDI_PERFORMANCE_DATA_IGNORED"
+    MIDI_TEXT_IGNORED = "MIDI_TEXT_IGNORED"
+
     MXL_MALFORMED_ARCHIVE = "MXL_MALFORMED_ARCHIVE"
     MXL_ARCHIVE_FEATURE_UNSUPPORTED = "MXL_ARCHIVE_FEATURE_UNSUPPORTED"
     MXL_ENCRYPTED_MEMBER = "MXL_ENCRYPTED_MEMBER"
@@ -111,6 +129,10 @@ class SourceLocation:
     voice: str | None = None
     element: str | None = None
     archive_member: str | None = None
+    track_index: int | None = None
+    channel: int | None = None
+    tick: int | None = None
+    event_index: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,7 +148,7 @@ class ImportProvenance:
     """Structured source identity retained across archive canonicalization."""
 
     source_filename: str
-    source_format: Literal["musicxml", "mxl"]
+    source_format: Literal["musicxml", "mxl", "midi"]
     raw_sha256: str
     root_member: str | None
     root_sha256: str
@@ -153,7 +175,9 @@ class ImportFailure:
     diagnostics: tuple[ImportDiagnostic, ...]
 
 
-MusicXMLImportResult = ImportSuccess | ImportFailure
+ScoreImportResult = ImportSuccess | ImportFailure
+MusicXMLImportResult = ScoreImportResult
+MIDIImportResult = ScoreImportResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,6 +201,14 @@ class ImportLimits:
     max_mxl_total_uncompressed_bytes: int = 32 * 1024 * 1024
     max_mxl_member_ratio: int = 100
     max_mxl_total_ratio: int = 100
+    max_midi_bytes: int = 10 * 1024 * 1024
+    max_midi_tracks: int = 64
+    max_midi_events: int = 250_000
+    max_midi_notes: int = 20_000
+    max_midi_tick: int = (1 << 31) - 1
+    max_midi_quarter_span: int = 4096
+    max_midi_text_bytes: int = 1024
+    max_midi_total_text_bytes: int = 64 * 1024
 
     def __post_init__(self) -> None:
         for field in fields(self):

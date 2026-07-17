@@ -11,6 +11,7 @@ import {
   arrangement,
   capabilities,
   jsonResponse,
+  midiArrangement,
   producerMxlArrangement,
   producerXmlArrangement,
 } from "./fixtures";
@@ -37,7 +38,7 @@ describe("Fretsure product flow", () => {
     const file = new File(["<score-partwise />"], "song.musicxml", {
       type: "application/xml",
     });
-    await user.upload(screen.getByLabelText("Choose a MusicXML or MXL score"), file);
+    await user.upload(screen.getByLabelText("Choose a supported symbolic score"), file);
     expect(screen.getByText("song.musicxml")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
 
@@ -53,6 +54,47 @@ describe("Fretsure product flow", () => {
     expect(new Headers(init?.headers).get("content-type")).toBe(
       "application/vnd.recordare.musicxml+xml",
     );
+  });
+
+  it("submits MIDI bytes unchanged and renders unavailable fidelity as N/A", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(capabilities))
+      .mockResolvedValueOnce(jsonResponse(midiArrangement));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    expect(await screen.findByText("Oracle ready")).toBeInTheDocument();
+    expect(
+      screen.getByText(/supported symbolic scores—MusicXML, MXL, and MIDI/),
+    ).toBeInTheDocument();
+    const bytes = new Uint8Array([
+      0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0x01, 0xe0,
+      0xff, 0x00,
+    ]);
+    const file = new File([bytes], "MELODY.MIDI", { type: "audio/midi" });
+    await user.upload(screen.getByLabelText("Choose a supported symbolic score"), file);
+    await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
+
+    expect(
+      await screen.findByText(
+        "Arrangement evidence / playability passed · available fidelity passed (1/3)",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("PASS · 1/3 available")).toBeInTheDocument();
+    expect(screen.getAllByText("N/A")).toHaveLength(2);
+    expect(screen.getByLabelText("Bass root: N/A").querySelector("progress")).toBeNull();
+    expect(screen.getByLabelText("Harmony: N/A").querySelector("progress")).toBeNull();
+    expect(screen.getAllByRole("progressbar")).toHaveLength(1);
+    expect(screen.getAllByText("midi@0.1.0").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/MIDI_HARMONY_UNPROVIDED/)).toBeInTheDocument();
+
+    const [, init] = fetchMock.mock.calls[1];
+    expect(String(fetchMock.mock.calls[1][0])).toContain("filename=MELODY.MIDI");
+    expect(init?.body).toBe(file);
+    expect(new Uint8Array(await (init?.body as File).arrayBuffer())).toEqual(bytes);
+    expect(new Headers(init?.headers).get("content-type")).toBe("audio/midi");
   });
 
   it.each([
@@ -83,7 +125,7 @@ describe("Fretsure product flow", () => {
     const frozenBytes = readFileSync(new URL(producer.path, import.meta.url));
     expect(createHash("sha256").update(frozenBytes).digest("hex")).toBe(producer.sha256);
     const file = new File([frozenBytes], producer.filename);
-    await user.upload(screen.getByLabelText("Choose a MusicXML or MXL score"), file);
+    await user.upload(screen.getByLabelText("Choose a supported symbolic score"), file);
     await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
 
     expect(
@@ -120,7 +162,7 @@ describe("Fretsure product flow", () => {
     render(<App />);
     await screen.findByText("Oracle ready");
     await user.upload(
-      screen.getByLabelText("Choose a MusicXML or MXL score"),
+      screen.getByLabelText("Choose a supported symbolic score"),
       new File(["score"], "hostile.musicxml"),
     );
     await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
@@ -143,7 +185,7 @@ describe("Fretsure product flow", () => {
     render(<App />);
     await screen.findByText("Oracle ready");
     await user.upload(
-      screen.getByLabelText("Choose a MusicXML or MXL score"),
+      screen.getByLabelText("Choose a supported symbolic score"),
       new File(["score"], "trace.mxl"),
     );
     await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
@@ -158,7 +200,7 @@ describe("Fretsure product flow", () => {
     const user = userEvent.setup();
     const problem = {
       type: "about:blank",
-      api_version: "fretsure-api@0.1.0",
+      api_version: "fretsure-api@0.2.0",
       status: 422,
       code: "IMPORT_REJECTED",
       title: "Request semantics rejected",
@@ -175,7 +217,7 @@ describe("Fretsure product flow", () => {
     render(<App />);
     await screen.findByText("Oracle ready");
     await user.upload(
-      screen.getByLabelText("Choose a MusicXML or MXL score"),
+      screen.getByLabelText("Choose a supported symbolic score"),
       new File(["bad"], "bad.musicxml"),
     );
     await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
@@ -192,7 +234,7 @@ describe("Fretsure product flow", () => {
     render(<App />);
     await screen.findByText("Oracle ready");
     await user.upload(
-      screen.getByLabelText("Choose a MusicXML or MXL score"),
+      screen.getByLabelText("Choose a supported symbolic score"),
       new File(["audio"], "song.mp3"),
     );
     expect(screen.getByText(/Choose \.musicxml/)).toBeInTheDocument();
@@ -230,10 +272,10 @@ describe("Fretsure product flow", () => {
     render(<App />);
     await screen.findByText("Oracle ready");
 
-    const input = screen.getByLabelText("Choose a MusicXML or MXL score");
+    const input = screen.getByLabelText("Choose a supported symbolic score");
     expect(input).toHaveAttribute("aria-hidden", "true");
     expect(input).toHaveAttribute("tabindex", "-1");
-    expect(input).toHaveAttribute("accept", ".musicxml,.xml,.mxl");
+    expect(input).toHaveAttribute("accept", ".musicxml,.xml,.mxl,.mid,.midi");
     expect(screen.getByRole("button", { name: /Drop a symbolic score/ })).toBeVisible();
   });
 
@@ -274,7 +316,7 @@ describe("Fretsure product flow", () => {
     render(<App />);
     await screen.findByText("Oracle ready");
     await user.upload(
-      screen.getByLabelText("Choose a MusicXML or MXL score"),
+      screen.getByLabelText("Choose a supported symbolic score"),
       new File(["score"], "bounded.musicxml"),
     );
     await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
@@ -286,12 +328,18 @@ describe("Fretsure product flow", () => {
   });
 
   it.each(["AMBER", "RED"] as const)(
-    "does not claim both gates passed when playability is %s",
+    "does not claim complete evidence when playability is %s",
     async (verdict) => {
       const user = userEvent.setup();
       const notGreen = structuredClone(arrangement);
       notGreen.playability!.verdict = verdict;
       notGreen.faithfulness!.passed = true;
+      const selection = notGreen.trace.steps.find(
+        (step) => step.event === "CANDIDATE_SELECTED",
+      )!;
+      selection.data.verdict = verdict;
+      selection.data.green_certified = false;
+      selection.data.playability_gate = "not_passed";
       vi.stubGlobal(
         "fetch",
         vi
@@ -302,7 +350,7 @@ describe("Fretsure product flow", () => {
       render(<App />);
       await screen.findByText("Oracle ready");
       await user.upload(
-        screen.getByLabelText("Choose a MusicXML or MXL score"),
+        screen.getByLabelText("Choose a supported symbolic score"),
         new File(["score"], `${verdict.toLowerCase()}.musicxml`),
       );
       await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
@@ -318,6 +366,12 @@ describe("Fretsure product flow", () => {
     const user = userEvent.setup();
     const warned = structuredClone(arrangement);
     warned.playability!.verdict = "RED";
+    const warnedSelection = warned.trace.steps.find(
+      (step) => step.event === "CANDIDATE_SELECTED",
+    )!;
+    warnedSelection.data.verdict = "RED";
+    warnedSelection.data.green_certified = false;
+    warnedSelection.data.playability_gate = "not_passed";
     warned.playability!.diagnostics = [
       {
         measure: 2,
@@ -331,7 +385,7 @@ describe("Fretsure product flow", () => {
     warned.source.warnings = [
       {
         code: "IGNORED_NOTATION",
-        severity: "WARNING",
+        severity: "warning",
         message: "lyrics were not imported",
         location: null,
       },
@@ -346,7 +400,7 @@ describe("Fretsure product flow", () => {
     render(<App />);
     await screen.findByText("Oracle ready");
     await user.upload(
-      screen.getByLabelText("Choose a MusicXML or MXL score"),
+      screen.getByLabelText("Choose a supported symbolic score"),
       new File(["score"], "warned.musicxml"),
     );
     await user.click(screen.getByRole("button", { name: "Arrange and verify" }));

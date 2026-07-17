@@ -1,7 +1,7 @@
 # Fretsure —— 可证明可弹的吉他谱智能体（设计文档 / Design Spec）
 
 > 产品名 **Fretsure**（fret + ensure，已定）。备选 PlayProof / Fretwright 仅存档。
-> 状态（2026-07-16）：设计已锁定；Plan 1–5、受限 MusicXML 文件纵切、Oracle 0.2 软件信任门、安全 `.mxl`、Plan 6A Web/API/replay trace/MCP 与 producer-driven MusicXML/IR 实现边界已落地。当前组合树为 package=`0.4.0`、service/API/MCP/trace=`0.1.0`，playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、faithfulness=`fidelity@0.2.0` 保持不变，importer=`musicxml@0.3.0`，container=`mxl-container@0.1.0` 保持不变；MusicXML runtime 精确锁定 `music21==10.5.0`，默认真代理模型为 `gpt-5.6-sol`。完整 Plan 6 的音频/琴颈/导出/live demo 仍 open；producer 阶段独立验收、提交推送后依次进入 MIDI、benchmark v2。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+> 状态（2026-07-17）：设计已锁定；Plan 1–5、受限 MusicXML、Oracle 0.2、安全 `.mxl`、Plan 6A 与 producer-driven MusicXML/IR 已闭门。strict MIDI input 的实现、exact producer corpus、repository/real-proxy/Web/distribution gates 与三轮独立 review 已完成，containing commit/push/SHA equality 由验收记录规定的外部 Git receipt 关闭。当前组合树为 package=`0.5.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0` 保持不变，runtime 精确锁定 `music21==10.5.0`，默认真代理模型为 `gpt-5.6-sol`。完整 Plan 6 的音频/琴颈/导出/live demo 仍 open；MIDI push receipt 成功后才进入 benchmark v2。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
 
 ---
 
@@ -111,8 +111,9 @@
 
 ### 5.1 输入解析 Input Parser
 - **目标保证路径（符号）**：MusicXML / MIDI / MusicXML-lite / lead sheet（旋律+和弦符号）/ 纯和弦谱。这里是目标集合，不表示当前全部实现。
-- **当前 `musicxml@0.3.0`**：安全 envelope + fail-closed 完整 raw 语义预检后，才重建一个 bounded event-only XML 交给精确锁定的 **music21 10.5.0**（BSD-3）做交叉验证；第三方只接收 divisions、harmony root/kind 与 note/rest/duration/tie，credit、instrument/MIDI、layout/print、lyrics/voice、key visual metadata 和合法额外 non-note-bearing part 不进入该边界。支持 MusicXML 3.1/4.0 `score-partwise` 的未压缩 `.musicxml`/`.xml`，以及由 `mxl-container@0.1.0` 有界校验、全内存解压和逐 member size/CRC/完整性核验后选出的唯一 `.mxl` root。语义仍限单 note-bearing part/staff/voice、普通 note/rest/tie、全曲固定的 bounded XSD-decimal divisions 与 decimal duration、固定传统 key、4/4、1–1000 BPM quarter tempo 与白名单 root+kind harmony。显式 major/minor 维持原 key；MusicXML 4.0 traditional key 省略 `<mode>` 时保留 `key-signature:fifths=N;mode=unprovided` 并发 located `KEY_MODE_UNPROVIDED`，不从音符、和弦、spelling 或 music21 猜 mode。MusicXML 3.1 省略 mode、空/其他 mode、重复权威 scalar、错误 key shape 与 key change 继续拒绝；外部资源、权威语义数值字段中的非 ASCII/XSD 值、location/diagnostic amplification 与派生 Fraction 均在 adapter 前有界失败。raw exact event timeline 是权威，music21 只做逐事件语义交叉验证；每个 success 还须满足 256-bit Fraction 的 public MusicIR snapshot；`.mxl` 不扩语义。复调、多 note-bearing part/staff/voice、导航/重复、pickup、变拍/变调/变速、复杂 harmony/技巧、MIDI 与 audio 均延后并 typed fail-closed。
+- **当前 `musicxml@0.3.0`**：安全 envelope + fail-closed 完整 raw 语义预检后，才重建一个 bounded event-only XML 交给精确锁定的 **music21 10.5.0**（BSD-3）做交叉验证；第三方只接收 divisions、harmony root/kind 与 note/rest/duration/tie，credit、instrument/MIDI、layout/print、lyrics/voice、key visual metadata 和合法额外 non-note-bearing part 不进入该边界。支持 MusicXML 3.1/4.0 `score-partwise` 的未压缩 `.musicxml`/`.xml`，以及由 `mxl-container@0.1.0` 有界校验、全内存解压和逐 member size/CRC/完整性核验后选出的唯一 `.mxl` root。语义仍限单 note-bearing part/staff/voice、普通 note/rest/tie、全曲固定的 bounded XSD-decimal divisions 与 decimal duration、固定传统 key、4/4、1–1000 BPM quarter tempo 与白名单 root+kind harmony。显式 major/minor 维持原 key；MusicXML 4.0 traditional key 省略 `<mode>` 时保留 `key-signature:fifths=N;mode=unprovided` 并发 located `KEY_MODE_UNPROVIDED`，不从音符、和弦、spelling 或 music21 猜 mode。MusicXML 3.1 省略 mode、空/其他 mode、重复权威 scalar、错误 key shape 与 key change 继续拒绝；外部资源、权威语义数值字段中的非 ASCII/XSD 值、location/diagnostic amplification 与派生 Fraction 均在 adapter 前有界失败。raw exact event timeline 是权威，music21 只做逐事件语义交叉验证；每个 success 还须满足 256-bit Fraction 的 public MusicIR snapshot；`.mxl` 不扩语义。复调、多 note-bearing part/staff/voice、导航/重复、pickup、变拍/变调/变速、复杂 harmony/技巧与 audio 均延后并 typed fail-closed。
 - producer 证据只覆盖 manifest 中未经手改、精确冻结的 artifacts：music21 10.5.0、musicxml 1.6.1 与 MuseScore Studio 4.7.4 XML/MXL rows。它不证明任意 MuseScore 4.7.4 乐谱、其他版本或完整 MusicXML 兼容；逐文件 census 与限制见 [`2026-07-16-producer-musicxml-census.json`](../../experiments/2026-07-16-producer-musicxml-census.json)，闭门证据见 [`PRODUCER_MUSICXML_ACCEPTANCE.md`](../../PRODUCER_MUSICXML_ACCEPTANCE.md)。
+- **当前 `midi@0.1.0`**：`score-input@0.1.0` 只把 `.mid/.midi` 路由到 strict SMF importer。第一方 parser 在任何 music21/pipeline/LLM 工作前验证 format 0/1、PPQN、chunk/EOF/VLQ/running status/EOT、资源门、单一非打击乐单声部 note stream 与固定 tempo/4/4/key/event allowlist；raw tick/PPQN 是权威。零 error 后只重建最小 canonical SMF 给 music21 10.5.0、`quantizePost=False` 逐 note 交叉验证。所有 note 固定为 melody、`chords=()`；不猜 track role、bass/chord/key、量化或 notation timing。10 MiB/64 tracks/250k events/20k notes/tick `2**31-1`/PPQN 32767/note-track EOT 4096 quarter notes/text/VLQ/diagnostic 门先于对象放大；EOT span 同时约束 leading rest、note duration 与 trailing silence，防止 music21 稀疏小节放大。MuseScore 4.7.4 melody-only exact positive 保留 7 beats 与每音 1 tick release gap，music21 10.5.0 positive 保留 8 beats；两个 harmony-realized exact rows typed 拒绝，不声称跨 producer IR equality 或通用 MIDI 兼容。证据见 [`2026-07-17-midi-census.json`](../../experiments/2026-07-17-midi-census.json) 与 [`MIDI_ACCEPTANCE.md`](../../MIDI_ACCEPTANCE.md)。
 - **尽力路径（音频,v2）**：mp3/wav → 转谱（旋律+和弦+节拍）。候选免费工具：Spotify **Basic Pitch**、librosa 节拍/和弦识别。**明确标注"近似、需校对、不保证"**;提供校对 UI。转谱错误不计入产品的"保证"。
 - 输出：统一 **Music IR**。
 
@@ -191,7 +192,7 @@ class MusicIR:
 
 **D. 难度 tier 约束**(见 §5.7)叠加为额外硬约束。
 
-> **oracle 只判版本化模型内的可弹性，不判忠实或好听。** `fidelity@0.2.0` 是独立来源忠实度门；GREEN 可以同时 fidelity FAIL。品味仍是另一条、尚未获真人校准的轴。
+> **oracle 只判版本化模型内的可弹性，不判忠实或好听。** `fidelity@0.3.0` 是独立、availability-aware 的来源忠实度门；缺 source evidence 的维度是 N/A，不是 1.0。GREEN 可以同时 fidelity FAIL/REVIEW。品味仍是另一条、尚未获真人校准的轴。
 
 ### 5.6 修复回路 Repair（★真正的护城河，verifier-guided search）
 
@@ -384,7 +385,7 @@ class MusicIR:
 - **自标注(无人)**:可弹性(oracle 即 label,合法因为是物理谓词);忠实度(对符号源精确计算,程序生成输入下完美)。
 - **需人(有界,建一次复用)**:musicality(~40 条×3 人 MOS + 盲 A/B);难度校准(专家排 ~150 条一次,拟合 learn-to-rank);**checker 金标集(~300 条分层,一名琴手逐条实弹 ~2–3 小时)**。**总常备人力 ≈ 每次大改 <1 天。**
 
-**A.5 忠实度指标（目标规格）**：目标按 voice-role 用 DTW((onset,pitch)) 对齐；DTW 与 1/16 网格宽松匹配尚未实现。当前 `fidelity@0.2.0` 使用 melody/bass exact-onset 与 active chord-segment harmony Jaccard，详见 `docs/BENCHMARK_RESULTS.md`。
+**A.5 忠实度指标（目标规格）**：目标按 voice-role 用 DTW((onset,pitch)) 对齐；DTW 与 1/16 网格宽松匹配尚未实现。当前 `fidelity@0.3.0` 保留 melody/bass exact-onset 与 active chord-segment harmony Jaccard，并增加 nullable scores、evaluated/unavailable dimensions 与可重算 passed；旧 benchmark 尚未按 0.3 重跑，详见 `docs/BENCHMARK_RESULTS.md`。
 - **Melody-F1** = recall 与 precision 的调和平均,匹配需 MIDI 音高精确 + onset 在 1/16 网格内;另报八度等价宽松版 + 音高误差直方图。
 - **Bass-root-accuracy** = 强拍上"编配最低发声 pitch-class = 源和弦根/记谱低音"的比例。
 - **Harmony-Jaccard** = 逐和弦段"编配 pitch-class 集 vs 源和弦 pitch-class 集"的平均 Jaccard。
@@ -495,7 +496,7 @@ class MusicIR:
 
 **以下为参考设计对照(非依赖)**：
 
-1. **自研 harness — 已采用的运行时(orchestration)**。回路是明确、有界的环（plan→emit edit→oracle→reason→edit→re-check 到不动点）加 best-of-N 扇出；状态、checkpoint、公开 `agent-trace@0.1.0` 与 eval 合同均由项目持有。Plan 6A 已证明它可直接驱动 replay viewer，不需要把 LangGraph/Claude Agent SDK 引入关键路径。LangGraph/Agent SDK 只保留为未来同预算对照实验；没有消融收益就不引入。
+1. **自研 harness — 已采用的运行时(orchestration)**。回路是明确、有界的环（plan→emit edit→oracle→reason→edit→re-check 到不动点）加 best-of-N 扇出；状态、checkpoint、公开 `agent-trace@0.2.0` 与 eval 合同均由项目持有。Plan 6A 已证明它可直接驱动 replay viewer，不需要把 LangGraph/Claude Agent SDK 引入关键路径。LangGraph/Agent SDK 只保留为未来同预算对照实验；没有消融收益就不引入。
    > 历史备选记录：早期曾在 LangGraph 与 Claude Agent SDK 间二选一；founder 后续决定已覆盖该方向，不能再把历史备选写成当前依赖。
 2. **DSPy 3.x + GEPA — prompt 优化(★皇冠研究信号)**。*建,但用消融把关。* GEPA 用**书面反馈**(而非数值奖励)进化 prompt,是 ICLR 2026 oral、以 ~35× 更少 rollout 胜过 RL(GRPO)、**不需要 GPU**(API+CPU),正好卡你硬件。**契合近乎教科书:你的 oracle 已经吐定位化类型诊断→把诊断原样喂给 GEPA,进化 ①编排者规划 prompt ②critic rubric,用你的确定性 checker 打分。这就是无 GPU 的 RL 风味胜利。** 招聘信号:全栈最高的"我做了真研究工程"。反 LARP:GEPA 只碰自然语言 prompt/rubric,**绝不碰 oracle/DSL/checker**;**用 leave-one-out 消融把关**(手写 prompt vs GEPA),不提升就**砍掉并说明**。先跑一天 spike 再决定。
 3. **Inspect-AI(UK AISI)— eval/verifier 台(可信度倍增器)**。*把 benchmark 建在它上面。* 它的词汇 Task/Solver/Scorer 让你的"checker 打分 + leave-one-out 消融"用标准语言可读:oracle 包成确定性 **Scorer**、每首歌是 **Task**、best-of-N+修复到不动点是 **Solver**。招聘信号:对研究倾向岗比任何厂商可观测工具都高(UK AISI 背书)。

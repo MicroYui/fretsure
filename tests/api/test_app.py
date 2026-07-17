@@ -31,7 +31,12 @@ from fretsure.application import (
     check_tab_json,
     solve_target_json,
 )
-from fretsure.importers import IMPORTER_VERSION
+from fretsure.importers import (
+    DEFAULT_LIMITS,
+    IMPORTER_VERSION,
+    MIDI_IMPORTER_VERSION,
+    SCORE_INPUT_VERSION,
+)
 from fretsure.llm.client import CONSTANT_LLM_MODEL_ID, ConstantLLM
 from fretsure.tab import MAX_TAB_JSON_BYTES, tab_to_json
 
@@ -43,7 +48,18 @@ MUSESCORE_XML = PRODUCER_FIXTURES / "musescore-4.7.4.musicxml"
 MUSESCORE_MXL = PRODUCER_FIXTURES / "musescore-4.7.4-roundtrip-supported_basic.mxl"
 UNPROVIDED_KEY = "key-signature:fifths=0;mode=unprovided"
 XML_MEDIA_TYPE = "application/vnd.recordare.musicxml+xml"
+MIDI_MEDIA_TYPE = "audio/midi"
 TEST_BASE_URL = "http://127.0.0.1"
+MINIMAL_MIDI = bytes.fromhex(
+    "4d546864000000060000000101e0"  # format 0, one track, PPQN 480
+    "4d54726b00000022"
+    "00ff510307a120"  # tick 0: 120 BPM
+    "00ff580404021808"  # tick 0: 4/4
+    "00ff59020000"  # tick 0: C major
+    "00903c40"  # tick 0: C4 note on
+    "8360803c00"  # tick 480: C4 note off
+    "00ff2f00"  # tick 480: end of track
+)
 
 
 class _NamedConstantLLM:
@@ -208,11 +224,20 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
     response = client.get("/api/v1/capabilities")
     assert response.status_code == 200
     body = response.json()
-    assert body["api_version"] == API_VERSION
-    assert body["service_version"] == "fretsure-service@0.1.0"
-    assert body["trace_schema_version"] == "agent-trace@0.1.0"
-    assert body["package_version"] == "0.4.0"
-    assert body["stamps"]["importer_version"] == IMPORTER_VERSION == "musicxml@0.3.0"
+    assert body["api_version"] == API_VERSION == "fretsure-api@0.2.0"
+    assert body["service_version"] == "fretsure-service@0.2.0"
+    assert body["trace_schema_version"] == "agent-trace@0.2.0"
+    assert body["package_version"] == "0.5.0"
+    assert "importer_version" not in body["stamps"]
+    assert body["stamps"]["score_input_version"] == SCORE_INPUT_VERSION
+    assert body["inputs"]["score_input"] == {
+        "router_version": "score-input@0.1.0",
+        "format_importers": {
+            "musicxml": "musicxml@0.3.0",
+            "mxl": "musicxml@0.3.0",
+            "midi": "midi@0.1.0",
+        },
+    }
     assert body["controls"]["arrange"]["n"] == {"min": 1, "max": 8}
     assert body["controls"]["arrange"]["max_iters"] == {"min": 0, "max": 16}
     assert body["controls"]["arrange"]["tempo_bpm"] == {
@@ -223,6 +248,11 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
     assert body["controls"]["arrange"]["defaults"]["engine"] == "offline"
     assert body["score_inputs"]["musicxml"]["max_body_bytes"] == 10 * 1024 * 1024
     assert body["score_inputs"]["mxl"]["max_body_bytes"] == 20 * 1024 * 1024
+    assert body["score_inputs"]["midi"] == {
+        "suffixes": [".mid", ".midi"],
+        "media_types": [MIDI_MEDIA_TYPE],
+        "max_body_bytes": DEFAULT_LIMITS.max_midi_bytes,
+    }
     assert body["engines"][0] == {
         "id": "offline",
         "available": True,
@@ -232,6 +262,7 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
     assert body["engines"][1]["available"] is False
     assert "render_audio" in body["deferred"]
     assert "render_audio" not in body["implemented"]
+    assert "midi_input" in body["implemented"]
     assert body["http"]["multipart_uploads"] is False
 
 
@@ -348,6 +379,38 @@ def test_arrangement_endpoint_accepts_safe_mxl_bytes(client: TestClient) -> None
     assert source["container_version"] == "mxl-container@0.1.0"
 
 
+def test_midi_raw_upload_preserves_hash_importer_and_na_fidelity(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/api/v1/arrangements?filename=minimal.MIDI&n=1&max_iters=0&use_critic=false",
+        content=MINIMAL_MIDI,
+        headers={"content-type": MIDI_MEDIA_TYPE},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    digest = hashlib.sha256(MINIMAL_MIDI).hexdigest()
+    assert body["source"]["filename"] == "minimal.MIDI"
+    assert body["source"]["format"] == "midi"
+    assert body["source"]["raw_sha256"] == digest
+    assert body["source"]["root_sha256"] == digest
+    assert body["source"]["root_member"] is None
+    assert body["source"]["container_version"] is None
+    assert body["source"]["importer_version"] == MIDI_IMPORTER_VERSION
+    assert body["stamps"]["score_input_version"] == SCORE_INPUT_VERSION
+    assert body["stamps"]["importer_version"] == MIDI_IMPORTER_VERSION
+    assert body["faithfulness"] == {
+        "melody_f1": 1.0,
+        "bass_root_accuracy": None,
+        "harmony_jaccard": None,
+        "evaluated_dimensions": ["melody"],
+        "unavailable_dimensions": ["bass_root", "harmony"],
+        "passed": True,
+        "checker_version": "fidelity@0.3.0",
+    }
+
+
 def test_oracle_endpoint_matches_application_service(client: TestClient) -> None:
     payload = _valid_tab_json()
     response = client.post(
@@ -373,7 +436,25 @@ def test_oracle_endpoint_matches_application_service(client: TestClient) -> None
             "/api/v1/arrangements?filename=score.mid",
             XML_MEDIA_TYPE,
             415,
-            "UNSUPPORTED_SCORE_SUFFIX",
+            "UNSUPPORTED_MEDIA_TYPE",
+        ),
+        (
+            "/api/v1/arrangements?filename=score.mid",
+            "audio/x-midi",
+            415,
+            "UNSUPPORTED_MEDIA_TYPE",
+        ),
+        (
+            "/api/v1/arrangements?filename=score.midi",
+            "audio/midi; charset=utf-8",
+            415,
+            "UNSUPPORTED_MEDIA_TYPE_PARAMETER",
+        ),
+        (
+            "/api/v1/arrangements?filename=score.xml",
+            MIDI_MEDIA_TYPE,
+            415,
+            "UNSUPPORTED_MEDIA_TYPE",
         ),
         (
             "/api/v1/arrangements?filename=score.mxl",
@@ -655,6 +736,66 @@ def test_import_rejection_never_initializes_engine_factory(static_root: Path) ->
     assert calls == 0
 
 
+def test_wrong_midi_media_rejects_before_body_read_or_engine_factory(
+    static_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = 0
+
+    def counted_factory() -> _NamedConstantLLM:
+        nonlocal calls
+        calls += 1
+        return _NamedConstantLLM("test-proxy")
+
+    async def forbidden_body_read(*_args: object, **_kwargs: object) -> NoReturn:
+        raise AssertionError("wrong MIDI media type reached body reader")
+
+    app = create_app(
+        allow_proxy=True,
+        proxy_factory=counted_factory,
+        proxy_model_id="test-proxy",
+        static_root=static_root,
+    )
+    monkeypatch.setattr(api_module, "read_bounded_body", forbidden_body_read)
+    with TestClient(app, base_url=TEST_BASE_URL, raise_server_exceptions=False) as local:
+        response = local.post(
+            "/api/v1/arrangements?filename=score.mid&engine=proxy",
+            content=MINIMAL_MIDI,
+            headers={"content-type": XML_MEDIA_TYPE},
+        )
+
+    _problem(response, 415, "UNSUPPORTED_MEDIA_TYPE")
+    assert calls == 0
+
+
+def test_midi_preflight_rejection_never_initializes_engine_factory(
+    static_root: Path,
+) -> None:
+    calls = 0
+
+    def counted_factory() -> _NamedConstantLLM:
+        nonlocal calls
+        calls += 1
+        return _NamedConstantLLM("test-proxy")
+
+    app = create_app(
+        allow_proxy=True,
+        proxy_factory=counted_factory,
+        proxy_model_id="test-proxy",
+        static_root=static_root,
+    )
+    with TestClient(app, base_url=TEST_BASE_URL, raise_server_exceptions=False) as local:
+        response = local.post(
+            "/api/v1/arrangements?filename=broken.mid&engine=proxy&n=1&max_iters=0",
+            content=b"not-an-smf",
+            headers={"content-type": MIDI_MEDIA_TYPE},
+        )
+
+    body = _problem(response, 422, "IMPORT_REJECTED")
+    assert "MALFORMED_MIDI" in json.dumps(body)
+    assert calls == 0
+
+
 def test_offline_constant_identity_keeps_large_score_direct_fallback(
     static_root: Path,
 ) -> None:
@@ -805,14 +946,77 @@ def test_endpoint_rejects_declared_and_chunked_oversize(static_root: Path) -> No
     assert json.loads(body)["code"] == "BODY_TOO_LARGE"
 
 
+def test_declared_oversize_midi_never_initializes_engine_factory(
+    static_root: Path,
+) -> None:
+    calls = 0
+
+    def counted_factory() -> _NamedConstantLLM:
+        nonlocal calls
+        calls += 1
+        return _NamedConstantLLM("test-proxy")
+
+    app = create_app(
+        allow_proxy=True,
+        proxy_factory=counted_factory,
+        proxy_model_id="test-proxy",
+        static_root=static_root,
+    )
+    status, body = _asgi_response(
+        app,
+        path="/api/v1/arrangements",
+        query=b"filename=oversize.mid&engine=proxy",
+        headers=[
+            (b"content-type", MIDI_MEDIA_TYPE.encode()),
+            (b"content-length", str(DEFAULT_LIMITS.max_midi_bytes + 1).encode()),
+        ],
+        chunks=[],
+    )
+
+    assert status == 413
+    assert json.loads(body)["code"] == "BODY_TOO_LARGE"
+    assert calls == 0
+
+
 def test_openapi_documents_only_real_raw_body_endpoints(client: TestClient) -> None:
     response = client.get("/openapi.json")
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/arrangements" in document["paths"]
     assert "/api/v1/oracle/check" in document["paths"]
+    capabilities_schema = document["paths"]["/api/v1/capabilities"]["get"]["responses"][
+        "200"
+    ]["content"]["application/json"]["schema"]
+    assert capabilities_schema["additionalProperties"] is False
+    assert set(capabilities_schema["required"]) >= {"inputs", "score_inputs", "stamps"}
+    score_input_schema = capabilities_schema["properties"]["inputs"]["properties"][
+        "score_input"
+    ]
+    assert score_input_schema["properties"]["router_version"]["const"] == (
+        "score-input@0.1.0"
+    )
+    assert score_input_schema["properties"]["format_importers"]["properties"] == {
+        "musicxml": {"type": "string", "const": "musicxml@0.3.0"},
+        "mxl": {"type": "string", "const": "musicxml@0.3.0"},
+        "midi": {"type": "string", "const": "midi@0.1.0"},
+    }
+    midi_capability_schema = capabilities_schema["properties"]["score_inputs"][
+        "properties"
+    ]["midi"]
+    assert midi_capability_schema["properties"]["suffixes"]["const"] == [
+        ".mid",
+        ".midi",
+    ]
+    assert midi_capability_schema["properties"]["media_types"]["const"] == [
+        MIDI_MEDIA_TYPE
+    ]
+    assert midi_capability_schema["properties"]["max_body_bytes"]["const"] == (
+        DEFAULT_LIMITS.max_midi_bytes
+    )
     operation = document["paths"]["/api/v1/arrangements"]["post"]
     assert "multipart/form-data" not in operation["requestBody"]["content"]
+    assert MIDI_MEDIA_TYPE in operation["requestBody"]["content"]
+    assert "audio/x-midi" not in operation["requestBody"]["content"]
     n_parameter = next(item for item in operation["parameters"] if item["name"] == "n")
     assert n_parameter["schema"]["maximum"] == 8
     arrangement_schema = operation["responses"]["200"]["content"]["application/json"][
@@ -828,6 +1032,73 @@ def test_openapi_documents_only_real_raw_body_endpoints(client: TestClient) -> N
         "faithfulness",
         "trace",
         "stamps",
+    }
+    faithfulness_schema = arrangement_schema["properties"]["faithfulness"]
+    assert faithfulness_schema["type"] == ["object", "null"]
+    assert faithfulness_schema["additionalProperties"] is False
+    assert faithfulness_schema["required"] == [
+        "melody_f1",
+        "bass_root_accuracy",
+        "harmony_jaccard",
+        "evaluated_dimensions",
+        "unavailable_dimensions",
+        "passed",
+        "checker_version",
+    ]
+    for field in ("melody_f1", "bass_root_accuracy", "harmony_jaccard"):
+        assert faithfulness_schema["properties"][field] == {
+            "type": ["number", "null"],
+            "minimum": 0.0,
+            "maximum": 1.0,
+        }
+    for field in ("evaluated_dimensions", "unavailable_dimensions"):
+        dimension_schema = faithfulness_schema["properties"][field]
+        assert dimension_schema["items"]["enum"] == [
+            "melody",
+            "bass_root",
+            "harmony",
+        ]
+        assert dimension_schema["uniqueItems"] is True
+        assert dimension_schema["maxItems"] == 3
+        assert [item["const"] for item in dimension_schema["oneOf"]] == [
+            [],
+            ["melody"],
+            ["bass_root"],
+            ["harmony"],
+            ["melody", "bass_root"],
+            ["melody", "harmony"],
+            ["bass_root", "harmony"],
+            ["melody", "bass_root", "harmony"],
+        ]
+    assert faithfulness_schema["properties"]["checker_version"] == {
+        "type": "string",
+        "const": "fidelity@0.3.0",
+    }
+    location_schema = arrangement_schema["properties"]["source"]["properties"][
+        "warnings"
+    ]["items"]["properties"]["location"]
+    assert location_schema["additionalProperties"] is False
+    assert location_schema["required"] == [
+        "part_id",
+        "measure",
+        "voice",
+        "element",
+        "archive_member",
+        "track_index",
+        "event_index",
+        "channel",
+        "tick",
+    ]
+    assert set(location_schema["properties"]) >= {
+        "track_index",
+        "event_index",
+        "channel",
+        "tick",
+    }
+    assert location_schema["properties"]["channel"] == {
+        "type": ["integer", "null"],
+        "minimum": 1,
+        "maximum": 16,
     }
     check_schema = document["paths"]["/api/v1/oracle/check"]["post"]["responses"]["200"][
         "content"

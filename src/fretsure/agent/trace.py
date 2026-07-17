@@ -52,7 +52,7 @@ TraceEvent = Literal[
     "NO_CANDIDATE_SELECTED",
 ]
 
-TRACE_SCHEMA_VERSION = "agent-trace@0.1.0"
+TRACE_SCHEMA_VERSION = "agent-trace@0.2.0"
 TRACE_CHECKPOINT_SCHEMA_VERSION = "trace-checkpoint@0.1.0"
 
 MAX_TRACE_STEPS = 10_000
@@ -75,6 +75,13 @@ MAX_TRACE_DOMAIN_NOTES = 20_000
 MAX_TRACE_STABLE_STRING_BYTES = 1024
 MAX_TRACE_TEMPO_BPM = 1_000.0
 MAX_TRACE_SUPPORTED_FRET = 36
+
+_TRACE_FIDELITY_DIMENSIONS = ("melody", "bass_root", "harmony")
+_TRACE_FIDELITY_THRESHOLDS = {
+    "melody": 0.9,
+    "bass_root": 0.7,
+    "harmony": 0.6,
+}
 
 _STABLE_CODE = re.compile(r"[A-Z][A-Z0-9_]*\Z")
 _SENSITIVE_KEY_PARTS = frozenset(
@@ -266,9 +273,14 @@ _PRODUCT_EVENT_FIELDS: dict[str, frozenset[str]] = {
             "green_certified",
             "playability_gate",
             "faithfulness_passed",
-            "melody_recall",
-            "bass_preserved",
+            "ranking_melody_recall",
+            "ranking_bass_preserved",
+            "ranking_harmony_jaccard",
+            "melody_f1",
+            "bass_root_accuracy",
             "harmony_jaccard",
+            "evaluated_dimensions",
+            "unavailable_dimensions",
             "critic_status",
             "critic_overall",
         }
@@ -342,6 +354,63 @@ def _unit_float(value: object, *, path: str) -> float:
     if not 0.0 <= result <= 1.0:
         raise TraceInputError(path, "must be within 0.0..1.0")
     return result
+
+
+def _validate_fidelity_availability(data: dict[str, object], *, path: str) -> None:
+    dimensions: dict[str, tuple[str, ...]] = {}
+    for field_name in ("evaluated_dimensions", "unavailable_dimensions"):
+        raw = data[field_name]
+        if type(raw) not in (list, tuple):
+            raise TraceInputError(
+                f"{path}.{field_name}", "must be an exact dimension sequence"
+            )
+        sequence = tuple(cast(list[object] | tuple[object, ...], raw))
+        if any(type(value) is not str for value in sequence):
+            raise TraceInputError(
+                f"{path}.{field_name}", "dimension names must be exact strings"
+            )
+        values = cast(tuple[str, ...], sequence)
+        canonical = tuple(
+            dimension for dimension in _TRACE_FIDELITY_DIMENSIONS if dimension in values
+        )
+        if values != canonical:
+            raise TraceInputError(
+                f"{path}.{field_name}",
+                "dimensions must be unique and canonically ordered",
+            )
+        dimensions[field_name] = values
+
+    evaluated = dimensions["evaluated_dimensions"]
+    unavailable = dimensions["unavailable_dimensions"]
+    if set(evaluated).isdisjoint(unavailable) is False or set(evaluated) | set(
+        unavailable
+    ) != set(_TRACE_FIDELITY_DIMENSIONS):
+        raise TraceInputError(path, "fidelity dimensions must form a complete partition")
+
+    score_fields = {
+        "melody": "melody_f1",
+        "bass_root": "bass_root_accuracy",
+        "harmony": "harmony_jaccard",
+    }
+    evaluated_scores: list[bool] = []
+    for dimension, score_field in score_fields.items():
+        score = data[score_field]
+        if dimension in evaluated:
+            normalized = _unit_float(score, path=f"{path}.{score_field}")
+            evaluated_scores.append(
+                normalized >= _TRACE_FIDELITY_THRESHOLDS[dimension]
+            )
+        elif score is not None:
+            raise TraceInputError(
+                f"{path}.{score_field}",
+                "must be null when the source dimension is unavailable",
+            )
+    expected_passed = bool(evaluated) and all(evaluated_scores)
+    if data["faithfulness_passed"] is not expected_passed:
+        raise TraceInputError(
+            f"{path}.faithfulness_passed",
+            "disagrees with available scores and frozen thresholds",
+        )
 
 
 def _canonical_fraction_parts(value: object, *, path: str) -> tuple[int, int]:
@@ -1027,8 +1096,13 @@ def _validate_product_payload(
             raise TraceInputError(path, "winner verdict and playability gate disagree")
         if type(data["faithfulness_passed"]) is not bool:
             raise TraceInputError(f"{path}.faithfulness_passed", "must be an exact boolean")
-        for name in ("melody_recall", "bass_preserved", "harmony_jaccard"):
+        for name in (
+            "ranking_melody_recall",
+            "ranking_bass_preserved",
+            "ranking_harmony_jaccard",
+        ):
             _unit_float(data[name], path=f"{path}.{name}")
+        _validate_fidelity_availability(data, path=path)
         critic_status = _stable_string(
             data["critic_status"],
             path=f"{path}.critic_status",

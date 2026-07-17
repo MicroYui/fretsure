@@ -14,7 +14,7 @@ from fretsure.agent.arranger import ArrangeGoal
 from fretsure.agent.harness import ArrangeResult, arrange, arrange_pool, best_of_k
 from fretsure.bench.corpus import CorpusItem
 from fretsure.llm.client import LLMClient
-from fretsure.metrics.fidelity import faithfulness
+from fretsure.metrics.fidelity import faithfulness, faithfulness_dimensions
 from fretsure.oracle.profiles import Profile
 
 LLMFactory = Callable[[], LLMClient]
@@ -34,18 +34,24 @@ _FULL = AblationConfig()
 class ConfigMetrics:
     joint_success: float  # GREEN AND faithfulness gate
     green_rate: float
-    mean_melody_f1: float
+    mean_melody_f1: float | None
+    melody_evaluated_items: int
     mean_edit_steps: float
     items: int
 
 
-def _score(result: ArrangeResult, item: CorpusItem) -> tuple[bool, bool, float, int]:
+def _score(
+    result: ArrangeResult, item: CorpusItem
+) -> tuple[bool, bool, float | None, int]:
     """(is_green, joint_success, melody_f1, applied_edit_steps) for one arrangement."""
     is_green = result.oracle is not None and result.oracle.verdict == "GREEN"
     # Count only versioned applied-edit events, never rejected/no-op model output.
     edits = sum(1 for step in result.trace.steps if step.event == "EDIT_APPLIED")
     if result.tab is None:
-        return is_green, False, 0.0, edits
+        melody_score = (
+            0.0 if "melody" in faithfulness_dimensions(item.ir) else None
+        )
+        return is_green, False, melody_score, edits
     gate = faithfulness(item.ir, result.tab)
     return is_green, is_green and gate.passed, gate.melody_f1, edits
 
@@ -60,6 +66,7 @@ def run_config(
     green = 0
     joint = 0
     mf1_total = 0.0
+    mf1_items = 0
     edit_total = 0
     for item in items:
         llm = llm_factory()  # fresh per item: FakeLLM scripts stay isolated + deterministic
@@ -75,10 +82,20 @@ def run_config(
         is_green, is_joint, mf1, edits = _score(result, item)
         green += int(is_green)
         joint += int(is_joint)
-        mf1_total += mf1
+        if mf1 is not None:
+            mf1_total += mf1
+            mf1_items += 1
         edit_total += edits
     n = len(items)
-    return ConfigMetrics(joint / n, green / n, mf1_total / n, edit_total / n, n)
+    denominator = n or 1
+    return ConfigMetrics(
+        joint_success=joint / denominator,
+        green_rate=green / denominator,
+        mean_melody_f1=None if mf1_items == 0 else mf1_total / mf1_items,
+        melody_evaluated_items=mf1_items,
+        mean_edit_steps=edit_total / denominator,
+        items=n,
+    )
 
 
 def leave_one_out(
@@ -136,6 +153,7 @@ def paired_best_of_n(
     n = max(2, n)  # best-of-1 vs best-of-1 is a degenerate comparison
     g1 = j1 = e1 = gn = jn = en = 0
     mf1_1 = mf1_n = 0.0
+    mf1_items_1 = mf1_items_n = 0
     for item in items:
         llm = llm_factory()
         pool = arrange_pool(
@@ -145,16 +163,34 @@ def paired_best_of_n(
         sn = _score(best_of_k(pool, pool.n), item)
         g1 += int(s1[0])
         j1 += int(s1[1])
-        mf1_1 += s1[2]
+        if s1[2] is not None:
+            mf1_1 += s1[2]
+            mf1_items_1 += 1
         e1 += s1[3]
         gn += int(sn[0])
         jn += int(sn[1])
-        mf1_n += sn[2]
+        if sn[2] is not None:
+            mf1_n += sn[2]
+            mf1_items_n += 1
         en += sn[3]
     m = len(items)
     d = m or 1
-    k1 = ConfigMetrics(j1 / d, g1 / d, mf1_1 / d, e1 / d, m)
-    kn = ConfigMetrics(jn / d, gn / d, mf1_n / d, en / d, m)
+    k1 = ConfigMetrics(
+        joint_success=j1 / d,
+        green_rate=g1 / d,
+        mean_melody_f1=None if mf1_items_1 == 0 else mf1_1 / mf1_items_1,
+        melody_evaluated_items=mf1_items_1,
+        mean_edit_steps=e1 / d,
+        items=m,
+    )
+    kn = ConfigMetrics(
+        joint_success=jn / d,
+        green_rate=gn / d,
+        mean_melody_f1=None if mf1_items_n == 0 else mf1_n / mf1_items_n,
+        melody_evaluated_items=mf1_items_n,
+        mean_edit_steps=en / d,
+        items=m,
+    )
     return PairedBestOfN(
         n, k1, kn, kn.green_rate - k1.green_rate, kn.joint_success - k1.joint_success, m
     )
@@ -207,6 +243,7 @@ def paired_critic(
     n = max(1, n)
     g0 = j0 = e0 = g1 = j1 = e1 = 0
     mf0 = mf1 = t0 = t1 = 0.0
+    mf_items_0 = mf_items_1 = 0
     for item in items:
         llm = llm_factory()
         pool = arrange_pool(
@@ -218,18 +255,36 @@ def paired_critic(
         s1 = _score(r1, item)
         g0 += int(s0[0])
         j0 += int(s0[1])
-        mf0 += s0[2]
+        if s0[2] is not None:
+            mf0 += s0[2]
+            mf_items_0 += 1
         e0 += s0[3]
         t0 += _selected_taste(r0)
         g1 += int(s1[0])
         j1 += int(s1[1])
-        mf1 += s1[2]
+        if s1[2] is not None:
+            mf1 += s1[2]
+            mf_items_1 += 1
         e1 += s1[3]
         t1 += _selected_taste(r1)
     m = len(items)
     d = m or 1
-    without = ConfigMetrics(j0 / d, g0 / d, mf0 / d, e0 / d, m)
-    with_ = ConfigMetrics(j1 / d, g1 / d, mf1 / d, e1 / d, m)
+    without = ConfigMetrics(
+        joint_success=j0 / d,
+        green_rate=g0 / d,
+        mean_melody_f1=None if mf_items_0 == 0 else mf0 / mf_items_0,
+        melody_evaluated_items=mf_items_0,
+        mean_edit_steps=e0 / d,
+        items=m,
+    )
+    with_ = ConfigMetrics(
+        joint_success=j1 / d,
+        green_rate=g1 / d,
+        mean_melody_f1=None if mf_items_1 == 0 else mf1 / mf_items_1,
+        melody_evaluated_items=mf_items_1,
+        mean_edit_steps=e1 / d,
+        items=m,
+    )
     return PairedCritic(
         n, without, with_,
         with_.green_rate - without.green_rate,

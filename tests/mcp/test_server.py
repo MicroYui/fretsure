@@ -196,7 +196,7 @@ async def test_capability_resource_is_shared_versioned_and_marks_audio_deferred(
     assert content.mimeType == "application/json"
     wire = cast(dict[str, object], json.loads(content.text))
     assert wire["mcp_version"] == MCP_VERSION
-    assert wire["service_version"] == "fretsure-service@0.1.0"
+    assert wire["service_version"] == "fretsure-service@0.2.0"
     assert wire["render_formats"] == ["ascii"]
     assert "render_audio" in cast(list[str], wire["deferred"])
     assert "render_audio" not in cast(list[str], wire["implemented"])

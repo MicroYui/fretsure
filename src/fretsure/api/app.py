@@ -41,9 +41,12 @@ from fretsure.application import (
 )
 from fretsure.importers import (
     DEFAULT_LIMITS,
+    SCORE_FORMAT_REGISTRY,
+    SCORE_INPUT_VERSION,
+    SCORE_SUFFIXES,
     ImportCode,
     ImportFailure,
-    validate_musicxml_filename,
+    validate_score_filename,
 )
 from fretsure.llm.client import (
     CONSTANT_LLM_MODEL_ID,
@@ -55,6 +58,7 @@ from fretsure.llm.client import (
     snapshot_llm_model_id,
     validate_llm_model_id,
 )
+from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 from fretsure.oracle.input import MAX_BEATS_PER_BAR, MAX_TEMPO_BPM, MIN_TEMPO_BPM
 from fretsure.tab import MAX_TAB_JSON_BYTES
 
@@ -69,6 +73,7 @@ _XML_MEDIA_TYPES = frozenset(
     }
 )
 _MXL_MEDIA_TYPES = frozenset({"application/vnd.recordare.musicxml"})
+_MIDI_MEDIA_TYPES = frozenset({"audio/midi"})
 _JSON_MEDIA_TYPES = frozenset({"application/json"})
 _DECIMAL = re.compile(r"0|[1-9][0-9]*\Z")
 _POSITIVE_DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?\Z")
@@ -212,7 +217,7 @@ def _boolean_control(query: dict[str, str], name: str, default: bool) -> bool:
 
 
 def _score_envelope(filename: str) -> tuple[frozenset[str], int]:
-    suffix = validate_musicxml_filename(filename)
+    suffix = validate_score_filename(filename)
     if isinstance(suffix, ImportFailure):
         too_large = any(
             diagnostic.code is ImportCode.INPUT_LIMIT_EXCEEDED
@@ -232,12 +237,14 @@ def _score_envelope(filename: str) -> tuple[frozenset[str], int]:
                 else "INVALID_FILENAME"
             ),
             "Score filename rejected",
-            "filename must be an inert basename ending in .musicxml, .xml, or .mxl",
+            "filename must be an inert basename ending in a supported score suffix",
         )
     if suffix == ".mxl":
         return _MXL_MEDIA_TYPES, DEFAULT_LIMITS.max_mxl_archive_bytes
     if suffix in {".musicxml", ".xml"}:
         return _XML_MEDIA_TYPES, DEFAULT_LIMITS.max_bytes
+    if suffix in {".mid", ".midi"}:
+        return _MIDI_MEDIA_TYPES, DEFAULT_LIMITS.max_midi_bytes
     raise RuntimeError("validated score suffix was not recognized")
 
 
@@ -375,6 +382,11 @@ def _capabilities_wire(config: _AppConfig) -> dict[str, object]:
             "media_types": sorted(_MXL_MEDIA_TYPES),
             "max_body_bytes": DEFAULT_LIMITS.max_mxl_archive_bytes,
         },
+        "midi": {
+            "suffixes": [".mid", ".midi"],
+            "media_types": sorted(_MIDI_MEDIA_TYPES),
+            "max_body_bytes": DEFAULT_LIMITS.max_midi_bytes,
+        },
     }
     wire["engines"] = [
         {
@@ -492,6 +504,123 @@ _TRACE_RESPONSE_SCHEMA = {
     },
 }
 
+_FIDELITY_DIMENSIONS = ["melody", "bass_root", "harmony"]
+_CANONICAL_DIMENSION_ARRAYS = [
+    [],
+    ["melody"],
+    ["bass_root"],
+    ["harmony"],
+    ["melody", "bass_root"],
+    ["melody", "harmony"],
+    ["bass_root", "harmony"],
+    ["melody", "bass_root", "harmony"],
+]
+_DIMENSION_ARRAY_SCHEMA = {
+    "type": "array",
+    "items": {"type": "string", "enum": _FIDELITY_DIMENSIONS},
+    "minItems": 0,
+    "maxItems": 3,
+    "uniqueItems": True,
+    "oneOf": [{"const": value} for value in _CANONICAL_DIMENSION_ARRAYS],
+}
+_FAITHFULNESS_RESPONSE_SCHEMA = {
+    "type": ["object", "null"],
+    "additionalProperties": False,
+    "required": [
+        "melody_f1",
+        "bass_root_accuracy",
+        "harmony_jaccard",
+        "evaluated_dimensions",
+        "unavailable_dimensions",
+        "passed",
+        "checker_version",
+    ],
+    "properties": {
+        "melody_f1": {"type": ["number", "null"], "minimum": 0.0, "maximum": 1.0},
+        "bass_root_accuracy": {
+            "type": ["number", "null"],
+            "minimum": 0.0,
+            "maximum": 1.0,
+        },
+        "harmony_jaccard": {
+            "type": ["number", "null"],
+            "minimum": 0.0,
+            "maximum": 1.0,
+        },
+        "evaluated_dimensions": _DIMENSION_ARRAY_SCHEMA,
+        "unavailable_dimensions": _DIMENSION_ARRAY_SCHEMA,
+        "passed": {"type": "boolean"},
+        "checker_version": {"type": "string", "const": FIDELITY_CHECKER_VERSION},
+    },
+}
+_SOURCE_LOCATION_SCHEMA = {
+    "type": ["object", "null"],
+    "additionalProperties": False,
+    "required": [
+        "part_id",
+        "measure",
+        "voice",
+        "element",
+        "archive_member",
+        "track_index",
+        "event_index",
+        "channel",
+        "tick",
+    ],
+    "properties": {
+        "part_id": {"type": ["string", "null"]},
+        "measure": {"type": ["string", "null"]},
+        "voice": {"type": ["string", "null"]},
+        "element": {"type": ["string", "null"]},
+        "archive_member": {"type": ["string", "null"]},
+        "track_index": {"type": ["integer", "null"], "minimum": 0},
+        "event_index": {"type": ["integer", "null"], "minimum": 0},
+        "channel": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "maximum": 16,
+        },
+        "tick": {"type": ["integer", "null"], "minimum": 0},
+    },
+}
+_SOURCE_RESPONSE_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "filename",
+        "format",
+        "raw_sha256",
+        "root_member",
+        "root_sha256",
+        "container_version",
+        "importer_version",
+        "warnings",
+    ],
+    "properties": {
+        "filename": {"type": "string"},
+        "format": {"type": "string", "enum": ["musicxml", "mxl", "midi"]},
+        "raw_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "root_member": {"type": ["string", "null"]},
+        "root_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "container_version": {"type": ["string", "null"]},
+        "importer_version": {"type": "string"},
+        "warnings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["code", "severity", "message", "location"],
+                "properties": {
+                    "code": {"type": "string"},
+                    "severity": {"type": "string", "enum": ["error", "warning"]},
+                    "message": {"type": "string"},
+                    "location": _SOURCE_LOCATION_SCHEMA,
+                },
+            },
+        },
+    },
+}
+
 _ARRANGE_RESPONSE_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -517,7 +646,7 @@ _ARRANGE_RESPONSE_SCHEMA = {
             "type": "string",
             "enum": ["tab_produced", "no_fingering_within_budget"],
         },
-        "source": {"type": "object"},
+        "source": _SOURCE_RESPONSE_SCHEMA,
         "score": {"type": "object"},
         "options": {"type": "object"},
         "model": {
@@ -531,7 +660,7 @@ _ARRANGE_RESPONSE_SCHEMA = {
         "tab": {"type": ["object", "null"]},
         "ascii": {"type": ["string", "null"]},
         "playability": {"type": ["object", "null"]},
-        "faithfulness": {"type": ["object", "null"]},
+        "faithfulness": _FAITHFULNESS_RESPONSE_SCHEMA,
         "trace": _TRACE_RESPONSE_SCHEMA,
         "stamps": {"type": "object", "additionalProperties": {"type": "string"}},
     },
@@ -560,6 +689,127 @@ _CHECK_RESPONSE_SCHEMA = {
     },
 }
 
+
+def _score_body_capability_schema(
+    suffixes: list[str],
+    media_types: list[str],
+    max_body_bytes: int,
+) -> dict[str, object]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["suffixes", "media_types", "max_body_bytes"],
+        "properties": {
+            "suffixes": {"type": "array", "const": suffixes},
+            "media_types": {"type": "array", "const": media_types},
+            "max_body_bytes": {
+                "type": "integer",
+                "const": max_body_bytes,
+                "minimum": 0,
+            },
+        },
+    }
+
+
+_FORMAT_IMPORTER_PROPERTIES = {
+    format_name: {"type": "string", "const": importer}
+    for format_name, importer in SCORE_FORMAT_REGISTRY.items()
+}
+_CAPABILITIES_RESPONSE_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "api_version",
+        "service_version",
+        "package_version",
+        "trace_schema_version",
+        "profile_registry_version",
+        "profiles",
+        "inputs",
+        "score_inputs",
+        "engines",
+        "controls",
+        "render_formats",
+        "implemented",
+        "deferred",
+        "http",
+        "stamps",
+    ],
+    "properties": {
+        "api_version": {"type": "string", "const": API_VERSION},
+        "service_version": {"type": "string"},
+        "package_version": {"type": "string"},
+        "trace_schema_version": {"type": "string", "const": TRACE_SCHEMA_VERSION},
+        "profile_registry_version": {"type": "string"},
+        "profiles": {"type": "array", "items": {"type": "object"}},
+        "inputs": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["tab_json", "target_json", "score_suffixes", "score_input"],
+            "properties": {
+                "tab_json": {"type": "object"},
+                "target_json": {"type": "object"},
+                "score_suffixes": {"type": "array", "const": list(SCORE_SUFFIXES)},
+                "score_input": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["router_version", "format_importers"],
+                    "properties": {
+                        "router_version": {
+                            "type": "string",
+                            "const": SCORE_INPUT_VERSION,
+                        },
+                        "format_importers": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": list(SCORE_FORMAT_REGISTRY),
+                            "properties": _FORMAT_IMPORTER_PROPERTIES,
+                        },
+                    },
+                },
+            },
+        },
+        "score_inputs": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["musicxml", "mxl", "midi"],
+            "properties": {
+                "musicxml": _score_body_capability_schema(
+                    [".musicxml", ".xml"],
+                    sorted(_XML_MEDIA_TYPES),
+                    DEFAULT_LIMITS.max_bytes,
+                ),
+                "mxl": _score_body_capability_schema(
+                    [".mxl"],
+                    sorted(_MXL_MEDIA_TYPES),
+                    DEFAULT_LIMITS.max_mxl_archive_bytes,
+                ),
+                "midi": _score_body_capability_schema(
+                    [".mid", ".midi"],
+                    sorted(_MIDI_MEDIA_TYPES),
+                    DEFAULT_LIMITS.max_midi_bytes,
+                ),
+            },
+        },
+        "engines": {"type": "array", "items": {"type": "object"}},
+        "controls": {"type": "object"},
+        "render_formats": {"type": "array", "items": {"type": "string"}},
+        "implemented": {"type": "array", "items": {"type": "string"}},
+        "deferred": {"type": "array", "items": {"type": "string"}},
+        "http": {"type": "object"},
+        "stamps": {"type": "object", "additionalProperties": {"type": "string"}},
+    },
+}
+
+_CAPABILITIES_OPENAPI = {
+    "responses": {
+        "200": {
+            "description": "Versioned service capabilities",
+            "content": {"application/json": {"schema": _CAPABILITIES_RESPONSE_SCHEMA}},
+        }
+    }
+}
+
 _ARRANGE_OPENAPI = {
     "parameters": [
         {"name": "filename", "in": "query", "required": True, "schema": {"type": "string"}},
@@ -585,7 +835,9 @@ _ARRANGE_OPENAPI = {
         "required": True,
         "content": {
             media_type: {"schema": {"type": "string", "format": "binary"}}
-            for media_type in sorted(_XML_MEDIA_TYPES | _MXL_MEDIA_TYPES)
+            for media_type in sorted(
+                _XML_MEDIA_TYPES | _MXL_MEDIA_TYPES | _MIDI_MEDIA_TYPES
+            )
         },
     },
     "responses": {
@@ -765,7 +1017,11 @@ def create_app(
             "scope": "process_liveness_only",
         }
 
-    @app.get("/api/v1/capabilities", tags=["capabilities"])
+    @app.get(
+        "/api/v1/capabilities",
+        tags=["capabilities"],
+        openapi_extra=_CAPABILITIES_OPENAPI,
+    )
     async def api_capabilities() -> dict[str, object]:
         return _capabilities_wire(config)
 

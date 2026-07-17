@@ -1,0 +1,65 @@
+{
+  "artifact_count": 4,
+  "artifacts": [
+    {
+      "expected": "success",
+      "output_file": "musescore-4.7.4-melody_only.mid",
+      "raw_bytes": 147,
+      "raw_sha256": "f28ca58259125af6f7aa11388dd26a9c2fc01dba833798843b182f59f82605b7",
+      "result_sha256": "844d0ee97b08166a97fe15aac5af6addc971473691c1c74dc88733933ad7008d",
+      "smf": {
+        "format": 1,
+        "ticks_per_quarter": 480,
+        "tracks": 1
+      }
+    },
+    {
+      "expected": "success",
+      "output_file": "music21-10.5.0-melody_only.mid",
+      "raw_bytes": 116,
+      "raw_sha256": "9d6dff16ad49f7a2cb75f43b60af4a85bd86797f505d7f5e7f5efd7a06ea227c",
+      "result_sha256": "4673b46cc2dea5baf36697dfa5b741ce408c40ca4ab2d2b370ae11de231f59d7",
+      "smf": {
+        "format": 1,
+        "ticks_per_quarter": 10080,
+        "tracks": 2
+      }
+    },
+    {
+      "expected": "failure",
+      "output_file": "musescore-4.7.4-supported_basic.mid",
+      "raw_bytes": 246,
+      "raw_sha256": "5906383876caa705d525e92e331107ac65b148f1b8c07ed3aabb24fd15b5cf91",
+      "result_sha256": "19dd90ad09dc32f9ca592d6c70560f5c5665d5fa7b97712b5536b054dba37de3",
+      "smf": {
+        "format": 1,
+        "ticks_per_quarter": 480,
+        "tracks": 1
+      }
+    },
+    {
+      "expected": "failure",
+      "output_file": "music21-10.5.0-supported_basic.mid",
+      "raw_bytes": 173,
+      "raw_sha256": "6110193b34647adcf9f3968d7b3a46be192ef97a802a7ba35026764430bd88b6",
+      "result_sha256": "84ad57751a79a5109771ad8734836ca2aa848692279d059bf8a7a838e8a3e50e",
+      "smf": {
+        "format": 1,
+        "ticks_per_quarter": 10080,
+        "tracks": 2
+      }
+    }
+  ],
+  "corpus_schema": "fretsure-midi-producer-fixtures@0.1.0",
+  "cross_producer_ir_equivalence_claimed": false,
+  "importer_version": "midi@0.1.0",
+  "note": "MuseScore melody duration is 7 beats with one-tick-short releases; music21 melody duration is 8 beats. Both harmony realizations are typed negatives, and no producer-wide compatibility is inferred.",
+  "producer_versions": [
+    "MuseScore Studio 4.7.4",
+    "music21 10.5.0"
+  ],
+  "raw_bytes_total": 682,
+  "schema": "fretsure-midi-census@0.1.0",
+  "successes": 2,
+  "typed_failures": 2
+}

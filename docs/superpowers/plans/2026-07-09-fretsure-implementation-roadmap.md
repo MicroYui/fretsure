@@ -5,11 +5,15 @@
 > **真源**：设计 spec `docs/superpowers/specs/2026-07-09-fretsure-design.md`（§0–§15）。本路线图**不新增设计决策**，只把 spec 落成可执行的里程碑序列与验收门；任何冲突以 spec 为准。
 
 > **当前执行位置（2026-07-17）**：Plan 1–5、MusicXML-first、Oracle 0.2、安全 MXL、Plan 6A 与
-> [`producer-driven MusicXML/IR`](2026-07-16-producer-driven-musicxml-ir.md) 已各自闭门，最终门见
-> [`PRODUCER_MUSICXML_ACCEPTANCE.md`](../../PRODUCER_MUSICXML_ACCEPTANCE.md)。本阶段提交推送并核对
-> local/remote SHA 后进入 MIDI，MIDI 闭门后再进入 benchmark v2。下面早期章节中的
+> [`producer-driven MusicXML/IR`](2026-07-16-producer-driven-musicxml-ir.md) 已各自闭门。strict MIDI
+> input 的 parser/importer/product/producer 实现已落地，当前在补齐
+> [`MIDI_ACCEPTANCE.md`](../../MIDI_ACCEPTANCE.md) 中尚未完成的全量、分发、独立 review、commit/push/SHA
+> gates；全部关闭后才进入 benchmark v2。下面早期章节中的
 > “Plan 1→2 补 MIDI”与“下一步写 Plan 1”只保留为
 > 初始路线历史，不再控制当前顺序。真人 gold/calibration 继续限制经验主张，但不阻塞这三个软件阶段。
+> 当前版本树是 package `0.5.0`、`score-input@0.1.0`、`musicxml@0.3.0`、`midi@0.1.0`、
+> `fidelity@0.3.0`、`agent-trace@0.2.0`、`fretsure-service@0.2.0`、`fretsure-api@0.2.0`、
+> `fretsure-mcp@0.2.0` 与 `fretsure-web@0.2.0`。
 
 **Goal（一句话）**：把一首歌的符号音乐内容编配成「人手可证明弹得出来」的吉他谱——LLM 提议 → 确定性可弹性 oracle 逐音硬门 + 定位化诊断 → verifier-guided 自动修复 → checker 打分 benchmark。
 
@@ -361,8 +365,9 @@ def feasible_fingerings(frame: "Frame", profile: Profile) -> list["FingerAssignm
 
 ### Plan 6 —— UI / trace viewer / demo / MCP（可展示=真功能）
 
-> **分段状态（2026-07-16）**：Plan 6A 薄纵切已完成并独立闭门：bytes-first application seam、
-> typed loopback FastAPI、`agent-trace@0.1.0` replay viewer、三个 stdio MCP tools，以及经用户审美认可的
+> **分段状态（2026-07-17）**：Plan 6A 薄纵切已完成并独立闭门；MIDI 阶段在同一视觉/产品骨架上把
+> capabilities 与 evidence availability 升至 service/API/MCP/Web/trace `0.2.0`。当前仍是 bytes-first application seam、
+> typed loopback FastAPI、`agent-trace@0.2.0` replay viewer、三个 stdio MCP tools，以及经用户审美认可的
 > React Web。下面原始 Plan 6 的 AlphaTab、音频、真实琴颈动画、导出互操作、live A/B/榜单与真人
 > money moment 仍全部 open，Plan 6A 不替代这些验收项。闭门证据见
 > [`2026-07-16-plan-6a-web-api-trace-mcp.md`](2026-07-16-plan-6a-web-api-trace-mcp.md) 与
@@ -456,8 +461,8 @@ def feasible_fingerings(frame: "Frame", profile: Profile) -> list["FingerAssignm
 
 ### D.3 诚实延后目录（这些是「延后」不是「简化」，前置一满足即即时补齐）
 - 后 6 个 Plan 的**逐行 bite-sized TDD 代码**——被类型依赖强制，其前置 Plan 锁定类型后即时撰写（各自独立 plan 文件）。
-- MIDI 解析 / drop-D / 变调夹变体（初始设想为 Plan 1→2；当前冻结为 producer-driven
-  MusicXML/IR 闭门后的独立计划）。
+- 通用多轨/角色映射 MIDI、drop-D / 变调夹变体。melody-only strict SMF input 已在独立 MIDI 计划中
+  完成软件验收；只剩 containing commit/push/SHA equality 的外部 Git receipt，不得再把整个 MIDI 输入写成延后项。
 - OR-Tools CP-SAT（仅自研 DP 成瓶颈才引）。
 - 音频前端 mp3→谱（best-effort/v2，Plan 6）。
 - tier 具体参数校准（需 design partner，Plan 5 前）。
@@ -515,9 +520,10 @@ Plan 1 (oracle+验证台) ──┬─→ Plan 2 (solver+M0) ──→ Plan 3 (a
 
 ## 执行入口
 
-- **当前下一步**：本 producer-driven MusicXML/IR 提交推送并核对 local/remote SHA 后，写/执行 MIDI
-  详细计划；MIDI 闭门后才写 benchmark v2。任何 MIDI 前端新视觉仍先与用户确认，沿用已冻结的
-  “古典制琴工坊 × 验证仪器”基线。
+- **当前下一步**：不重做 MIDI 实现；完成全量/代理/Web/分发 gates、scope/security/consumer reviews、
+  一个可审查提交与 push，并核对 local/tracking/remote SHA。全部闭门后才写/执行 benchmark v2。
+  首版 MIDI 只复用“古典制琴工坊 × 验证仪器”上传/证据卡，没有新增视觉；未来若加入多轨 mapper、
+  playback timeline 或新页面，仍须先与用户确认。
 - 每个阶段在前置提交的 local/remote SHA 一致后才开启；阶段末做独立 scope/security/consumer 审计。
   用户审计只在新视觉、音频/听感、真人演奏或 calibration gate 出现时暂停，不把普通代码审查误写成
   用户真人阻塞。
