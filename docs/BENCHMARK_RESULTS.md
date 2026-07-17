@@ -1,12 +1,13 @@
 # Benchmark Results — Agent Ablation (Plan 4)
 
-> **Current status (2026-07-16): the numerical tables in this document are a
+> **Current status (2026-07-17): the numerical tables in this document are a
 > LEGACY / UNVERSIONED FIDELITY SNAPSHOT.** They were recorded on 2026-07-10–11
 > before the fidelity checker was version-stamped, using the old note-onset
 > harmony-Jaccard semantics. They are **not** results under the current
-> `fidelity@0.2.0`. The historical code/document state is pinned by the
-> consolidated baseline commit `bee8a1c`; a real-LLM benchmark v2 rerun is still
-> required before publishing a current headline number.
+> `fidelity@0.3.0`. The historical code/document state is pinned by the
+> consolidated baseline commit `bee8a1c`; the versioned evidence/paired rerun is
+> governed by [`2026-07-17-benchmark-v2.md`](superpowers/plans/2026-07-17-benchmark-v2.md)
+> and remains required before publishing a current headline number.
 >
 > The active proxy default moved to canonical `gpt-5.6-sol` on 2026-07-16.
 > Current trace and aggregate benchmark JSON stamp `llm_model_id`; the legacy
@@ -23,13 +24,14 @@ Two gates must not be conflated:
 - **Playability:** GREEN means passing `oracle@0.2.0` under the stamped simplified
   model/profile, after `tab-input@0.2.0` validation; every result also carries the
   profile version and canonical fingerprint. It does not imply fidelity to the source.
-- **Faithfulness:** the current `fidelity@0.2.0` uses exact-onset top-voice melody
+- **Faithfulness:** the current `fidelity@0.3.0` uses exact-onset top-voice melody
   matching, bass-root evaluation at each exact chord onset using the lowest note
   sounding there (including a note sustained from an earlier onset), and
   chord-segment pitch-class Jaccard for harmony. Sustained notes count in every
   segment they cross; `Meta.duration_beats` bounds the final segment and preserves
-  notated trailing rests. Melody/bass preservation used for candidate ranking remains
-  exact-onset based.
+  notated trailing rests. Its public gate also records nullable scores plus an exact
+  evaluated/unavailable partition, so absent source evidence is N/A rather than 1.0.
+  Melody/bass preservation used for candidate ranking remains exact-onset based.
 
 The human-played gold set is still pending, so GREEN is model-relative evidence,
 not a measured real-player false-accept guarantee. Human work does not block the
@@ -50,7 +52,7 @@ memorization but is not an absolute proof against learned generator patterns or
 contamination. The current LLM (`gpt-5.6-sol` via the
 local proxy) is stochastic, so this reproduces the experiment shape, **not the exact
 recorded counts**. More importantly, the command now scores with
-`fidelity@0.2.0`; it cannot reproduce the legacy tables under the same scoring
+`fidelity@0.3.0`; it cannot reproduce the legacy tables under the same scoring
 semantics. The current CLI stamps the model id and both checker versions in its
 aggregate JSON, but
 does not calculate the Wilson intervals shown below or persist per-item raw rows.
@@ -64,7 +66,7 @@ commits `fb5b56a` (first seed), `337ed23`
 were consolidated at `bee8a1c`. The exact execution commit and raw per-item rows
 were not stamped into each run artifact, which remains a reproducibility gap.
 
-## Current `fidelity@0.2.0` smoke evidence (not a benchmark baseline)
+## Current `fidelity@0.3.0` smoke evidence (not a benchmark baseline)
 
 Two deterministic end-to-end smokes make the independent gates visible:
 
@@ -75,24 +77,24 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
 ```
 
 - `fretsure-demo` returns `oracle@0.2.0` GREEN and
-  `fidelity@0.2.0` melody-F1 `1.00`, bass-root `1.00`, harmony `0.75`, gate PASS.
+  `fidelity@0.3.0` melody-F1 `1.00`, bass-root `1.00`, harmony `0.75`, gate PASS
+  with all 3 dimensions evaluated.
 - The supported MusicXML fixture imports at source/effective tempo 96 bpm and
   returns the same oracle GREEN, but harmony is about `0.29`, so the fidelity gate
   is FAIL. This is expected: playability certification and source faithfulness are
   independent gates, and GREEN must never be reported as joint success by itself.
 
-These are smoke examples, not corpus-level effect estimates. The current repository
-collects 1248 tests: 1242 offline cases plus 6 proxy-backed integration cases; the
-full local-proxy run passes all 1248. The final ruff, strict mypy, lock and
-package/install smokes are recorded in
-`docs/PROJECT_STATE.md` and the safe `.mxl` container plan; the preceding Oracle
-0.2 trust-gate plan retains its own independently closed evidence.
+These are smoke examples, not corpus-level effect estimates. At the strict MIDI
+closure the repository collected 1849 tests: 1841 offline cases plus 8 proxy-backed
+integration cases; both partitions and the full 1849-case run passed. The final Ruff,
+strict mypy, lock and package/install smokes are recorded in `docs/MIDI_ACCEPTANCE.md`;
+the preceding Oracle 0.2 trust-gate plan retains its own independently closed evidence.
 
 ## Legacy / unversioned fidelity snapshot (2026-07-10–11)
 
 Every numerical ablation result below uses the historical `oracle@0.1.0` playability
 stamp and unversioned note-onset harmony metric. Preserve it as a directional research
-record; do not quote it as a current `oracle@0.2.0` / `fidelity@0.2.0` baseline or
+record; do not quote it as a current `oracle@0.2.0` / `fidelity@0.3.0` baseline or
 compare a new v2 run to it as though the scoring definitions were unchanged.
 
 ## Headline — a large, repeatable repair effect (paired causal test still pending)
@@ -221,7 +223,7 @@ is the anti-LARP discipline the project runs on. Under the historical metric, re
 has a large descriptive association, best-of-N has a provisional paired gain, and
 critic is honestly flagged rather than quietly promoted. These component verdicts
 must be refreshed, not silently carried forward, when benchmark v2 is run under
-`fidelity@0.2.0`.
+`fidelity@0.3.0`.
 
 ## A "who checks the corpus" finding
 
@@ -257,11 +259,12 @@ checker") turned on the benchmark corpus.
   scores need a paired permutation/bootstrap, Wilcoxon, or another justified paired
   continuous-outcome test (and ultimately human ratings).
 - The recorded `joint_success` values used exact-onset matching and the old
-  note-onset harmony Jaccard. Current `fidelity@0.2.0` changes harmony to active
-  chord segments and makes held notes visible across segment/chord boundaries;
-  therefore the old and new joint counts are not score-compatible. Grid/DTW
+  note-onset harmony Jaccard. Current `fidelity@0.3.0` includes the 0.2 chord-segment
+  semantics (held notes remain visible across segment/chord boundaries) and adds
+  explicit evidence availability; therefore the old and new joint counts are not
+  score-compatible. Grid/DTW
   tolerance for real human-timed corpora remains a later refinement.
-- There is no current real-LLM benchmark baseline under `fidelity@0.2.0` yet.
+- There is no current real-LLM benchmark baseline under `fidelity@0.3.0` yet.
   Benchmark v2 must retain paired per-item rows, rerun the baselines/ablations,
   and use McNemar for binary paired outcomes plus a justified paired test for
   continuous critic/taste scores.

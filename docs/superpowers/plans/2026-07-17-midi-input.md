@@ -1,11 +1,11 @@
 # MIDI input — strict SMF to loss-aware MusicIR
 
-> **状态（2026-07-17）**：**SOFTWARE ACCEPTANCE COMPLETE / READY FOR GIT
-> CLOSURE**。前置 producer-driven MusicXML/IR 已在提交
+> **状态（2026-07-17）**：**DONE**。前置 producer-driven MusicXML/IR 已在提交
 > `0fa6af728b1d4f483767cb54f1e9bd3151d58a7e` 推送；本阶段的 producer/parser/importer/product/docs、
-> 全量 offline/real-proxy/Web/distribution gates 与三轮独立 review 均已完成。精确 closure SHA 不能写入
-> 自身 commit 的文件，故 commit/push/local-tracking-remote equality 作为外部 receipt 随
-> [`MIDI_ACCEPTANCE.md`](../../MIDI_ACCEPTANCE.md) 报告。只有该 receipt 成功后才允许开启 benchmark v2。
+> 全量 offline/real-proxy/Web/distribution gates 与三轮独立 review 均已完成。外部
+> commit/push/local-tracking-remote receipt 已一致关闭在
+> `46ff8ac070e97422b4aecf5c0f2a22b588a5fda4`，详见
+> [`MIDI_ACCEPTANCE.md`](../../MIDI_ACCEPTANCE.md)；benchmark v2 已解锁。
 
 **Goal:** 增加一个诚实、资源有界、可复核的 Standard MIDI File 输入纵切：把无歧义的单一单声部
 note stream 精确转换为 MusicIR melody，贯通 CLI/application/API/Web/LLM/checker，同时不猜 track

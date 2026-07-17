@@ -151,9 +151,10 @@ authoritative source performances.
 ## Git closure receipt
 
 - Target branch: `origin/codex/sequential-plans`.
-- Closure shape: one reviewable commit without an AI coauthor trailer.
-- Identity check: after push, compare `git rev-parse HEAD`, `git rev-parse @{u}`, and
-  `git ls-remote origin refs/heads/codex/sequential-plans`; report the single matching
-  SHA with this record. This external receipt is the authoritative commit identity.
+- Closure commit: `46ff8ac070e97422b4aecf5c0f2a22b588a5fda4`
+  (`feat: add strict MIDI score input`), without an AI coauthor trailer.
+- Identity check passed on 2026-07-17: `git rev-parse HEAD`, `git rev-parse @{u}`, and
+  `git ls-remote origin refs/heads/codex/sequential-plans` all returned exactly
+  `46ff8ac070e97422b4aecf5c0f2a22b588a5fda4`.
 
-Benchmark v2 becomes the next active stage only after that post-push equality check.
+That external receipt closes the MIDI stage and unlocks benchmark v2.

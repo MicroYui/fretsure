@@ -1,7 +1,7 @@
 # Fretsure —— 可证明可弹的吉他谱智能体（设计文档 / Design Spec）
 
 > 产品名 **Fretsure**（fret + ensure，已定）。备选 PlayProof / Fretwright 仅存档。
-> 状态（2026-07-17）：设计已锁定；Plan 1–5、受限 MusicXML、Oracle 0.2、安全 `.mxl`、Plan 6A 与 producer-driven MusicXML/IR 已闭门。strict MIDI input 的实现、exact producer corpus、repository/real-proxy/Web/distribution gates 与三轮独立 review 已完成，containing commit/push/SHA equality 由验收记录规定的外部 Git receipt 关闭。当前组合树为 package=`0.5.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0` 保持不变，runtime 精确锁定 `music21==10.5.0`，默认真代理模型为 `gpt-5.6-sol`。完整 Plan 6 的音频/琴颈/导出/live demo 仍 open；MIDI push receipt 成功后才进入 benchmark v2。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+> 状态（2026-07-17）：设计已锁定；Plan 1–5、受限 MusicXML、Oracle 0.2、安全 `.mxl`、Plan 6A 与 producer-driven MusicXML/IR 已闭门。strict MIDI input 的实现、exact producer corpus、repository/real-proxy/Web/distribution gates 与三轮独立 review 已完成，containing commit/push/SHA equality 的外部 Git receipt 已在 `46ff8ac` 关闭。当前组合树为 package=`0.5.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0` 保持不变，runtime 精确锁定 `music21==10.5.0`，默认真代理模型为 `gpt-5.6-sol`。当前按独立 benchmark-v2 计划重建版本化证据与配对消融；完整 Plan 6 的音频/琴颈/导出/live demo 仍 open。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
 
 ---
 

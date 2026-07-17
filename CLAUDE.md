@@ -4,7 +4,7 @@
 
 **产品目标一句话**：一个 agent，把一首歌（符号谱 / MIDI / lead sheet；mp3 作 best-effort 前端）编配成**人手可证明弹得出来**的吉他谱（HERO = 指弹独奏；也做伴奏、难度简化）。核心 = "LLM 提议 → 确定性可弹性 oracle 逐音把关并修复 → checker 打分 benchmark"。
 
-**当前阶段（2026-07-17）**：**Plan 1–5、MusicXML-first、Oracle 0.2、安全 `.mxl`、Plan 6A 与 producer-driven MusicXML/IR 已闭门；strict MIDI input 的实现、两正两负 producer corpus 与产品纵切已落地，但最终仓库/分发/review/commit/push/SHA gates 仍在进行**。当前 package=`0.5.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；checker/input/container/profile 保持 `oracle@0.2.0`、`tab-input@0.2.0`、`mxl-container@0.1.0`、`median@0.1`，runtime 精确锁定 `music21==10.5.0`。默认真代理模型是 canonical `gpt-5.6-sol`，只有显式有效的 loopback proxy 配置才可联网。现有古典制琴工坊视觉只复用上传/证据卡并显示 N/A，没有新增视觉 gate。完整 Plan 6 的音频/AlphaTab/琴颈动画/导出/live demo 与真人 money moment 仍 open；只有 MIDI 阶段最终提交推送并核对 SHA 后才进入 benchmark v2。
+**当前阶段（2026-07-17）**：**Plan 1–5、MusicXML-first、Oracle 0.2、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR 与 strict MIDI input 已闭门；MIDI 的 local/tracking/remote receipt 均为 `46ff8ac`，当前进入 benchmark v2**。当前运行 package=`0.5.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；checker/input/container/profile 保持 `oracle@0.2.0`、`tab-input@0.2.0`、`mxl-container@0.1.0`、`median@0.1`，runtime 精确锁定 `music21==10.5.0`。benchmark runner-ready 提交将按计划把 package 升至 `0.6.0` 并冻结 notegraph/corpus/config-manifest/row/sanitized-observations/receipt/report 合同。默认真代理模型是 canonical `gpt-5.6-sol`，只有显式有效的 loopback proxy 配置才可联网。benchmark v2 只做 CLI/JSON/JSONL/文档，不新增前端；若要 dashboard、图表页或 live leaderboard，先与用户确认“古典制琴工坊 × 验证仪器”视觉。完整 Plan 6 的音频/AlphaTab/琴颈动画/导出/live demo 与真人 money moment 仍 open。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。
 
@@ -12,10 +12,9 @@
 1. 读 `docs/superpowers/specs/2026-07-09-fretsure-design.md`（设计真源，§14=benchmark/checker/agent 深度详版，§15=harness/demo/求职详版；其中 target 数字不是实测结果）。
 2. 读 `docs/PROJECT_STATE.md`（当前实现状态、决策日志、7 拆分、下一步与未决项）。
 3. 读 `docs/BENCHMARK_RESULTS.md` 与 `docs/PLAN1_ACCEPTANCE.md`（已测结果、诚实限制、真人 gold 延期边界）。
-4. 继续时读 `docs/superpowers/plans/2026-07-17-midi-input.md`、
-   `docs/MIDI_ACCEPTANCE.md`、`docs/experiments/2026-07-17-midi-census.json` 与
-   `tests/fixtures/midi/producers/provenance.json`。不要重做 Plan 1–5、Oracle 0.2、安全 `.mxl`、Plan 6A、
-   producer-driven MusicXML/IR 或已经落地的 MIDI 实现；先补齐 MIDI final gates，再做 benchmark v2。
+4. 继续时读 `docs/superpowers/plans/2026-07-17-benchmark-v2.md`，再按需回看
+   `docs/MIDI_ACCEPTANCE.md` 与 `docs/BENCHMARK_RESULTS.md`。不要重做 Plan 1–5、Oracle 0.2、安全
+   `.mxl`、Plan 6A、producer-driven MusicXML/IR 或 MIDI；旧 benchmark 数也不得冒充当前基线。
 
 ## 锁定的关键决定（勿重新推翻，除非用户明说）
 - 领域 = 音乐 / 吉他编配（受众广、可听可视）；**领域不硬核、技术尽量硬核**。
@@ -39,7 +38,7 @@
 
 ## 目录约定
 - `docs/superpowers/specs/` 设计文档（设计真源）
-- `docs/superpowers/plans/` 路线图、Plan 1–5 历史计划、MusicXML/Oracle/MXL/Plan 6A/producer 计划，以及当前 MIDI 闭门计划（完整 Plan 6B/7 仍待后续）
+- `docs/superpowers/plans/` 路线图、历史计划、已闭门 MusicXML/Oracle/MXL/Plan 6A/producer/MIDI 计划，以及当前 benchmark-v2 计划（完整 Plan 6B/7 仍待后续）
 - `docs/PROJECT_STATE.md` 当前项目状态 / 恢复文档
 - `docs/BENCHMARK_RESULTS.md` 已跑实验与限制
 

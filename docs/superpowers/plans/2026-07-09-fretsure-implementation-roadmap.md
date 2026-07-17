@@ -5,10 +5,10 @@
 > **真源**：设计 spec `docs/superpowers/specs/2026-07-09-fretsure-design.md`（§0–§15）。本路线图**不新增设计决策**，只把 spec 落成可执行的里程碑序列与验收门；任何冲突以 spec 为准。
 
 > **当前执行位置（2026-07-17）**：Plan 1–5、MusicXML-first、Oracle 0.2、安全 MXL、Plan 6A 与
-> [`producer-driven MusicXML/IR`](2026-07-16-producer-driven-musicxml-ir.md) 已各自闭门。strict MIDI
-> input 的 parser/importer/product/producer 实现已落地，当前在补齐
-> [`MIDI_ACCEPTANCE.md`](../../MIDI_ACCEPTANCE.md) 中尚未完成的全量、分发、独立 review、commit/push/SHA
-> gates；全部关闭后才进入 benchmark v2。下面早期章节中的
+> [`producer-driven MusicXML/IR`](2026-07-16-producer-driven-musicxml-ir.md) 与 strict MIDI input 已各自
+> 闭门；MIDI 的 local/tracking/remote receipt 均为 `46ff8ac`。当前执行
+> [`benchmark v2`](2026-07-17-benchmark-v2.md)：先冻结 versioned corpus/manifest/raw rows/report 与统计
+> 预注册，再实现共享 proposal 的配对消融和当前模型重跑。下面早期章节中的
 > “Plan 1→2 补 MIDI”与“下一步写 Plan 1”只保留为
 > 初始路线历史，不再控制当前顺序。真人 gold/calibration 继续限制经验主张，但不阻塞这三个软件阶段。
 > 当前版本树是 package `0.5.0`、`score-input@0.1.0`、`musicxml@0.3.0`、`midi@0.1.0`、
@@ -520,10 +520,10 @@ Plan 1 (oracle+验证台) ──┬─→ Plan 2 (solver+M0) ──→ Plan 3 (a
 
 ## 执行入口
 
-- **当前下一步**：不重做 MIDI 实现；完成全量/代理/Web/分发 gates、scope/security/consumer reviews、
-  一个可审查提交与 push，并核对 local/tracking/remote SHA。全部闭门后才写/执行 benchmark v2。
-  首版 MIDI 只复用“古典制琴工坊 × 验证仪器”上传/证据卡，没有新增视觉；未来若加入多轨 mapper、
-  playback timeline 或新页面，仍须先与用户确认。
+- **当前下一步**：不重做 MIDI 或历史 Plan 4；按
+  [`2026-07-17-benchmark-v2.md`](2026-07-17-benchmark-v2.md) 分 prereg、runner-ready、results 三个 Git gate
+  实现。旧 Claude/旧 fidelity 数只保留为历史证据。v2 只做 CLI/JSON/JSONL/文档；若加入 dashboard、
+  图表页、live leaderboard 或其他前端，仍须先与用户确认统一视觉。
 - 每个阶段在前置提交的 local/remote SHA 一致后才开启；阶段末做独立 scope/security/consumer 审计。
   用户审计只在新视觉、音频/听感、真人演奏或 calibration gate 出现时暂停，不把普通代码审查误写成
   用户真人阻塞。
