@@ -1,6 +1,6 @@
 # Fretsure Web、HTTP API 与 MCP
 
-本页描述 package `0.5.0` 的本地互操作面：router=`score-input@0.1.0`，importers=
+本页描述 package `0.6.0` 的本地互操作面：router=`score-input@0.1.0`，importers=
 `musicxml@0.3.0` / `midi@0.1.0`，service=`fretsure-service@0.2.0`、
 API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`、
 trace=`agent-trace@0.2.0`，faithfulness=`fidelity@0.3.0`。这里的 `GREEN` 始终是

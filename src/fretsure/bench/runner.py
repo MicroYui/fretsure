@@ -14,7 +14,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from fretsure.agent.arranger import ArrangeGoal
+from fretsure.agent.arranger import (
+    ARRANGEMENT_UNISON_COALESCER_VERSION,
+    PROPOSAL_COMPACT_PROTOCOL_VERSION,
+    PROPOSAL_OBJECT_PROTOCOL_VERSION,
+    ArrangeGoal,
+)
+from fretsure.agent.critic import CRITIC_MAX_TOKENS
+from fretsure.agent.repair import REPAIR_MAX_TOKENS
 from fretsure.bench.ablation import (
     AblationConfig,
     ConfigMetrics,
@@ -31,6 +38,7 @@ from fretsure.bench.artifacts import (
     BenchmarkManifest,
     BenchmarkReceipt,
     BlobRecord,
+    CompleteUnitReservation,
     FinalizationInputs,
     FinalizedReport,
     ReplayBundle,
@@ -40,7 +48,11 @@ from fretsure.bench.artifacts import (
     load_replay_bundle,
     publish_replay_bundle,
 )
-from fretsure.bench.baselines import PureSolverOutcome
+from fretsure.bench.baselines import (
+    RAW_COMPACT_PROTOCOL_VERSION,
+    RAW_OBJECT_PROTOCOL_VERSION,
+    PureSolverOutcome,
+)
 from fretsure.bench.contracts import canonical_json_bytes
 from fretsure.bench.corpus import (
     PRIMARY_PROCEDURAL_BASE_SEED,
@@ -63,6 +75,19 @@ from fretsure.bench.experiment import (
     sample_pair_id,
 )
 from fretsure.bench.generator import GenConfig, generate_leadsheet
+from fretsure.bench.precall import (
+    BenchmarkPreCallConfig,
+    pre_call_artifact_budget,
+    pre_call_config_from_bytes,
+    preregistered_artifact_budget,
+    require_live_authorization,
+    validate_current_runtime,
+)
+from fretsure.bench.preregistration import (
+    BenchmarkPreregistration,
+    preregistration_from_bytes,
+    preregistration_from_dict,
+)
 from fretsure.bench.report import (
     BenchmarkReport as BenchmarkV2Report,
 )
@@ -78,6 +103,9 @@ from fretsure.bench.report import (
 )
 from fretsure.llm.client import (
     DEFAULT_PROXY_MODEL,
+    MAX_PROXY_TEXT_BYTES_PER_TOKEN,
+    MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
+    PROXY_REQUEST_TIMEOUT_SECONDS,
     LLMClient,
     LLMModelIdError,
     close_llm_client,
@@ -86,8 +114,17 @@ from fretsure.llm.client import (
 )
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 from fretsure.oracle.core import CHECKER_VERSION
-from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION, ensure_profile
+from fretsure.oracle.input import (
+    MAX_SOLVER_WORK_UNITS,
+    ORACLE_INPUT_SCHEMA_VERSION,
+    ensure_profile,
+)
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
+from fretsure.solver.score import (
+    MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS,
+    MAX_SCORE_SOLVER_SEGMENTS,
+    SCORE_SOLVER_VERSION,
+)
 
 MAX_BENCHMARK_ITEMS = 1_000
 MAX_BENCHMARK_BARS = 64
@@ -108,21 +145,36 @@ def _max_v2_bootstrap_seed(family_count: int) -> int:
     return MAX_BENCHMARK_SEED - derived_offset
 
 
-def _analysis_code_sha256() -> str:
-    payload = canonical_json_bytes(
-        {
-            "checker_version": CHECKER_VERSION,
-            "fidelity_checker_version": FIDELITY_CHECKER_VERSION,
-            "input_schema_version": ORACLE_INPUT_SCHEMA_VERSION,
-            "report_contract": BENCHMARK_V2_ANALYSIS_VERSION,
-        }
-    )
+def _analysis_contract_sha256(
+    preregistration: BenchmarkPreregistration | None = None,
+) -> str:
+    contract: dict[str, object] = {
+        "arrangement_unison_coalescer": ARRANGEMENT_UNISON_COALESCER_VERSION,
+        "checker_version": CHECKER_VERSION,
+        "fidelity_checker_version": FIDELITY_CHECKER_VERSION,
+        "input_schema_version": ORACLE_INPUT_SCHEMA_VERSION,
+        "proposal_compact_protocol": PROPOSAL_COMPACT_PROTOCOL_VERSION,
+        "proposal_object_protocol": PROPOSAL_OBJECT_PROTOCOL_VERSION,
+        "raw_compact_protocol": RAW_COMPACT_PROTOCOL_VERSION,
+        "raw_object_protocol": RAW_OBJECT_PROTOCOL_VERSION,
+        "report_contract": BENCHMARK_V2_ANALYSIS_VERSION,
+        "score_solver_aggregate_work_limit": MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS,
+        "score_solver_composition": SCORE_SOLVER_VERSION,
+        "score_solver_maximum_segments": MAX_SCORE_SOLVER_SEGMENTS,
+        "score_solver_per_segment_work_limit": MAX_SOLVER_WORK_UNITS,
+    }
+    if preregistration is not None:
+        preregistered = preregistration.to_dict()
+        model = cast(dict[str, object], preregistered["model_and_prompts"])
+        contract["preregistered_prompts"] = model["prompts"]
+        contract["preregistered_versions"] = preregistered["versions"]
+    payload = canonical_json_bytes(contract)
     return hashlib.sha256(
-        f"fretsure:{BENCHMARK_V2_ANALYSIS_VERSION}\0".encode() + payload
+        b"fretsure:benchmark-v2-analysis-contract@0.1.0\0" + payload
     ).hexdigest()
 
 
-BENCHMARK_V2_ANALYSIS_SHA256 = _analysis_code_sha256()
+BENCHMARK_V2_ANALYSIS_CONTRACT_SHA256 = _analysis_contract_sha256()
 
 
 class BenchmarkInputError(ValueError):
@@ -219,6 +271,8 @@ class BenchmarkV2Context:
     goal: ArrangeGoal
     profile: Profile
     requested_model_id: str
+    preregistration: BenchmarkPreregistration | None = None
+    pre_call_config: BenchmarkPreCallConfig | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -335,15 +389,55 @@ def _expected_v2_rows(plan: ExperimentPlan) -> tuple[RowKey, ...]:
     return tuple(sorted(rows, key=lambda value: value.sort_key))
 
 
-def _v2_limits(family_count: int) -> ArtifactLimits:
-    maximum_calls = family_count * 110
+def _reservation_from_wire(value: dict[str, int]) -> CompleteUnitReservation:
+    return CompleteUnitReservation(
+        value["logical_calls"],
+        value["attempts"],
+        value["requested_output_tokens"],
+        value["attempt_reserved_output_tokens"],
+        value["response_text_bytes"],
+        value["transport_response_bytes"],
+        value["recorded_provider_call_elapsed_microseconds"],
+    )
+
+
+def _v2_limits(
+    item_count: int,
+    *,
+    preregistration: BenchmarkPreregistration | None = None,
+    pre_call_config: BenchmarkPreCallConfig | None = None,
+) -> ArtifactLimits:
+    if preregistration is not None and pre_call_config is not None:
+        maximum, reservation = pre_call_artifact_budget(pre_call_config)
+    elif preregistration is not None:
+        maximum, reservation = preregistered_artifact_budget(preregistration)
+    else:
+        maximum_calls = item_count * 110
+        return ArtifactLimits(
+            max_rows=item_count * 21,
+            max_blobs=item_count * 83,
+            max_calls=maximum_calls,
+            max_attempts=maximum_calls * 3,
+            max_json_bytes=256 * 1024 * 1024,
+            max_jsonl_line_bytes=4 * 1024 * 1024,
+        )
     return ArtifactLimits(
-        max_rows=family_count * 21,
-        max_blobs=family_count * 83,
-        max_calls=maximum_calls,
-        max_attempts=maximum_calls * 3,
+        max_rows=item_count * 21,
+        max_blobs=item_count * 83,
+        max_calls=maximum["max_logical_calls"],
+        max_attempts=maximum["max_attempts"],
         max_json_bytes=256 * 1024 * 1024,
         max_jsonl_line_bytes=4 * 1024 * 1024,
+        max_requested_output_tokens=maximum["max_requested_output_tokens"],
+        max_attempt_reserved_output_tokens=maximum[
+            "max_attempt_reserved_output_tokens"
+        ],
+        max_response_text_bytes=maximum["max_response_text_bytes"],
+        max_transport_response_bytes=maximum["max_transport_response_bytes"],
+        max_wall_microseconds=maximum[
+            "max_recorded_provider_call_elapsed_microseconds"
+        ],
+        complete_unit_reservation=_reservation_from_wire(reservation),
     )
 
 
@@ -370,21 +464,88 @@ def _v2_parameters(
     goal: ArrangeGoal,
     profile: Profile,
     requested_model_id: str,
+    *,
+    preregistration: BenchmarkPreregistration | None = None,
+    pre_call_config: BenchmarkPreCallConfig | None = None,
+    procedural_parameters: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    return {
-        "analysis": {
-            "analysis_code_sha256": BENCHMARK_V2_ANALYSIS_SHA256,
+    if pre_call_config is None:
+        analysis_sha256 = _analysis_contract_sha256(preregistration)
+        analysis_kind = (
+            "preregistered_analysis_contract_sha256"
+            if preregistration is not None
+            else "software_stub_analysis_contract_sha256"
+        )
+        analysis_parameters: dict[str, object] = {
+            "analysis_contract_sha256": analysis_sha256,
+            "binding_kind": analysis_kind,
             "version": BENCHMARK_V2_ANALYSIS_VERSION,
-        },
-        "corpus": corpus_to_dict(plan.items),
-        "experiment": _plan_wire(plan),
+        }
+        execution: dict[str, object] = {
+            "analysis_binding": {
+                "kind": analysis_kind,
+                "sha256": analysis_sha256,
+            },
+            "execution_git_sha": None,
+            "mode": "stub",
+        }
+    else:
+        execution = cast(dict[str, object], pre_call_config.to_dict()["execution"])
+        external_binding = cast(dict[str, object], execution["analysis_binding"])
+        analysis_sha256 = pre_call_config.analysis_code_sha256
+        analysis_parameters = {
+            "analysis_code_sha256": analysis_sha256,
+            "binding_kind": external_binding["kind"],
+            "version": BENCHMARK_V2_ANALYSIS_VERSION,
+        }
+    allowed_returned_model_id = (
+        requested_model_id
+        if pre_call_config is None
+        else pre_call_config.allowed_returned_model_id
+    )
+    pre_call_wire: dict[str, object] | None = None
+    if pre_call_config is not None:
+        pre_call_wire = pre_call_config.to_dict()
+        del pre_call_wire["preregistration"]
+    return {
+        "analysis": analysis_parameters,
+        "corpus": (
+            corpus_to_dict(plan.items)
+            if preregistration is None
+            else {"source": "parameters.preregistration.wire.corpus.snapshot"}
+        ),
+        "experiment": (
+            _plan_wire(plan)
+            if preregistration is None
+            else {"source": "parameters.preregistration.wire.schedule"}
+        ),
         "goal": _goal_wire(goal),
-        "model": {"requested_model_id": requested_model_id},
+        "execution": execution,
+        "model": {
+            "allowed_returned_model_id": allowed_returned_model_id,
+            "requested_model_id": requested_model_id,
+            "returned_model_rule": "exact_equal",
+        },
+        "pre_call": pre_call_wire,
+        "preregistration": (
+            None
+            if preregistration is None
+            else {
+                "raw_sha256": hashlib.sha256(preregistration.wire_json).hexdigest(),
+                "wire": preregistration.to_dict(),
+            }
+        ),
         "procedural": {
-            "bars": config.bars,
-            "base_seed": config.base_seed,
-            "family_count": config.family_count,
-            "split": "test",
+            **(
+                {
+                    "bars": config.bars,
+                    "base_seed": config.base_seed,
+                    "family_count": config.family_count,
+                    "split": "test",
+                }
+                if procedural_parameters is None
+                else procedural_parameters
+            ),
         },
         "profile": {
             "fingerprint": profile.fingerprint,
@@ -400,11 +561,77 @@ def _v2_parameters(
     }
 
 
+def _build_context_from_items(
+    config: BenchmarkV2Config,
+    items: tuple[CorpusItem, ...],
+    *,
+    preregistration: BenchmarkPreregistration | None = None,
+    pre_call_config: BenchmarkPreCallConfig | None = None,
+    procedural_parameters: dict[str, object] | None = None,
+) -> BenchmarkV2Context:
+    corpus_digest = corpus_sha256(items)
+    run_id = _derived_run_id(config, corpus_digest)
+    plan = preflight_experiment(items, run_id=run_id, schedule_seed=config.schedule_seed)
+    goal = ArrangeGoal()
+    profile = MEDIAN_HAND
+    requested_model_id = _benchmark_model_id(
+        pre_call_config.requested_model_id
+        if pre_call_config is not None
+        else config.requested_model_id
+        if config.requested_model_id is not None
+        else BENCHMARK_V2_STUB_MODEL_ID
+        if config.stub
+        else DEFAULT_PROXY_MODEL
+    )
+    analysis_code_sha256 = (
+        _analysis_contract_sha256(preregistration)
+        if pre_call_config is None
+        else pre_call_config.analysis_code_sha256
+    )
+    manifest = build_manifest(
+        run_id=run_id,
+        corpus_sha256=corpus_digest,
+        analysis_code_sha256=analysis_code_sha256,
+        stub=config.stub,
+        expected_rows=_expected_v2_rows(plan),
+        limits=_v2_limits(
+            len(items),
+            preregistration=preregistration,
+            pre_call_config=pre_call_config,
+        ),
+        parameters=_v2_parameters(
+            config,
+            plan,
+            goal,
+            profile,
+            requested_model_id,
+            preregistration=preregistration,
+            pre_call_config=pre_call_config,
+            procedural_parameters=procedural_parameters,
+        ),
+    )
+    return BenchmarkV2Context(
+        config,
+        manifest,
+        plan,
+        goal,
+        profile,
+        requested_model_id,
+        preregistration,
+        pre_call_config,
+    )
+
+
 def build_benchmark_v2_context(config: BenchmarkV2Config) -> BenchmarkV2Context:
     """Build one strict procedural v2 plan and its self-contained manifest."""
 
     if type(config) is not BenchmarkV2Config:
         raise BenchmarkInputError("config", "must be an exact BenchmarkV2Config")
+    if not config.stub:
+        raise BenchmarkInputError(
+            "pre_call_config",
+            "live collection requires a validated pre-call config",
+        )
     items = build_primary_procedural_corpus(
         ProceduralCorpusConfig(
             family_count=config.family_count,
@@ -413,28 +640,129 @@ def build_benchmark_v2_context(config: BenchmarkV2Config) -> BenchmarkV2Context:
             split="test",
         )
     )
-    corpus_digest = corpus_sha256(items)
-    run_id = _derived_run_id(config, corpus_digest)
-    plan = preflight_experiment(items, run_id=run_id, schedule_seed=config.schedule_seed)
-    goal = ArrangeGoal()
-    profile = MEDIAN_HAND
-    requested_model_id = _benchmark_model_id(
-        config.requested_model_id
-        if config.requested_model_id is not None
-        else BENCHMARK_V2_STUB_MODEL_ID
-        if config.stub
-        else DEFAULT_PROXY_MODEL
+    return _build_context_from_items(config, items)
+
+
+def _preregistration_context(
+    preregistration: BenchmarkPreregistration,
+    *,
+    stub: bool,
+    pre_call_config: BenchmarkPreCallConfig | None = None,
+) -> BenchmarkV2Context:
+    if type(preregistration) is not BenchmarkPreregistration:
+        raise BenchmarkInputError(
+            "preregistration", "must be an exact BenchmarkPreregistration"
+        )
+    if (pre_call_config is None) != stub:
+        raise BenchmarkInputError(
+            "pre_call_config", "stub must omit and live must provide pre-call config"
+        )
+    wire = preregistration.to_dict()
+    corpus = _exact_object(
+        wire["corpus"],
+        "preregistration.corpus",
+        frozenset(
+            {
+                "artifact_sha256",
+                "contamination_clean",
+                "corpus_sha256",
+                "counts",
+                "ordered_bindings",
+                "primary",
+                "public_secondary",
+                "snapshot",
+                "source_census_sha256",
+            }
+        ),
     )
-    manifest = build_manifest(
-        run_id=run_id,
-        corpus_sha256=corpus_digest,
-        analysis_code_sha256=BENCHMARK_V2_ANALYSIS_SHA256,
-        stub=config.stub,
-        expected_rows=_expected_v2_rows(plan),
-        limits=_v2_limits(len(items)),
-        parameters=_v2_parameters(config, plan, goal, profile, requested_model_id),
+    items = corpus_from_dict(corpus["snapshot"])
+    primary = _exact_object(
+        corpus["primary"],
+        "preregistration.corpus.primary",
+        frozenset(
+            {"bars", "base_seed", "family_count", "generator_version", "layer", "split"}
+        ),
     )
-    return BenchmarkV2Context(config, manifest, plan, goal, profile, requested_model_id)
+    inference = cast(dict[str, object], wire["inference"])
+    bootstrap = cast(dict[str, object], inference["bootstrap"])
+    sign_flip = cast(dict[str, object], inference["sign_flip"])
+    schedule = cast(dict[str, object], wire["schedule"])
+    formal_run_id = cast(str, wire["run_id"])
+    config = BenchmarkV2Config(
+        family_count=len(items),
+        base_seed=cast(int, primary["base_seed"]),
+        bars=cast(int, primary["bars"]),
+        schedule_seed=cast(int, schedule["schedule_seed"]),
+        bootstrap_seed=cast(int, bootstrap["seed"]),
+        bootstrap_repetitions=cast(int, bootstrap["repetitions"]),
+        sign_flip_seed=cast(int, sign_flip["seed"]),
+        sign_flip_draws=cast(int, sign_flip["draws"]),
+        stub=stub,
+        requested_model_id=(
+            BENCHMARK_V2_STUB_MODEL_ID
+            if stub
+            else cast(str, cast(dict[str, object], wire["model_and_prompts"])["requested_model"])
+        ),
+        run_id=(
+            f"{formal_run_id}-stub-attempt-001"
+            if stub
+            else cast(BenchmarkPreCallConfig, pre_call_config).run_id
+        ),
+    )
+    context = _build_context_from_items(
+        config,
+        items,
+        preregistration=preregistration,
+        pre_call_config=pre_call_config,
+        procedural_parameters={
+            "bars": primary["bars"],
+            "base_seed": primary["base_seed"],
+            "family_count": primary["family_count"],
+            "split": primary["split"],
+        },
+    )
+    plan_wire = _plan_wire(context.plan)
+    if (
+        plan_wire["collection_schedule"] != schedule["collection_schedule"]
+        or [
+            {
+                "candidate_permutation": value["candidate_permutation"],
+                "item_id": value["item_id"],
+            }
+            for value in cast(list[dict[str, object]], plan_wire["item_schedules"])
+        ]
+        != schedule["item_permutations"]
+    ):
+        raise BenchmarkInputError(
+            "preregistration.schedule", "does not match the executable experiment plan"
+        )
+    return context
+
+
+def build_benchmark_v2_preregistered_context(
+    preregistration: BenchmarkPreregistration,
+) -> BenchmarkV2Context:
+    """Build the frozen mixed-corpus offline stub context."""
+
+    return _preregistration_context(preregistration, stub=True)
+
+
+def build_benchmark_v2_live_context(
+    pre_call_config: BenchmarkPreCallConfig,
+) -> BenchmarkV2Context:
+    """Build a live context only from one fully validated pre-call config."""
+
+    if type(pre_call_config) is not BenchmarkPreCallConfig:
+        raise BenchmarkInputError(
+            "pre_call_config", "must be an exact BenchmarkPreCallConfig"
+        )
+    validate_current_runtime(pre_call_config)
+    require_live_authorization(pre_call_config)
+    return _preregistration_context(
+        pre_call_config.preregistration,
+        stub=False,
+        pre_call_config=pre_call_config,
+    )
 
 
 def benchmark_v2_context_from_manifest(manifest: BenchmarkManifest) -> BenchmarkV2Context:
@@ -450,9 +778,12 @@ def benchmark_v2_context_from_manifest(manifest: BenchmarkManifest) -> Benchmark
                 "schema",
                 "analysis",
                 "corpus",
+                "execution",
                 "experiment",
                 "goal",
                 "model",
+                "pre_call",
+                "preregistration",
                 "procedural",
                 "profile",
                 "report",
@@ -468,6 +799,95 @@ def benchmark_v2_context_from_manifest(manifest: BenchmarkManifest) -> Benchmark
     )
     if procedural["split"] != "test":
         raise BenchmarkInputError("parameters.procedural.split", "must equal test")
+    report = _exact_object(
+        parameters["report"],
+        "parameters.report",
+        frozenset({"bootstrap_seed", "bootstrap_repetitions", "sign_flip_seed", "sign_flip_draws"}),
+    )
+    model = _exact_object(
+        parameters["model"],
+        "parameters.model",
+        frozenset(
+            {"allowed_returned_model_id", "requested_model_id", "returned_model_rule"}
+        ),
+    )
+    requested_model_id = _benchmark_model_id(model["requested_model_id"])
+    if (
+        model["returned_model_rule"] != "exact_equal"
+        or _benchmark_model_id(model["allowed_returned_model_id"]) != requested_model_id
+    ):
+        raise BenchmarkInputError(
+            "parameters.model", "must use the exact requested/returned model rule"
+        )
+    raw_preregistration = parameters["preregistration"]
+    raw_pre_call = parameters["pre_call"]
+    if raw_preregistration is not None:
+        corpus_reference = _exact_object(
+            parameters["corpus"],
+            "parameters.corpus",
+            frozenset({"source"}),
+        )
+        experiment_reference = _exact_object(
+            parameters["experiment"],
+            "parameters.experiment",
+            frozenset({"source"}),
+        )
+        if corpus_reference["source"] != (
+            "parameters.preregistration.wire.corpus.snapshot"
+        ):
+            raise BenchmarkInputError(
+                "parameters.corpus.source", "does not name the embedded corpus snapshot"
+            )
+        if experiment_reference["source"] != (
+            "parameters.preregistration.wire.schedule"
+        ):
+            raise BenchmarkInputError(
+                "parameters.experiment.source", "does not name the embedded schedule"
+            )
+        preregistration_binding = _exact_object(
+            raw_preregistration,
+            "parameters.preregistration",
+            frozenset({"raw_sha256", "wire"}),
+        )
+        preregistration = preregistration_from_dict(preregistration_binding["wire"])
+        expected_sha = hashlib.sha256(preregistration.wire_json).hexdigest()
+        if preregistration_binding["raw_sha256"] != expected_sha:
+            raise BenchmarkInputError(
+                "parameters.preregistration.raw_sha256",
+                "does not bind the embedded preregistration",
+            )
+        if manifest.stub:
+            if raw_pre_call is not None:
+                raise BenchmarkInputError(
+                    "parameters.pre_call", "stub manifests must not contain a pre-call config"
+                )
+            context = build_benchmark_v2_preregistered_context(preregistration)
+        else:
+            if raw_pre_call is None:
+                raise BenchmarkInputError(
+                    "parameters.pre_call", "live manifests require a pre-call config"
+                )
+            if type(raw_pre_call) is not dict:
+                raise BenchmarkInputError(
+                    "parameters.pre_call", "must be one exact pre-call binding object"
+                )
+            complete_pre_call = dict(cast(dict[str, object], raw_pre_call))
+            complete_pre_call["preregistration"] = preregistration.to_dict()
+            pre_call = pre_call_config_from_bytes(canonical_json_bytes(complete_pre_call))
+            if pre_call.preregistration != preregistration:
+                raise BenchmarkInputError(
+                    "parameters.pre_call", "binds a different preregistration"
+                )
+            context = build_benchmark_v2_live_context(pre_call)
+        if manifest != context.manifest:
+            raise BenchmarkInputError(
+                "manifest", "does not match the preregistered executable context"
+            )
+        return context
+    if raw_pre_call is not None or not manifest.stub:
+        raise BenchmarkInputError(
+            "parameters.pre_call", "scalar contexts are offline stub-only"
+        )
     experiment = _exact_object(
         parameters["experiment"],
         "parameters.experiment",
@@ -485,17 +905,6 @@ def benchmark_v2_context_from_manifest(manifest: BenchmarkManifest) -> Benchmark
             }
         ),
     )
-    report = _exact_object(
-        parameters["report"],
-        "parameters.report",
-        frozenset({"bootstrap_seed", "bootstrap_repetitions", "sign_flip_seed", "sign_flip_draws"}),
-    )
-    model = _exact_object(
-        parameters["model"],
-        "parameters.model",
-        frozenset({"requested_model_id"}),
-    )
-    requested_model_id = _benchmark_model_id(model["requested_model_id"])
     config = BenchmarkV2Config(
         family_count=_exact_int(
             procedural["family_count"],
@@ -846,15 +1255,57 @@ def _staged_blobs(store: ArtifactStore) -> tuple[BlobRecord, ...]:
     return tuple(sorted(by_ref.values(), key=lambda value: value.ref.sort_key))
 
 
+def _configure_next_unit_reservation(
+    store: ArtifactStore,
+    context: BenchmarkV2Context,
+) -> None:
+    if context.manifest.limits.complete_unit_reservation is None:
+        return
+    schedule_index = len(store.completed_units) - len(context.plan.items)
+    if not 0 <= schedule_index < len(context.plan.collection_schedule):
+        return
+    unit = context.plan.collection_schedule[schedule_index]
+    proposal_tokens = context.plan.matched_budgets[unit.item_position].proposal_tokens
+    if unit.arm.value == "raw":
+        logical_calls = 1
+        requested_tokens = proposal_tokens
+    else:
+        logical_calls = 1 + context.plan.max_repair_iters + 1
+        requested_tokens = (
+            proposal_tokens
+            + context.plan.max_repair_iters * REPAIR_MAX_TOKENS
+            + CRITIC_MAX_TOKENS
+        )
+    attempts = logical_calls * 3
+    reservation = CompleteUnitReservation(
+        logical_calls,
+        attempts,
+        requested_tokens,
+        requested_tokens * 3,
+        requested_tokens * MAX_PROXY_TEXT_BYTES_PER_TOKEN,
+        attempts * MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
+        int(
+            (
+                attempts * PROXY_REQUEST_TIMEOUT_SECONDS
+                + logical_calls * 1.5
+            )
+            * 1_000_000
+        ),
+    )
+    store.reserve_next_unit(reservation)
+
+
 def collect_benchmark_v2(
     *,
-    config: BenchmarkV2Config,
+    config: BenchmarkV2Config | None = None,
+    preregistration: BenchmarkPreregistration | None = None,
+    pre_call_config: BenchmarkPreCallConfig | None = None,
     output_dir: Path,
     resume: bool = False,
     agent_llm_factory: Callable[[], LLMClient] | None = None,
     raw_llm_factory: Callable[[], LLMClient] | None = None,
 ) -> BenchmarkV2Result:
-    """Collect or resume one procedural benchmark-v2 artifact directory."""
+    """Collect one scalar stub, preregistered stub, or authorized live run."""
 
     if not isinstance(output_dir, Path):
         raise BenchmarkInputError("output_dir", "must be a Path")
@@ -864,105 +1315,151 @@ def collect_benchmark_v2(
         raise BenchmarkInputError(
             "llm_factory", "agent and raw factories must be supplied together"
         )
-    context = build_benchmark_v2_context(config)
+    selected = sum(
+        value is not None for value in (config, preregistration, pre_call_config)
+    )
+    if selected != 1:
+        raise BenchmarkInputError(
+            "collection_config",
+            "requires exactly one scalar config, preregistration, or pre-call config",
+        )
+    if config is not None:
+        context = build_benchmark_v2_context(config)
+    elif preregistration is not None:
+        context = build_benchmark_v2_preregistered_context(preregistration)
+    else:
+        assert pre_call_config is not None
+        context = build_benchmark_v2_live_context(pre_call_config)
+    if context.config.stub and agent_llm_factory is not None:
+        raise BenchmarkInputError(
+            "llm_factory", "stub collection does not accept client factories"
+        )
+
+    prepared_clients: tuple[LLMClient, LLMClient] | None = None
+    clients_transferred = False
+    if not context.config.stub:
+        # Configuration and both proxy clients are proven usable before a fresh
+        # output node is created.  No model method is called by this preflight.
+        prepared_clients = _create_v2_clients(
+            context,
+            agent_llm_factory,
+            raw_llm_factory,
+        )
     store_factory = ArtifactStore.resume if resume else ArtifactStore.create
     report_result: BenchmarkV2Report | None = None
-    with store_factory(output_dir, context.manifest) as store:
-        staged_rows = store.completed_rows
-        staged_blobs = _staged_blobs(store)
-        resume_state = (
-            None
-            if not staged_rows
-            else resume_state_from_rows(
+    try:
+        with store_factory(output_dir, context.manifest) as store:
+            staged_rows = store.completed_rows
+            staged_blobs = _staged_blobs(store)
+            resume_state = (
+                None
+                if not staged_rows
+                else resume_state_from_rows(
+                    context.plan,
+                    context.goal,
+                    context.profile,
+                    staged_rows,
+                    staged_blobs,
+                )
+            )
+            _configure_next_unit_reservation(store, context)
+            complete = len(staged_rows) == len(context.manifest.expected_rows)
+            if complete:
+                if prepared_clients is not None:
+                    close_llm_client(prepared_clients[1])
+                    close_llm_client(prepared_clients[0])
+                    prepared_clients = None
+                agent_llm: LLMClient = _NoCallLLM(context.requested_model_id)
+                raw_llm: LLMClient = _NoCallLLM(context.requested_model_id)
+            elif prepared_clients is not None:
+                agent_llm, raw_llm = prepared_clients
+            else:
+                agent_llm, raw_llm = _create_v2_clients(
+                    context,
+                    agent_llm_factory,
+                    raw_llm_factory,
+                )
+
+            def pure_complete(item: CorpusItem, outcome: PureSolverOutcome) -> None:
+                bundle = pure_outcome_to_row_bundle(
+                    context.plan,
+                    context.goal,
+                    context.profile,
+                    item,
+                    outcome,
+                )
+                store.commit_unit(
+                    len(store.completed_units),
+                    bundle.rows[0],
+                    bundle.blobs,
+                )
+                _configure_next_unit_reservation(store, context)
+
+            def unit_complete(completed: CompletedExperimentUnit) -> None:
+                bundle = completed_unit_to_row_bundle(
+                    context.plan,
+                    context.goal,
+                    context.profile,
+                    completed,
+                    _store_ledger(store),
+                )
+                store.commit_unit(
+                    len(store.completed_units),
+                    bundle.rows[0],
+                    bundle.blobs,
+                )
+                _configure_next_unit_reservation(store, context)
+
+            clients_transferred = True
+            collection = run_experiment(
                 context.plan,
                 context.goal,
+                agent_llm,
+                raw_llm,
                 context.profile,
-                staged_rows,
-                staged_blobs,
+                observation_sink=store.sink,
+                observation_clock_ns=(lambda: 0) if context.config.stub else None,
+                resume_state=resume_state,
+                on_pure_solver_complete=pure_complete,
+                on_unit_complete=unit_complete,
             )
-        )
-        complete = len(staged_rows) == len(context.manifest.expected_rows)
-        if complete:
-            agent_llm: LLMClient = _NoCallLLM(context.requested_model_id)
-            raw_llm: LLMClient = _NoCallLLM(context.requested_model_id)
-        else:
-            agent_llm, raw_llm = _create_v2_clients(
-                context,
-                agent_llm_factory,
-                raw_llm_factory,
-            )
+            complete_bundle = collection_to_row_bundle(collection)
+            if (
+                tuple(sorted(store.completed_rows, key=lambda value: value.sort_key))
+                != complete_bundle.rows
+                or _staged_blobs(store) != complete_bundle.blobs
+            ):
+                raise BenchmarkInputError(
+                    "staging", "incremental rows/blobs differ from the complete collection"
+                )
 
-        def pure_complete(item: CorpusItem, outcome: PureSolverOutcome) -> None:
-            bundle = pure_outcome_to_row_bundle(
-                context.plan,
-                context.goal,
-                context.profile,
-                item,
-                outcome,
-            )
-            store.commit_unit(
-                len(store.completed_units),
-                bundle.rows[0],
-                bundle.blobs,
-            )
+            def report_callback(inputs: FinalizationInputs) -> FinalizedReport:
+                nonlocal report_result
+                bindings = publication_bindings_from_artifacts(inputs.manifest, inputs.receipt)
+                report_result = build_benchmark_report(
+                    context.plan,
+                    context.goal,
+                    context.profile,
+                    inputs.rows,
+                    inputs.blobs,
+                    inputs.observations,
+                    publication_bindings=bindings,
+                    mode=ReplayMode.FULL_RESCORE,
+                    bootstrap_seed=context.config.bootstrap_seed,
+                    bootstrap_repetitions=context.config.bootstrap_repetitions,
+                    sign_flip_seed=context.config.sign_flip_seed,
+                    sign_flip_draws=context.config.sign_flip_draws,
+                )
+                markdown = report_to_markdown(report_result).encode("utf-8")
+                return FinalizedReport(report_result.wire_json, markdown)
 
-        def unit_complete(completed: CompletedExperimentUnit) -> None:
-            bundle = completed_unit_to_row_bundle(
-                context.plan,
-                context.goal,
-                context.profile,
-                completed,
-                _store_ledger(store),
-            )
-            store.commit_unit(
-                len(store.completed_units),
-                bundle.rows[0],
-                bundle.blobs,
-            )
-
-        collection = run_experiment(
-            context.plan,
-            context.goal,
-            agent_llm,
-            raw_llm,
-            context.profile,
-            observation_sink=store.sink,
-            observation_clock_ns=(lambda: 0) if context.config.stub else None,
-            resume_state=resume_state,
-            on_pure_solver_complete=pure_complete,
-            on_unit_complete=unit_complete,
-        )
-        complete_bundle = collection_to_row_bundle(collection)
-        if (
-            tuple(sorted(store.completed_rows, key=lambda value: value.sort_key))
-            != complete_bundle.rows
-            or _staged_blobs(store) != complete_bundle.blobs
-        ):
-            raise BenchmarkInputError(
-                "staging", "incremental rows/blobs differ from the complete collection"
-            )
-
-        def report_callback(inputs: FinalizationInputs) -> FinalizedReport:
-            nonlocal report_result
-            bindings = publication_bindings_from_artifacts(inputs.manifest, inputs.receipt)
-            report_result = build_benchmark_report(
-                context.plan,
-                context.goal,
-                context.profile,
-                inputs.rows,
-                inputs.blobs,
-                inputs.observations,
-                publication_bindings=bindings,
-                mode=ReplayMode.FULL_RESCORE,
-                bootstrap_seed=context.config.bootstrap_seed,
-                bootstrap_repetitions=context.config.bootstrap_repetitions,
-                sign_flip_seed=context.config.sign_flip_seed,
-                sign_flip_draws=context.config.sign_flip_draws,
-            )
-            markdown = report_to_markdown(report_result).encode("utf-8")
-            return FinalizedReport(report_result.wire_json, markdown)
-
-        receipt = store.finalize(report_callback=report_callback)
+            receipt = store.finalize(report_callback=report_callback)
+    finally:
+        if prepared_clients is not None and not clients_transferred:
+            try:
+                close_llm_client(prepared_clients[1])
+            finally:
+                close_llm_client(prepared_clients[0])
     if report_result is None:  # pragma: no cover - callback invariant
         raise AssertionError("finalization did not build a report")
     return BenchmarkV2Result(receipt, report_result)
@@ -1020,23 +1517,23 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     mode.add_argument("--stub", action="store_true", help="deterministic offline collection")
     mode.add_argument("--live", action="store_true", help="collect through the configured proxy")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--prereg", type=Path)
+    parser.add_argument("--pre-call-config", type=Path)
     parser.add_argument("--run-id")
     parser.add_argument("--model")
-    parser.add_argument("--seed", type=int, default=PRIMARY_PROCEDURAL_BASE_SEED)
-    parser.add_argument("--items", type=int, default=1)
-    parser.add_argument("--bars", type=int, default=1)
-    parser.add_argument("--schedule-seed", type=int, default=0)
-    parser.add_argument("--bootstrap-seed", type=int, default=0)
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--items", type=int)
+    parser.add_argument("--bars", type=int)
+    parser.add_argument("--schedule-seed", type=int)
+    parser.add_argument("--bootstrap-seed", type=int)
     parser.add_argument(
         "--bootstrap-repetitions",
         type=int,
-        default=DEFAULT_BENCHMARK_V2_BOOTSTRAP_REPETITIONS,
     )
-    parser.add_argument("--sign-flip-seed", type=int, default=0)
+    parser.add_argument("--sign-flip-seed", type=int)
     parser.add_argument(
         "--sign-flip-draws",
         type=int,
-        default=DEFAULT_BENCHMARK_V2_SIGN_FLIP_DRAWS,
     )
     parser.add_argument("--replay-config", type=Path)
     parser.add_argument("--replay-receipt", type=Path)
@@ -1064,12 +1561,42 @@ def main(argv: Sequence[str] | None = None) -> int:
     replay = any(value is not None for value in replay_paths)
     if replay and any(value is None for value in replay_paths):
         parser.error("replay requires all five --replay-* inputs")
-    if replay and (args.stub or args.live or args.resume):
+    if replay and (
+        args.stub
+        or args.live
+        or args.resume
+        or args.prereg is not None
+        or args.pre_call_config is not None
+    ):
         parser.error("replay flags cannot be combined with collection mode flags")
     if not replay and not (args.stub or args.live):
         parser.error("collection requires exactly one of --stub or --live")
     if args.fast_reaggregate and not replay:
         parser.error("--fast-reaggregate requires replay inputs")
+    scalar_values = (
+        args.run_id,
+        args.model,
+        args.seed,
+        args.items,
+        args.bars,
+        args.schedule_seed,
+        args.bootstrap_seed,
+        args.bootstrap_repetitions,
+        args.sign_flip_seed,
+        args.sign_flip_draws,
+    )
+    if args.stub and args.pre_call_config is not None:
+        parser.error("--stub cannot be combined with --pre-call-config")
+    if args.live and args.prereg is not None:
+        parser.error("--live cannot be combined with --prereg")
+    if args.live and args.pre_call_config is None and not replay:
+        parser.error("--live requires --pre-call-config")
+    if args.stub and args.prereg is not None and any(
+        value is not None for value in scalar_values
+    ):
+        parser.error("--prereg cannot be combined with scalar collection controls")
+    if args.live and any(value is not None for value in scalar_values):
+        parser.error("--pre-call-config cannot be combined with scalar collection controls")
 
     try:
         if replay:
@@ -1086,18 +1613,46 @@ def main(argv: Sequence[str] | None = None) -> int:
                     else ReplayMode.FULL_RESCORE
                 ),
             )
+        elif args.prereg is not None:
+            preregistration = preregistration_from_bytes(args.prereg.read_bytes())
+            result = collect_benchmark_v2(
+                preregistration=preregistration,
+                output_dir=args.output_dir,
+                resume=args.resume,
+            )
+        elif args.pre_call_config is not None:
+            pre_call = pre_call_config_from_bytes(args.pre_call_config.read_bytes())
+            result = collect_benchmark_v2(
+                pre_call_config=pre_call,
+                output_dir=args.output_dir,
+                resume=args.resume,
+            )
         else:
             result = collect_benchmark_v2(
                 config=BenchmarkV2Config(
-                    family_count=args.items,
-                    base_seed=args.seed,
-                    bars=args.bars,
-                    schedule_seed=args.schedule_seed,
-                    bootstrap_seed=args.bootstrap_seed,
-                    bootstrap_repetitions=args.bootstrap_repetitions,
-                    sign_flip_seed=args.sign_flip_seed,
-                    sign_flip_draws=args.sign_flip_draws,
-                    stub=args.stub,
+                    family_count=1 if args.items is None else args.items,
+                    base_seed=(
+                        PRIMARY_PROCEDURAL_BASE_SEED if args.seed is None else args.seed
+                    ),
+                    bars=1 if args.bars is None else args.bars,
+                    schedule_seed=0 if args.schedule_seed is None else args.schedule_seed,
+                    bootstrap_seed=(
+                        0 if args.bootstrap_seed is None else args.bootstrap_seed
+                    ),
+                    bootstrap_repetitions=(
+                        DEFAULT_BENCHMARK_V2_BOOTSTRAP_REPETITIONS
+                        if args.bootstrap_repetitions is None
+                        else args.bootstrap_repetitions
+                    ),
+                    sign_flip_seed=(
+                        0 if args.sign_flip_seed is None else args.sign_flip_seed
+                    ),
+                    sign_flip_draws=(
+                        DEFAULT_BENCHMARK_V2_SIGN_FLIP_DRAWS
+                        if args.sign_flip_draws is None
+                        else args.sign_flip_draws
+                    ),
+                    stub=True,
                     requested_model_id=args.model,
                     run_id=args.run_id,
                 ),

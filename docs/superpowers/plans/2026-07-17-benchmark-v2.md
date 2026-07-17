@@ -6,14 +6,18 @@
 > by the roadmap; the historical 2026-07-10 Plan 4 remains an implementation
 > record and its numerical tables are not a current baseline.
 >
-> **Implementation progress (2026-07-17): Tasks 1–6 software-complete.** Strict
+> **Implementation progress (2026-07-18): Tasks 1–7 software-complete.** Strict
 > corpus/generator contracts, observable trajectories, the shared ten-sample pool,
 > baselines, registered statistics, durable artifacts, deterministic reports, and
 > full/fast CLI replay have passed their directed and independent gates. The licensed
 > 500-procedural + 3-public corpus, exact role-map normalization, contamination controls,
 > canonical builder, datasheet, and checker-vs-judge software boundary have also
-> closed; Task 7 is active. No real-model collection has started; the first
-> implementation commit remains the Task 7 runner-ready gate.
+> closed. Task 7 froze the 0.6.0 runner, preregistration, budget, distribution, and
+> full-size deterministic stub artifacts. Its full replay and final gates have closed;
+> the terminal external push follows, after which work pauses for the user's next
+> instruction. No real-model
+> collection has started. After that push, work pauses for the user's next instruction;
+> Task 8 does not start automatically.
 >
 > **Runtime provenance correction (2026-07-17, before any model outcome):** per the
 > user-approved simplicity boundary, runtime collection/replay must not spawn Git or
@@ -594,8 +598,12 @@ fixtures. Directed tests and two independent reviews closed with zero findings.
 
 ## 11. Task 7 — Runner-ready preregistration and first Git gate
 
-**Implementation status (2026-07-17): ACTIVE.** This is the first external Git gate;
-runtime collection and replay remain independent of Git and subprocess discovery.
+**Implementation status (2026-07-18): COMPLETE.** The 0.6.0 runner,
+preregistration, budget, distribution, deterministic full-size stub path, and
+fail-closed live boundary are implemented. Runtime collection and replay remain
+independent of Git and subprocess discovery. The full replay and final verification
+receipt are complete; the external commit/push and SHA-equality check are the terminal
+handoff operation rather than runtime behavior.
 
 **Files:**
 
@@ -629,7 +637,47 @@ runtime collection and replay remain independent of Git and subprocess discovery
   record that exact SHA as `execution_git_sha`; do not edit the prereg file after
   seeing the commit ID.
 
+**Frozen implementation evidence:**
+
+- Preregistration SHA-256:
+  `ad9129edfb47634085f7bfd5557ca76f59eb8358865a1742bfcba69fa0c1362b`.
+  Budget Markdown SHA-256:
+  `4814206e1b749a03e458822016b66caeb1cfb480e033111e05030ffafe372b19`.
+- Each full-size stub run covered 503 items and 10,060 scheduled units, producing
+  10,563 rows. All seven canonical files from runs A and B were byte-identical.
+- `report.json` file SHA-256:
+  `73d77442426eab0100ff55a551913c7656cfdd3e795106939e4085fc17e47d32`.
+  Embedded `report_sha256`:
+  `131c0b9bb5baf63f03100a85546e1edc48351615ae19e9ddea7f1b5cff2fb776`.
+  Full-size stub run B elapsed 4,431.39 seconds.
+- These are deterministic software artifacts, not model-quality evidence. No real
+  provider/network collection occurred, and no frontend surface or design changed.
+
+**Runner-ready closure state:**
+
+- **Full replay complete:** the full rescore/reaggregate replay completed in
+  `2454.226` seconds. All seven canonical outputs were byte-identical to collection A,
+  including the `73d77442...d32` report JSON and `131c0b9b...776` embedded report
+  contract hash.
+- **Final gates complete:** the final offline suite passed `2415` tests with `8`
+  integration tests deselected; the empty-provider integration boundary exited cleanly
+  with those `8` tests skipped. Ruff, strict mypy (`94` source files plus both frozen
+  build scripts), lock, preregistration, and `35`-file Markdown-link checks passed.
+  The web suite passed `29` tests plus typecheck/build. Rebuilt distributions passed
+  the `114`-entry wheel / `307`-entry sdist audit and the full isolated install smoke
+  matrix. All four independent review lenses closed at 0 blocker / 0 important /
+  0 minor findings.
+- **Terminal push and pause:** commit and push this runner-ready tree, verify
+  local/tracking/remote SHA equality, then pause and await the user's next instruction.
+  The task handoff records the non-self-referential Git receipt. Do not proceed into
+  Task 8 in the same execution sequence.
+
 ## 12. Task 8 — Operational proxy pilot and explicit budget gate
+
+**Status (2026-07-18): FUTURE / NOT STARTED.** Task 8 is listed only as subsequent
+work. Per the user's instruction, the runner-ready Task 7 push is a hard pause point;
+no pilot, provider call, network collection, or budget authorization begins until the
+user gives a new explicit instruction after that push.
 
 - Run a separately labeled pilot only after the runner-ready SHA is clean and pushed,
   on at most two two-bar procedural families excluded from the formal corpus and two
@@ -740,7 +788,9 @@ uv run pytest -q -m integration
 uv run ruff check .
 uv run mypy --strict src
 uv run mypy --strict scripts/build_benchmark_corpus.py
+uv run mypy --strict scripts/build_benchmark_prereg.py
 uv lock --check
+uv run python scripts/build_benchmark_prereg.py --check
 uv run python scripts/check_markdown_links.py
 git diff --check
 uv build
@@ -750,7 +800,7 @@ uv run python scripts/smoke_distributions.py
 git status --short
 git rev-parse HEAD
 git rev-parse '@{u}'
-git ls-remote origin refs/heads/codex/sequential-plans
+git ls-remote origin refs/heads/main
 ```
 
 ## 18. Plan-freeze review receipt

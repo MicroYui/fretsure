@@ -13,6 +13,7 @@ from fretsure.agent.trace import (
     TraceInputError,
     TraceStep,
     diagnostics_payload,
+    oracle_trace_payload,
     tab_checkpoint,
     target_checkpoint,
 )
@@ -519,6 +520,36 @@ def test_structured_diagnostics_are_bounded_and_digest_the_complete_set(
     assert first["offending_note_indices"] == [0, 1]
     assert "checker-defined units" in first["message"]
     assert len(payload["diagnostics_sha256"]) == 64
+
+
+def test_amber_trace_may_have_no_median_profile_diagnostics() -> None:
+    tab = Tab(
+        (TabNote(F(0), F(1), 0, 0, 0, "p"),),
+        STANDARD_TUNING,
+        0,
+    )
+    result = OracleResult(
+        "AMBER",
+        (),
+        CHECKER_VERSION,
+        MEDIAN_HAND.version,
+        MEDIAN_HAND.fingerprint,
+        ORACLE_INPUT_SCHEMA_VERSION,
+    )
+    trace = Trace()
+
+    trace.add(
+        "ORACLE",
+        "Oracle returned AMBER with 0 diagnostics.",
+        event="PLAYABILITY_CHECKED",
+        candidate_index=4,
+        iteration=0,
+        **oracle_trace_payload(result, tab, terminal_reason=None),
+    )
+
+    data = trace.to_wire()["steps"][0]["data"]
+    assert data["verdict"] == "AMBER"
+    assert data["diagnostic_count"] == 0
 
 
 def test_empty_trace_jsonl_is_empty() -> None:

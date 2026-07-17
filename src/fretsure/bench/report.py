@@ -22,6 +22,7 @@ from fretsure.agent.arranger import (
     ArrangeGoal,
     ProposalOutcome,
     ProposalStatus,
+    arrangement_solver_ir,
     arrangement_source_context_sha256,
 )
 from fretsure.agent.critic import CRITIC_MAX_TOKENS, CriticOutcome, CriticScore, CriticStatus
@@ -125,7 +126,8 @@ from fretsure.metrics.fidelity import (
 from fretsure.oracle.core import CHECKER_VERSION, OracleResult, check_playability
 from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION, ensure_profile
 from fretsure.oracle.profiles import LARGE_HAND, SMALL_HAND, Profile
-from fretsure.solver.api import Infeasible, InfeasibleCode, solve_fingering
+from fretsure.solver.api import Infeasible, InfeasibleCode
+from fretsure.solver.score import solve_fingering_score as solve_fingering
 from fretsure.tab import Tab, tab_to_json, validated_tab_from_json
 
 REPAIR_SESOI: Final = 0.10
@@ -1087,8 +1089,9 @@ def _pure_row_bundle(
         _fail("item", "planned family and cluster identities are required")
     source_blob = _source_blob(item)
     exact_goal = _goal_at_source_tempo(goal, item)
+    solver_ir = arrangement_solver_ir(item.ir)
     target = propose_fingerstyle(
-        item.ir,
+        solver_ir,
         exact_goal.tuning,
         exact_goal.capo,
         profile=profile,
@@ -2232,8 +2235,9 @@ def _pure_from_row(
     )
     if full:
         exact_goal = _goal_at_source_tempo(goal, item)
+        solver_ir = arrangement_solver_ir(item.ir)
         expected_target = propose_fingerstyle(
-            item.ir,
+            solver_ir,
             exact_goal.tuning,
             exact_goal.capo,
             profile=profile,

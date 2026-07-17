@@ -1,3 +1,4 @@
+import json
 from dataclasses import FrozenInstanceError
 from fractions import Fraction as F
 from pathlib import Path
@@ -5,9 +6,15 @@ from pathlib import Path
 import pytest
 
 from fretsure.agent.arranger import (
+    MAX_COMPACT_SOURCE_EVENTS,
+    MAX_OBJECT_SOURCE_EVENTS,
+    PROPOSAL_COMPACT_PROTOCOL_VERSION,
     ArrangeGoal,
     ArrangementCapacityError,
+    ArrangementOutputProtocol,
     ProposalStatus,
+    arrangement_output_protocol,
+    arrangement_solver_ir,
     arrangement_source_context,
     arrangement_source_context_sha256,
     ensure_llm_capacity,
@@ -251,11 +258,14 @@ def test_deterministic_proposer_keeps_structural_validation() -> None:
 
 
 def test_real_llm_path_rejects_unrepresentable_input_instead_of_truncating() -> None:
-    notes = tuple(Note(F(i), F(1), 60 + (i % 12), "melody") for i in range(170))
+    notes = tuple(
+        Note(F(i), F(1), 60 + (i % 12), "melody")
+        for i in range(MAX_COMPACT_SOURCE_EVENTS + 1)
+    )
     ir = MusicIR(notes, (), _meta())
     llm = FakeLLM([_VALID])
 
-    with pytest.raises(ArrangementCapacityError, match="chunking is deferred"):
+    with pytest.raises(ArrangementCapacityError, match="was not truncated"):
         propose_arrangement(ir, ArrangeGoal(), llm)
     assert llm.calls == []
 
@@ -273,9 +283,142 @@ def test_capacity_check_rejects_hostile_notes_before_len_hook() -> None:
 
 
 def test_deterministic_path_supports_input_beyond_real_llm_single_call_capacity() -> None:
-    notes = tuple(Note(F(i), F(1), 60 + (i % 12), "melody") for i in range(170))
+    notes = tuple(
+        Note(F(i), F(1), 60 + (i % 12), "melody")
+        for i in range(MAX_COMPACT_SOURCE_EVENTS + 1)
+    )
     ir = MusicIR(notes, (), _meta())
     assert propose_arrangement(ir, ArrangeGoal(), ConstantLLM("noop")) == notes
+
+
+@pytest.mark.parametrize(
+    ("event_count", "expected_protocol", "expected_tokens"),
+    [
+        (169, ArrangementOutputProtocol.OBJECT, 16_352),
+        (170, ArrangementOutputProtocol.COMPACT, 5_568),
+        (198, ArrangementOutputProtocol.COMPACT, 6_464),
+        (443, ArrangementOutputProtocol.COMPACT, 14_304),
+        (495, ArrangementOutputProtocol.COMPACT, 15_968),
+        (508, ArrangementOutputProtocol.COMPACT, 16_384),
+    ],
+)
+def test_lossless_single_call_protocol_and_budget_boundaries(
+    event_count: int,
+    expected_protocol: ArrangementOutputProtocol,
+    expected_tokens: int,
+) -> None:
+    ir = MusicIR(
+        tuple(Note(F(index), F(1), 60 + index % 12, "melody") for index in range(event_count)),
+        (),
+        _meta(),
+    )
+
+    assert MAX_OBJECT_SOURCE_EVENTS == 169
+    assert MAX_COMPACT_SOURCE_EVENTS == 508
+    assert arrangement_output_protocol(ir) is expected_protocol
+    assert proposal_output_token_budget(ir) == expected_tokens
+
+
+@pytest.mark.parametrize("event_count", [170, 198, 443, 495])
+def test_compact_long_score_response_is_lossless_and_strict(event_count: int) -> None:
+    source = MusicIR(
+        tuple(
+            Note(F(index), F(1), 60 + index % 12, "melody")
+            for index in range(event_count)
+        ),
+        (),
+        _meta(),
+    )
+    expected = tuple(
+        Note(F(index, 2), F(1, 2), 60 + index % 12, "melody")
+        for index in range(event_count)
+    )
+    reply = json.dumps(
+        {
+            "schema": PROPOSAL_COMPACT_PROTOCOL_VERSION,
+            "notes": [
+                [
+                    f"{note.onset.numerator}/{note.onset.denominator}",
+                    f"{note.duration.numerator}/{note.duration.denominator}",
+                    note.pitch,
+                    note.voice,
+                ]
+                for note in expected
+            ],
+        },
+        separators=(",", ":"),
+    )
+    llm = FakeLLM([reply])
+
+    outcome = propose_arrangement_outcome(source, ArrangeGoal(), llm)
+
+    assert outcome.status is ProposalStatus.LLM_SUCCESS
+    assert outcome.target == expected
+    assert llm.calls[0]["max_tokens"] == 128 + 32 * event_count
+    assert PROPOSAL_COMPACT_PROTOCOL_VERSION in llm.calls[0]["system"]
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        '{"schema":"arrangement-proposal-compact@0.1.0","notes":[["0","1/1",64,"melody"]]}',
+        '{"schema":"arrangement-proposal-compact@0.1.0","notes":[["0/1","1/1",64,"melody",0]]}',
+        '{"schema":"arrangement-proposal-compact@0.1.0","notes":[["0/1","1/1",true,"melody"]]}',
+        '{"schema":"arrangement-proposal-compact@0.1.0","notes":[["0/1","1/1",64,"melody"]],"extra":0}',
+        '{"schema":"arrangement-proposal-compact@0.1.0","schema":"arrangement-proposal-compact@0.1.0","notes":[["0/1","1/1",64,"melody"]]}',
+    ],
+)
+def test_compact_long_score_rejects_noncanonical_or_extra_values(reply: str) -> None:
+    source = MusicIR(
+        tuple(Note(F(index), F(1), 60 + index % 12, "melody") for index in range(170)),
+        (),
+        _meta(),
+    )
+
+    outcome = propose_arrangement_outcome(source, ArrangeGoal(), FakeLLM([reply]))
+
+    assert outcome.status is ProposalStatus.PARSE_VALIDATION_FALLBACK
+
+
+def test_compact_target_must_pass_solver_domain_before_success() -> None:
+    source = MusicIR(
+        tuple(Note(F(index), F(1), 60 + index % 12, "melody") for index in range(170)),
+        (),
+        _meta(),
+    )
+    oversized_fraction = f"{'1' * 80}/1"
+    reply = json.dumps(
+        {
+            "schema": PROPOSAL_COMPACT_PROTOCOL_VERSION,
+            "notes": [[oversized_fraction, "1/1", 64, "melody"]],
+        },
+        separators=(",", ":"),
+    )
+
+    outcome = propose_arrangement_outcome(source, ArrangeGoal(), FakeLLM([reply]))
+
+    assert outcome.status is ProposalStatus.PARSE_VALIDATION_FALLBACK
+
+
+def test_solver_view_coalesces_source_unisons_without_changing_source_evidence() -> None:
+    source = MusicIR(
+        (
+            Note(F(0), F(1), 64, "harmony"),
+            Note(F(0), F(2), 64, "melody"),
+            Note(F(1), F(1), 67, "melody"),
+        ),
+        (),
+        _meta(),
+    )
+
+    solver_view = arrangement_solver_ir(source)
+
+    assert source.notes[0].voice == "harmony" and len(source.notes) == 3
+    assert solver_view.notes == (
+        Note(F(0), F(2), 64, "melody"),
+        Note(F(1), F(1), 67, "melody"),
+    )
+    assert arrangement_source_context(source).count("pitch=64") == 2
 
 
 @pytest.mark.integration

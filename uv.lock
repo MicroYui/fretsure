@@ -591,7 +591,7 @@ wheels = [
 
 [[package]]
 name = "fretsure-oracle"
-version = "0.5.0"
+version = "0.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -604,6 +604,12 @@ dependencies = [
 agent = [
     { name = "anthropic" },
     { name = "httpx" },
+]
+benchmark = [
+    { name = "anthropic" },
+    { name = "defusedxml" },
+    { name = "httpx" },
+    { name = "music21" },
 ]
 dev = [
     { name = "anthropic" },
@@ -640,17 +646,21 @@ service = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", marker = "extra == 'agent'", specifier = ">=0.40" },
+    { name = "anthropic", marker = "extra == 'benchmark'", specifier = ">=0.40" },
     { name = "anthropic", marker = "extra == 'dev'", specifier = ">=0.40" },
+    { name = "defusedxml", marker = "extra == 'benchmark'", specifier = ">=0.7.1,<1" },
     { name = "defusedxml", marker = "extra == 'dev'", specifier = ">=0.7.1,<1" },
     { name = "defusedxml", marker = "extra == 'musicxml'", specifier = ">=0.7.1,<1" },
     { name = "defusedxml", marker = "extra == 'score'", specifier = ">=0.7.1,<1" },
     { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.139,<0.140" },
     { name = "fastapi", marker = "extra == 'service'", specifier = ">=0.139,<0.140" },
     { name = "httpx", marker = "extra == 'agent'", specifier = ">=0.28,<0.29" },
+    { name = "httpx", marker = "extra == 'benchmark'", specifier = ">=0.28,<0.29" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28,<0.29" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6" },
     { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.28.1,<1.29" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.28.1,<1.29" },
+    { name = "music21", marker = "extra == 'benchmark'", specifier = "==10.5.0" },
     { name = "music21", marker = "extra == 'dev'", specifier = "==10.5.0" },
     { name = "music21", marker = "extra == 'midi'", specifier = "==10.5.0" },
     { name = "music21", marker = "extra == 'musicxml'", specifier = "==10.5.0" },
@@ -663,7 +673,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'dev'", specifier = ">=0.41,<0.42" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'service'", specifier = ">=0.41,<0.42" },
 ]
-provides-extras = ["agent", "musicxml", "midi", "score", "service", "mcp", "dev"]
+provides-extras = ["agent", "benchmark", "musicxml", "midi", "score", "service", "mcp", "dev"]
 
 [[package]]
 name = "h11"

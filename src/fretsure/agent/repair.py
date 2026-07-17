@@ -28,7 +28,7 @@ from fretsure.oracle.core import OracleResult
 from fretsure.oracle.input import (
     MAX_AGENT_REPAIR_ITERS,
     ensure_repair_iterations,
-    ensure_solver_input,
+    ensure_solver_domain,
 )
 from fretsure.oracle.profiles import Profile
 from fretsure.solver.api import Infeasible
@@ -192,7 +192,7 @@ def repair(
     call_scope_factory: ModelCallScopeFactory | None = None,
 ) -> RepairResult:
     max_iters = ensure_repair_iterations(max_iters)
-    target, tuning, capo, profile, tempo_bpm, _beam = ensure_solver_input(
+    target, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
         target,
         tuning,
         capo,

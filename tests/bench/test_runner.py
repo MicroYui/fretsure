@@ -1,11 +1,15 @@
 import json
 from dataclasses import replace
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 import fretsure.bench.report as report_module
 import fretsure.bench.runner as runner_module
+from fretsure.bench.artifacts import manifest_to_dict
+from fretsure.bench.contracts import canonical_json_bytes
+from fretsure.bench.preregistration import preregistration_from_bytes
 from fretsure.bench.report import ReplayMode
 from fretsure.bench.runner import (
     MAX_BENCHMARK_BARS,
@@ -239,6 +243,77 @@ def test_v2_config_rejects_seeds_that_cannot_fit_frozen_report_offsets() -> None
     assert sign_flip.value.field == "sign_flip_seed"
 
 
+def test_live_scalar_config_fails_before_creating_output(tmp_path: Path) -> None:
+    output = tmp_path / "must-not-exist"
+    with pytest.raises(BenchmarkInputError) as caught:
+        collect_benchmark_v2(
+            config=replace(_v2_config(), stub=False),
+            output_dir=output,
+        )
+
+    assert caught.value.field == "pre_call_config"
+    assert not output.exists()
+
+
+def test_stub_rejects_client_factories_before_call_or_output(tmp_path: Path) -> None:
+    output = tmp_path / "must-not-exist"
+
+    def forbidden() -> ConstantLLM:
+        raise AssertionError("stub factory must not be called")
+
+    with pytest.raises(BenchmarkInputError) as caught:
+        collect_benchmark_v2(
+            config=_v2_config(),
+            output_dir=output,
+            agent_llm_factory=forbidden,
+            raw_llm_factory=forbidden,
+        )
+
+    assert caught.value.field == "llm_factory"
+    assert not output.exists()
+
+
+def test_preregistered_mixed_context_is_self_contained_and_replayable() -> None:
+    root = Path(__file__).resolve().parents[2]
+    preregistration = preregistration_from_bytes(
+        (root / "docs/experiments/2026-07-17-benchmark-v2-prereg.json").read_bytes()
+    )
+
+    context = runner_module.build_benchmark_v2_preregistered_context(preregistration)
+    restored = runner_module.benchmark_v2_context_from_manifest(context.manifest)
+
+    assert len(context.plan.items) == 503
+    assert context.manifest.run_id == (
+        "benchmark-v2-formal-20260717-stub-attempt-001"
+    )
+    assert len(context.manifest.expected_rows) == 503 * 21
+    assert {item.layer for item in context.plan.items} == {
+        "procedural",
+        "public_classical",
+        "public_midi",
+    }
+    assert context.manifest == restored.manifest
+    assert canonical_json_bytes(manifest_to_dict(context.manifest))
+    assert context.manifest.parameters["corpus"] == {
+        "source": "parameters.preregistration.wire.corpus.snapshot"
+    }
+    assert context.manifest.parameters["experiment"] == {
+        "source": "parameters.preregistration.wire.schedule"
+    }
+    analysis = cast(dict[str, object], context.manifest.parameters["analysis"])
+    execution = cast(dict[str, object], context.manifest.parameters["execution"])
+    assert analysis["binding_kind"] == "preregistered_analysis_contract_sha256"
+    assert analysis["analysis_contract_sha256"] == context.manifest.analysis_code_sha256
+    assert execution == {
+        "analysis_binding": {
+            "kind": "preregistered_analysis_contract_sha256",
+            "sha256": context.manifest.analysis_code_sha256,
+        },
+        "execution_git_sha": None,
+        "mode": "stub",
+    }
+
+
 def test_v2_client_creation_closes_first_client_when_second_factory_fails() -> None:
     context = runner_module.build_benchmark_v2_context(_v2_config())
     agent = _ClosableConstant(context.requested_model_id)
@@ -390,3 +465,19 @@ def test_v2_cli_requires_explicit_collection_mode_and_output(tmp_path: Path) -> 
     with pytest.raises(SystemExit) as caught:
         main(["--output-dir", str(tmp_path / "missing-mode")])
     assert caught.value.code == 2
+
+    with pytest.raises(SystemExit) as missing_pre_call:
+        main(["--live", "--output-dir", str(tmp_path / "missing-pre-call")])
+    assert missing_pre_call.value.code == 2
+
+    with pytest.raises(SystemExit) as wrong_binding:
+        main(
+            [
+                "--stub",
+                "--pre-call-config",
+                str(tmp_path / "not-read.json"),
+                "--output-dir",
+                str(tmp_path / "wrong-binding"),
+            ]
+        )
+    assert wrong_binding.value.code == 2

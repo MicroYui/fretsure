@@ -227,7 +227,7 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
     assert body["api_version"] == API_VERSION == "fretsure-api@0.2.0"
     assert body["service_version"] == "fretsure-service@0.2.0"
     assert body["trace_schema_version"] == "agent-trace@0.2.0"
-    assert body["package_version"] == "0.5.0"
+    assert body["package_version"] == "0.6.0"
     assert "importer_version" not in body["stamps"]
     assert body["stamps"]["score_input_version"] == SCORE_INPUT_VERSION
     assert body["inputs"]["score_input"] == {

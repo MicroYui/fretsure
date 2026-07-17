@@ -190,7 +190,7 @@ def test_arrangement_wire_stamps_actual_model_and_all_public_contracts(
     assert stamps["fidelity_checker_version"] == "fidelity@0.3.0"
     assert stamps["target_input_schema_version"] == "target-input@0.1.0"
     assert stamps["trace_schema_version"] == "agent-trace@0.2.0"
-    assert stamps["package_version"] == fretsure.__version__ == "0.5.0"
+    assert stamps["package_version"] == fretsure.__version__ == "0.6.0"
     assert stamps["importer_version"] == "musicxml@0.3.0"
     assert len(str(stamps["profile_fingerprint"])) == 64
 
@@ -313,7 +313,7 @@ def test_capabilities_wire_is_transport_neutral_and_honest() -> None:
     }
     assert "render_audio" in wire["deferred"]  # type: ignore[operator]
     assert "render_audio" not in wire["implemented"]  # type: ignore[operator]
-    assert wire["stamps"]["package_version"] == "0.5.0"  # type: ignore[index]
+    assert wire["stamps"]["package_version"] == "0.6.0"  # type: ignore[index]
     assert wire["stamps"]["score_input_version"] == "score-input@0.1.0"  # type: ignore[index]
     assert "importer_version" not in wire["stamps"]  # type: ignore[operator]
 

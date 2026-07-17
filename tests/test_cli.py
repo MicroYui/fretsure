@@ -313,7 +313,7 @@ def test_cli_real_llm_capacity_failure_is_explicit_before_proxy_creation(
     monkeypatch: object, capsys: object
 ) -> None:
     base = sample_ir(bars=1)
-    notes = tuple(Note(F(i), F(1), 60 + (i % 12), "melody") for i in range(170))
+    notes = tuple(Note(F(i), F(1), 60 + (i % 12), "melody") for i in range(509))
     success = ImportSuccess(
         MusicIR(notes, (), base.meta), (), "musicxml@0.1.0", "abc123"
     )
@@ -325,7 +325,7 @@ def test_cli_real_llm_capacity_failure_is_explicit_before_proxy_creation(
     assert exit_code != 0
     assert "input was not truncated" in captured.err
     assert "use the deterministic path" in captured.err
-    assert "chunking is deferred" in captured.err
+    assert "lossless compact single-call protocol" in captured.err
     assert "Traceback" not in captured.err
 
 

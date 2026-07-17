@@ -45,7 +45,12 @@ from fretsure.bench.observe import (
     InMemoryObservationSink,
     ProviderObservation,
 )
-from fretsure.llm.client import LLMModelIdError, validate_llm_model_id
+from fretsure.llm.client import (
+    MAX_PROXY_TEXT_BYTES_PER_TOKEN,
+    MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
+    LLMModelIdError,
+    validate_llm_model_id,
+)
 
 BENCHMARK_BLOB_VERSION: Final = "benchmark-blob@0.1.0"
 BENCHMARK_WAL_VERSION: Final = "benchmark-wal@0.1.0"
@@ -60,6 +65,7 @@ MAX_ARTIFACT_ROWS = 100_000
 MAX_ARTIFACT_BLOBS = 500_000
 MAX_ARTIFACT_CALLS = 100_000
 MAX_ARTIFACT_ATTEMPTS = 1_600_000
+MAX_ARTIFACT_BUDGET = (1 << 63) - 1
 MAX_ARTIFACT_REPORT_JSON_BYTES = MAX_BENCHMARK_JSON_BYTES
 MAX_ARTIFACT_REPORT_MARKDOWN_BYTES = 16 * 1024 * 1024
 
@@ -485,6 +491,48 @@ class RowKey:
 
 
 @dataclass(frozen=True, slots=True)
+class CompleteUnitReservation:
+    """Worst-case resources required before one scheduled unit may begin."""
+
+    logical_calls: int
+    attempts: int
+    requested_output_tokens: int
+    attempt_reserved_output_tokens: int
+    response_text_bytes: int
+    transport_response_bytes: int
+    wall_microseconds: int
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("logical_calls", self.logical_calls),
+            ("attempts", self.attempts),
+            ("requested_output_tokens", self.requested_output_tokens),
+            ("attempt_reserved_output_tokens", self.attempt_reserved_output_tokens),
+            ("response_text_bytes", self.response_text_bytes),
+            ("transport_response_bytes", self.transport_response_bytes),
+            ("wall_microseconds", self.wall_microseconds),
+        ):
+            _require_int(
+                value,
+                f"limits.complete_unit_reservation.{name}",
+                minimum=1,
+                maximum=MAX_ARTIFACT_BUDGET,
+            )
+        if self.attempts < self.logical_calls:
+            raise _error(
+                ArtifactCode.INVALID_INPUT,
+                "limits.complete_unit_reservation.attempts",
+                "cannot be smaller than logical_calls",
+            )
+        if self.attempt_reserved_output_tokens < self.requested_output_tokens:
+            raise _error(
+                ArtifactCode.INVALID_INPUT,
+                "limits.complete_unit_reservation.attempt_reserved_output_tokens",
+                "cannot be smaller than requested_output_tokens",
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class ArtifactLimits:
     max_rows: int
     max_blobs: int
@@ -492,6 +540,12 @@ class ArtifactLimits:
     max_attempts: int
     max_json_bytes: int
     max_jsonl_line_bytes: int
+    max_requested_output_tokens: int = MAX_ARTIFACT_BUDGET
+    max_attempt_reserved_output_tokens: int = MAX_ARTIFACT_BUDGET
+    max_response_text_bytes: int = MAX_ARTIFACT_BUDGET
+    max_transport_response_bytes: int = MAX_ARTIFACT_BUDGET
+    max_wall_microseconds: int = MAX_ARTIFACT_BUDGET
+    complete_unit_reservation: CompleteUnitReservation | None = None
 
     def __post_init__(self) -> None:
         _require_int(self.max_rows, "limits.max_rows", minimum=1, maximum=MAX_ARTIFACT_ROWS)
@@ -521,6 +575,65 @@ class ArtifactLimits:
                 "limits.max_jsonl_line_bytes",
                 "cannot exceed max_json_bytes",
             )
+        for name, value in (
+            ("max_requested_output_tokens", self.max_requested_output_tokens),
+            (
+                "max_attempt_reserved_output_tokens",
+                self.max_attempt_reserved_output_tokens,
+            ),
+            ("max_response_text_bytes", self.max_response_text_bytes),
+            ("max_transport_response_bytes", self.max_transport_response_bytes),
+            ("max_wall_microseconds", self.max_wall_microseconds),
+        ):
+            _require_int(
+                value,
+                f"limits.{name}",
+                minimum=1,
+                maximum=MAX_ARTIFACT_BUDGET,
+            )
+        reservation = self.complete_unit_reservation
+        if reservation is not None:
+            if type(reservation) is not CompleteUnitReservation:
+                raise _error(
+                    ArtifactCode.INVALID_INPUT,
+                    "limits.complete_unit_reservation",
+                    "must be null or an exact CompleteUnitReservation",
+                )
+            for name, reserved, maximum in (
+                ("logical_calls", reservation.logical_calls, self.max_calls),
+                ("attempts", reservation.attempts, self.max_attempts),
+                (
+                    "requested_output_tokens",
+                    reservation.requested_output_tokens,
+                    self.max_requested_output_tokens,
+                ),
+                (
+                    "attempt_reserved_output_tokens",
+                    reservation.attempt_reserved_output_tokens,
+                    self.max_attempt_reserved_output_tokens,
+                ),
+                (
+                    "response_text_bytes",
+                    reservation.response_text_bytes,
+                    self.max_response_text_bytes,
+                ),
+                (
+                    "transport_response_bytes",
+                    reservation.transport_response_bytes,
+                    self.max_transport_response_bytes,
+                ),
+                (
+                    "wall_microseconds",
+                    reservation.wall_microseconds,
+                    self.max_wall_microseconds,
+                ),
+            ):
+                if reserved > maximum:
+                    raise _error(
+                        ArtifactCode.INVALID_INPUT,
+                        f"limits.complete_unit_reservation.{name}",
+                        f"cannot exceed limits.{('max_' + name)}",
+                    )
 
 
 def _row_key_to_dict(value: RowKey) -> dict[str, object]:
@@ -571,12 +684,36 @@ def _limits_to_dict(value: ArtifactLimits) -> dict[str, object]:
     if type(value) is not ArtifactLimits:
         raise _error(ArtifactCode.INVALID_INPUT, "limits", "must be exact ArtifactLimits")
     return {
+        "complete_unit_reservation": (
+            None
+            if value.complete_unit_reservation is None
+            else {
+                "attempt_reserved_output_tokens": (
+                    value.complete_unit_reservation.attempt_reserved_output_tokens
+                ),
+                "attempts": value.complete_unit_reservation.attempts,
+                "logical_calls": value.complete_unit_reservation.logical_calls,
+                "requested_output_tokens": (
+                    value.complete_unit_reservation.requested_output_tokens
+                ),
+                "response_text_bytes": value.complete_unit_reservation.response_text_bytes,
+                "transport_response_bytes": (
+                    value.complete_unit_reservation.transport_response_bytes
+                ),
+                "wall_microseconds": value.complete_unit_reservation.wall_microseconds,
+            }
+        ),
         "max_attempts": value.max_attempts,
+        "max_attempt_reserved_output_tokens": value.max_attempt_reserved_output_tokens,
         "max_blobs": value.max_blobs,
         "max_calls": value.max_calls,
         "max_json_bytes": value.max_json_bytes,
         "max_jsonl_line_bytes": value.max_jsonl_line_bytes,
+        "max_requested_output_tokens": value.max_requested_output_tokens,
+        "max_response_text_bytes": value.max_response_text_bytes,
         "max_rows": value.max_rows,
+        "max_transport_response_bytes": value.max_transport_response_bytes,
+        "max_wall_microseconds": value.max_wall_microseconds,
     }
 
 
@@ -586,15 +723,83 @@ def _limits_from_dict(value: object) -> ArtifactLimits:
         "limits",
         frozenset(
             {
+                "complete_unit_reservation",
                 "max_rows",
                 "max_blobs",
                 "max_calls",
                 "max_attempts",
                 "max_json_bytes",
                 "max_jsonl_line_bytes",
+                "max_requested_output_tokens",
+                "max_attempt_reserved_output_tokens",
+                "max_response_text_bytes",
+                "max_transport_response_bytes",
+                "max_wall_microseconds",
             }
         ),
     )
+    raw_reservation = obj["complete_unit_reservation"]
+    reservation: CompleteUnitReservation | None = None
+    if raw_reservation is not None:
+        reservation_obj = _require_exact_dict(
+            raw_reservation,
+            "limits.complete_unit_reservation",
+            frozenset(
+                {
+                    "logical_calls",
+                    "attempts",
+                    "requested_output_tokens",
+                    "attempt_reserved_output_tokens",
+                    "response_text_bytes",
+                    "transport_response_bytes",
+                    "wall_microseconds",
+                }
+            ),
+        )
+        reservation = CompleteUnitReservation(
+            _require_int(
+                reservation_obj["logical_calls"],
+                "limits.complete_unit_reservation.logical_calls",
+                minimum=1,
+                maximum=MAX_ARTIFACT_BUDGET,
+            ),
+            _require_int(
+                reservation_obj["attempts"],
+                "limits.complete_unit_reservation.attempts",
+                minimum=1,
+                maximum=MAX_ARTIFACT_BUDGET,
+            ),
+            _require_int(
+                reservation_obj["requested_output_tokens"],
+                "limits.complete_unit_reservation.requested_output_tokens",
+                minimum=1,
+                maximum=MAX_ARTIFACT_BUDGET,
+            ),
+            _require_int(
+                reservation_obj["attempt_reserved_output_tokens"],
+                "limits.complete_unit_reservation.attempt_reserved_output_tokens",
+                minimum=1,
+                maximum=MAX_ARTIFACT_BUDGET,
+            ),
+            _require_int(
+                reservation_obj["response_text_bytes"],
+                "limits.complete_unit_reservation.response_text_bytes",
+                minimum=1,
+                maximum=MAX_ARTIFACT_BUDGET,
+            ),
+            _require_int(
+                reservation_obj["transport_response_bytes"],
+                "limits.complete_unit_reservation.transport_response_bytes",
+                minimum=1,
+                maximum=MAX_ARTIFACT_BUDGET,
+            ),
+            _require_int(
+                reservation_obj["wall_microseconds"],
+                "limits.complete_unit_reservation.wall_microseconds",
+                minimum=1,
+                maximum=MAX_ARTIFACT_BUDGET,
+            ),
+        )
     return ArtifactLimits(
         _require_int(obj["max_rows"], "limits.max_rows", minimum=1, maximum=MAX_ARTIFACT_ROWS),
         _require_int(obj["max_blobs"], "limits.max_blobs", minimum=1, maximum=MAX_ARTIFACT_BLOBS),
@@ -617,6 +822,37 @@ def _limits_from_dict(value: object) -> ArtifactLimits:
             minimum=1,
             maximum=MAX_ARTIFACT_JSONL_LINE_BYTES,
         ),
+        _require_int(
+            obj["max_requested_output_tokens"],
+            "limits.max_requested_output_tokens",
+            minimum=1,
+            maximum=MAX_ARTIFACT_BUDGET,
+        ),
+        _require_int(
+            obj["max_attempt_reserved_output_tokens"],
+            "limits.max_attempt_reserved_output_tokens",
+            minimum=1,
+            maximum=MAX_ARTIFACT_BUDGET,
+        ),
+        _require_int(
+            obj["max_response_text_bytes"],
+            "limits.max_response_text_bytes",
+            minimum=1,
+            maximum=MAX_ARTIFACT_BUDGET,
+        ),
+        _require_int(
+            obj["max_transport_response_bytes"],
+            "limits.max_transport_response_bytes",
+            minimum=1,
+            maximum=MAX_ARTIFACT_BUDGET,
+        ),
+        _require_int(
+            obj["max_wall_microseconds"],
+            "limits.max_wall_microseconds",
+            minimum=1,
+            maximum=MAX_ARTIFACT_BUDGET,
+        ),
+        reservation,
     )
 
 
@@ -2591,6 +2827,13 @@ class DurableObservationSink(InMemoryObservationSink):
         *,
         max_calls: int,
         max_attempts: int = MAX_ARTIFACT_ATTEMPTS,
+        max_requested_output_tokens: int = MAX_ARTIFACT_BUDGET,
+        max_attempt_reserved_output_tokens: int = MAX_ARTIFACT_BUDGET,
+        max_response_text_bytes: int = MAX_ARTIFACT_BUDGET,
+        max_transport_response_bytes: int = MAX_ARTIFACT_BUDGET,
+        max_wall_microseconds: int = MAX_ARTIFACT_BUDGET,
+        complete_unit_reservation: CompleteUnitReservation | None = None,
+        allowed_returned_model_id: str | None = None,
         resume: bool = False,
     ) -> None:
         super().__init__(max_calls=max_calls)
@@ -2604,6 +2847,57 @@ class DurableObservationSink(InMemoryObservationSink):
             minimum=max_calls,
             maximum=MAX_ARTIFACT_ATTEMPTS,
         )
+        self._max_requested_output_tokens = _require_int(
+            max_requested_output_tokens,
+            "max_requested_output_tokens",
+            minimum=1,
+            maximum=MAX_ARTIFACT_BUDGET,
+        )
+        self._max_attempt_reserved_output_tokens = _require_int(
+            max_attempt_reserved_output_tokens,
+            "max_attempt_reserved_output_tokens",
+            minimum=1,
+            maximum=MAX_ARTIFACT_BUDGET,
+        )
+        self._max_response_text_bytes = _require_int(
+            max_response_text_bytes,
+            "max_response_text_bytes",
+            minimum=1,
+            maximum=MAX_ARTIFACT_BUDGET,
+        )
+        self._max_transport_response_bytes = _require_int(
+            max_transport_response_bytes,
+            "max_transport_response_bytes",
+            minimum=1,
+            maximum=MAX_ARTIFACT_BUDGET,
+        )
+        self._max_wall_microseconds = _require_int(
+            max_wall_microseconds,
+            "max_wall_microseconds",
+            minimum=1,
+            maximum=MAX_ARTIFACT_BUDGET,
+        )
+        if complete_unit_reservation is not None and type(
+            complete_unit_reservation
+        ) is not CompleteUnitReservation:
+            raise _error(
+                ArtifactCode.INVALID_INPUT,
+                "complete_unit_reservation",
+                "must be null or an exact CompleteUnitReservation",
+            )
+        self._complete_unit_reservation = complete_unit_reservation
+        self._next_unit_reservation = complete_unit_reservation
+        self._allowed_returned_model_id = _model_id(
+            allowed_returned_model_id,
+            "allowed_returned_model_id",
+            optional=True,
+        )
+        self._requested_output_tokens = 0
+        self._attempt_reserved_output_tokens = 0
+        self._response_text_bytes = 0
+        self._transport_response_bytes = 0
+        self._wall_microseconds = 0
+        self._reservation_required = True
         self._journal_path = journal_path
         self._event_count = 0
         self._final_event_sha256 = _ZERO_SHA256
@@ -2625,6 +2919,7 @@ class DurableObservationSink(InMemoryObservationSink):
                         previous=previous,
                     )
                     if type(event) is CallIntent:
+                        self._account_intent(event, require_complete_reservation=False)
                         super().write_intent(event)
                     elif type(event) is AttemptIntent:
                         if len(self.attempt_intents) >= self._max_attempts:
@@ -2633,10 +2928,12 @@ class DurableObservationSink(InMemoryObservationSink):
                                 "journal.attempts",
                                 "attempt count exceeds the configured limit",
                             )
+                        self._account_attempt_intent(event)
                         super().write_attempt_intent(event)
                     elif type(event) is AttemptResult:
                         super().write_attempt_result(event)
                     elif type(event) is CallResult:
+                        self._account_replayed_result(event)
                         super().write_result(event)
                     else:  # pragma: no cover - exhaustive internal union
                         raise AssertionError("unhandled WAL event")
@@ -2702,6 +2999,144 @@ class DurableObservationSink(InMemoryObservationSink):
         if self._descriptor is None:
             raise _error(ArtifactCode.IO_ERROR, "journal", "sink is closed")
 
+    def _remaining_supports_complete_unit(self) -> None:
+        reservation = self._next_unit_reservation
+        if reservation is None or not self._reservation_required:
+            return
+        remaining = (
+            ("logical_calls", self._max_calls - len(self.intents), reservation.logical_calls),
+            (
+                "attempts",
+                self._max_attempts - len(self.attempt_intents),
+                reservation.attempts,
+            ),
+            (
+                "requested_output_tokens",
+                self._max_requested_output_tokens - self._requested_output_tokens,
+                reservation.requested_output_tokens,
+            ),
+            (
+                "attempt_reserved_output_tokens",
+                self._max_attempt_reserved_output_tokens
+                - self._attempt_reserved_output_tokens,
+                reservation.attempt_reserved_output_tokens,
+            ),
+            (
+                "response_text_bytes",
+                self._max_response_text_bytes - self._response_text_bytes,
+                reservation.response_text_bytes,
+            ),
+            (
+                "transport_response_bytes",
+                self._max_transport_response_bytes - self._transport_response_bytes,
+                reservation.transport_response_bytes,
+            ),
+            (
+                "wall_microseconds",
+                self._max_wall_microseconds - self._wall_microseconds,
+                reservation.wall_microseconds,
+            ),
+        )
+        for name, available, required in remaining:
+            if available < required:
+                raise _error(
+                    ArtifactCode.LIMIT_EXCEEDED,
+                    f"journal.reservation.{name}",
+                    "cannot reserve the next complete candidate unit",
+                )
+
+    def _account_intent(
+        self,
+        intent: CallIntent,
+        *,
+        require_complete_reservation: bool,
+    ) -> None:
+        if require_complete_reservation:
+            self._remaining_supports_complete_unit()
+        requested = intent.max_tokens
+        response = requested * MAX_PROXY_TEXT_BYTES_PER_TOKEN
+        if self._requested_output_tokens + requested > self._max_requested_output_tokens:
+            raise _error(
+                ArtifactCode.LIMIT_EXCEEDED,
+                "journal.requested_output_tokens",
+                "logical requested-output-token ceiling is exhausted",
+            )
+        if self._response_text_bytes + response > self._max_response_text_bytes:
+            raise _error(
+                ArtifactCode.LIMIT_EXCEEDED,
+                "journal.response_text_bytes",
+                "response-text ceiling is exhausted",
+            )
+        self._requested_output_tokens += requested
+        self._response_text_bytes += response
+        self._reservation_required = False
+
+    def _account_attempt_intent(self, intent: AttemptIntent) -> None:
+        requested = intent.reserved_output_tokens
+        if (
+            self._attempt_reserved_output_tokens + requested
+            > self._max_attempt_reserved_output_tokens
+        ):
+            raise _error(
+                ArtifactCode.LIMIT_EXCEEDED,
+                "journal.attempt_reserved_output_tokens",
+                "attempt-reserved output-token ceiling is exhausted",
+            )
+        if (
+            self._transport_response_bytes + MAX_PROXY_TRANSPORT_RESPONSE_BYTES
+            > self._max_transport_response_bytes
+        ):
+            raise _error(
+                ArtifactCode.LIMIT_EXCEEDED,
+                "journal.transport_response_bytes",
+                "transport-response ceiling is exhausted",
+            )
+        self._attempt_reserved_output_tokens += requested
+        self._transport_response_bytes += MAX_PROXY_TRANSPORT_RESPONSE_BYTES
+
+    def _account_replayed_result(self, result: CallResult) -> None:
+        returned = result.provider.returned_model_id
+        if (
+            returned is not None
+            and self._allowed_returned_model_id is not None
+            and returned != self._allowed_returned_model_id
+            and result.failure_code is not CallFailureCode.RETURNED_MODEL_MISMATCH
+        ):
+            raise _error(
+                ArtifactCode.CORRUPT_JOURNAL,
+                "journal.returned_model_id",
+                "does not satisfy the manifest model rule",
+            )
+        self._wall_microseconds += result.elapsed_microseconds
+        if self._wall_microseconds > self._max_wall_microseconds:
+            raise _error(
+                ArtifactCode.LIMIT_EXCEEDED,
+                "journal.wall_microseconds",
+                "recorded wall-time ceiling is exceeded",
+            )
+
+    def mark_unit_committed(
+        self,
+        next_reservation: CompleteUnitReservation | None = None,
+    ) -> None:
+        """Require the supplied scheduled-unit reservation before the next intent."""
+
+        self._require_writable()
+        if next_reservation is not None and type(
+            next_reservation
+        ) is not CompleteUnitReservation:
+            raise _error(
+                ArtifactCode.INVALID_INPUT,
+                "next_reservation",
+                "must be null or an exact CompleteUnitReservation",
+            )
+        self._next_unit_reservation = (
+            self._complete_unit_reservation
+            if next_reservation is None
+            else next_reservation
+        )
+        self._reservation_required = True
+
     def _append(self, event: CallIntent | AttemptIntent | AttemptResult | CallResult) -> None:
         descriptor = self._descriptor
         if descriptor is None:
@@ -2730,6 +3165,7 @@ class DurableObservationSink(InMemoryObservationSink):
 
     def write_intent(self, intent: CallIntent) -> None:
         self._require_writable()
+        self._account_intent(intent, require_complete_reservation=True)
         super().write_intent(intent)
         self._append(intent)
 
@@ -2741,6 +3177,7 @@ class DurableObservationSink(InMemoryObservationSink):
                 "journal.attempts",
                 "attempt count exceeds the configured limit",
             )
+        self._account_attempt_intent(intent)
         super().write_attempt_intent(intent)
         self._append(intent)
 
@@ -2751,8 +3188,38 @@ class DurableObservationSink(InMemoryObservationSink):
 
     def write_result(self, result: CallResult) -> None:
         self._require_writable()
-        super().write_result(result)
-        self._append(result)
+        exact = result
+        mismatch = (
+            exact.provider.returned_model_id is not None
+            and self._allowed_returned_model_id is not None
+            and exact.provider.returned_model_id != self._allowed_returned_model_id
+        )
+        if mismatch:
+            exact = CallResult(
+                exact.logical_call_id,
+                exact.call_index,
+                "failed",
+                None,
+                exact.elapsed_microseconds,
+                CallFailureCode.RETURNED_MODEL_MISMATCH,
+                exact.provider,
+            )
+        super().write_result(exact)
+        self._append(exact)
+        self._wall_microseconds += exact.elapsed_microseconds
+        wall_exceeded = self._wall_microseconds > self._max_wall_microseconds
+        if mismatch:
+            raise _error(
+                ArtifactCode.HASH_MISMATCH,
+                "journal.returned_model_id",
+                "does not equal the manifest's requested model",
+            )
+        if wall_exceeded:
+            raise _error(
+                ArtifactCode.LIMIT_EXCEEDED,
+                "journal.wall_microseconds",
+                "recorded wall-time ceiling is exceeded",
+            )
 
 
 def _fsync_directory(path: Path) -> None:
@@ -2935,6 +3402,18 @@ def _unit_from_dict(value: object, *, maximum_blobs: int) -> CompletedUnit:
         raise _error(ArtifactCode.CORRUPT_UNIT, "unit", "staged unit is invalid") from error
 
 
+def _manifest_allowed_returned_model_id(manifest: BenchmarkManifest) -> str | None:
+    """Read the runner's exact model rule without imposing it on generic manifests."""
+
+    model = manifest.parameters.get("model")
+    if type(model) is not dict:
+        return None
+    raw = cast(dict[str, object], model).get("allowed_returned_model_id")
+    return _model_id(
+        raw, "manifest.parameters.model.allowed_returned_model_id", optional=True
+    )
+
+
 class ArtifactStore:
     """Exclusive owner of one fresh or resumable benchmark output directory."""
 
@@ -2983,6 +3462,15 @@ class ArtifactStore:
                 output_dir / "journal.jsonl",
                 max_calls=manifest.limits.max_calls,
                 max_attempts=manifest.limits.max_attempts,
+                max_requested_output_tokens=manifest.limits.max_requested_output_tokens,
+                max_attempt_reserved_output_tokens=(
+                    manifest.limits.max_attempt_reserved_output_tokens
+                ),
+                max_response_text_bytes=manifest.limits.max_response_text_bytes,
+                max_transport_response_bytes=manifest.limits.max_transport_response_bytes,
+                max_wall_microseconds=manifest.limits.max_wall_microseconds,
+                complete_unit_reservation=manifest.limits.complete_unit_reservation,
+                allowed_returned_model_id=_manifest_allowed_returned_model_id(manifest),
             )
         except BaseException:
             fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
@@ -3015,10 +3503,20 @@ class ArtifactStore:
                 output_dir / "journal.jsonl",
                 max_calls=manifest.limits.max_calls,
                 max_attempts=manifest.limits.max_attempts,
+                max_requested_output_tokens=manifest.limits.max_requested_output_tokens,
+                max_attempt_reserved_output_tokens=(
+                    manifest.limits.max_attempt_reserved_output_tokens
+                ),
+                max_response_text_bytes=manifest.limits.max_response_text_bytes,
+                max_transport_response_bytes=manifest.limits.max_transport_response_bytes,
+                max_wall_microseconds=manifest.limits.max_wall_microseconds,
+                complete_unit_reservation=manifest.limits.complete_unit_reservation,
+                allowed_returned_model_id=_manifest_allowed_returned_model_id(manifest),
                 resume=True,
             )
             units = cls._read_units(output_dir, manifest)
             cls._validate_resume_state(manifest, sink, units)
+            sink.mark_unit_committed()
             return cls(output_dir, manifest, lock_descriptor, sink, units)
         except BaseException:
             if sink is not None:
@@ -3132,6 +3630,40 @@ class ArtifactStore:
 
         return tuple(unit.row for unit in self._units)
 
+    def reserve_next_unit(self, reservation: CompleteUnitReservation) -> None:
+        """Install the executable schedule's exact next-unit reservation."""
+
+        self._require_open()
+        if type(reservation) is not CompleteUnitReservation:
+            raise _error(
+                ArtifactCode.INVALID_INPUT,
+                "reservation",
+                "must be an exact CompleteUnitReservation",
+            )
+        maximum = self._manifest.limits.complete_unit_reservation
+        if maximum is None:
+            raise _error(
+                ArtifactCode.INVALID_INPUT,
+                "reservation",
+                "manifest has no complete-unit reservation contract",
+            )
+        for field in (
+            "logical_calls",
+            "attempts",
+            "requested_output_tokens",
+            "attempt_reserved_output_tokens",
+            "response_text_bytes",
+            "transport_response_bytes",
+            "wall_microseconds",
+        ):
+            if cast(int, getattr(reservation, field)) > cast(int, getattr(maximum, field)):
+                raise _error(
+                    ArtifactCode.INVALID_INPUT,
+                    f"reservation.{field}",
+                    "exceeds the manifest's maximum complete-unit reservation",
+                )
+        self._sink.mark_unit_committed(reservation)
+
     def commit_unit(
         self,
         schedule_index: int,
@@ -3170,6 +3702,7 @@ class ArtifactStore:
             raise _error(ArtifactCode.LIMIT_EXCEEDED, "unit", "exceeds manifest max_json_bytes")
         _atomic_create(path, encoded)
         self._units.append(unit)
+        self._sink.mark_unit_committed()
 
     def _complete_receipt(
         self,
@@ -3466,6 +3999,7 @@ __all__ = [
     "BlobRef",
     "CompletedUnit",
     "CompletionStatus",
+    "CompleteUnitReservation",
     "DurableObservationSink",
     "FinalizationInputs",
     "FinalizedReport",

@@ -3,7 +3,7 @@
 A tight, reproducible walkthrough for a screen recording or live demo. The default
 path is fully offline, including the MusicXML and MIDI imports. A real-LLM benchmark or
 `--llm` arrangement needs the local proxy and defaults to canonical
-`gpt-5.6-sol`. The current package/router/importers are `0.5.0`,
+`gpt-5.6-sol`. The current package/router/importers are `0.6.0`,
 `score-input@0.1.0`, and `musicxml@0.3.0` / `midi@0.1.0`, with
 `music21==10.5.0` pinned exactly. Target length ≈ 3 minutes.
 

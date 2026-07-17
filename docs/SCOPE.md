@@ -238,7 +238,7 @@ Technique-aware AMBER diagnostics are a future requirement, not a current capabi
 
 ## Version stamping
 
-The current distribution package is `0.5.0`. Every oracle verdict carries `checker_version`, `profile_version`, a canonical
+The current distribution package is `0.6.0`. Every oracle verdict carries `checker_version`, `profile_version`, a canonical
 profile SHA-256 fingerprint, and `input_schema_version`; current values are
 `oracle@0.2.0` and `tab-input@0.2.0`, while the bundled preset remains
 `median@0.1` with fingerprint

@@ -8,6 +8,7 @@ license-audited reproducible adapter exists.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
@@ -16,12 +17,16 @@ from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
+from fractions import Fraction
 from typing import Literal, Protocol
 
 from fretsure.agent.arranger import (
     MAX_OUTPUT_TOKENS,
     MIN_OUTPUT_TOKENS,
     ArrangeGoal,
+    ArrangementOutputProtocol,
+    arrangement_output_protocol,
+    arrangement_solver_ir,
     arrangement_source_context,
     arrangement_source_context_sha256,
     proposal_output_token_budget,
@@ -46,7 +51,8 @@ from fretsure.oracle.input import (
     ensure_solver_domain,
 )
 from fretsure.oracle.profiles import Profile
-from fretsure.solver.api import Infeasible, solve_fingering
+from fretsure.solver.api import Infeasible
+from fretsure.solver.score import solve_fingering_score as solve_fingering
 from fretsure.tab import Tab, TabSchemaError, validated_tab_from_json
 
 RAW_BASELINE_TEMPERATURE = 0.8
@@ -54,6 +60,9 @@ PURE_SOLVER_BASELINE_SLOTS = 10
 LICENSE_AUDITED_REPRODUCIBLE_ADAPTER_ABSENT = "LICENSE_AUDITED_REPRODUCIBLE_ADAPTER_ABSENT"
 
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+_COMPACT_FRACTION = re.compile(
+    r"(?P<numerator>0|-?[1-9][0-9]*)/(?P<denominator>[1-9][0-9]*)\Z"
+)
 _LEGACY_RAW_SYSTEM = (
     "You are a guitar tablature writer. Output ONLY a JSON tab in this exact schema: "
     '{"tuning": [40,45,50,55,59,64], "capo": 0, "notes": [{"onset": "<fraction>", '
@@ -67,6 +76,26 @@ _RAW_SYSTEM = (
     '"fret": <int>, "left_finger": <0-4>, "right_finger": "p|i|m|a"}, ...]}. '
     "string 0 = lowest-pitched. Do not include prose or Markdown."
 )
+RAW_OBJECT_PROTOCOL_VERSION = "raw-tab-object@0.1.0"
+RAW_COMPACT_PROTOCOL_VERSION = "raw-tab-compact@0.1.0"
+_RAW_COMPACT_SYSTEM = (
+    "You are a guitar tablature writer. Output ONLY one JSON tab in this exact "
+    'lossless compact schema: {"schema": "raw-tab-compact@0.1.0", "tuning": '
+    "[<six requested open-string MIDI integers>], \"capo\": <requested capo>, "
+    '"notes": [["<reduced onset fraction>", "<reduced duration fraction>", '
+    '<string 0-5>, <fret integer>, <left finger 0-4>, "p|i|m|a"], ...]}. '
+    "Fractions must use reduced numerator/positive-denominator form such as 0/1 or "
+    "3/2. string 0 = lowest-pitched. Do not add fields, prose, or Markdown."
+)
+_RAW_PROMPT_DIGEST_DOMAIN = b"fretsure:raw-baseline-prompt@0.1.0\0"
+
+
+def _raw_prompt_sha256(text: str) -> str:
+    return hashlib.sha256(_RAW_PROMPT_DIGEST_DOMAIN + text.encode("utf-8")).hexdigest()
+
+
+RAW_OBJECT_SYSTEM_SHA256 = _raw_prompt_sha256(_RAW_SYSTEM)
+RAW_COMPACT_SYSTEM_SHA256 = _raw_prompt_sha256(_RAW_COMPACT_SYSTEM)
 
 
 class RawStatus(StrEnum):
@@ -171,6 +200,7 @@ class RawBaselineRequest:
     beats_per_bar: int
     source_context_sha256: str
     profile_fingerprint: str
+    protocol_version: str
 
     def __post_init__(self) -> None:
         if type(self.system) is not str or not self.system:
@@ -206,6 +236,11 @@ class RawBaselineRequest:
         ):
             if type(value) is not str or _SHA256.fullmatch(value) is None:
                 raise ValueError(f"{field} must be one lowercase SHA-256 digest")
+        if self.protocol_version not in {
+            RAW_OBJECT_PROTOCOL_VERSION,
+            RAW_COMPACT_PROTOCOL_VERSION,
+        }:
+            raise ValueError("protocol_version must name one frozen raw schema")
 
 
 @dataclass(frozen=True, slots=True)
@@ -307,7 +342,8 @@ def build_raw_baseline_request(
 ) -> RawBaselineRequest:
     """Build the preregistered raw request from the same facts/policy as proposal."""
 
-    ir = snapshot_music_ir(ir)
+    source_ir = snapshot_music_ir(ir)
+    ir = arrangement_solver_ir(source_ir)
     notes, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
         ir.notes,
         goal.tuning,
@@ -316,7 +352,9 @@ def build_raw_baseline_request(
         tempo_bpm=goal.tempo_bpm,
     )
     ir = MusicIR(notes, tuple(ir.chords), ir.meta)
-    context = arrangement_source_context(ir)
+    output_protocol = arrangement_output_protocol(source_ir)
+    compact = output_protocol is ArrangementOutputProtocol.COMPACT
+    context = arrangement_source_context(source_ir)
     low = min(tuning) + capo
     high = max(tuning) + capo + 22
     tuning_text = ",".join(str(pitch) for pitch in tuning)
@@ -331,16 +369,19 @@ def build_raw_baseline_request(
         "Write the fingerstyle tab directly now."
     )
     return RawBaselineRequest(
-        system=_RAW_SYSTEM,
+        system=_RAW_COMPACT_SYSTEM if compact else _RAW_SYSTEM,
         user=user,
-        max_tokens=proposal_output_token_budget(ir),
+        max_tokens=proposal_output_token_budget(source_ir),
         temperature=RAW_BASELINE_TEMPERATURE,
         tuning=tuning,
         capo=capo,
         tempo_bpm=tempo_bpm,
-        beats_per_bar=ir.meta.time_sig[0],
-        source_context_sha256=arrangement_source_context_sha256(ir),
+        beats_per_bar=source_ir.meta.time_sig[0],
+        source_context_sha256=arrangement_source_context_sha256(source_ir),
         profile_fingerprint=profile.fingerprint,
+        protocol_version=(
+            RAW_COMPACT_PROTOCOL_VERSION if compact else RAW_OBJECT_PROTOCOL_VERSION
+        ),
     )
 
 
@@ -472,6 +513,88 @@ def _balanced_json_object_text(reply: object) -> str:
     raise ValueError("raw model reply has no balanced JSON object")
 
 
+def _compact_fraction(value: object) -> Fraction:
+    if type(value) is not str or len(value) > 128:
+        raise ValueError("compact raw fractions must be bounded canonical strings")
+    match = _COMPACT_FRACTION.fullmatch(value)
+    if match is None:
+        raise ValueError("compact raw fractions must use numerator/denominator form")
+    fraction = Fraction(int(match.group("numerator")), int(match.group("denominator")))
+    if f"{fraction.numerator}/{fraction.denominator}" != value:
+        raise ValueError("compact raw fractions must be reduced")
+    return fraction
+
+
+def _reject_duplicate_object_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("compact raw objects cannot repeat keys")
+        result[key] = value
+    return result
+
+
+def _expand_compact_raw_tab(object_text: str) -> str:
+    decoded = json.loads(
+        object_text,
+        object_pairs_hook=_reject_duplicate_object_pairs,
+        parse_constant=lambda _token: (_ for _ in ()).throw(ValueError("non-finite number")),
+    )
+    if type(decoded) is not dict or set(decoded) != {"schema", "tuning", "capo", "notes"}:
+        raise ValueError("compact raw tab must contain the exact top-level fields")
+    if decoded["schema"] != RAW_COMPACT_PROTOCOL_VERSION:
+        raise ValueError("compact raw tab has the wrong schema version")
+    tuning = decoded["tuning"]
+    capo = decoded["capo"]
+    raw_notes = decoded["notes"]
+    if (
+        type(tuning) is not list
+        or len(tuning) != 6
+        or any(type(pitch) is not int for pitch in tuning)
+        or type(capo) is not int
+        or type(raw_notes) is not list
+    ):
+        raise ValueError("compact raw tab has invalid instrument or note field types")
+    notes: list[dict[str, object]] = []
+    seen: set[tuple[Fraction, int]] = set()
+    for raw_note in raw_notes:
+        if type(raw_note) is not list or len(raw_note) != 6:
+            raise ValueError("compact raw notes must be fixed six-value arrays")
+        onset = _compact_fraction(raw_note[0])
+        duration = _compact_fraction(raw_note[1])
+        string, fret, left_finger, right_finger = raw_note[2:]
+        if (
+            onset < 0
+            or duration <= 0
+            or type(string) is not int
+            or type(fret) is not int
+            or type(left_finger) is not int
+            or type(right_finger) is not str
+            or right_finger not in {"p", "i", "m", "a"}
+        ):
+            raise ValueError("compact raw note has invalid exact values")
+        identity = (onset, string)
+        if identity in seen:
+            raise ValueError("compact raw tab repeats one string at an onset")
+        seen.add(identity)
+        notes.append(
+            {
+                "onset": raw_note[0],
+                "duration": raw_note[1],
+                "string": string,
+                "fret": fret,
+                "left_finger": left_finger,
+                "right_finger": right_finger,
+            }
+        )
+    return json.dumps(
+        {"tuning": tuning, "capo": capo, "notes": notes},
+        allow_nan=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+
 def collect_raw_llm_baseline(
     request: RawBaselineRequest,
     llm: LLMClient,
@@ -525,6 +648,17 @@ def collect_raw_llm_baseline(
             RawStatus.PARSE_FAILED,
             parse_code=RawParseCode.NO_JSON_OBJECT,
         )
+    if request.protocol_version == RAW_COMPACT_PROTOCOL_VERSION:
+        try:
+            object_text = _expand_compact_raw_tab(object_text)
+        except (ValueError, TypeError, json.JSONDecodeError, RecursionError):
+            return _raw_outcome(
+                request,
+                context,
+                sample_index,
+                RawStatus.PARSE_FAILED,
+                parse_code=RawParseCode.TAB_SCHEMA_INVALID,
+            )
     try:
         tab = validated_tab_from_json(
             object_text,
@@ -572,8 +706,10 @@ def run_pure_solver_baseline(
 ) -> PureSolverOutcome:
     """Run the deterministic B2 proposal and solver once for one item."""
 
+    source_ir = snapshot_music_ir(ir)
+    solver_ir = arrangement_solver_ir(source_ir)
     target = propose_fingerstyle(
-        ir,
+        solver_ir,
         goal.tuning,
         goal.capo,
         profile=profile,
@@ -585,7 +721,7 @@ def run_pure_solver_baseline(
         goal.capo,
         profile,
         tempo_bpm=goal.tempo_bpm,
-        beats_per_bar=ir.meta.time_sig[0],
+        beats_per_bar=source_ir.meta.time_sig[0],
     )
     if isinstance(solved, Tab):
         return PureSolverOutcome(PureSolverStatus.TAB, solved, None)

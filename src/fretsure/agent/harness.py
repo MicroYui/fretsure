@@ -20,6 +20,7 @@ from typing import Any, cast
 from fretsure.agent.arranger import (
     ArrangeGoal,
     ProposalOutcome,
+    arrangement_solver_ir,
     propose_arrangement_outcome,
 )
 from fretsure.agent.critic import CriticOutcome, CriticScore, critique_outcome
@@ -319,7 +320,8 @@ def build_candidate_trajectory(
 ) -> CandidateTrajectory:
     """Run the exact production primitive for one bounded candidate slot."""
 
-    ir = snapshot_music_ir(ir)
+    source_ir = snapshot_music_ir(ir)
+    solver_ir = arrangement_solver_ir(source_ir)
     candidate_index = ensure_candidate_count(candidate_index, path="candidate_index")
     # A pool of at most MAX_AGENT_CANDIDATES has indices 0..MAX-1. Reusing the
     # count validator keeps the failure typed and rejects bool before arithmetic.
@@ -327,13 +329,13 @@ def build_candidate_trajectory(
     max_iters = ensure_repair_iterations(max_iters)
     use_critic = ensure_boolean_control(use_critic, path="use_critic")
     notes, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
-        ir.notes,
+        solver_ir.notes,
         goal.tuning,
         goal.capo,
         profile,
         tempo_bpm=goal.tempo_bpm,
     )
-    ir = MusicIR(notes, tuple(ir.chords), ir.meta)
+    solver_ir = MusicIR(notes, tuple(solver_ir.chords), solver_ir.meta)
     goal = ArrangeGoal(
         style=goal.style,
         tier=goal.tier,
@@ -348,7 +350,7 @@ def build_candidate_trajectory(
         else _validate_temperature(temperature, path="temperature")
     )
     proposal = propose_arrangement_outcome(
-        ir,
+        source_ir,
         goal,
         llm,
         temperature=temperature,
@@ -373,7 +375,7 @@ def build_candidate_trajectory(
         profile,
         llm,
         tempo_bpm=goal.tempo_bpm,
-        beats_per_bar=ir.meta.time_sig[0],
+        beats_per_bar=source_ir.meta.time_sig[0],
         max_iters=max_iters,
         candidate_index=candidate_index,
         call_scope_factory=call_scope_factory,
@@ -398,12 +400,12 @@ def build_candidate_trajectory(
         candidate_critic_outcome: CriticOutcome | None = None
         status = CandidateStatus.NO_TAB
     else:
-        candidate_fidelity = fidelity(ir, repaired.tab)
-        candidate_faithfulness = faithfulness(ir, repaired.tab)
+        candidate_fidelity = fidelity(source_ir, repaired.tab)
+        candidate_faithfulness = faithfulness(source_ir, repaired.tab)
         is_green = repaired.oracle is not None and repaired.oracle.verdict == "GREEN"
         candidate_critic_outcome = (
             critique_outcome(
-                ir,
+                source_ir,
                 repaired.tab,
                 llm,
                 call_scope_factory=call_scope_factory,
@@ -458,7 +460,8 @@ def arrange_pool(
 ) -> ArrangePool:
     """Build one ordered pool while retaining a trajectory for every slot."""
 
-    ir = snapshot_music_ir(ir)
+    source_ir = snapshot_music_ir(ir)
+    solver_ir = arrangement_solver_ir(source_ir)
     n = ensure_candidate_count(n)
     max_iters = ensure_repair_iterations(max_iters)
     use_critic = ensure_boolean_control(use_critic, path="use_critic")
@@ -468,13 +471,13 @@ def arrange_pool(
         temperature_schedule=temperature_schedule,
     )
     notes, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
-        ir.notes,
+        solver_ir.notes,
         goal.tuning,
         goal.capo,
         profile,
         tempo_bpm=goal.tempo_bpm,
     )
-    ir = MusicIR(notes, tuple(ir.chords), ir.meta)
+    solver_ir = MusicIR(notes, tuple(solver_ir.chords), solver_ir.meta)
     goal = ArrangeGoal(
         style=goal.style,
         tier=goal.tier,
@@ -489,7 +492,7 @@ def arrange_pool(
     trajectories: list[CandidateTrajectory] = []
     for candidate_index in range(n):
         trajectory = build_candidate_trajectory(
-            ir,
+            source_ir,
             goal,
             llm,
             profile=profile,

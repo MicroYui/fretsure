@@ -2,7 +2,7 @@ import type { ArrangementResponse, CapabilitiesResponse } from "../src/types";
 
 export const capabilities: CapabilitiesResponse = {
   api_version: "fretsure-api@0.2.0",
-  package_version: "0.5.0",
+  package_version: "0.6.0",
   service_version: "fretsure-service@0.2.0",
   trace_schema_version: "agent-trace@0.2.0",
   engines: [
@@ -48,7 +48,7 @@ export const capabilities: CapabilitiesResponse = {
   implemented: ["arrange_score_bytes"],
   deferred: ["render_audio"],
   stamps: {
-    package_version: "0.5.0",
+    package_version: "0.6.0",
     service_version: "fretsure-service@0.2.0",
     score_input_version: "score-input@0.1.0",
     fidelity_checker_version: "fidelity@0.3.0",
@@ -180,7 +180,7 @@ export const arrangement: ArrangementResponse = {
     ],
   },
   stamps: {
-    package_version: "0.5.0",
+    package_version: "0.6.0",
     service_version: "fretsure-service@0.2.0",
     score_input_version: "score-input@0.1.0",
     profile_registry_version: "profile-registry@0.1.0",

@@ -991,7 +991,12 @@ def _validate_product_payload(
         if (verdict == "GREEN") != (terminal_reason == "GREEN"):
             raise TraceInputError(path, "GREEN verdict and terminal reason disagree")
         diagnostic_count = cast(int, data["diagnostic_count"])
-        if (verdict == "GREEN") != (diagnostic_count == 0):
+        # Verdicts compare optimistic/pessimistic profiles, while public
+        # diagnostics localize the median profile. An AMBER result may therefore
+        # have either zero or non-zero median diagnostics.
+        if (verdict == "GREEN" and diagnostic_count != 0) or (
+            verdict == "RED" and diagnostic_count == 0
+        ):
             raise TraceInputError(path, "verdict and diagnostic count disagree")
     elif event == "TIER_CHECKED":
         _stable_string(data["tier"], path=f"{path}.tier")

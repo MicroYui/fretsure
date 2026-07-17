@@ -20,6 +20,8 @@ from fretsure.bench.baselines import (
     OPTIONAL_BASELINE_AVAILABILITY,
     PURE_SOLVER_BASELINE_SLOTS,
     RAW_BASELINE_TEMPERATURE,
+    RAW_COMPACT_PROTOCOL_VERSION,
+    RAW_OBJECT_PROTOCOL_VERSION,
     BaselineAvailabilityStatus,
     BaselineId,
     PureSolverStatus,
@@ -307,8 +309,87 @@ def test_raw_and_proposal_share_source_context_capacity_and_item_controls() -> N
     assert request.temperature == proposal.calls[0]["temperature"] == RAW_BASELINE_TEMPERATURE
     assert request.tuning == STANDARD_TUNING and request.capo == 2
     assert request.tempo_bpm == 72.0 and request.beats_per_bar == 4
+    assert request.protocol_version == RAW_OBJECT_PROTOCOL_VERSION
     assert "Requested tuning (open-string MIDI, low to high): [40,45,50,55,59,64]" in request.user
     assert "Requested capo: 2" in request.user
+
+
+def test_long_raw_request_uses_lossless_compact_protocol_and_budget() -> None:
+    ir = MusicIR(
+        tuple(Note(F(index), F(1), 60 + index % 12, "melody") for index in range(170)),
+        (),
+        _IR.meta,
+    )
+
+    request = build_raw_baseline_request(ir, ArrangeGoal(), MEDIAN_HAND)
+
+    assert request.protocol_version == RAW_COMPACT_PROTOCOL_VERSION
+    assert request.max_tokens == 5_568
+    assert RAW_COMPACT_PROTOCOL_VERSION in request.system
+
+
+@pytest.mark.parametrize("event_count", [170, 198, 443, 495])
+def test_long_raw_compact_response_round_trips_to_valid_tab(event_count: int) -> None:
+    ir = MusicIR(
+        tuple(
+            Note(F(index), F(1), 60 + index % 12, "melody")
+            for index in range(event_count)
+        ),
+        (),
+        _IR.meta,
+    )
+    request = build_raw_baseline_request(ir, ArrangeGoal(), MEDIAN_HAND)
+    reply = (
+        '{"schema":"raw-tab-compact@0.1.0",'
+        '"tuning":[40,45,50,55,59,64],"capo":0,'
+        '"notes":[["0/1","1/1",0,0,0,"p"]]}'
+    )
+
+    outcome = collect_raw_llm_baseline(
+        request,
+        FakeLLM([reply]),
+        MEDIAN_HAND,
+        sample_index=0,
+        call_scope_factory=_bound_scopes(),
+    )
+
+    assert outcome.status is RawStatus.VALID_TAB
+    assert request.max_tokens == 128 + 32 * event_count
+    assert outcome.tab is not None
+    assert outcome.tab.tuning == STANDARD_TUNING and outcome.tab.capo == 0
+    assert len(outcome.tab.notes) == 1
+    note = outcome.tab.notes[0]
+    assert (note.onset, note.duration, note.string, note.fret) == (F(0), F(1), 0, 0)
+    assert (note.left_finger, note.right_finger) == (0, "p")
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        '{"schema":"raw-tab-compact@0.1.0","tuning":[40,45,50,55,59,64],"capo":0,"notes":[["0","1/1",0,0,0,"p"]]}',
+        '{"schema":"raw-tab-compact@0.1.0","tuning":[40,45,50,55,59,64],"capo":0,"notes":[["0/1","1/1",0,0,0,"p",0]]}',
+        '{"schema":"raw-tab-compact@0.1.0","tuning":[40,45,50,55,59,64],"capo":0,"notes":[["0/1","1/1",0,0,0,"x"]]}',
+        '{"schema":"raw-tab-compact@0.1.0","tuning":[40,45,50,55,59,64],"capo":0,"notes":[],"extra":0}',
+    ],
+)
+def test_long_raw_compact_response_rejects_noncanonical_values(reply: str) -> None:
+    ir = MusicIR(
+        tuple(Note(F(index), F(1), 60 + index % 12, "melody") for index in range(170)),
+        (),
+        _IR.meta,
+    )
+    request = build_raw_baseline_request(ir, ArrangeGoal(), MEDIAN_HAND)
+
+    outcome = collect_raw_llm_baseline(
+        request,
+        FakeLLM([reply]),
+        MEDIAN_HAND,
+        sample_index=0,
+        call_scope_factory=_bound_scopes(),
+    )
+
+    assert outcome.status is RawStatus.PARSE_FAILED
+    assert outcome.parse_code is RawParseCode.TAB_SCHEMA_INVALID
 
 
 def test_raw_passes_effective_tempo_and_source_meter_to_domain_validator(

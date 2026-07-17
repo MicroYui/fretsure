@@ -18,7 +18,7 @@ export class FretsureAPIError extends Error {
 }
 
 const CURRENT_API_VERSION = "fretsure-api@0.2.0";
-const CURRENT_PACKAGE_VERSION = "0.5.0";
+const CURRENT_PACKAGE_VERSION = "0.6.0";
 const CURRENT_SERVICE_VERSION = "fretsure-service@0.2.0";
 const CURRENT_SCORE_INPUT_VERSION = "score-input@0.1.0";
 const CURRENT_FIDELITY_VERSION = "fidelity@0.3.0";

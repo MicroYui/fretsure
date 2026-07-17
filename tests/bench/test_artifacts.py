@@ -21,6 +21,7 @@ from fretsure.bench.artifacts import (
     BenchmarkRow,
     BlobKind,
     BlobRecord,
+    CompleteUnitReservation,
     CompletionStatus,
     DurableObservationSink,
     FinalizationInputs,
@@ -63,6 +64,7 @@ from fretsure.bench.contracts import (
     canonical_sha256,
 )
 from fretsure.bench.observe import (
+    CallFailureCode,
     CallSequence,
     CallStage,
     InMemoryObservationSink,
@@ -471,6 +473,76 @@ def test_durable_sink_enforces_global_attempt_limit_on_fresh_and_resume(
             resume=True,
         )
     assert caught.value.code is ArtifactCode.CORRUPT_JOURNAL
+
+
+def test_durable_sink_reserves_tokens_bytes_and_one_complete_unit_before_intent(
+    tmp_path: Path,
+) -> None:
+    seed = InMemoryObservationSink(max_calls=1)
+    _make_call(seed)
+    journal = tmp_path / "budget.jsonl"
+    journal.touch(mode=0o600)
+    reservation = CompleteUnitReservation(
+        logical_calls=1,
+        attempts=1,
+        requested_output_tokens=32,
+        attempt_reserved_output_tokens=32,
+        response_text_bytes=1024,
+        transport_response_bytes=1024 * 1024,
+        wall_microseconds=1,
+    )
+    with DurableObservationSink(
+        journal,
+        max_calls=1,
+        max_attempts=1,
+        max_requested_output_tokens=31,
+        max_attempt_reserved_output_tokens=32,
+        max_response_text_bytes=1024,
+        max_transport_response_bytes=1024 * 1024,
+        max_wall_microseconds=1,
+        complete_unit_reservation=reservation,
+    ) as sink:
+        with pytest.raises(ArtifactError) as caught:
+            sink.write_intent(seed.intents[0])
+    assert caught.value.code is ArtifactCode.LIMIT_EXCEEDED
+    assert journal.read_bytes() == b""
+
+
+def test_durable_sink_records_returned_model_mismatch_as_terminal_failure(
+    tmp_path: Path,
+) -> None:
+    seed = InMemoryObservationSink(max_calls=1)
+    _make_call(seed)
+    provider = ProviderObservation(
+        available=True,
+        status="succeeded",
+        attempts=1,
+        retries=0,
+        returned_model_id="returned-other-model",
+        response_id_sha256=None,
+        input_tokens=1,
+        output_tokens=1,
+        cache_creation_input_tokens=None,
+        cache_read_input_tokens=None,
+    )
+    journal = tmp_path / "model.jsonl"
+    journal.touch(mode=0o600)
+    with DurableObservationSink(
+        journal,
+        max_calls=1,
+        max_attempts=1,
+        allowed_returned_model_id="requested-model",
+    ) as sink:
+        sink.write_intent(seed.intents[0])
+        sink.write_attempt_intent(seed.attempt_intents[0])
+        sink.write_attempt_result(seed.attempt_results[0])
+        with pytest.raises(ArtifactError) as caught:
+            sink.write_result(replace(seed.results[0], provider=provider))
+    assert caught.value.code is ArtifactCode.HASH_MISMATCH
+    events = parse_canonical_jsonl_bytes(journal.read_bytes())
+    terminal = events[-1]["payload"]  # type: ignore[index]
+    assert terminal["status"] == "failed"  # type: ignore[index]
+    assert terminal["failure_code"] == CallFailureCode.RETURNED_MODEL_MISMATCH.value  # type: ignore[index]
 
 
 def test_private_to_sanitized_observations_removes_response_id_and_preserves_usage_nulls() -> None:

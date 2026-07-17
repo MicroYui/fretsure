@@ -11,7 +11,8 @@ from fretsure.geometry import note_pitch
 from fretsure.ir import Note
 from fretsure.oracle.core import OracleResult, check_playability
 from fretsure.oracle.profiles import Profile
-from fretsure.solver.api import Infeasible, solve_fingering
+from fretsure.solver.api import Infeasible
+from fretsure.solver.score import solve_fingering_score as solve_fingering
 from fretsure.tab import Tab
 
 
