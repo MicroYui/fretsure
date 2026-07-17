@@ -6,18 +6,19 @@
 > by the roadmap; the historical 2026-07-10 Plan 4 remains an implementation
 > record and its numerical tables are not a current baseline.
 >
-> **Implementation progress (2026-07-18): Tasks 1–7 software-complete.** Strict
+> **Implementation progress (2026-07-18): Tasks 1–7 complete; Task 8 software-ready.** Strict
 > corpus/generator contracts, observable trajectories, the shared ten-sample pool,
 > baselines, registered statistics, durable artifacts, deterministic reports, and
 > full/fast CLI replay have passed their directed and independent gates. The licensed
 > 500-procedural + 3-public corpus, exact role-map normalization, contamination controls,
 > canonical builder, datasheet, and checker-vs-judge software boundary have also
 > closed. Task 7 froze the 0.6.0 runner, preregistration, budget, distribution, and
-> full-size deterministic stub artifacts. Its full replay and final gates have closed;
-> the terminal external push follows, after which work pauses for the user's next
-> instruction. No real-model
-> collection has started. After that push, work pauses for the user's next instruction;
-> Task 8 does not start automatically.
+> full-size deterministic stub artifacts. Its full replay, final gates, and external
+> push have closed. After the user's next instruction, Task 8 froze a separate 2×2
+> operational pilot, exact pricing/budget arithmetic, WAL/resume path, and explicit
+> spend-confirmation boundary. The offline software gate is ready, but no real-model
+> collection has started: a verifiable pricing contract and user-approved pilot spend
+> remain external prerequisites.
 >
 > **Runtime provenance correction (2026-07-17, before any model outcome):** per the
 > user-approved simplicity boundary, runtime collection/replay must not spawn Git or
@@ -674,10 +675,12 @@ handoff operation rather than runtime behavior.
 
 ## 12. Task 8 — Operational proxy pilot and explicit budget gate
 
-**Status (2026-07-18): FUTURE / NOT STARTED.** Task 8 is listed only as subsequent
-work. Per the user's instruction, the runner-ready Task 7 push is a hard pause point;
-no pilot, provider call, network collection, or budget authorization begins until the
-user gives a new explicit instruction after that push.
+**Status (2026-07-18): SOFTWARE READY / REAL PILOT NOT RUN.** The canonical
+[pilot specification](../../experiments/2026-07-18-benchmark-v2-pilot-spec.json),
+scripts-only collector, exact pricing/budget gate, clean-resume tests, and explicit
+spend-confirmation boundary are complete. See the
+[Task 8 readiness record](../../BENCHMARK_V2_TASK8_READINESS.md). No provider call,
+network collection, verified price contract, or budget authorization has occurred.
 
 - Run a separately labeled pilot only after the runner-ready SHA is clean and pushed,
   on at most two two-bar procedural families excluded from the formal corpus and two
@@ -697,6 +700,12 @@ user gives a new explicit instruction after that push.
   If pilot or formal cost is unknown/material, pause for user authorization before that
   collection rather than silently launching calls.
 - Pilot rows never enter the formal report and have a distinct manifest/run ID.
+- The exact provider timeout envelope, durable recorded-elapsed ceiling, and active
+  host deadline are separate fields. Pilot-informed projections use stage-level totals
+  and retain the formal corpus's variable proposal/raw token base.
+- Creating a priced pre-call declaration is not authorization. Live collection also
+  requires a caller-supplied maximum spend equal to the mechanically recomputed pilot
+  worst case; this remains subordinate to explicit user approval.
 
 ## 13. Task 9 — Current-model collection and deterministic analysis
 

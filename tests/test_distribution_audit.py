@@ -150,7 +150,9 @@ def test_wheel_audit_rejects_private_or_formal_run_artifacts(
         _audit_wheel(wheel, expected_version=_VERSION)
 
 
-def test_sdist_audit_requires_task7_evidence_and_exact_licensed_sources(tmp_path: Path) -> None:
+def test_sdist_audit_requires_task7_and_task8_evidence_and_exact_sources(
+    tmp_path: Path,
+) -> None:
     complete = tmp_path / f"fretsure_oracle-{_VERSION}.tar.gz"
     _write_test_sdist(complete)
     assert _audit_sdist(complete) > 0
@@ -162,6 +164,22 @@ def test_sdist_audit_requires_task7_evidence_and_exact_licensed_sources(tmp_path
     )
     with pytest.raises(ValueError, match="benchmark-v2-prereg"):
         _audit_sdist(missing_prereg)
+
+    missing_pilot = tmp_path / "missing-task8-pilot.tar.gz"
+    _write_test_sdist(
+        missing_pilot,
+        omitted="docs/experiments/2026-07-18-benchmark-v2-pilot-spec.json",
+    )
+    with pytest.raises(ValueError, match="benchmark-v2-pilot-spec"):
+        _audit_sdist(missing_pilot)
+
+    missing_budget_gate = tmp_path / "missing-task8-budget-gate.tar.gz"
+    _write_test_sdist(
+        missing_budget_gate,
+        omitted="scripts/task8_budget_gate.py",
+    )
+    with pytest.raises(ValueError, match="task8_budget_gate"):
+        _audit_sdist(missing_budget_gate)
 
     source_name = next(iter(_licensed_source_files()))
     missing_source = tmp_path / "missing-source.tar.gz"

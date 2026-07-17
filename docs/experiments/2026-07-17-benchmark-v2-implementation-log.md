@@ -207,3 +207,39 @@ runner-ready closure steps are deliberately not inferred from the stub compariso
 
 No real provider or model call was made, and no network collection was performed. No
 frontend surface or frontend design changed.
+
+## 2026-07-18 — Task 8 offline readiness
+
+After the user resumed work, Task 8 completed every non-provider software gate while
+leaving the real operational pilot unrun:
+
+- A canonical 2-family × 2-sample pilot specification binds the Task 7 preregistration
+  by SHA without duplicating its 503-item payload. Its own corpus is two bars per family
+  and is disjoint from the formal corpus by all frozen identity and content digests.
+- The separate scripts-only collector reuses the durable ArtifactStore/WAL boundary but
+  has its own manifest schema, run ID, schedule, and five-file canonical bundle. It
+  reserves one complete agent/raw pair before each agent row, cleanly resumes after
+  agent or raw rows, rejects orphaned calls, and never invokes the formal report path.
+- Pilot time accounting now distinguishes the exact 4,026-second provider timeout
+  envelope from the 5,400-second durable recorded ceiling and invocation-local host
+  deadline. Formal accounting likewise distinguishes 5,062,695 seconds from the
+  runner's 5,184,000-second recorded ceiling.
+- The pricing contract uses exact integer microunit arithmetic and canonical evidence
+  bindings. Pilot pre-call parsing embeds and recomputes the complete contract and
+  mechanical worst case. Live collection additionally requires the caller to repeat
+  that exact maximum spend; declaration generation alone is not authorization.
+- Stage-aware pilot projections preserve the formal 503-item proposal/raw token base.
+  Missing provider usage and uncovered retry usage remain unavailable rather than
+  becoming zero. Pilot rows cannot enter or alter the formal report.
+
+The canonical pilot-spec SHA-256 is
+`e455a608d4b186f24a2739e009b8f9fe604036fd3a4f34d0ef97d2afb3ab7ad3`. The directed
+Task 8 suites passed 31 tests; Ruff and strict mypy passed both scripts. One-shot stub
+collection and a clean resume after one row produced byte-identical config, receipt,
+rows, blobs, and observations. Full hashes and resource arithmetic are recorded in
+[`BENCHMARK_V2_TASK8_READINESS.md`](../BENCHMARK_V2_TASK8_READINESS.md).
+
+No `src/`, package metadata, dependency lock, runtime Git behavior, or frontend surface
+changed. No real price contract, proxy, network, or provider call was used. The next
+step is the external pricing and explicit pilot-spend authorization gate; Task 9 has
+not started.
