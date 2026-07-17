@@ -28,6 +28,11 @@ jobs:
       - name: Pytest
         run: uv run pytest -q
 
+      - name: Minimum Anthropic compatibility
+        run: >-
+          uv run --isolated --extra agent --with "anthropic==0.40.0" --with "pytest>=8"
+          python -m pytest -q tests/llm/test_anthropic_compat.py
+
       - name: Lockfile and Markdown links
         run: |
           uv lock --check

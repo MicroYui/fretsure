@@ -358,6 +358,7 @@ def solve_fingering(
     profile: Profile,
     *,
     tempo_bpm: float = 90.0,
+    beats_per_bar: int = 4,
     beam: int = 16,
 ) -> Tab | Infeasible:
     notes, tuning, capo, profile, tempo_bpm, beam = ensure_solver_input(
@@ -490,7 +491,12 @@ def solve_fingering(
     finalists = sorted(states, key=_state_sort_key)[:MAX_SOLVER_FINAL_CHECKS]
     for state in finalists:
         result = Tab(_reconstruct_notes(state), tuning, capo)
-        verdict = check_playability(result, profile, tempo_bpm=tempo_bpm).verdict
+        verdict = check_playability(
+            result,
+            profile,
+            tempo_bpm=tempo_bpm,
+            beats_per_bar=beats_per_bar,
+        ).verdict
         if verdict == "GREEN":
             return result
         if verdict == "AMBER" and first_amber is None:

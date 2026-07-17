@@ -109,8 +109,9 @@ def test_paired_critic_captures_selection_effect() -> None:
     # melody_recall while the joint gate keys on top-voice melody_f1, so the critic's
     # pick (melody 64 + harmony 67 above it) fails the gate -> joint_delta == -1. This
     # asserts the machinery captures the effect; the sign is not the critic's verdict.
-    # NOTE: coupled to the STUB top-voice melody_f1 (fidelity.py); a Plan-4 DTW melody
-    # metric that no longer requires top-voice would flip this to 0 — update deliberately.
+    # This legacy compatibility assertion is intentionally tied to the frozen
+    # fidelity@0.3.0 exact-onset/top-voice semantics. A future checker version would
+    # require an explicit preregistration and deliberate test update.
     assert res.joint_delta == -1.0
     assert res.items == 1
 

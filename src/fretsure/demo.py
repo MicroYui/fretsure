@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from fretsure.agent.harness import ArrangeResult
 from fretsure.bench.generator import GenConfig, generate_leadsheet
 from fretsure.ir import MusicIR
-from fretsure.llm.client import ConstantLLM, LLMClient
+from fretsure.llm.client import ConstantLLM, LLMClient, managed_llm_client
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION, FaithfulnessGate
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 from fretsure.pipeline import PipelineOptions, run_pipeline
@@ -155,7 +155,8 @@ def main() -> None:
 
     ir = sample_ir(seed=args.seed, bars=args.bars)
     llm, engine = _make_llm(args.llm)
-    demo = run_demo(ir, llm, n=args.n)
+    with managed_llm_client(llm):
+        demo = run_demo(ir, llm, n=args.n)
     print(render_demo(demo, ir, engine=engine))
 
 

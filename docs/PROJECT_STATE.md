@@ -3,7 +3,7 @@
 > 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-17。
 
 ## 0. 现状一句话
-设计已锁定；**Plan 1–5、Pre-Plan 6 MusicXML-first、Oracle 0.2、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR 与 strict MIDI input 均已闭门；MIDI 的 local/tracking/remote receipt 一致指向 `46ff8ac070e97422b4aecf5c0f2a22b588a5fda4`。当前阶段是 benchmark v2 的版本化证据与配对消融重建**。当前运行版本边界仍是 package=`0.5.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`、profile=`median@0.1` 保持不变，runtime 精确锁定 `music21==10.5.0`。benchmark v2 的公开 CLI/artifact 变化将在 runner-ready 提交把 package 升至 `0.6.0`，并按独立计划冻结 notegraph/corpus/config-manifest/row/sanitized-observations/receipt/report 合同。默认真代理模型为 canonical `gpt-5.6-sol`，Web/API 默认离线；只有显式有效的 loopback proxy 配置加启动授权才可联网。完整 Plan 6 的音频、AlphaTab、琴颈动画、导出、live A/B/榜单与真人 money moment 仍 open。
+设计已锁定；**Plan 1–5、Pre-Plan 6 MusicXML-first、Oracle 0.2、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR 与 strict MIDI input 均已闭门；MIDI 的 local/tracking/remote receipt 一致指向 `46ff8ac070e97422b4aecf5c0f2a22b588a5fda4`。benchmark v2 的 Task 1–6（strict corpus、可观测调用/候选轨迹、共享十槽候选池与 baselines、统计与确定性 artifact/report/CLI replay、500 procedural + 3 licensed public corpus 与污染控制、checker-vs-judge 软件边界）已完成软件验收，当前进入 Task 7 runner-ready 预注册与首次外部 Git 门；尚未发起任何真模型调用**。Task 1–6 的可复核证据记录在 [`2026-07-17-benchmark-v2-implementation-log.md`](experiments/2026-07-17-benchmark-v2-implementation-log.md)，Task 5 的来源、许可、排除与 exact hashes 见 [`benchmark-v2-corpus-datasheet.md`](experiments/benchmark-v2-corpus-datasheet.md)。当前运行版本边界仍是 package=`0.5.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`、profile=`median@0.1` 保持不变，runtime 精确锁定 `music21==10.5.0`。benchmark v2 的公开 CLI/artifact 变化将在 runner-ready 提交把 package 升至 `0.6.0`，并按独立计划冻结 notegraph/corpus/config-manifest/row/sanitized-observations/receipt/report 合同。默认真代理模型为 canonical `gpt-5.6-sol`，Web/API 默认离线；只有显式有效的 loopback proxy 配置加启动授权才可联网。完整 Plan 6 的音频、AlphaTab、琴颈动画、导出、live A/B/榜单与真人 money moment 仍 open。
 - **Plan 1**（`plan-1-core-oracle`）：可弹性 oracle + 自验证台。终审 Ready。
 - **Plan 2**（`plan-2-solver-m0`）：beam 求解器（永不返回 RED）+ M0。复核 Ready。
 - **Plan 3**（`plan-3-agent-loop`）：oracle 当环境、LLM 当策略——修复脊柱 + 提议器 + critic + best-of-N。真 LLM 端到端。Ready-with-minor（已修）。
@@ -77,7 +77,7 @@
 - **诚实记分卡**：历史 repair 强正信号；best-of-N 薄利；**critic 未挣得（观察/待砍）**。这些旧数来自 legacy/unversioned harmony metric，不是当前 `fidelity@0.3.0` benchmark 基线。
 - **Plan 6A 闭门质量门（历史快照）**：收集 `1500` 项；离线 `1494 passed, 6 deselected`，真实本地 `gpt-5.6-sol` integration `6 passed, 1494 deselected`。ruff、strict mypy、`uv lock --check`、Markdown local-link 与 `git diff --check` 全绿；前端 `20 passed`、typecheck/build、`npm audit` 0 vulnerabilities，真实浏览器 desktop/mobile 的 landing/result/trace 与 focus/retry/CSP/MIME/cache 路径通过。`fretsure_oracle-0.3.0` wheel/sdist 经过路径 allowlist、字体 OFL、静态资源审计；clean core、`[musicxml]`、`[service,musicxml,agent]`、`[mcp]` 四组合安装 smoke 全绿。FastAPI 0.139 TestClient 仍发出上游 httpx2 迁移 warning，运行时代码无对应 warning。producer 阶段的新门不从这组历史数字推断，以 `docs/PRODUCER_MUSICXML_ACCEPTANCE.md` 为准。
 - **分支**：plan-1→2→3→4→5→`consolidation` 已**全部 ff 并入 `master`（trunk）**（trunk 原只有 spec 脚手架；现含完整后端）。
-- **下一步已冻结**：按 [`2026-07-17-benchmark-v2.md`](superpowers/plans/2026-07-17-benchmark-v2.md) 先冻结严格 corpus/manifest/raw-row/report 与统计预注册，再实现共享 proposal 的配对 repair/search/critic、baselines、可重放 CLI 和当前模型重跑。旧数不作当前基线；正式大规模代理运行在显式预算 gate 前不启动。完整 Plan 6B 仍后置；新的前端/音频审美、真人演奏或 calibration gate 才暂停请求用户输入。
+- **下一步已冻结**：执行 benchmark-v2 Task 7，冻结机器可读预注册、预算、package/distribution 与 runner-ready 外部 SHA；运行时只接收该外部版本值，不调用 Git/子进程。旧数不作当前基线；正式大规模代理运行在显式预算 gate 前不启动。完整 Plan 6B 仍后置；新的前端/音频审美、真人演奏或 calibration gate 才暂停请求用户输入。
 - **已知点**：solve_fingering 是资源有界、非完备搜索；tier/忠实度/难度参数占位待 design partner 校准；leave-one-out 各臂对随机 LLM **非配对**（大效应 repair 不受影响；best-of-N/critic 已另有**配对**测量，见 RESULTS）。
 
 ## 1. 这是什么
@@ -112,8 +112,12 @@
     `46ff8ac` 闭合。
 16. **Benchmark v2（2026-07-17）**：历史 Plan 4 runner 只保留为骨架；新计划先冻结逐 item/candidate
     rows、corpus/manifest/report 版本、availability strata 与共享 proposal 的配对检验，再用当前
-    `gpt-5.6-sol` 重跑。程序生成层扛主结果；旧 Claude/旧 fidelity 数不同比。CLI/JSON/JSONL/文档阶段
-    不改前端；若增加 dashboard、图表页面或 live leaderboard，须先与用户确认统一视觉。
+    `gpt-5.6-sol` 重跑。Task 1–6 已闭门：默认 corpus 为 500 个独立 procedural families + 3 个
+    license-audited public controls，real/procedural 独立报告并有无 denominator 的 cross-stratum
+    collision gate；checker-vs-judge 仅有 `SOFTWARE_FIXTURE_ONLY` 证据，真人标签与跨供应商比较仍
+    unavailable；Task 7 当前 active。程序生成层扛主结果；旧 Claude/旧 fidelity 数不同比。
+    CLI/JSON/JSONL/文档阶段不改前端；若增加 dashboard、图表页面或 live leaderboard，须先与用户
+    确认统一视觉。
 
 ## 3. 诚实的新颖性裁决（红队结论，勿自欺）
 - **部分开放**：无成熟上线产品做这套完整组合；但**概念不新**。

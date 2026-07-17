@@ -11,17 +11,28 @@ compare best-of-1 vs best-of-N on the SAME pool, isolating selection breadth
 from the stochastic-draw noise that confounds an unpaired ablation.
 """
 
+import json
+import math
 from dataclasses import dataclass
+from enum import StrEnum
+from typing import Any, cast
 
-from fretsure.agent.arranger import ArrangeGoal, propose_arrangement
-from fretsure.agent.critic import CriticScore, critique
-from fretsure.agent.repair import RepairResult, repair
-from fretsure.agent.trace import Trace, TraceStep, target_checkpoint
-from fretsure.ir import MusicIR, snapshot_music_ir
+from fretsure.agent.arranger import (
+    ArrangeGoal,
+    ProposalOutcome,
+    propose_arrangement_outcome,
+)
+from fretsure.agent.critic import CriticOutcome, CriticScore, critique_outcome
+from fretsure.agent.model_calls import ModelCallScopeFactory
+from fretsure.agent.repair import RepairSnapshot, repair
+from fretsure.agent.trace import StepKind, Trace, TraceEvent, TraceStep, target_checkpoint
+from fretsure.ir import MusicIR, Note, snapshot_music_ir
 from fretsure.llm.client import LLMClient
 from fretsure.metrics.fidelity import FaithfulnessGate, Fidelity, faithfulness, fidelity
 from fretsure.oracle.core import OracleResult
 from fretsure.oracle.input import (
+    MAX_AGENT_CANDIDATES,
+    MAX_AGENT_REPAIR_ITERS,
     ensure_boolean_control,
     ensure_candidate_count,
     ensure_repair_iterations,
@@ -48,14 +59,190 @@ class ArrangeResult:
     candidates_tried: int
 
 
-@dataclass(frozen=True)
-class _Candidate:
+class CandidateStatus(StrEnum):
+    """Stable terminal state for one candidate-pool slot."""
+
+    GREEN = "GREEN"
+    NON_GREEN_TAB = "NON_GREEN_TAB"
+    NO_TAB = "NO_TAB"
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateWorkCounts:
+    """Bounded logical work performed for one candidate.
+
+    Provider-internal retries are intentionally not inferred here; these are the
+    calls made by the agent policy and deterministic solver.
+    """
+
+    proposal_llm_calls: int
+    repair_llm_calls: int
+    critic_llm_calls: int
+    solver_calls: int
+
+    def __post_init__(self) -> None:
+        bounds = (
+            ("proposal_llm_calls", self.proposal_llm_calls, 1),
+            ("repair_llm_calls", self.repair_llm_calls, MAX_AGENT_REPAIR_ITERS),
+            ("critic_llm_calls", self.critic_llm_calls, 1),
+            ("solver_calls", self.solver_calls, MAX_AGENT_REPAIR_ITERS + 1),
+        )
+        for name, value, maximum in bounds:
+            minimum = 1 if name == "solver_calls" else 0
+            if type(value) is not int or not minimum <= value <= maximum:
+                raise ValueError(f"{name} must be an exact integer in {minimum}..{maximum}")
+
+    @property
+    def total_llm_calls(self) -> int:
+        return self.proposal_llm_calls + self.repair_llm_calls + self.critic_llm_calls
+
+
+def _canonical_trace_data(data: object) -> bytes:
+    if type(data) is not dict:
+        raise ValueError("trace snapshot data must be an exact object")
+    try:
+        return json.dumps(
+            data,
+            allow_nan=False,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    except (TypeError, ValueError, OverflowError, UnicodeError):
+        raise ValueError("trace snapshot data must be canonical JSON") from None
+
+
+@dataclass(frozen=True, slots=True)
+class TraceStepSnapshot:
+    """Deeply immutable, canonically encoded copy of one public trace step."""
+
+    kind: StepKind
+    detail: str
+    data_json: bytes
+    event: TraceEvent | None
+    candidate_index: int | None
+    iteration: int | None
+
+    def __post_init__(self) -> None:
+        if type(self.data_json) is not bytes:
+            raise ValueError("trace snapshot data_json must be exact bytes")
+        step = self.to_trace_step()
+        if _canonical_trace_data(step.data) != self.data_json:
+            raise ValueError("trace snapshot data_json must use canonical encoding")
+
+    @classmethod
+    def from_trace_step(cls, step: TraceStep) -> "TraceStepSnapshot":
+        if type(step) is not TraceStep:
+            raise ValueError("trace snapshot source must be an exact TraceStep")
+        return cls(
+            step.kind,
+            step.detail,
+            _canonical_trace_data(step.data),
+            step.event,
+            step.candidate_index,
+            step.iteration,
+        )
+
+    def to_trace_step(self) -> TraceStep:
+        try:
+            raw = json.loads(self.data_json)
+        except (json.JSONDecodeError, UnicodeError):
+            raise ValueError("trace snapshot data_json is not valid JSON") from None
+        if type(raw) is not dict:
+            raise ValueError("trace snapshot data_json must encode an object")
+        return TraceStep(
+            self.kind,
+            self.detail,
+            cast(dict[str, Any], raw),
+            self.event,
+            self.candidate_index,
+            self.iteration,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateTrajectory:
+    """Immutable, lossless outcome for one ordered candidate-pool slot."""
+
     index: int
+    temperature: float
+    proposal: ProposalOutcome
+    initial_target: tuple[Note, ...]
+    iteration_zero: RepairSnapshot
+    terminal: RepairSnapshot
+    status: CandidateStatus
     is_green: bool
-    fidelity: Fidelity
-    faithfulness: FaithfulnessGate
-    critic: CriticScore | None
-    repair: RepairResult
+    fidelity: Fidelity | None
+    faithfulness: FaithfulnessGate | None
+    critic_outcome: CriticOutcome | None
+    trace_snapshots: tuple[TraceStepSnapshot, ...]
+    work: CandidateWorkCounts
+
+    def __post_init__(self) -> None:
+        if type(self.index) is not int or not 0 <= self.index < MAX_AGENT_CANDIDATES:
+            raise ValueError("index must be an exact bounded candidate index")
+        if (
+            type(self.temperature) is not float
+            or not math.isfinite(self.temperature)
+            or not 0.0 <= self.temperature <= 1.0
+        ):
+            raise ValueError("temperature must be an exact finite float in 0..1")
+        if type(self.initial_target) is not tuple or self.initial_target != self.proposal.target:
+            raise ValueError("initial_target must match the proposal target")
+        if self.iteration_zero.target != self.initial_target:
+            raise ValueError("iteration_zero must solve the initial target")
+        if type(self.status) is not CandidateStatus or type(self.is_green) is not bool:
+            raise ValueError("candidate status fields are malformed")
+        if type(self.trace_snapshots) is not tuple or not self.trace_snapshots:
+            raise ValueError("trace_snapshots must be a non-empty exact tuple")
+        if any(type(step) is not TraceStepSnapshot for step in self.trace_snapshots):
+            raise ValueError("trace_snapshots must contain exact TraceStepSnapshot values")
+        if self.work.proposal_llm_calls != self.proposal.llm_calls:
+            raise ValueError("proposal work count disagrees with proposal outcome")
+        if self.work.solver_calls != self.terminal.iteration + 1:
+            raise ValueError("solver work count disagrees with terminal iteration")
+        repair_events = sum(
+            step.event
+            in {"REPAIR_EDIT_PROPOSED", "MODEL_EDIT_INVALID", "MODEL_CALL_FAILED"}
+            for step in self.trace_steps
+        )
+        if self.work.repair_llm_calls != repair_events:
+            raise ValueError("repair work count disagrees with candidate trace")
+        expected_critic_calls = (
+            self.critic_outcome.llm_calls if self.critic_outcome is not None else 0
+        )
+        if self.work.critic_llm_calls != expected_critic_calls:
+            raise ValueError("critic work count disagrees with critic outcome")
+
+        has_tab = self.terminal.tab is not None
+        has_fidelity = self.fidelity is not None
+        has_faithfulness = self.faithfulness is not None
+        if has_fidelity is not has_faithfulness or has_tab is not has_fidelity:
+            raise ValueError("only candidates with tabs may carry fidelity scores")
+        oracle_green = self.terminal.oracle is not None and self.terminal.oracle.verdict == "GREEN"
+        expected_status = (
+            CandidateStatus.GREEN
+            if oracle_green
+            else CandidateStatus.NON_GREEN_TAB
+            if has_tab
+            else CandidateStatus.NO_TAB
+        )
+        if self.status is not expected_status or self.is_green is not oracle_green:
+            raise ValueError("candidate status disagrees with its terminal result")
+        if self.critic_outcome is not None and not self.is_green:
+            raise ValueError("only a GREEN candidate may carry a critic score")
+
+    @property
+    def critic(self) -> CriticScore | None:
+        """Compatibility score view; benchmark code should retain ``critic_outcome``."""
+
+        return self.critic_outcome.score if self.critic_outcome is not None else None
+
+    @property
+    def trace_steps(self) -> tuple[TraceStep, ...]:
+        """Return detached public-trace copies without exposing stored mutable dicts."""
+
+        return tuple(step.to_trace_step() for step in self.trace_snapshots)
 
 
 @dataclass(frozen=True)
@@ -66,17 +253,21 @@ class ArrangePool:
     so slot order (and thus "best-of-1 == the greedy draw") is preserved.
     """
 
-    candidates: tuple[_Candidate | None, ...]
+    candidates: tuple[CandidateTrajectory | None, ...]
     trace: Trace
     n: int
     candidate_traces: tuple[tuple[TraceStep, ...], ...] = ()
+    trajectories: tuple[CandidateTrajectory, ...] = ()
 
 
-def _rank(c: _Candidate, *, use_critic: bool = True) -> tuple[int, float, float, float, float]:
+def _rank(
+    c: CandidateTrajectory, *, use_critic: bool = True
+) -> tuple[int, float, float, float, float]:
     # prefer GREEN, then melody preservation, then bass preservation (both are
     # faithfulness to the input, which the joint gate scores), then critic taste,
     # then harmony. Bass sits above critic so we never trade the bass for taste.
     # use_critic=False zeroes the critic term (for the paired critic ablation).
+    assert c.fidelity is not None
     critic = c.critic.overall if (use_critic and c.critic is not None) else 0.0
     return (
         1 if c.is_green else 0,
@@ -87,19 +278,52 @@ def _rank(c: _Candidate, *, use_critic: bool = True) -> tuple[int, float, float,
     )
 
 
-def arrange_pool(
+def _validate_temperature(value: object, *, path: str) -> float:
+    if type(value) is not float or not math.isfinite(value) or not 0.0 <= value <= 1.0:
+        raise ValueError(f"{path} must be an exact finite float in 0..1")
+    return value
+
+
+def _resolve_temperature_schedule(
+    n: int,
+    *,
+    temperature: float | None,
+    temperature_schedule: tuple[float, ...] | None,
+) -> tuple[float, ...]:
+    if temperature is not None and temperature_schedule is not None:
+        raise ValueError("temperature and temperature_schedule are mutually exclusive")
+    if temperature is not None:
+        exact = _validate_temperature(temperature, path="temperature")
+        return (exact,) * n
+    if temperature_schedule is not None:
+        if type(temperature_schedule) is not tuple or len(temperature_schedule) != n:
+            raise ValueError("temperature_schedule must be an exact tuple with one value per slot")
+        return tuple(
+            _validate_temperature(value, path=f"temperature_schedule[{index}]")
+            for index, value in enumerate(temperature_schedule)
+        )
+    return tuple(min(1.0, 0.2 * index) for index in range(n))
+
+
+def build_candidate_trajectory(
     ir: MusicIR,
     goal: ArrangeGoal,
     llm: LLMClient,
     *,
     profile: Profile = MEDIAN_HAND,
-    n: int = 4,
+    candidate_index: int = 0,
     max_iters: int = 8,
     use_critic: bool = True,
-) -> ArrangePool:
-    """Build the ordered pool of N repaired candidates (no selection)."""
+    temperature: float | None = None,
+    call_scope_factory: ModelCallScopeFactory | None = None,
+) -> CandidateTrajectory:
+    """Run the exact production primitive for one bounded candidate slot."""
+
     ir = snapshot_music_ir(ir)
-    n = ensure_candidate_count(n)
+    candidate_index = ensure_candidate_count(candidate_index, path="candidate_index")
+    # A pool of at most MAX_AGENT_CANDIDATES has indices 0..MAX-1. Reusing the
+    # count validator keeps the failure typed and rejects bool before arithmetic.
+    ensure_candidate_count(candidate_index + 1, path="candidate_index")
     max_iters = ensure_repair_iterations(max_iters)
     use_critic = ensure_boolean_control(use_critic, path="use_critic")
     notes, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
@@ -118,65 +342,181 @@ def arrange_pool(
         tempo_bpm=tempo_bpm,
         extras=goal.extras,
     )
+    temperature = (
+        min(1.0, 0.2 * candidate_index)
+        if temperature is None
+        else _validate_temperature(temperature, path="temperature")
+    )
+    proposal = propose_arrangement_outcome(
+        ir,
+        goal,
+        llm,
+        temperature=temperature,
+        profile=profile,
+        call_scope_factory=call_scope_factory,
+        candidate_index=candidate_index,
+    )
+    target = proposal.target
+    candidate_trace = Trace()
+    candidate_trace.add(
+        "PROPOSE",
+        f"Candidate {candidate_index} produced a bounded target-note checkpoint.",
+        event="CANDIDATE_PROPOSED",
+        candidate_index=candidate_index,
+        temperature=temperature,
+        target_checkpoint=target_checkpoint(target),
+    )
+    repaired = repair(
+        target,
+        goal.tuning,
+        goal.capo,
+        profile,
+        llm,
+        tempo_bpm=goal.tempo_bpm,
+        beats_per_bar=ir.meta.time_sig[0],
+        max_iters=max_iters,
+        candidate_index=candidate_index,
+        call_scope_factory=call_scope_factory,
+    )
+    candidate_trace.steps.extend(repaired.trace.steps)
+    verdict = repaired.oracle.verdict if repaired.oracle is not None else "INFEASIBLE"
+    candidate_trace.add(
+        "SOLVE",
+        f"Candidate {candidate_index} finished with {verdict}.",
+        event="CANDIDATE_FINISHED",
+        candidate_index=candidate_index,
+        iteration=repaired.iterations,
+        verdict=verdict,
+        tab_available=repaired.tab is not None,
+        repair_iterations=repaired.iterations,
+    )
+
+    if repaired.tab is None:
+        candidate_fidelity = None
+        candidate_faithfulness = None
+        is_green = False
+        candidate_critic_outcome: CriticOutcome | None = None
+        status = CandidateStatus.NO_TAB
+    else:
+        candidate_fidelity = fidelity(ir, repaired.tab)
+        candidate_faithfulness = faithfulness(ir, repaired.tab)
+        is_green = repaired.oracle is not None and repaired.oracle.verdict == "GREEN"
+        candidate_critic_outcome = (
+            critique_outcome(
+                ir,
+                repaired.tab,
+                llm,
+                call_scope_factory=call_scope_factory,
+                candidate_index=candidate_index,
+            )
+            if (is_green and use_critic)
+            else None
+        )
+        status = CandidateStatus.GREEN if is_green else CandidateStatus.NON_GREEN_TAB
+
+    work = CandidateWorkCounts(
+        proposal_llm_calls=proposal.llm_calls,
+        repair_llm_calls=repaired.model_calls,
+        critic_llm_calls=(
+            candidate_critic_outcome.llm_calls
+            if candidate_critic_outcome is not None
+            else 0
+        ),
+        solver_calls=repaired.solve_calls,
+    )
+    return CandidateTrajectory(
+        index=candidate_index,
+        temperature=temperature,
+        proposal=proposal,
+        initial_target=target,
+        iteration_zero=repaired.iteration_zero,
+        terminal=repaired.terminal,
+        status=status,
+        is_green=is_green,
+        fidelity=candidate_fidelity,
+        faithfulness=candidate_faithfulness,
+        critic_outcome=candidate_critic_outcome,
+        trace_snapshots=tuple(
+            TraceStepSnapshot.from_trace_step(step) for step in candidate_trace.steps
+        ),
+        work=work,
+    )
+
+
+def arrange_pool(
+    ir: MusicIR,
+    goal: ArrangeGoal,
+    llm: LLMClient,
+    *,
+    profile: Profile = MEDIAN_HAND,
+    n: int = 4,
+    max_iters: int = 8,
+    use_critic: bool = True,
+    temperature: float | None = None,
+    temperature_schedule: tuple[float, ...] | None = None,
+    call_scope_factory: ModelCallScopeFactory | None = None,
+) -> ArrangePool:
+    """Build one ordered pool while retaining a trajectory for every slot."""
+
+    ir = snapshot_music_ir(ir)
+    n = ensure_candidate_count(n)
+    max_iters = ensure_repair_iterations(max_iters)
+    use_critic = ensure_boolean_control(use_critic, path="use_critic")
+    temperatures = _resolve_temperature_schedule(
+        n,
+        temperature=temperature,
+        temperature_schedule=temperature_schedule,
+    )
+    notes, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
+        ir.notes,
+        goal.tuning,
+        goal.capo,
+        profile,
+        tempo_bpm=goal.tempo_bpm,
+    )
+    ir = MusicIR(notes, tuple(ir.chords), ir.meta)
+    goal = ArrangeGoal(
+        style=goal.style,
+        tier=goal.tier,
+        tuning=tuning,
+        capo=capo,
+        tempo_bpm=tempo_bpm,
+        extras=goal.extras,
+    )
     trace = Trace()
-    slots: list[_Candidate | None] = []
+    slots: list[CandidateTrajectory | None] = []
     candidate_traces: list[tuple[TraceStep, ...]] = []
-    for i in range(n):
-        candidate_trace = Trace()
-        temperature = min(1.0, 0.2 * i)
-        target = propose_arrangement(
+    trajectories: list[CandidateTrajectory] = []
+    for candidate_index in range(n):
+        trajectory = build_candidate_trajectory(
             ir,
             goal,
             llm,
-            temperature=temperature,
             profile=profile,
-        )
-        candidate_trace.add(
-            "PROPOSE",
-            f"Candidate {i} produced a bounded target-note checkpoint.",
-            event="CANDIDATE_PROPOSED",
-            candidate_index=i,
-            temperature=temperature,
-            target_checkpoint=target_checkpoint(target),
-        )
-        rr = repair(
-            target,
-            goal.tuning,
-            goal.capo,
-            profile,
-            llm,
-            tempo_bpm=goal.tempo_bpm,
+            candidate_index=candidate_index,
             max_iters=max_iters,
-            candidate_index=i,
+            use_critic=use_critic,
+            temperature=temperatures[candidate_index],
+            call_scope_factory=call_scope_factory,
         )
-        candidate_trace.steps.extend(rr.trace.steps)
-        verdict = rr.oracle.verdict if rr.oracle is not None else "INFEASIBLE"
-        candidate_trace.add(
-            "SOLVE",
-            f"Candidate {i} finished with {verdict}.",
-            event="CANDIDATE_FINISHED",
-            candidate_index=i,
-            iteration=rr.iterations,
-            verdict=verdict,
-            tab_available=rr.tab is not None,
-            repair_iterations=rr.iterations,
-        )
-        trace.steps.extend(candidate_trace.steps)
-        candidate_traces.append(tuple(candidate_trace.steps))
-        if rr.tab is None:
-            slots.append(None)
-            continue
-        fid = fidelity(ir, rr.tab)
-        faith = faithfulness(ir, rr.tab)
-        is_green = rr.oracle is not None and rr.oracle.verdict == "GREEN"
-        crit = critique(ir, rr.tab, llm) if (is_green and use_critic) else None
-        slots.append(_Candidate(i, is_green, fid, faith, crit, rr))
-    return ArrangePool(tuple(slots), trace, n, tuple(candidate_traces))
+        trajectories.append(trajectory)
+        candidate_traces.append(trajectory.trace_steps)
+        trace.steps.extend(trajectory.trace_steps)
+        slots.append(trajectory if trajectory.terminal.tab is not None else None)
+    return ArrangePool(
+        tuple(slots),
+        trace,
+        n,
+        tuple(candidate_traces),
+        tuple(trajectories),
+    )
 
 
 def _retained_candidate_steps(pool: ArrangePool, index: int) -> tuple[TraceStep, ...]:
     """Return one complete candidate replay, tolerating pre-6A pool fixtures."""
 
+    if len(pool.trajectories) == pool.n:
+        return pool.trajectories[index].trace_steps
     if len(pool.candidate_traces) == pool.n:
         return pool.candidate_traces[index]
     return tuple(pool.trace.steps)
@@ -187,8 +527,12 @@ def _failed_candidate_to_retain(pool: ArrangePool, k: int) -> int | None:
 
     if k == 0:
         return None
-    if len(pool.candidate_traces) == pool.n:
-        for index, steps in enumerate(pool.candidate_traces[:k]):
+    if len(pool.trajectories) == pool.n:
+        candidate_steps = tuple(item.trace_steps for item in pool.trajectories[:k])
+    else:
+        candidate_steps = pool.candidate_traces[:k]
+    if len(candidate_steps) == k:
+        for index, steps in enumerate(candidate_steps):
             if any(step.event == "MODEL_CALL_FAILED" for step in steps):
                 return index
     return 0
@@ -224,7 +568,9 @@ def best_of_k(pool: ArrangePool, k: int, *, use_critic: bool = True) -> ArrangeR
     # trace bounded independently of N while preserving every winner step from
     # proposal through repair and finish.
     trace.steps.extend(_retained_candidate_steps(pool, best.index))
-    verdict = best.repair.oracle.verdict if best.repair.oracle is not None else None
+    assert best.fidelity is not None
+    assert best.faithfulness is not None
+    verdict = best.terminal.oracle.verdict if best.terminal.oracle is not None else None
     trace.add(
         "SELECT",
         f"Selected candidate {best.index}; playability and fidelity remain separate gates.",
@@ -247,7 +593,14 @@ def best_of_k(pool: ArrangePool, k: int, *, use_critic: bool = True) -> ArrangeR
         critic_status="SCORED" if best.critic is not None else "NOT_RUN",
         critic_overall=best.critic.overall if best.critic is not None else None,
     )
-    return ArrangeResult(best.repair.tab, best.repair.oracle, best.fidelity, best.critic, trace, k)
+    return ArrangeResult(
+        best.terminal.tab,
+        best.terminal.oracle,
+        best.fidelity,
+        best.critic,
+        trace,
+        k,
+    )
 
 
 def arrange(
@@ -259,8 +612,20 @@ def arrange(
     n: int = 4,
     max_iters: int = 8,
     use_critic: bool = True,
+    temperature: float | None = None,
+    temperature_schedule: tuple[float, ...] | None = None,
+    call_scope_factory: ModelCallScopeFactory | None = None,
 ) -> ArrangeResult:
     pool = arrange_pool(
-        ir, goal, llm, profile=profile, n=n, max_iters=max_iters, use_critic=use_critic
+        ir,
+        goal,
+        llm,
+        profile=profile,
+        n=n,
+        max_iters=max_iters,
+        use_critic=use_critic,
+        temperature=temperature,
+        temperature_schedule=temperature_schedule,
+        call_scope_factory=call_scope_factory,
     )
     return best_of_k(pool, pool.n)

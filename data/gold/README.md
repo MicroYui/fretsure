@@ -5,17 +5,13 @@ and roadmap §14 A.8). A guitarist with a measured hand span plays each tab and
 records whether it is physically playable. This is the empirical anchor for the
 GREEN false-accept rate.
 
-> **Status (2026-07-13): not collected.** `sample_labeled.jsonl` contains six
-> constructed rows only; it validates serialization/statistics plumbing and cannot
-> support a real-player false-accept claim or parameter calibration. Collection can
-> happen in parallel with Plan 6 and other engineering; it does not block continued
-> implementation. It does block a measured real-world false-accept rate, mapping
-> versioned profiles/tiers to real players, and any stronger claim that a real
-> guitarist can necessarily play a result certified GREEN by `oracle@0.2.0`.
-> Human musicality is a separate blind-rating track; this physical-playability set
-> cannot establish it.
+> **Status (2026-07-17): formal contract frozen; human observations = 0; real
+> provider calls = 0.** Task 6 can emit software-fixture evidence only. The formal
+> label/proposition boundary is ready for a later approved collection, but no
+> constructed row is human gold and no checker-vs-judge superiority claim is
+> available. Human musicality remains a separate blind-rating track.
 
-## Current fixture schema — `*.jsonl`
+## Legacy software fixture — `sample_labeled.jsonl`
 
 ```json
 {
@@ -34,9 +30,9 @@ GREEN false-accept rate.
 
 - `tab` is the exact JSON emitted by `fretsure.tab.tab_to_json`. `string` 0 =
   lowest-pitched (6th) string. `right_finger` ∈ {p, i, m, a}.
-- `human_playable` is only a fixture field in the current six-row sample. The
-  present loader calls the oracle with default tempo 90 and 4 beats/bar and has no
-  session/player metadata, so this schema is **not collection-ready**.
+- `human_playable` is only a legacy fixture field. The six constructed rows validate
+  serialization and statistics plumbing with default tempo 90 and 4 beats/bar; they
+  are not Task 6 formal rows and are **not collection-ready**.
 
 ## Files
 
@@ -59,27 +55,137 @@ snapshotting against mutation; physical-line provenance tied to canonical conten
 64 MiB cumulative bytes/scalars; 200,000 notes; 2,000,000 checker-work units;
 1,000,000 physical lines; and 1,000,000 cumulative JSON nodes, plus per-row
 depth/node/token limits. These protections make the plumbing safe to expose; they do
-not make the six constructed rows human evidence or make the current schema
-collection-ready.
+not make the six constructed rows human evidence.
 
-## Required collection-schema extension
+## Formal human-label contract
 
-Before collecting real labels, extend the loader/schema to bind every observation
-to the exact claim being tested:
+One future collection record must bind the label to the exact proposition being
+tested. The field names and states mirror the Task 6 `JudgeItem`, `ReferenceLabel`,
+`LabelProvenance`, and agreement contracts:
 
-- `tempo_bpm`, `beats_per_bar`, checker/profile version **and Git commit**;
-- anonymous player/session id, rater id, date, measured hand-span method/value,
-  relevant experience level;
-- instrument type, scale length, tuning, capo and setup;
-- whether the player must use the **exhibited fingering** (the oracle's claim) or
-  may refinger; the primary label must test the exhibited fingering;
-- attempt count, clean-play criterion, playable/unplayable/uncertain label and an
-  optional reason/diagnostic;
-- source/family/template/seed identifiers so near-duplicates stay in one split.
+```json
+{
+  "item_id": "human-item-001",
+  "family_id": "human-family-001",
+  "adversarial_class": "stretch-near-miss",
+  "tab": {
+    "tuning": [40, 45, 50, 55, 59, 64],
+    "capo": 0,
+    "notes": [
+      {"onset": "0/1", "duration": "1/1", "string": 0, "fret": 2,
+       "left_finger": 1, "right_finger": "p"}
+    ]
+  },
+  "tab_time_unit": "quarter_note",
+  "tempo_bpm": 90.0,
+  "tempo_unit": "quarter_notes_per_minute",
+  "meter": [4, 4],
+  "bar_duration_quarter_notes": "4/1",
+  "fingering_policy": "EXHIBITED_ONLY",
+  "profile_version": "median@0.1",
+  "profile_fingerprint": "<lowercase-sha256>",
+  "profile_assignment_protocol_version": "<frozen-before-collection>",
+  "checker_version": "oracle@0.2.0",
+  "proposition_sha256": "<lowercase-sha256>",
+  "execution_git_sha": "<task-7-release-sha>",
+  "provenance": {
+    "source": "human",
+    "dataset_id": "<dataset-id>",
+    "protocol_version": "<protocol-version>",
+    "record_sha256": "<lowercase-sha256>"
+  },
+  "observations": [
+    {
+      "player_id": "anon-player-001",
+      "session_id": "anon-session-001",
+      "rater_id": "anon-rater-001",
+      "date": "2026-08-01",
+      "measured_finger_1_to_4_span_mm": 100.0,
+      "hand_span_method": "finger-1-to-4-max-span@0.1.0",
+      "experience_level": "advanced",
+      "instrument_type": "classical-guitar",
+      "scale_length_mm": 648.0,
+      "assigned_profile_version": "median@0.1",
+      "assigned_profile_fingerprint": "<same-as-proposition>",
+      "attempt_count": 3,
+      "label": "PLAYABLE",
+      "reason": null
+    },
+    {
+      "player_id": "anon-player-002",
+      "session_id": "anon-session-002",
+      "rater_id": "anon-rater-002",
+      "date": "2026-08-01",
+      "measured_finger_1_to_4_span_mm": 100.0,
+      "hand_span_method": "finger-1-to-4-max-span@0.1.0",
+      "experience_level": "advanced",
+      "instrument_type": "classical-guitar",
+      "scale_length_mm": 648.0,
+      "assigned_profile_version": "median@0.1",
+      "assigned_profile_fingerprint": "<same-as-proposition>",
+      "attempt_count": 3,
+      "label": "PLAYABLE",
+      "reason": null
+    }
+  ],
+  "agreement_status": "agreed",
+  "labeler_count": 2,
+  "verdict": "PLAYABLE",
+  "adjudication": null
+}
+```
 
-Do not start the headline collection against the current simplified loader: tempo
-and session ambiguity would make the label disagree with the proposition certified
-by the oracle.
+- `tab` is the exact exhibited fingering; refingering answers a different question.
+  Tab onset/duration values are quarter-note units, and `tempo_bpm` is quarter notes
+  per minute. `bar_duration_quarter_notes` is derived exactly as
+  `meter_numerator * 4 / meter_denominator`; for example, 6/8 is `3/1`.
+  The tempo, exact meter, profile fingerprint, canonical tab, fixed units, and fixed
+  `EXHIBITED_ONLY` policy determine `proposition_sha256`; `profile_version` is stamped
+  separately.
+  `adversarial_class` follows the collection protocol's frozen taxonomy; it is not a
+  human difficulty label.
+- Player, session, and rater identifiers are anonymous. `Profile.hand_span_mm` means
+  maximum finger-1-to-4 distance, not thumb-to-pinky span; instrument scale length must
+  match the assigned profile. A versioned profile-assignment protocol must be frozen
+  before collection. Every accepted observation carries the same assigned profile
+  version/fingerprint as the proposition; observations assigned to different profiles
+  are never aggregated. The collection protocol also freezes date, experience level,
+  attempts, clean-play criterion, and optional reason before collection.
+- Each observation label is exactly `PLAYABLE`, `UNPLAYABLE`, or `UNCERTAIN`.
+  `UNCERTAIN` is preserved as an observation but can never become the final binary
+  `verdict`.
+- Human agreement states are `pending`, `single_label`, `uncertain`, `agreed`,
+  `disagreed`, and `adjudicated`. Only an `agreed` or `adjudicated` row with final
+  binary verdict `PLAYABLE` or `UNPLAYABLE` may enter a future confirmatory
+  denominator. All other states remain visible and follow the preregistered
+  missingness rule.
+- The future collection loader derives the aggregate from accepted observations bound
+  to the same proposition; it does not trust a caller-supplied summary. `labeler_count`
+  equals the number of those observations. Zero observations gives `pending`; one
+  binary label gives `single_label`; one or more all-`UNCERTAIN` labels gives
+  `uncertain`; at least two identical binary labels with no uncertainty gives `agreed`;
+  every other multi-observation combination gives `disagreed` with a null verdict.
+  `adjudicated` is allowed only after `disagreed` and requires a separate versioned
+  adjudication record with anonymous adjudicator, date, binary verdict, and reason;
+  the adjudicator is not added to `labeler_count`.
+- `execution_git_sha` is supplied by the external Task 7 publication workflow. Task 6
+  runtime does not inspect `.git`, invoke Git, or launch a subprocess to discover it.
+
+Do not collect formal labels through the legacy `human_playable` loader.
+
+## Evidence and open gates
+
+- Task 6 output is exactly `SOFTWARE_FIXTURE_ONLY`. A software fixture has constructed
+  binary truth, `agreement_status="software_fixture"`, and `labeler_count=0`; it proves
+  parsing, prompt/schedule, repetition, flip/invalid, and accounting machinery only.
+- **Human empirical: OPEN.** Real guitarist observations and agreement/adjudication
+  remain required for empirical GREEN false-accept, AMBER bandwidth, player/profile
+  calibration, and checker-vs-judge superiority claims. No profile-assignment
+  protocol has yet been approved, so formal collection remains closed.
+- **Cross-provider comparison: UNAVAILABLE.** It remains unavailable until at least
+  two independently versioned provider models have exact model bindings and an
+  explicit versioned call budget covering the complete frozen schedule. Repeated
+  prompts, aliases, or fake clients do not satisfy this gate.
 
 ## Planned collection protocol
 

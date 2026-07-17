@@ -6,14 +6,17 @@ in which octaves — and emits a target note set as JSON. It never decides finge
 the Plan 2 rule stub, so the pipeline always has a target.
 """
 
+import hashlib
 from dataclasses import dataclass, field
+from enum import StrEnum
 from fractions import Fraction
 from typing import cast
 
+from fretsure.agent.model_calls import ModelCallScopeFactory, model_call_scope
 from fretsure.arrange.propose import propose_fingerstyle
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import MusicIR, Note, VoiceRole, snapshot_music_ir
-from fretsure.llm.client import ConstantLLM, LLMClient, extract_json
+from fretsure.llm.client import ConstantLLM, LLMClient, LLMIntegrityError, extract_json
 from fretsure.oracle.input import ensure_solver_domain
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 
@@ -28,10 +31,48 @@ _ARRANGE_SYSTEM = (
 
 MIN_OUTPUT_TOKENS = 2048
 MAX_OUTPUT_TOKENS = 16_384
+_SOURCE_CONTEXT_DIGEST_DOMAIN = b"fretsure:arrangement-source-context@0.1.0\0"
 
 
 class ArrangementCapacityError(ValueError):
     """A real-LLM proposal cannot faithfully encode every legal source event."""
+
+
+class ProposalStatus(StrEnum):
+    """Stable, outcome-only provenance for one bounded proposal attempt."""
+
+    LLM_SUCCESS = "LLM_SUCCESS"
+    PARSE_VALIDATION_FALLBACK = "PARSE_VALIDATION_FALLBACK"
+    CALL_FAILURE_FALLBACK = "CALL_FAILURE_FALLBACK"
+    CONSTANT_LLM_BYPASS = "CONSTANT_LLM_BYPASS"
+
+
+@dataclass(frozen=True, slots=True)
+class ProposalOutcome:
+    """Immutable proposal target plus its non-sensitive execution outcome."""
+
+    target: tuple[Note, ...]
+    status: ProposalStatus
+    llm_calls: int
+
+    def __post_init__(self) -> None:
+        if type(self.target) is not tuple:
+            raise ValueError("target must be an exact tuple")
+        if type(self.status) is not ProposalStatus:
+            raise ValueError("status must be a ProposalStatus")
+        if type(self.llm_calls) is not int or self.llm_calls not in (0, 1):
+            raise ValueError("llm_calls must be an exact integer in 0..1")
+        if (self.status is ProposalStatus.CONSTANT_LLM_BYPASS) != (self.llm_calls == 0):
+            raise ValueError("only the ConstantLLM bypass may use zero LLM calls")
+
+    @property
+    def fallback_assisted(self) -> bool:
+        """Whether malformed output or a failed call selected the rule fallback."""
+
+        return self.status in {
+            ProposalStatus.PARSE_VALIDATION_FALLBACK,
+            ProposalStatus.CALL_FAILURE_FALLBACK,
+        }
 
 
 @dataclass(frozen=True)
@@ -44,15 +85,13 @@ class ArrangeGoal:
     extras: dict[str, str] = field(default_factory=dict)
 
 
-def _ir_summary(ir: MusicIR) -> str:
+def _render_arrangement_source_context(ir: MusicIR) -> str:
     mel = [n for n in ir.notes if n.voice == "melody"]
     bass = [n for n in ir.notes if n.voice == "bass"]
     harmony = [n for n in ir.notes if n.voice == "harmony"]
 
     def events(notes: list[Note]) -> str:
-        return "; ".join(
-            f"onset={n.onset} duration={n.duration} pitch={n.pitch}" for n in notes
-        )
+        return "; ".join(f"onset={n.onset} duration={n.duration} pitch={n.pitch}" for n in notes)
 
     chords = "; ".join(
         f"onset={c.onset} {c.symbol} root_pc={c.root_pc} "
@@ -67,6 +106,24 @@ def _ir_summary(ir: MusicIR) -> str:
         f"Source harmony-note events: {events(harmony)}\n"
         f"Chord annotations: {chords}"
     )
+
+
+def arrangement_source_context(ir: MusicIR) -> str:
+    """Return the stable source-only context shared by proposal baselines.
+
+    Goal, tuning, capo, and effective-tempo instructions deliberately remain outside
+    this renderer so callers can prove that different policies saw the same source
+    facts without claiming that their tasks were identical.
+    """
+
+    return _render_arrangement_source_context(snapshot_music_ir(ir))
+
+
+def arrangement_source_context_sha256(ir: MusicIR) -> str:
+    """Digest the exact public source-context rendering with a stable domain tag."""
+
+    encoded = arrangement_source_context(ir).encode("utf-8")
+    return hashlib.sha256(_SOURCE_CONTEXT_DIGEST_DOMAIN + encoded).hexdigest()
 
 
 def _parse_notes(obj: dict[str, object]) -> tuple[Note, ...]:
@@ -94,21 +151,20 @@ def _parse_notes(obj: dict[str, object]) -> tuple[Note, ...]:
             raise ValueError(f"pitch must be in MIDI range 0..127, got {raw_pitch}")
         identity = (onset, raw_pitch)
         if identity in seen:
-            raise ValueError(
-                f"duplicate pitch {raw_pitch} at onset {onset} is ambiguous"
-            )
+            raise ValueError(f"duplicate pitch {raw_pitch} at onset {onset} is ambiguous")
         seen.add(identity)
         notes.append(Note(onset, duration, raw_pitch, cast(VoiceRole, voice)))
     return tuple(sorted(notes, key=lambda n: (n.onset, n.pitch)))
 
 
-def _output_token_budget(ir: MusicIR) -> int:
+def proposal_output_token_budget(ir: MusicIR) -> int:
     """Budget a full structured reply for every legal input event.
 
     The old fixed 2k budget could truncate an otherwise-valid long arrangement.
     Imported resource limits bound the request; this scales generously with all
     source notes and chord annotations while retaining a provider-safe ceiling.
     """
+    ir = snapshot_music_ir(ir)
     events = len(ir.notes) + len(ir.chords)
     required = max(MIN_OUTPUT_TOKENS, 128 + 96 * events)
     if required > MAX_OUTPUT_TOKENS:
@@ -123,18 +179,22 @@ def _output_token_budget(ir: MusicIR) -> int:
 
 def ensure_llm_capacity(ir: MusicIR) -> None:
     """Raise a typed error rather than silently truncating a real-LLM request."""
-    ir = snapshot_music_ir(ir)
-    _output_token_budget(ir)
+
+    proposal_output_token_budget(ir)
 
 
-def propose_arrangement(
+def propose_arrangement_outcome(
     ir: MusicIR,
     goal: ArrangeGoal,
     llm: LLMClient,
     *,
     temperature: float = 0.0,
     profile: Profile = MEDIAN_HAND,
-) -> tuple[Note, ...]:
+    call_scope_factory: ModelCallScopeFactory | None = None,
+    candidate_index: int | None = None,
+) -> ProposalOutcome:
+    """Return one target and explicit provenance without exposing model content."""
+
     ir = snapshot_music_ir(ir)
     notes, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
         ir.notes,
@@ -157,18 +217,22 @@ def propose_arrangement(
     # vertical slice continues to accept the importer's much larger resource
     # envelope without constructing an enormous prompt.
     if isinstance(llm, ConstantLLM):
-        return propose_fingerstyle(
-            ir,
-            goal.tuning,
-            goal.capo,
-            profile=profile,
-            tempo_bpm=goal.tempo_bpm,
+        return ProposalOutcome(
+            propose_fingerstyle(
+                ir,
+                goal.tuning,
+                goal.capo,
+                profile=profile,
+                tempo_bpm=goal.tempo_bpm,
+            ),
+            ProposalStatus.CONSTANT_LLM_BYPASS,
+            0,
         )
-    max_tokens = _output_token_budget(ir)
+    max_tokens = proposal_output_token_budget(ir)
     low = min(goal.tuning) + goal.capo
     high = max(goal.tuning) + goal.capo + 22
     user = (
-        f"{_ir_summary(ir)}\n"
+        f"{arrangement_source_context(ir)}\n"
         f"Effective arrangement tempo: {goal.tempo_bpm} BPM.\n\n"
         f"Playable range on this tuning: MIDI {low}-{high} "
         f"(the lowest playable note is {low}; never write a note below {low}). "
@@ -176,21 +240,70 @@ def propose_arrangement(
         f"Goal: {goal.style}, {goal.tier} difficulty. Produce the target note set now."
     )
     try:
-        reply = llm.complete(
-            system=_ARRANGE_SYSTEM,
-            user=user,
-            temperature=temperature,
-            max_tokens=max_tokens,
+        with model_call_scope(
+            call_scope_factory,
+            stage="proposal",
+            stage_ordinal=0,
+            candidate_index=candidate_index,
+        ):
+            reply = llm.complete(
+                system=_ARRANGE_SYSTEM,
+                user=user,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+    except LLMIntegrityError:
+        raise
+    except (ValueError, KeyError, TypeError, RuntimeError, ZeroDivisionError):
+        return ProposalOutcome(
+            propose_fingerstyle(
+                ir,
+                goal.tuning,
+                goal.capo,
+                profile=profile,
+                tempo_bpm=goal.tempo_bpm,
+            ),
+            ProposalStatus.CALL_FAILURE_FALLBACK,
+            1,
         )
+
+    try:
         notes = _parse_notes(extract_json(reply))
         if not any(n.voice == "melody" for n in notes):
             raise ValueError("proposal has no melody")
-        return notes
-    except (ValueError, KeyError, TypeError, RuntimeError):
-        return propose_fingerstyle(
-            ir,
-            goal.tuning,
-            goal.capo,
-            profile=profile,
-            tempo_bpm=goal.tempo_bpm,
+        return ProposalOutcome(notes, ProposalStatus.LLM_SUCCESS, 1)
+    except (ValueError, KeyError, TypeError, RuntimeError, ArithmeticError):
+        return ProposalOutcome(
+            propose_fingerstyle(
+                ir,
+                goal.tuning,
+                goal.capo,
+                profile=profile,
+                tempo_bpm=goal.tempo_bpm,
+            ),
+            ProposalStatus.PARSE_VALIDATION_FALLBACK,
+            1,
         )  # honest deterministic fallback
+
+
+def propose_arrangement(
+    ir: MusicIR,
+    goal: ArrangeGoal,
+    llm: LLMClient,
+    *,
+    temperature: float = 0.0,
+    profile: Profile = MEDIAN_HAND,
+    call_scope_factory: ModelCallScopeFactory | None = None,
+    candidate_index: int | None = None,
+) -> tuple[Note, ...]:
+    """Compatibility wrapper returning exactly the historical target tuple."""
+
+    return propose_arrangement_outcome(
+        ir,
+        goal,
+        llm,
+        temperature=temperature,
+        profile=profile,
+        call_scope_factory=call_scope_factory,
+        candidate_index=candidate_index,
+    ).target

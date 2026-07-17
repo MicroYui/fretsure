@@ -54,6 +54,7 @@ from fretsure.llm.client import (
     ConstantLLM,
     LLMClient,
     ProxyLLM,
+    close_llm_client,
     proxy_environment_configured,
     snapshot_llm_model_id,
     validate_llm_model_id,
@@ -104,9 +105,13 @@ class _LazyConfiguredLLM:
     def _get(self) -> LLMClient:
         if self._delegate is None:
             delegate = self._factory()
-            actual_model_id = snapshot_llm_model_id(delegate)
-            if actual_model_id != self._expected_model_id:
-                raise ValueError("engine model did not match startup configuration")
+            try:
+                actual_model_id = snapshot_llm_model_id(delegate)
+                if actual_model_id != self._expected_model_id:
+                    raise ValueError("engine model did not match startup configuration")
+            except Exception:
+                close_llm_client(delegate)
+                raise
             self._delegate = delegate
         return self._delegate
 
@@ -129,6 +134,11 @@ class _LazyConfiguredLLM:
             max_tokens=max_tokens,
             temperature=temperature,
         )
+
+    def close(self) -> None:
+        if self._delegate is not None:
+            close_llm_client(self._delegate)
+            self._delegate = None
 
 
 def _api_problem(status: int, code: str, title: str, detail: str) -> APIProblem:
@@ -1084,12 +1094,20 @@ def create_app(
 
         def execute() -> dict[str, object]:
             llm = _configured_llm(config, engine)
-            outcome = arrange_score_bytes(data, filename=filename, options=options, llm=llm)
-            wire = _api_wire(arrange_outcome_to_wire(outcome))
-            model = wire.get("model")
-            if type(model) is dict:
-                cast(dict[str, object], model)["engine"] = engine
-            return wire
+            try:
+                outcome = arrange_score_bytes(
+                    data,
+                    filename=filename,
+                    options=options,
+                    llm=llm,
+                )
+                wire = _api_wire(arrange_outcome_to_wire(outcome))
+                model = wire.get("model")
+                if type(model) is dict:
+                    cast(dict[str, object], model)["engine"] = engine
+                return wire
+            finally:
+                close_llm_client(llm)
 
         return JSONResponse(await run_in_threadpool(execute))
 

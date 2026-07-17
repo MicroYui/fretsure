@@ -4,10 +4,10 @@ from typing import Any, cast
 
 import pytest
 
-from fretsure.agent.repair import repair
+from fretsure.agent.repair import REPAIR_MAX_TOKENS, repair
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import Note
-from fretsure.llm.client import FakeLLM
+from fretsure.llm.client import FakeLLM, LLMIntegrityError
 from fretsure.oracle.input import OracleInputCode, SolverInputError
 from fretsure.oracle.profiles import MEDIAN_HAND
 
@@ -35,6 +35,56 @@ def test_repair_drops_harmony_to_reach_green() -> None:
     assert 85 in [n.pitch for n in r.target]  # melody preserved
     assert 86 not in [n.pitch for n in r.target]
     assert any(s.kind == "EDIT" for s in r.trace.steps)
+
+
+def test_repair_uses_the_public_fixed_output_budget() -> None:
+    llm = FakeLLM([_DROP_86])
+
+    repair(_INFEASIBLE, STANDARD_TUNING, 0, MEDIAN_HAND, llm)
+
+    assert llm.calls[0]["max_tokens"] == REPAIR_MAX_TOKENS == 1024
+
+
+def test_repair_exposes_iteration_zero_and_terminal_solver_states() -> None:
+    result = repair(
+        _INFEASIBLE,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FakeLLM([_DROP_86]),
+    )
+
+    assert result.iteration_zero.iteration == 0
+    assert result.iteration_zero.target == _INFEASIBLE
+    assert result.iteration_zero.tab is None
+    assert result.iteration_zero.oracle is None
+    assert result.iteration_zero.infeasible is not None
+    assert result.iteration_zero.solved == result.iteration_zero.infeasible
+    assert result.terminal.iteration == 1
+    assert result.terminal.target == result.target
+    assert result.terminal.tab == result.tab
+    assert result.terminal.oracle == result.oracle
+    assert result.terminal.infeasible is None
+    assert result.model_calls == 1
+    assert result.solve_calls == 2
+
+
+def test_iteration_zero_retains_tab_and_oracle_before_repair() -> None:
+    result = repair(
+        _AMBER,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FakeLLM([_DROP_41]),
+        max_iters=2,
+    )
+
+    assert result.iteration_zero.tab is not None
+    assert result.iteration_zero.oracle is not None
+    assert result.iteration_zero.oracle.verdict == "AMBER"
+    assert result.iteration_zero.infeasible is None
+    assert result.terminal.oracle is not None
+    assert result.terminal.oracle.verdict == "GREEN"
 
 
 def test_repair_trace_is_digest_linked_and_candidate_scoped() -> None:
@@ -92,9 +142,7 @@ def test_trace_replays_localized_diagnostic_edit_and_green_recheck() -> None:
         "SOLVER_RETURNED_TAB",
         "PLAYABILITY_CHECKED",
     ]
-    checks = [
-        step for step in result.trace.steps if step.event == "PLAYABILITY_CHECKED"
-    ]
+    checks = [step for step in result.trace.steps if step.event == "PLAYABILITY_CHECKED"]
     assert [step.data["verdict"] for step in checks] == ["AMBER", "GREEN"]
     first_diagnostics = checks[0].data["diagnostics"]
     assert {row["code"] for row in first_diagnostics} == {
@@ -126,6 +174,40 @@ def test_repair_trace_never_records_raw_model_reply_or_transport_exception() -> 
     assert "private-token" not in encoded
     assert _DROP_86 not in encoded
 
+    zero_denominator = repair(
+        _INFEASIBLE,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FakeLLM(
+            [
+                '{"op":"drop_note","target_onset":"1/0","target_pitch":86}'
+            ]
+        ),
+        max_iters=1,
+    )
+    invalid = next(
+        step for step in zero_denominator.trace.steps if step.event == "MODEL_EDIT_INVALID"
+    )
+    assert invalid.data["reason_code"] == "INVALID_EDIT_SCHEMA"
+
+    infinite_pitch = repair(
+        _INFEASIBLE,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FakeLLM(
+            [
+                '{"op":"drop_note","target_onset":"0","target_pitch":Infinity}'
+            ]
+        ),
+        max_iters=1,
+    )
+    invalid = next(
+        step for step in infinite_pitch.trace.steps if step.event == "MODEL_EDIT_INVALID"
+    )
+    assert invalid.data["reason_code"] == "INVALID_EDIT_SCHEMA"
+
     class FailingLLM:
         @property
         def model_id(self) -> str:
@@ -133,9 +215,7 @@ def test_repair_trace_never_records_raw_model_reply_or_transport_exception() -> 
 
         def complete(self, **kwargs: object) -> str:
             del kwargs
-            raise RuntimeError(
-                "Bearer top-secret at https://proxy.invalid/private?auth=top-secret"
-            )
+            raise RuntimeError("Bearer top-secret at https://proxy.invalid/private?auth=top-secret")
 
     failed = repair(
         _INFEASIBLE,
@@ -147,12 +227,27 @@ def test_repair_trace_never_records_raw_model_reply_or_transport_exception() -> 
     failed_json = failed.trace.to_jsonl()
     assert "top-secret" not in failed_json
     assert "proxy.invalid" not in failed_json
+    assert failed.iteration_zero == failed.terminal
+    assert failed.model_calls == 1
+    assert failed.solve_calls == 1
     failure_rows = [json.loads(line) for line in failed_json.splitlines()]
     failure = next(row for row in failure_rows if row["event"] == "MODEL_CALL_FAILED")
     assert failure["data"] == {
         "reason_code": "LLM_TRANSPORT_FAILURE",
         "target_sha256": failure["data"]["target_sha256"],
     }
+
+
+def test_repair_never_converts_integrity_failure_into_terminal_model_failure() -> None:
+    class IntegrityFailingLLM:
+        model_id = "integrity-test"
+
+        def complete(self, **kwargs: object) -> str:
+            del kwargs
+            raise LLMIntegrityError("formal observation failed")
+
+    with pytest.raises(LLMIntegrityError, match="formal observation failed"):
+        repair(_INFEASIBLE, STANDARD_TUNING, 0, MEDIAN_HAND, IntegrityFailingLLM())
 
 
 def test_nonmatching_edit_is_explicit_rejection_not_an_applied_edit() -> None:
@@ -204,9 +299,7 @@ def test_repair_rejects_unbounded_iteration_controls_before_llm(
             max_iters=max_iters,  # type: ignore[arg-type]
         )
     assert llm.calls == []
-    assert {d.code for d in caught.value.diagnostics} == {
-        OracleInputCode.REPAIR_ITERATIONS
-    }
+    assert {d.code for d in caught.value.diagnostics} == {OracleInputCode.REPAIR_ITERATIONS}
 
 
 def test_repair_validates_target_before_sorting_or_llm() -> None:
@@ -222,9 +315,7 @@ def test_repair_validates_target_before_sorting_or_llm() -> None:
         )
 
     assert llm.calls == []
-    assert OracleInputCode.NOTE_TYPE in {
-        diagnostic.code for diagnostic in caught.value.diagnostics
-    }
+    assert OracleInputCode.NOTE_TYPE in {diagnostic.code for diagnostic in caught.value.diagnostics}
 
 
 def test_deterministic() -> None:

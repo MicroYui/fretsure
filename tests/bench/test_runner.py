@@ -1,12 +1,21 @@
+import json
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
+import fretsure.bench.report as report_module
+import fretsure.bench.runner as runner_module
+from fretsure.bench.report import ReplayMode
 from fretsure.bench.runner import (
     MAX_BENCHMARK_BARS,
     MAX_BENCHMARK_ITEMS,
     BenchmarkInputError,
+    BenchmarkV2Config,
     BenchReport,
+    collect_benchmark_v2,
+    main,
+    replay_benchmark_v2,
     report_to_dict,
     run_benchmark,
 )
@@ -14,6 +23,23 @@ from fretsure.llm.client import ConstantLLM
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION
 from fretsure.oracle.profiles import MEDIAN_HAND
+
+
+class _ClosableConstant(ConstantLLM):
+    def __init__(self, model_id: str, *, readable: bool = True) -> None:
+        super().__init__("noop")
+        self._test_model_id = model_id
+        self._readable = readable
+        self.closes = 0
+
+    @property
+    def model_id(self) -> str:
+        if not self._readable:
+            raise RuntimeError("SECRET model id getter")
+        return self._test_model_id
+
+    def close(self) -> None:
+        self.closes += 1
 
 
 def test_run_benchmark_reproducible() -> None:
@@ -68,6 +94,45 @@ def test_run_benchmark_reports_ablation() -> None:
             bars=1,
             llm_factory=lambda: NamedConstant(next(model_ids)),
         )
+
+
+def test_factory_product_is_closed_when_model_id_cannot_be_read() -> None:
+    llm = _ClosableConstant("unused", readable=False)
+
+    with pytest.raises(BenchmarkInputError, match="could not be read"):
+        run_benchmark(seed=1, items=1, bars=1, llm_factory=lambda: llm)
+
+    assert llm.closes == 1
+
+
+def test_factory_product_is_closed_when_expected_model_id_mismatches() -> None:
+    llm = _ClosableConstant("actual-model")
+
+    with pytest.raises(BenchmarkInputError, match="factory returned 'actual-model'"):
+        run_benchmark(
+            seed=1,
+            items=1,
+            bars=1,
+            llm_factory=lambda: llm,
+            llm_model_id="expected-model",
+        )
+
+    assert llm.closes == 1
+
+
+def test_factory_product_is_closed_when_arms_return_inconsistent_models() -> None:
+    created: list[_ClosableConstant] = []
+    model_ids = iter(("first-model", "second-model"))
+
+    def factory() -> _ClosableConstant:
+        llm = _ClosableConstant(next(model_ids))
+        created.append(llm)
+        return llm
+
+    with pytest.raises(BenchmarkInputError, match="inconsistent model ids"):
+        run_benchmark(seed=1, items=1, bars=1, llm_factory=factory)
+
+    assert [llm.closes for llm in created] == [1, 1]
 
 
 def test_run_benchmark_full_arranges_generated() -> None:
@@ -145,3 +210,183 @@ def test_benchmark_rejects_invalid_or_unbounded_controls_before_factory(
 
     assert caught.value.field == field
     assert calls == 0
+
+
+def _v2_config() -> BenchmarkV2Config:
+    return BenchmarkV2Config(
+        family_count=1,
+        bars=1,
+        bootstrap_repetitions=11,
+        sign_flip_draws=11,
+    )
+
+
+def _canonical_bytes(path: Path) -> dict[str, bytes]:
+    return {value.name: value.read_bytes() for value in (path / "canonical").iterdir()}
+
+
+def test_v2_config_rejects_seeds_that_cannot_fit_frozen_report_offsets() -> None:
+    with pytest.raises(BenchmarkInputError) as bootstrap:
+        BenchmarkV2Config(
+            bootstrap_seed=runner_module._max_v2_bootstrap_seed(1) + 1,
+        )
+    assert bootstrap.value.field == "bootstrap_seed"
+
+    with pytest.raises(BenchmarkInputError) as sign_flip:
+        BenchmarkV2Config(
+            sign_flip_seed=runner_module.MAX_BENCHMARK_V2_SIGN_FLIP_SEED + 1,
+        )
+    assert sign_flip.value.field == "sign_flip_seed"
+
+
+def test_v2_client_creation_closes_first_client_when_second_factory_fails() -> None:
+    context = runner_module.build_benchmark_v2_context(_v2_config())
+    agent = _ClosableConstant(context.requested_model_id)
+
+    def fail() -> ConstantLLM:
+        raise RuntimeError("raw factory failed")
+
+    with pytest.raises(RuntimeError, match="raw factory failed"):
+        runner_module._create_v2_clients(context, lambda: agent, fail)
+
+    assert agent.closes == 1
+
+
+def test_v2_client_creation_rejects_manifest_model_drift_and_closes_both() -> None:
+    context = runner_module.build_benchmark_v2_context(_v2_config())
+    agent = _ClosableConstant("different-model")
+    raw = _ClosableConstant("different-model")
+
+    with pytest.raises(BenchmarkInputError) as caught:
+        runner_module._create_v2_clients(context, lambda: agent, lambda: raw)
+
+    assert caught.value.field == "llm_model_id"
+    assert agent.closes == raw.closes == 1
+
+
+def test_v2_stub_collection_is_byte_identical_and_full_replay_matches(
+    tmp_path: Path,
+) -> None:
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    replay = tmp_path / "replay"
+    config = _v2_config()
+
+    collected = collect_benchmark_v2(config=config, output_dir=first)
+    collect_benchmark_v2(config=config, output_dir=second)
+
+    assert collected.receipt.observed_rows == 21
+    assert collected.receipt.observed_calls > 0
+    assert set(_canonical_bytes(first)) == {
+        "blobs.jsonl",
+        "config.json",
+        "observations.json",
+        "receipt.json",
+        "report.json",
+        "report.md",
+        "rows.jsonl",
+    }
+    assert _canonical_bytes(first) == _canonical_bytes(second)
+    observations = json.loads((first / "canonical" / "observations.json").read_text())
+    assert observations["calls"]
+    assert all(value["elapsed_microseconds"] is None for value in observations["calls"])
+    assert all(set(value["usage"].values()) == {None} for value in observations["calls"])
+
+    replayed = replay_benchmark_v2(
+        config_path=first / "canonical" / "config.json",
+        receipt_path=first / "canonical" / "receipt.json",
+        rows_path=first / "canonical" / "rows.jsonl",
+        blobs_path=first / "canonical" / "blobs.jsonl",
+        observations_path=first / "canonical" / "observations.json",
+        output_dir=replay,
+    )
+    assert replayed.report == collected.report
+    assert (replay / "canonical" / "report.json").read_bytes() == (
+        first / "canonical" / "report.json"
+    ).read_bytes()
+    assert (replay / "canonical" / "report.md").read_bytes() == (
+        first / "canonical" / "report.md"
+    ).read_bytes()
+
+
+def test_v2_resume_from_committed_unit_matches_one_shot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    interrupted = tmp_path / "interrupted"
+    expected = tmp_path / "expected"
+    config = _v2_config()
+    original = runner_module.ArtifactStore.commit_unit
+    injected = False
+
+    def stop_after_commit(
+        store: runner_module.ArtifactStore,
+        schedule_index: int,
+        row: object,
+        blobs: object,
+    ) -> None:
+        nonlocal injected
+        original(store, schedule_index, row, blobs)  # type: ignore[arg-type]
+        if schedule_index == 3 and not injected:
+            injected = True
+            raise RuntimeError("injected callback stop")
+
+    monkeypatch.setattr(runner_module.ArtifactStore, "commit_unit", stop_after_commit)
+    with pytest.raises(RuntimeError, match="injected callback stop"):
+        collect_benchmark_v2(config=config, output_dir=interrupted)
+    assert not (interrupted / "canonical").exists()
+
+    monkeypatch.setattr(runner_module.ArtifactStore, "commit_unit", original)
+    collect_benchmark_v2(config=config, output_dir=interrupted, resume=True)
+    collect_benchmark_v2(config=config, output_dir=expected)
+    assert _canonical_bytes(interrupted) == _canonical_bytes(expected)
+
+
+def test_v2_fast_replay_is_explicit_and_does_not_call_solver(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "source"
+    output = tmp_path / "fast"
+    collect_benchmark_v2(config=_v2_config(), output_dir=source)
+    monkeypatch.setattr(
+        report_module,
+        "solve_fingering",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("solver called")),
+    )
+
+    result = replay_benchmark_v2(
+        config_path=source / "canonical" / "config.json",
+        receipt_path=source / "canonical" / "receipt.json",
+        rows_path=source / "canonical" / "rows.jsonl",
+        blobs_path=source / "canonical" / "blobs.jsonl",
+        observations_path=source / "canonical" / "observations.json",
+        output_dir=output,
+        mode=ReplayMode.FAST_REAGGREGATE,
+    )
+
+    assert result.report.mode is ReplayMode.FAST_REAGGREGATE
+    wire = json.loads((output / "canonical" / "report.json").read_text())
+    assert wire["mode"] == "fast_reaggregate"
+    assert wire["replay_policy"] == "explicit_trust_of_stored_scores"
+
+
+def test_v2_cli_requires_explicit_collection_mode_and_output(tmp_path: Path) -> None:
+    output = tmp_path / "cli"
+    assert (
+        main(
+            [
+                "--stub",
+                "--output-dir",
+                str(output),
+                "--bootstrap-repetitions",
+                "11",
+                "--sign-flip-draws",
+                "11",
+            ]
+        )
+        == 0
+    )
+    with pytest.raises(SystemExit) as caught:
+        main(["--output-dir", str(tmp_path / "missing-mode")])
+    assert caught.value.code == 2

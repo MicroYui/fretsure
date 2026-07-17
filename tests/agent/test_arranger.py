@@ -1,3 +1,4 @@
+from dataclasses import FrozenInstanceError
 from fractions import Fraction as F
 from pathlib import Path
 
@@ -6,13 +7,18 @@ import pytest
 from fretsure.agent.arranger import (
     ArrangeGoal,
     ArrangementCapacityError,
+    ProposalStatus,
+    arrangement_source_context,
+    arrangement_source_context_sha256,
     ensure_llm_capacity,
+    proposal_output_token_budget,
     propose_arrangement,
+    propose_arrangement_outcome,
 )
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.importers import ImportSuccess, import_musicxml
 from fretsure.ir import ChordSymbol, IRInputError, Meta, MusicIR, Note
-from fretsure.llm.client import ConstantLLM, FakeLLM
+from fretsure.llm.client import ConstantLLM, FakeLLM, LLMIntegrityError
 from fretsure.oracle.input import OracleInputCode, SolverInputError
 
 
@@ -57,10 +63,59 @@ def test_no_melody_in_reply_falls_back() -> None:
     assert any(n.voice == "melody" for n in notes)  # fallback restores melody
 
 
+def test_proposal_outcome_distinguishes_every_execution_path() -> None:
+    succeeded = propose_arrangement_outcome(_leadsheet(), ArrangeGoal(), FakeLLM([_VALID]))
+    malformed = propose_arrangement_outcome(
+        _leadsheet(), ArrangeGoal(), FakeLLM(["not json at all"])
+    )
+
+    class FailingLLM:
+        @property
+        def model_id(self) -> str:
+            return "failing-test"
+
+        def complete(self, **kwargs: object) -> str:
+            del kwargs
+            raise RuntimeError("transport detail must not enter the outcome")
+
+    failed = propose_arrangement_outcome(_leadsheet(), ArrangeGoal(), FailingLLM())
+    bypassed = propose_arrangement_outcome(_leadsheet(), ArrangeGoal(), ConstantLLM("unused"))
+
+    assert succeeded.status is ProposalStatus.LLM_SUCCESS
+    assert malformed.status is ProposalStatus.PARSE_VALIDATION_FALLBACK
+    assert failed.status is ProposalStatus.CALL_FAILURE_FALLBACK
+    assert bypassed.status is ProposalStatus.CONSTANT_LLM_BYPASS
+    assert (succeeded.llm_calls, malformed.llm_calls, failed.llm_calls, bypassed.llm_calls) == (
+        1,
+        1,
+        1,
+        0,
+    )
+    assert not succeeded.fallback_assisted
+    assert malformed.fallback_assisted and failed.fallback_assisted
+    assert not bypassed.fallback_assisted
+    frozen_field = "status"
+    with pytest.raises(FrozenInstanceError):
+        setattr(succeeded, frozen_field, ProposalStatus.CALL_FAILURE_FALLBACK)
+
+
+def test_proposer_never_converts_integrity_failure_into_rule_fallback() -> None:
+    class IntegrityFailingLLM:
+        model_id = "integrity-test"
+
+        def complete(self, **kwargs: object) -> str:
+            del kwargs
+            raise LLMIntegrityError("formal observation failed")
+
+    with pytest.raises(LLMIntegrityError, match="formal observation failed"):
+        propose_arrangement_outcome(_leadsheet(), ArrangeGoal(), IntegrityFailingLLM())
+
+
 @pytest.mark.parametrize(
     "reply",
     [
         '{"notes":[{"onset":"-1","duration":"1","pitch":64,"voice":"melody"}]}',
+        '{"notes":[{"onset":"1/0","duration":"1","pitch":64,"voice":"melody"}]}',
         '{"notes":[{"onset":"0","duration":"0","pitch":64,"voice":"melody"}]}',
         '{"notes":[{"onset":"0","duration":"1","pitch":128,"voice":"melody"}]}',
         '{"notes":[{"onset":"0","duration":"1","pitch":64.5,"voice":"melody"}]}',
@@ -75,18 +130,12 @@ def test_no_melody_in_reply_falls_back() -> None:
 def test_invalid_llm_note_domain_falls_back_before_solver(reply: str) -> None:
     notes = propose_arrangement(_leadsheet(), ArrangeGoal(), FakeLLM([reply]))
 
-    assert notes == propose_arrangement(
-        _leadsheet(), ArrangeGoal(), ConstantLLM("noop")
-    )
+    assert notes == propose_arrangement(_leadsheet(), ArrangeGoal(), ConstantLLM("noop"))
 
 
 def test_prompt_contains_every_melody_duration_and_chord_without_truncation() -> None:
-    notes = tuple(
-        Note(F(i), F(3, 2), 60 + (i % 12), "melody") for i in range(65)
-    )
-    chords = tuple(
-        ChordSymbol(F(i), f"C{i}", frozenset({0, 4, 7}), 0) for i in range(33)
-    )
+    notes = tuple(Note(F(i), F(3, 2), 60 + (i % 12), "melody") for i in range(65))
+    chords = tuple(ChordSymbol(F(i), f"C{i}", frozenset({0, 4, 7}), 0) for i in range(33))
     ir = MusicIR(notes, chords, _meta())
     llm = FakeLLM([_VALID])
 
@@ -108,6 +157,35 @@ def test_prompt_playable_range_accounts_for_capo() -> None:
     assert "Playable range on this tuning: MIDI 42-88" in llm.calls[0]["user"]
     assert "source tempo 90.0 BPM" in llm.calls[0]["user"]
     assert "Effective arrangement tempo: 72.0 BPM" in llm.calls[0]["user"]
+
+
+def test_public_source_context_and_token_policy_preserve_proposal_request_bytes() -> None:
+    llm = FakeLLM([_VALID])
+    source_context = (
+        "Key C, 4/4, source tempo 90.0 BPM.\n"
+        "Melody events: onset=0 duration=1 pitch=64\n"
+        "Source bass events: onset=0 duration=1 pitch=40\n"
+        "Source harmony-note events: \n"
+        "Chord annotations: onset=0 C root_pc=0 pitch_classes=0,4,7"
+    )
+    expected_user = (
+        f"{source_context}\n"
+        "Effective arrangement tempo: 90.0 BPM.\n\n"
+        "Playable range on this tuning: MIDI 40-86 "
+        "(the lowest playable note is 40; never write a note below 40). "
+        "Keep at most 4 notes sounding at the same onset. "
+        "Goal: fingerstyle, intermediate difficulty. Produce the target note set now."
+    )
+
+    propose_arrangement(_leadsheet(), ArrangeGoal(), llm)
+
+    assert arrangement_source_context(_leadsheet()) == source_context
+    assert llm.calls[0]["user"] == expected_user
+    assert proposal_output_token_budget(_leadsheet()) == llm.calls[0]["max_tokens"] == 2048
+    assert (
+        arrangement_source_context_sha256(_leadsheet())
+        == "86bef864283cdb4956730a5326d96fe84d852072b0f8eeb48e6ee86beb63791f"
+    )
 
 
 @pytest.mark.parametrize(

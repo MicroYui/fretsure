@@ -1,0 +1,247 @@
+{
+  "schema": "benchmark-source-census@0.1.0",
+  "allowed_hosts": [
+    "raw.githubusercontent.com",
+    "www.mutopiaproject.org"
+  ],
+  "timeout_seconds": 20,
+  "max_total_bytes": 32768,
+  "sources": [
+    {
+      "source_id": "mutopia-bach-bwv773",
+      "layer": "public_midi",
+      "status": "excluded",
+      "source_format": "midi",
+      "source_url": "https://www.mutopiaproject.org/ftp/BachJS/BWV773/bach-invention-02/bach-invention-02.mid",
+      "upstream_revision": "Mutopia-2008/06/15-58",
+      "retrieval_date": "2026-07-17",
+      "expected_sha256": "b61e1e4d4a42ca70efd0eb8a65de3ed0ca0ee9c31556354608f6caa360e78e98",
+      "cache_name": null,
+      "max_bytes": 0,
+      "item_id": null,
+      "family_id": null,
+      "cluster_id": null,
+      "genre": "baroque-invention",
+      "split": null,
+      "role_map": [],
+      "normalization": [
+        "excluded-melody-stream-polyphony"
+      ],
+      "license": {
+        "expression": "CC-PDDC",
+        "attribution": "Mutopia Project piece 58; Johann Sebastian Bach; typesetter Allen Garvin",
+        "redistribution": true,
+        "derivatives": true,
+        "provider_submission": true
+      },
+      "exclusion_reason": "MELODY_STREAM_POLYPHONY_OUTSIDE_NORMALIZER_CONTRACT"
+    },
+    {
+      "source_id": "mutopia-bach-bwv774",
+      "layer": "public_midi",
+      "status": "included",
+      "source_format": "midi",
+      "source_url": "https://www.mutopiaproject.org/ftp/BachJS/BWV774/bach-invention-03/bach-invention-03.mid",
+      "upstream_revision": "Mutopia-2008/06/15-70",
+      "retrieval_date": "2026-07-17",
+      "expected_sha256": "602579a39b5b0e13ab4740dcff36342302553dcbd3619066e678f0074890c268",
+      "cache_name": "mutopia-bach-bwv774.mid",
+      "max_bytes": 8192,
+      "item_id": "public-midi-bwv774",
+      "family_id": "public-family-bwv774",
+      "cluster_id": "public-cluster-bwv774",
+      "genre": "baroque-invention",
+      "split": "test",
+      "role_map": [
+        {
+          "source": "part-name:one",
+          "role": "melody"
+        },
+        {
+          "source": "part-name:two",
+          "role": "bass"
+        }
+      ],
+      "normalization": [
+        "music21-10.5.0-no-quantize-explicit-tie-coalescing-part-name-selection",
+        "public-midi-explicit-role-map@0.1.0"
+      ],
+      "license": {
+        "expression": "CC-PDDC",
+        "attribution": "Mutopia Project piece 70; Johann Sebastian Bach; typesetter Allen Garvin",
+        "redistribution": true,
+        "derivatives": true,
+        "provider_submission": true
+      },
+      "exclusion_reason": null
+    },
+    {
+      "source_id": "mutopia-bach-bwv775",
+      "layer": "public_midi",
+      "status": "included",
+      "source_format": "midi",
+      "source_url": "https://www.mutopiaproject.org/ftp/BachJS/BWV775/bach-invention-04/bach-invention-04.mid",
+      "upstream_revision": "Mutopia-2008/06/15-67",
+      "retrieval_date": "2026-07-17",
+      "expected_sha256": "5ecc06eb04d56ea40bd4db64bfd49ac9bff523e46d134912fa5bd07aea1db1c7",
+      "cache_name": "mutopia-bach-bwv775.mid",
+      "max_bytes": 8192,
+      "item_id": "public-midi-bwv775",
+      "family_id": "public-family-bwv775",
+      "cluster_id": "public-cluster-bwv775",
+      "genre": "baroque-invention",
+      "split": "test",
+      "role_map": [
+        {
+          "source": "part-name:one",
+          "role": "melody"
+        },
+        {
+          "source": "part-name:two",
+          "role": "bass"
+        }
+      ],
+      "normalization": [
+        "music21-10.5.0-no-quantize-explicit-tie-coalescing-part-name-selection",
+        "public-midi-explicit-role-map@0.1.0"
+      ],
+      "license": {
+        "expression": "CC-PDDC",
+        "attribution": "Mutopia Project piece 67; Johann Sebastian Bach; typesetter Allen Garvin",
+        "redistribution": true,
+        "derivatives": true,
+        "provider_submission": true
+      },
+      "exclusion_reason": null
+    },
+    {
+      "source_id": "openscore-lieder-beethoven-op48-5",
+      "layer": "public_classical",
+      "status": "included",
+      "source_format": "mxl",
+      "source_url": "https://raw.githubusercontent.com/OpenScore/Lieder/6b2dc542ce2e8aa4b78c8ee62103b210efc07015/scores/Beethoven,_Ludwig_van/6_Lieder,_Op.48/5_Gottes_Macht_und_Vorsehung/lc5121692.mxl",
+      "upstream_revision": "6b2dc542ce2e8aa4b78c8ee62103b210efc07015",
+      "retrieval_date": "2026-07-17",
+      "expected_sha256": "de665a004f7c55d30bf648b2b5ad17ab3afff16713a960f9441dce8ddce5b0ad",
+      "cache_name": "openscore-lieder-beethoven-op48-5.mxl",
+      "max_bytes": 8192,
+      "item_id": "public-classical-beethoven-op48-5",
+      "family_id": "public-family-beethoven-op48-5",
+      "cluster_id": "public-cluster-beethoven-op48-5",
+      "genre": "classical-lieder",
+      "split": "test",
+      "role_map": [
+        {
+          "source": "part:P2-Staff1",
+          "role": "harmony"
+        },
+        {
+          "source": "part:P2-Staff2",
+          "role": "bass"
+        },
+        {
+          "source": "part:Singstimme Voice",
+          "role": "melody"
+        }
+      ],
+      "normalization": [
+        "music21-10.5.0-explicit-tie-coalescing-part-selection",
+        "mxl-container@0.1.0-verified-root",
+        "public-classical-explicit-role-map@0.1.0"
+      ],
+      "license": {
+        "expression": "CC0-1.0",
+        "attribution": "OpenScore Lieder Corpus; Beethoven Op.48 No.5 encoding",
+        "redistribution": true,
+        "derivatives": true,
+        "provider_submission": true
+      },
+      "exclusion_reason": null
+    },
+    {
+      "source_id": "openscore-lieder-bizet-serenade",
+      "layer": "public_classical",
+      "status": "excluded",
+      "source_format": "mxl",
+      "source_url": "https://raw.githubusercontent.com/OpenScore/Lieder/6b2dc542ce2e8aa4b78c8ee62103b210efc07015/scores/Bizet,_Georges/20_M%C3%A9lodies,_Op.21/10_S%C3%A9r%C3%A9nade/lc6898141.mxl",
+      "upstream_revision": "6b2dc542ce2e8aa4b78c8ee62103b210efc07015",
+      "retrieval_date": "2026-07-17",
+      "expected_sha256": "5de9ea7c0572a5a0371c98e2ad778ac0cb01ed0fdcf821830de668dc296c0308",
+      "cache_name": null,
+      "max_bytes": 0,
+      "item_id": null,
+      "family_id": null,
+      "cluster_id": null,
+      "genre": "classical-lieder",
+      "split": null,
+      "role_map": [],
+      "normalization": [
+        "excluded-time-signature-changes"
+      ],
+      "license": {
+        "expression": "CC0-1.0",
+        "attribution": "OpenScore Lieder Corpus; Bizet Op.21 No.10 encoding",
+        "redistribution": true,
+        "derivatives": true,
+        "provider_submission": true
+      },
+      "exclusion_reason": "TIME_SIGNATURE_CHANGES_OUTSIDE_NORMALIZER_CONTRACT"
+    },
+    {
+      "source_id": "openscore-lieder-just-for-today",
+      "layer": "public_classical",
+      "status": "excluded",
+      "source_format": "mxl",
+      "source_url": "https://raw.githubusercontent.com/OpenScore/Lieder/6b2dc542ce2e8aa4b78c8ee62103b210efc07015/scores/Abbott,_Jane_Bingham/_/Just_for_Today/lc6583477.mxl",
+      "upstream_revision": "6b2dc542ce2e8aa4b78c8ee62103b210efc07015",
+      "retrieval_date": "2026-07-17",
+      "expected_sha256": "79a19736fcce71c0acf4b39feff63723d2ff75e29285ea2ab594f9b2b6a835ff",
+      "cache_name": null,
+      "max_bytes": 0,
+      "item_id": null,
+      "family_id": null,
+      "cluster_id": null,
+      "genre": "classical-lieder",
+      "split": null,
+      "role_map": [],
+      "normalization": [
+        "excluded-vocal-part-polyphony"
+      ],
+      "license": {
+        "expression": "CC0-1.0",
+        "attribution": "OpenScore Lieder Corpus; Abbott Just for Today encoding",
+        "redistribution": true,
+        "derivatives": true,
+        "provider_submission": true
+      },
+      "exclusion_reason": "MELODY_STREAM_POLYPHONY_OUTSIDE_NORMALIZER_CONTRACT"
+    },
+    {
+      "source_id": "public-leadsheet-unavailable",
+      "layer": "public_leadsheet",
+      "status": "unavailable",
+      "source_format": null,
+      "source_url": null,
+      "upstream_revision": null,
+      "retrieval_date": "2026-07-17",
+      "expected_sha256": null,
+      "cache_name": null,
+      "max_bytes": 0,
+      "item_id": null,
+      "family_id": null,
+      "cluster_id": null,
+      "genre": null,
+      "split": null,
+      "role_map": [],
+      "normalization": [],
+      "license": {
+        "expression": "NOASSERTION",
+        "attribution": null,
+        "redistribution": null,
+        "derivatives": null,
+        "provider_submission": null
+      },
+      "exclusion_reason": "NO_LICENSE_AUDITED_LEADSHEET_SOURCE"
+    }
+  ]
+}

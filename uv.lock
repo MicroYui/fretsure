@@ -594,6 +594,8 @@ name = "fretsure-oracle"
 version = "0.5.0"
 source = { editable = "." }
 dependencies = [
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
@@ -601,6 +603,7 @@ dependencies = [
 [package.optional-dependencies]
 agent = [
     { name = "anthropic" },
+    { name = "httpx" },
 ]
 dev = [
     { name = "anthropic" },
@@ -643,6 +646,7 @@ requires-dist = [
     { name = "defusedxml", marker = "extra == 'score'", specifier = ">=0.7.1,<1" },
     { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.139,<0.140" },
     { name = "fastapi", marker = "extra == 'service'", specifier = ">=0.139,<0.140" },
+    { name = "httpx", marker = "extra == 'agent'", specifier = ">=0.28,<0.29" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28,<0.29" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6" },
     { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.28.1,<1.29" },
@@ -652,6 +656,7 @@ requires-dist = [
     { name = "music21", marker = "extra == 'musicxml'", specifier = "==10.5.0" },
     { name = "music21", marker = "extra == 'score'", specifier = "==10.5.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
+    { name = "numpy", specifier = ">=1.25" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
     { name = "scipy", specifier = ">=1.11" },

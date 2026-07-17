@@ -59,6 +59,6 @@ def parse_edit(obj: dict[str, Any]) -> Edit:
         onset = Fraction(str(obj["target_onset"]))
         pitch = int(obj["target_pitch"])
         arg = int(obj.get("arg", 0))
-    except (KeyError, ValueError, TypeError) as exc:
+    except (KeyError, ValueError, TypeError, ArithmeticError) as exc:
         raise ValueError(f"malformed edit {obj!r}: {exc}") from exc
     return Edit(op, onset, pitch, arg)

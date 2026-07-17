@@ -5,6 +5,21 @@
 > remote SHA equality. This document is the new benchmark-v2 contract required
 > by the roadmap; the historical 2026-07-10 Plan 4 remains an implementation
 > record and its numerical tables are not a current baseline.
+>
+> **Implementation progress (2026-07-17): Tasks 1–6 software-complete.** Strict
+> corpus/generator contracts, observable trajectories, the shared ten-sample pool,
+> baselines, registered statistics, durable artifacts, deterministic reports, and
+> full/fast CLI replay have passed their directed and independent gates. The licensed
+> 500-procedural + 3-public corpus, exact role-map normalization, contamination controls,
+> canonical builder, datasheet, and checker-vs-judge software boundary have also
+> closed; Task 7 is active. No real-model collection has started; the first
+> implementation commit remains the Task 7 runner-ready gate.
+>
+> **Runtime provenance correction (2026-07-17, before any model outcome):** per the
+> user-approved simplicity boundary, runtime collection/replay must not spawn Git or
+> inspect checkout state. Task 7's explicit external release gate verifies cleanliness
+> and SHA equality once; the runtime manifest only records that accepted SHA and its
+> analysis/package bindings.
 
 **Goal:** turn the existing benchmark skeleton into a versioned evidence system
 that preserves item-level outcomes, measures repair/search/critic effects on shared
@@ -201,12 +216,29 @@ version and a later preregistration.
   stratum-preserving family bootstrap with 10,000 resamples. Degenerate samples return
   an explicit point interval/status. Two-sided 95% intervals are descriptive; the
   preregistered one-sided 97.5% lower bounds are decision guards.
+- Bootstrap input is first reduced to one equal-weight value per musical family, then
+  whole clusters are resampled with replacement inside the frozen
+  `(layer, evidence_signature, synthetic_complexity, polyphony)` strata. Quantiles use
+  the type-7 linear rule over sorted replicates. Conditional fidelity averages only
+  scored, structurally applicable values within each family and always appears beside
+  the equal-family-weight failure-inclusive composite; it never enters a binary KEEP
+  rule or replaces an ITT denominator.
 - Repair uses an exact sign-flip test when at most 20 family deltas are nonzero and a
   frozen-seed 100,000-draw sign-flip test otherwise, with `(extreme+1)/(draws+1)`.
+- The two no-cheap-remedy guard p-values use that same one-sided family-level sign-flip
+  rule on their paired per-family pass-estimand differences, while their uncertainty
+  intervals remain the preregistered paired cluster bootstrap. They form their own
+  two-test Holm family, separate from repair plus search.
 - Best-of-4 uses one-sided exact McNemar on family discordances. Report the matched
   odds ratio with a two-sided exact 95% interval; zero cells yield explicit zero/
   infinity bounds, never an unstated pseudo-count. The continuity-corrected chi-square
   remains compatibility-only.
+- The deployment Pareto maximizes equal-family joint success while minimizing mean
+  logical calls, complete provider token usage
+  `(input + output + cache-create + cache-read)`, and summed model-call latency. Any
+  nullable token component makes the formal token/cost dimension unavailable rather
+  than zero. Best-of-4 is non-dominated only when no frozen k point is at least as good
+  in success and no worse in every available cost dimension, with one strict advantage.
 - Holm-adjusted p-values control the two confirmatory tests at family-wise alpha 0.05.
 - Before any proxy outcome is inspected, the machine preregistration must demonstrate
   at least 80% power using conservative per-test alpha 0.025, repair SESOI 0.10,
@@ -256,10 +288,11 @@ The config manifest exists and is hashed before the first call. It binds:
 - maximum logical calls, attempts, response bytes, output tokens, wall time, and spend
   (or a pre-call `cost_contract_unavailable` flag).
 
-Collection refuses a dirty source checkout, mismatched SHA/lock/corpus/config, unknown
-requested model, changed prompt hash, `PYTHONPATH`/import shadowing outside that checkout,
-or insufficient reserved budget for the next complete logical candidate unit. Replay
-from an installed wheel does not require `.git`; live collection does.
+The Task 7 release gate refuses a dirty source checkout or mismatched SHA/lock before
+freezing the config. Runtime collection then validates the frozen SHA/lock/corpus/config,
+requested model, prompt hashes, package/analysis binding, and reserved budget for the
+next complete logical candidate unit without invoking Git or inspecting ambient import
+paths. Replay and live collection therefore have no runtime `.git` dependency.
 
 All canonical artifacts use validated NFC strings, UTF-8, LF, sorted exact keys,
 compact JSON separators, `ensure_ascii=False`, `allow_nan=False`, base-10 exact
@@ -372,9 +405,14 @@ replay timestamps or host information never enter canonical output.
   existing `LLMClient.complete() -> str` contract.
 - Before joining, hashing, or parsing provider content, cap blocks at 64, each text
   block at 256 KiB, and total response text at `min(1 MiB, max_tokens * 32 bytes)`;
-  bound response IDs to 256 printable characters and usage fields to exact nonnegative
+  bound response IDs to 512 printable characters and usage fields to exact nonnegative
   integers within the manifest ceiling. Provider `max_tokens` is not trusted as a
   transport-byte limit.
+- The loopback HTTP client disables ambient proxy state and redirects, requests
+  identity encoding, and caps the complete raw success/error response stream at 1 MiB
+  before SDK parsing. Only connection failures or status 408/409/429/5xx are retried
+  (subject to the provider's explicit `x-should-retry` override); permanent failures
+  and transport/schema boundary failures make one attempt.
 - Keep proxy credentials and raw transport exceptions redacted. Tests use fake SDK
   response objects; no telemetry field is trusted without exact type/range bounds.
 - Make proposal parse failure and deterministic fallback explicit in benchmark
@@ -384,8 +422,9 @@ replay timestamps or host information never enter canonical output.
   steps, and total work. Refactor the production harness to consume the same primitive;
   differential tests prove existing `arrange` results/traces remain unchanged.
 - Preserve public trace bounds while benchmark rows account for every pool candidate.
-- Tests prove live collection fails when imported package modules do not resolve under
-  the clean execution checkout, while installed-wheel replay remains supported.
+- Tests prove execution provenance is a pure declaration of the externally accepted
+  SHA and installed-wheel binding; it performs no filesystem, import-path, Git, or
+  subprocess inspection at runtime.
 
 ## 7. Task 3 — Shared-pool collection and baselines
 
@@ -472,6 +511,11 @@ replay timestamps or host information never enter canonical output.
 
 ## 9. Task 5 — Corpus layers and contamination controls
 
+**Implementation status (2026-07-17): COMPLETE.** The default 503-item build is
+byte-identical across two fresh runs, all three contamination gates are clean, and
+independent source/normalizer/contamination/builder reviews have zero unresolved
+findings. Exact hashes and exclusions are recorded in the corpus datasheet.
+
 **Files:**
 
 - `src/fretsure/bench/normalizers.py`
@@ -489,12 +533,11 @@ replay timestamps or host information never enter canonical output.
 - Fetch only immutable, license-compatible public artifacts with recorded source URL,
   retrieval date, upstream revision where available, raw SHA, and per-file license.
   A missing/ambiguous license is an exclusion reason, not “public domain” by guess.
-- Treat first acquisition as quarantined census input. Reproducible fetches require a
-  pre-recorded expected SHA-256, HTTPS host allowlist, public-IP resolution, redirects
-  disabled or restricted to the same allowlist, bounded connect/read timeouts, and
-  exclusive temporary files. Disable ambient proxy credentials/cookies; reject
-  loopback/private/link-local/file URLs and cap per-file, total download, archive member,
-  decompressed, and compression-ratio resources before parsing.
+- Treat first acquisition as census input. Reproducible fetches require a pre-recorded
+  expected SHA-256, HTTPS host allowlist, one timeout, and per-file/total byte caps.
+  This local, checked-in-source workflow deliberately does not add DNS, proxy,
+  redirect, cookie, credential, or exclusive-file security machinery; the frozen hash
+  is the content identity and the builder writes only to a fresh output directory.
 - License rows freeze SPDX expression, attribution, redistribution, derivative-work,
   and provider-submission permission separately. A file that cannot lawfully be sent
   to the configured model is excluded from proxy collection even if local evaluation
@@ -504,7 +547,8 @@ replay timestamps or host information never enter canonical output.
   public strict `midi@0.1.0` importer.
 - Split by musical family before variants; detect exact/near duplicates, transposition/
   tempo variants, canary leakage, item overlap, and producer duplicates. Report real
-  and procedural strata separately.
+  and procedural strata separately, with a denominator-free cross-stratum collision
+  gate so procedural items cannot silently duplicate public controls.
 - Corpus build writes only a fresh directory, refuses overwrite, validates every
   artifact, and reproduces the ordered manifest/hash from pinned inputs.
 
@@ -513,6 +557,9 @@ or cannot be normalized without semantic guessing, retain its adapter/test and r
 the layer as externally unavailable. Do not substitute a hand-authored “real” sample.
 
 ## 10. Task 6 — Checker-vs-judge software boundary
+
+**Implementation status (2026-07-17): COMPLETE.** No judge/provider call was made;
+this task froze and tested the software boundary with deterministic fakes only.
 
 **Files:**
 
@@ -533,10 +580,22 @@ the layer as externally unavailable. Do not substitute a hand-authored “real�
   pretending constructed labels are human gold.
 - Emit software-fixture evidence only until real guitarist labels exist. Constructed
   examples prove machinery, not that oracle beats an LLM judge.
-- Keep cross-provider comparison `unavailable` unless an independently versioned model
-  and explicit call budget are supplied.
+- Task 6 software-fixture results always keep cross-provider comparison `unavailable`.
+  A later live collection may lift that status only with independently versioned
+  models, exact returned-model observations, and an explicit full call budget.
+
+**Closing evidence:** the label proposition binds canonical Tab, quarter-note time and
+tempo units, exact meter, profile fingerprint, and `EXHIBITED_ONLY` fingering policy.
+Both prompt conditions use frozen hashes, every request binds model/max-tokens/
+temperature, every cell has five pre-scheduled repetitions, and malformed/failing
+outputs remain `INVALID`/`CALL_FAILED`. Human observations, provider-returned model
+metadata, and empirical comparisons remain unavailable rather than inferred from
+fixtures. Directed tests and two independent reviews closed with zero findings.
 
 ## 11. Task 7 — Runner-ready preregistration and first Git gate
+
+**Implementation status (2026-07-17): ACTIVE.** This is the first external Git gate;
+runtime collection and replay remain independent of Git and subprocess discovery.
 
 **Files:**
 
@@ -701,3 +760,14 @@ security/privacy/resource/reproducibility reviews each reached 0 blocker, 0 impo
 and 0 minor findings after fixes. The documentation gate passed `git diff --check`,
 all 32 Markdown link targets, and the unchanged benchmark skeleton’s 120 tests. This
 receipt validates the implementation contract; it is not benchmark outcome evidence.
+
+Pre-collection implementation census amendment: the loopback proxy’s opaque response
+ID is 416 printable characters, so its private-only hash input cap is 512 rather than
+the initial 256. The ID remains omitted from public artifacts; no benchmark outcome was
+inspected and no endpoint, threshold, corpus, or statistical rule changed.
+
+Pre-collection security clarification: the optional proxy transport now freezes a
+1-MiB raw identity-encoded response cap, disables ambient HTTP proxies and redirects,
+and white-lists retryable failure classes. This closes transport allocation and
+credential-routing ambiguity discovered before collection; no provider outcome was
+observed and no inferential rule changed.

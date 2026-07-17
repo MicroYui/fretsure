@@ -1,23 +1,24 @@
-"""Leave-one-out ablation runner.
+"""Legacy compatibility ablation runners.
 
-Each capability (repair / best-of-N / critic) earns its existence only if
-removing it degrades a checker-scored metric. Switches map onto Plan 3
-``arrange``: repair off -> max_iters=0, best_of_n -> n, critic off -> use_critic.
-The ``llm_factory`` yields a fresh LLM per configuration so runs are independent
-and deterministic under FakeLLM.
+These helpers preserve the historical independently sampled Plan-4 API.  They are
+not benchmark-v2 headline estimands.  New repair/search/critic evidence must consume
+``fretsure.bench.experiment.ExperimentCollection`` through ``derive_shared_views`` so
+every contrast reuses one frozen proposal pool.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from typing import Final
 
 from fretsure.agent.arranger import ArrangeGoal
 from fretsure.agent.harness import ArrangeResult, arrange, arrange_pool, best_of_k
 from fretsure.bench.corpus import CorpusItem
-from fretsure.llm.client import LLMClient
+from fretsure.llm.client import LLMClient, managed_llm_client
 from fretsure.metrics.fidelity import faithfulness, faithfulness_dimensions
 from fretsure.oracle.profiles import Profile
 
 LLMFactory = Callable[[], LLMClient]
+LEGACY_ABLATION_COMPATIBILITY_ONLY: Final = True
 
 
 @dataclass(frozen=True)
@@ -40,17 +41,19 @@ class ConfigMetrics:
     items: int
 
 
-def _score(
-    result: ArrangeResult, item: CorpusItem
-) -> tuple[bool, bool, float | None, int]:
+def _goal_at_source_tempo(goal: ArrangeGoal, item: CorpusItem) -> ArrangeGoal:
+    """Bind benchmark evaluation to the item's source tempo, never a global default."""
+
+    return replace(goal, tempo_bpm=item.ir.meta.tempo_bpm)
+
+
+def _score(result: ArrangeResult, item: CorpusItem) -> tuple[bool, bool, float | None, int]:
     """(is_green, joint_success, melody_f1, applied_edit_steps) for one arrangement."""
     is_green = result.oracle is not None and result.oracle.verdict == "GREEN"
     # Count only versioned applied-edit events, never rejected/no-op model output.
     edits = sum(1 for step in result.trace.steps if step.event == "EDIT_APPLIED")
     if result.tab is None:
-        melody_score = (
-            0.0 if "melody" in faithfulness_dimensions(item.ir) else None
-        )
+        melody_score = 0.0 if "melody" in faithfulness_dimensions(item.ir) else None
         return is_green, False, melody_score, edits
     gate = faithfulness(item.ir, result.tab)
     return is_green, is_green and gate.passed, gate.melody_f1, edits
@@ -63,22 +66,26 @@ def run_config(
     cfg: AblationConfig,
     profile: Profile,
 ) -> ConfigMetrics:
+    """Run one independently sampled legacy compatibility configuration."""
+
     green = 0
     joint = 0
     mf1_total = 0.0
     mf1_items = 0
     edit_total = 0
     for item in items:
-        llm = llm_factory()  # fresh per item: FakeLLM scripts stay isolated + deterministic
-        result = arrange(
-            item.ir,
-            goal,
-            llm,
-            profile=profile,
-            n=cfg.best_of_n,
-            max_iters=8 if cfg.repair else 0,
-            use_critic=cfg.critic,
-        )
+        # Fresh per item: FakeLLM scripts stay isolated and stateful clients are
+        # deterministically released on success and failure.
+        with managed_llm_client(llm_factory()) as llm:
+            result = arrange(
+                item.ir,
+                _goal_at_source_tempo(goal, item),
+                llm,
+                profile=profile,
+                n=cfg.best_of_n,
+                max_iters=8 if cfg.repair else 0,
+                use_critic=cfg.critic,
+            )
         is_green, is_joint, mf1, edits = _score(result, item)
         green += int(is_green)
         joint += int(is_joint)
@@ -106,6 +113,8 @@ def leave_one_out(
     *,
     base: AblationConfig = _FULL,
 ) -> dict[str, ConfigMetrics]:
+    """Preserve the unpaired legacy API; never use it for v2 headline evidence."""
+
     out = {
         "full": run_config(items, goal, llm_factory, base, profile),
         "-repair": run_config(items, goal, llm_factory, replace(base, repair=False), profile),
@@ -141,7 +150,9 @@ def paired_best_of_n(
     max_iters: int = 8,
     use_critic: bool = True,
 ) -> PairedBestOfN:
-    """Paired best-of-N ablation: build one pool of N candidates per item, then
+    """Legacy paired helper, not a benchmark-v2 confirmatory API.
+
+    Build one pool of N candidates per item, then
     score best-of-1 (the greedy draw) vs best-of-N over that SAME pool.
 
     ``leave_one_out``'s ``-best_of_n`` arm re-samples the LLM independently, so its
@@ -155,10 +166,16 @@ def paired_best_of_n(
     mf1_1 = mf1_n = 0.0
     mf1_items_1 = mf1_items_n = 0
     for item in items:
-        llm = llm_factory()
-        pool = arrange_pool(
-            item.ir, goal, llm, profile=profile, n=n, max_iters=max_iters, use_critic=use_critic
-        )
+        with managed_llm_client(llm_factory()) as llm:
+            pool = arrange_pool(
+                item.ir,
+                _goal_at_source_tempo(goal, item),
+                llm,
+                profile=profile,
+                n=n,
+                max_iters=max_iters,
+                use_critic=use_critic,
+            )
         s1 = _score(best_of_k(pool, 1), item)
         sn = _score(best_of_k(pool, pool.n), item)
         g1 += int(s1[0])
@@ -232,7 +249,9 @@ def paired_critic(
     n: int = 4,
     max_iters: int = 8,
 ) -> PairedCritic:
-    """Paired critic ablation: build one pool (with critic scores) per item, then
+    """Legacy paired helper, not a benchmark-v2 confirmatory API.
+
+    Build one pool (with critic scores) per item, then
     select best-of-N WITH vs WITHOUT the critic term on that SAME pool.
 
     Like ``paired_best_of_n``, this removes the stochastic-draw noise that confounds
@@ -245,10 +264,16 @@ def paired_critic(
     mf0 = mf1 = t0 = t1 = 0.0
     mf_items_0 = mf_items_1 = 0
     for item in items:
-        llm = llm_factory()
-        pool = arrange_pool(
-            item.ir, goal, llm, profile=profile, n=n, max_iters=max_iters, use_critic=True
-        )
+        with managed_llm_client(llm_factory()) as llm:
+            pool = arrange_pool(
+                item.ir,
+                _goal_at_source_tempo(goal, item),
+                llm,
+                profile=profile,
+                n=n,
+                max_iters=max_iters,
+                use_critic=True,
+            )
         r0 = best_of_k(pool, pool.n, use_critic=False)
         r1 = best_of_k(pool, pool.n, use_critic=True)
         s0 = _score(r0, item)
@@ -286,8 +311,13 @@ def paired_critic(
         items=m,
     )
     return PairedCritic(
-        n, without, with_,
+        n,
+        without,
+        with_,
         with_.green_rate - without.green_rate,
         with_.joint_success - without.joint_success,
-        t0 / d, t1 / d, (t1 - t0) / d, m,
+        t0 / d,
+        t1 / d,
+        (t1 - t0) / d,
+        m,
     )

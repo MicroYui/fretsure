@@ -1,7 +1,11 @@
 from fractions import Fraction as F
 
+import pytest
+
 from fretsure.agent.arranger import ArrangeGoal
-from fretsure.bench.ablation import AblationConfig, leave_one_out, run_config
+from fretsure.agent.harness import ArrangeResult
+from fretsure.agent.trace import Trace
+from fretsure.bench.ablation import AblationConfig, LLMFactory, leave_one_out, run_config
 from fretsure.bench.corpus import CorpusItem
 from fretsure.ir import Meta, MusicIR, Note
 from fretsure.llm.client import ConstantLLM, FakeLLM
@@ -21,7 +25,7 @@ def _items() -> list[CorpusItem]:
     return [CorpusItem(ir, "procedural", "gen", 3, "i0")]
 
 
-def _factory() -> object:
+def _factory() -> LLMFactory:
     return lambda: FakeLLM([_PROP, _EDIT, _CRITIC])
 
 
@@ -66,7 +70,7 @@ def test_leave_one_out_repair_earns_existence() -> None:
     loo = leave_one_out(
         _items(), ArrangeGoal(), _factory(), MEDIAN_HAND, base=AblationConfig(best_of_n=1)
     )
-    assert loo["full"].joint_success > loo["-repair"].joint_success  # headline #1
+    assert loo["full"].joint_success > loo["-repair"].joint_success  # legacy signal
 
 
 def test_deterministic() -> None:
@@ -74,3 +78,61 @@ def test_deterministic() -> None:
     a = run_config(_items(), ArrangeGoal(), _factory(), cfg, MEDIAN_HAND)
     b = run_config(_items(), ArrangeGoal(), _factory(), cfg, MEDIAN_HAND)
     assert a == b
+
+
+def test_each_item_is_evaluated_at_its_source_tempo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed_tempos: list[float] = []
+    ir = MusicIR(
+        (Note(F(0), F(1), 64, "melody"),),
+        (),
+        Meta("C", (4, 4), 96.0, "t", "t", "PD"),
+    )
+
+    def capture_arrange(
+        ir: MusicIR,
+        goal: ArrangeGoal,
+        llm: object,
+        **_kwargs: object,
+    ) -> ArrangeResult:
+        del ir, llm
+        observed_tempos.append(goal.tempo_bpm)
+        return ArrangeResult(None, None, None, None, Trace(), 1)
+
+    monkeypatch.setattr("fretsure.bench.ablation.arrange", capture_arrange)
+
+    run_config(
+        [CorpusItem(ir, "procedural", "generated", 0, "tempo-96")],
+        ArrangeGoal(),
+        lambda: ConstantLLM("noop"),
+        AblationConfig(best_of_n=1, critic=False),
+        MEDIAN_HAND,
+    )
+
+    assert observed_tempos == [96.0]
+
+
+def test_run_config_closes_each_stateful_llm_on_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    closes = 0
+
+    class ClosableFake(FakeLLM):
+        def close(self) -> None:
+            nonlocal closes
+            closes += 1
+
+    def fail_arrange(*_args: object, **_kwargs: object) -> ArrangeResult:
+        raise RuntimeError("arrange failed")
+
+    monkeypatch.setattr("fretsure.bench.ablation.arrange", fail_arrange)
+    with pytest.raises(RuntimeError, match="arrange failed"):
+        run_config(
+            _items(),
+            ArrangeGoal(),
+            lambda: ClosableFake([]),
+            AblationConfig(best_of_n=1),
+            MEDIAN_HAND,
+        )
+    assert closes == 1

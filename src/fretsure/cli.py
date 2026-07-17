@@ -18,7 +18,7 @@ from fretsure.importers import (
     import_score,
 )
 from fretsure.ir import MusicIR
-from fretsure.llm.client import ConstantLLM, LLMClient
+from fretsure.llm.client import ConstantLLM, LLMClient, managed_llm_client
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION, FaithfulnessGate
 from fretsure.oracle.input import (
     MAX_AGENT_CANDIDATES,
@@ -323,16 +323,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.llm:
             ensure_llm_capacity(imported.ir)
         llm, engine = _make_llm(args.llm)
-        result = run_pipeline(
-            imported.ir,
-            llm,
-            options=PipelineOptions(
-                n=args.n,
-                max_iters=args.max_iters,
-                use_critic=not args.no_critic,
-                tempo_override_bpm=args.tempo_bpm,
-            ),
-        )
+        with managed_llm_client(llm):
+            result = run_pipeline(
+                imported.ir,
+                llm,
+                options=PipelineOptions(
+                    n=args.n,
+                    max_iters=args.max_iters,
+                    use_critic=not args.no_critic,
+                    tempo_override_bpm=args.tempo_bpm,
+                ),
+            )
     except ArrangementCapacityError as exc:
         print(f"fretsure-arrange: pipeline rejected input: {_terminal_safe(exc)}", file=sys.stderr)
         return EXIT_PIPELINE_ERROR

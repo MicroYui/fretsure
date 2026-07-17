@@ -22,11 +22,24 @@ def solve_and_check(
     profile: Profile,
     *,
     tempo_bpm: float = 90.0,
+    beats_per_bar: int = 4,
 ) -> tuple[Tab | Infeasible, OracleResult | None]:
-    solved = solve_fingering(target, tuning, capo, profile, tempo_bpm=tempo_bpm)
+    solved = solve_fingering(
+        target,
+        tuning,
+        capo,
+        profile,
+        tempo_bpm=tempo_bpm,
+        beats_per_bar=beats_per_bar,
+    )
     if isinstance(solved, Infeasible):
         return solved, None
-    return solved, check_playability(solved, profile, tempo_bpm=tempo_bpm)
+    return solved, check_playability(
+        solved,
+        profile,
+        tempo_bpm=tempo_bpm,
+        beats_per_bar=beats_per_bar,
+    )
 
 
 def _target_summary(target: tuple[Note, ...]) -> str:

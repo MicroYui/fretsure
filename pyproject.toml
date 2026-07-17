@@ -5,12 +5,14 @@ description = "Deterministic guitar-playability oracle for the Fretsure arrangem
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "numpy>=1.25",
     "scipy>=1.11",
 ]
 
 [project.optional-dependencies]
 agent = [
     "anthropic>=0.40",
+    "httpx>=0.28,<0.29",
 ]
 musicxml = [
     "defusedxml>=0.7.1,<1",

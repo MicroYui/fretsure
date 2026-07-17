@@ -1,12 +1,25 @@
+import hashlib
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import FrozenInstanceError
 from fractions import Fraction as F
 
 import pytest
 
-from fretsure.agent.arranger import ArrangeGoal
-from fretsure.agent.harness import ArrangeResult, arrange
+from fretsure.agent.arranger import ArrangeGoal, ProposalStatus
+from fretsure.agent.critic import CriticStatus
+from fretsure.agent.harness import (
+    ArrangeResult,
+    CandidateStatus,
+    arrange,
+    arrange_pool,
+    best_of_k,
+    build_candidate_trajectory,
+)
+from fretsure.agent.model_calls import ModelCallStage
 from fretsure.geometry import STANDARD_TUNING, note_pitch
 from fretsure.ir import Meta, MusicIR, Note
-from fretsure.llm.client import FakeLLM
+from fretsure.llm.client import FakeLLM, LLMIntegrityError
 from fretsure.oracle.input import OracleInputCode, SolverInputError
 
 _IR = MusicIR((Note(F(0), F(1), 64, "melody"),), (), Meta("C", (4, 4), 90.0, "t", "t", "PD"))
@@ -28,6 +41,53 @@ _PROP_INFEASIBLE = (
 def _script() -> list[str]:
     # per candidate: propose, then (both already GREEN -> 0 repair calls) critic
     return [_PROP_A, '{"overall":0.6}', _PROP_B, '{"overall":0.9}']
+
+
+class _RecordingScopeFactory:
+    def __init__(self) -> None:
+        self.active: tuple[ModelCallStage, int, int] | None = None
+        self.entries: list[tuple[ModelCallStage, int, int]] = []
+        self.exits: list[tuple[ModelCallStage, int, int]] = []
+
+    @contextmanager
+    def __call__(
+        self,
+        stage: ModelCallStage,
+        candidate_index: int,
+        stage_ordinal: int,
+    ) -> Iterator[None]:
+        identity = (stage, stage_ordinal, candidate_index)
+        assert self.active is None
+        self.active = identity
+        self.entries.append(identity)
+        try:
+            yield
+        finally:
+            assert self.active == identity
+            self.exits.append(identity)
+            self.active = None
+
+
+class _ScopeCheckingLLM:
+    model_id = "scope-checking-test"
+
+    def __init__(self, scripted: list[str], scopes: _RecordingScopeFactory) -> None:
+        self._scripted = iter(scripted)
+        self._scopes = scopes
+        self.calls: list[tuple[ModelCallStage, int, int]] = []
+
+    def complete(
+        self,
+        *,
+        system: str,
+        user: str,
+        max_tokens: int = 1024,
+        temperature: float = 0.0,
+    ) -> str:
+        del system, user, max_tokens, temperature
+        assert self._scopes.active is not None
+        self.calls.append(self._scopes.active)
+        return next(self._scripted)
 
 
 def test_best_of_n_picks_higher_critic_green_candidate() -> None:
@@ -127,8 +187,6 @@ def test_selection_prefers_bass_preservation_over_order() -> None:
 def test_best_of_k_is_paired_on_one_pool() -> None:
     # Build ONE pool, then compare best-of-1 (greedy) vs best-of-2 on that SAME
     # pool — no re-sampling. This is the paired comparison the ablation needs.
-    from fretsure.agent.harness import arrange_pool, best_of_k
-
     script = [_PROP_DROPS_BASS, '{"overall":0.8}', _PROP_KEEPS_BASS, '{"overall":0.8}']
     pool = arrange_pool(_IR_BASS, ArrangeGoal(), FakeLLM(script), n=2)
     r1 = best_of_k(pool, 1)
@@ -139,6 +197,270 @@ def test_best_of_k_is_paired_on_one_pool() -> None:
     assert 52 in p1 and 40 not in p1  # best-of-1 is the greedy (bass-dropping) draw
     assert 40 in p2 and 52 not in p2  # best-of-2 recovers the faithful one
     assert r1.candidates_tried == 1 and r2.candidates_tried == 2
+
+
+def test_pool_retains_every_failed_candidate_trajectory_and_bounded_work() -> None:
+    pool = arrange_pool(
+        _IR,
+        ArrangeGoal(),
+        FakeLLM([_PROP_INFEASIBLE, _PROP_INFEASIBLE]),
+        n=2,
+        max_iters=0,
+        use_critic=False,
+    )
+
+    assert pool.candidates == (None, None)
+    assert len(pool.trajectories) == 2
+    for index, trajectory in enumerate(pool.trajectories):
+        assert trajectory.index == index
+        assert trajectory.status is CandidateStatus.NO_TAB
+        assert trajectory.proposal.status is ProposalStatus.LLM_SUCCESS
+        assert trajectory.initial_target == trajectory.proposal.target
+        assert trajectory.iteration_zero == trajectory.terminal
+        assert trajectory.terminal.tab is None
+        assert trajectory.terminal.infeasible is not None
+        assert trajectory.critic is None
+        assert trajectory.work.proposal_llm_calls == 1
+        assert trajectory.work.repair_llm_calls == 0
+        assert trajectory.work.critic_llm_calls == 0
+        assert trajectory.work.solver_calls == 1
+        assert trajectory.work.total_llm_calls == 1
+        assert trajectory.trace_steps == pool.candidate_traces[index]
+        assert {step.candidate_index for step in trajectory.trace_steps} == {index}
+    frozen_field = "index"
+    with pytest.raises(FrozenInstanceError):
+        setattr(pool.trajectories[0], frozen_field, 2)
+
+
+def test_one_candidate_scopes_every_proposal_repair_and_critic_call_independently() -> None:
+    scopes = _RecordingScopeFactory()
+    llm = _ScopeCheckingLLM(
+        [
+            _PROP_INFEASIBLE,
+            '{"op":"drop_note","target_onset":"0","target_pitch":85}',
+            '{"op":"drop_note","target_onset":"0","target_pitch":86}',
+            '{"overall":0.7}',
+        ],
+        scopes,
+    )
+
+    trajectory = build_candidate_trajectory(
+        _IR,
+        ArrangeGoal(),
+        llm,
+        candidate_index=3,
+        max_iters=2,
+        temperature=0.8,
+        call_scope_factory=scopes,
+    )
+
+    expected = [
+        ("proposal", 0, 3),
+        ("repair", 0, 3),
+        ("repair", 1, 3),
+        ("critic", 0, 3),
+    ]
+    assert scopes.entries == expected
+    assert scopes.exits == expected
+    assert llm.calls == expected
+    assert len(set(llm.calls)) == len(llm.calls)
+    assert trajectory.temperature == 0.8
+    assert trajectory.critic_outcome is not None
+    assert trajectory.critic_outcome.status is CriticStatus.LLM_SUCCESS
+    assert trajectory.work.total_llm_calls == 4
+
+
+def test_scope_factory_failure_aborts_candidate_instead_of_selecting_fallback() -> None:
+    def broken_scope_factory(*args: object) -> object:
+        del args
+        raise RuntimeError("scope internals must be redacted")
+
+    llm = FakeLLM([_PROP_A])
+    with pytest.raises(LLMIntegrityError, match="scope entry failed"):
+        build_candidate_trajectory(
+            _IR,
+            ArrangeGoal(),
+            llm,
+            candidate_index=0,
+            call_scope_factory=broken_scope_factory,  # type: ignore[arg-type]
+        )
+    assert llm.calls == []
+
+
+def test_trajectory_critic_outcome_retains_parse_fallback_status_and_work() -> None:
+    pool = arrange_pool(
+        _IR,
+        ArrangeGoal(),
+        FakeLLM([_PROP_A, "not critic json"]),
+        n=1,
+    )
+
+    trajectory = pool.trajectories[0]
+    assert trajectory.critic_outcome is not None
+    assert trajectory.critic_outcome.status is CriticStatus.PARSE_VALIDATION_FALLBACK
+    assert trajectory.critic is not None and trajectory.critic.overall == 0.5
+    assert trajectory.work.critic_llm_calls == 1
+
+
+def test_candidate_trace_snapshots_are_deeply_immutable_and_detached() -> None:
+    pool = arrange_pool(
+        _IR,
+        ArrangeGoal(),
+        FakeLLM([_PROP_A]),
+        n=1,
+        use_critic=False,
+    )
+    trajectory = pool.trajectories[0]
+    stored = trajectory.trace_snapshots[0].data_json
+    exposed = trajectory.trace_steps
+    exposed[0].data["temperature"] = 1.0
+    checkpoint = exposed[0].data["target_checkpoint"]
+    assert isinstance(checkpoint, dict)
+    checkpoint["sha256"] = "0" * 64
+
+    fresh = trajectory.trace_steps
+    assert fresh[0].data["temperature"] == 0.0
+    assert fresh[0].data["target_checkpoint"]["sha256"] != "0" * 64
+    assert trajectory.trace_snapshots[0].data_json == stored
+    assert pool.candidate_traces[0][0].data["temperature"] == 0.0
+    with pytest.raises(FrozenInstanceError):
+        trajectory.trace_snapshots[0].data_json = b"{}"  # type: ignore[misc]
+
+
+def test_formal_fixed_temperature_and_injected_schedule_are_exact() -> None:
+    fixed_llm = FakeLLM([_PROP_A, _PROP_A, _PROP_A])
+    fixed = arrange_pool(
+        _IR,
+        ArrangeGoal(),
+        fixed_llm,
+        n=3,
+        use_critic=False,
+        temperature=0.8,
+    )
+    assert [call["temperature"] for call in fixed_llm.calls] == [0.8, 0.8, 0.8]
+    assert [trajectory.temperature for trajectory in fixed.trajectories] == [0.8, 0.8, 0.8]
+
+    scheduled_llm = FakeLLM([_PROP_A, _PROP_A, _PROP_A])
+    scheduled = arrange_pool(
+        _IR,
+        ArrangeGoal(),
+        scheduled_llm,
+        n=3,
+        use_critic=False,
+        temperature_schedule=(0.7, 0.8, 0.9),
+    )
+    assert [call["temperature"] for call in scheduled_llm.calls] == [0.7, 0.8, 0.9]
+    assert [trajectory.temperature for trajectory in scheduled.trajectories] == [0.7, 0.8, 0.9]
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"temperature": 0},
+        {"temperature": True},
+        {"temperature": float("nan")},
+        {"temperature": 1.1},
+        {"temperature_schedule": [0.8, 0.8]},
+        {"temperature_schedule": (0.8,)},
+        {"temperature_schedule": (0.8, True)},
+        {"temperature": 0.8, "temperature_schedule": (0.8, 0.8)},
+    ],
+)
+def test_temperature_controls_fail_closed_before_any_model_call(
+    kwargs: dict[str, object],
+) -> None:
+    llm = FakeLLM([])
+    with pytest.raises(ValueError, match="temperature"):
+        arrange_pool(
+            _IR,
+            ArrangeGoal(),
+            llm,
+            n=2,
+            use_critic=False,
+            **kwargs,  # type: ignore[arg-type]
+        )
+    assert llm.calls == []
+
+
+def test_arrange_wrapper_matches_shared_pool_primitive_without_trace_drift() -> None:
+    direct = arrange(_IR, ArrangeGoal(), FakeLLM(_script()), n=2)
+    pool = arrange_pool(_IR, ArrangeGoal(), FakeLLM(_script()), n=2)
+    selected = best_of_k(pool, 2)
+
+    assert direct.tab == selected.tab
+    assert direct.oracle == selected.oracle
+    assert direct.fidelity == selected.fidelity
+    assert direct.critic == selected.critic
+    assert direct.candidates_tried == selected.candidates_tried
+    assert direct.trace.to_jsonl() == selected.trace.to_jsonl()
+    assert pool.trajectories[1].work.total_llm_calls == 2
+
+
+def test_public_arrange_results_and_traces_match_clean_prerefactor_goldens() -> None:
+    # Captured by executing the clean preregistration commit
+    # 44927517958ecd3b9868bafb7bfe6133be25cc8e from a git archive. These hashes
+    # compare against the pre-trajectory implementation, not another new code path.
+    repaired = arrange(
+        _IR,
+        ArrangeGoal(),
+        FakeLLM(
+            [
+                _PROP_INFEASIBLE,
+                '{"op":"drop_note","target_onset":"0","target_pitch":86}',
+            ]
+        ),
+        n=1,
+        max_iters=1,
+        use_critic=False,
+    )
+    cases = {
+        "green-critic": arrange(_IR, ArrangeGoal(), FakeLLM(_script()), n=2),
+        "repair": repaired,
+        "fallback": arrange(
+            _IR,
+            ArrangeGoal(),
+            FakeLLM(["not json"]),
+            n=1,
+            max_iters=0,
+            use_critic=False,
+        ),
+        "no-tab": arrange(
+            _IR,
+            ArrangeGoal(),
+            FakeLLM([_PROP_INFEASIBLE]),
+            n=1,
+            max_iters=0,
+            use_critic=False,
+        ),
+    }
+    expected = {
+        "green-critic": (
+            "09a20699f868cc15a4c140164d8ad0fe644c2ec187e80d0f579a4a0511a347e7",
+            ("GREEN", 1.0, 0.9, 2),
+        ),
+        "repair": (
+            "a5c7d9878ae8dfba8e05a14dfe9a9968e491e3a0b5fad66f6a0b0ef360f967a1",
+            ("GREEN", 0.0, None, 1),
+        ),
+        "fallback": (
+            "5470d25061ff7888ecd8fa097b98c1995f6081521f6516d1f62830b58094ebd2",
+            ("GREEN", 1.0, None, 1),
+        ),
+        "no-tab": (
+            "908a8b23d7ab5aeb44b0f1f28cbfba8fcfb1cd5f0fba29fd7dc08d8ee4ac07ee",
+            (None, None, None, 1),
+        ),
+    }
+
+    for name, result in cases.items():
+        trace_digest = hashlib.sha256(result.trace.to_jsonl().encode("utf-8")).hexdigest()
+        fingerprint = (
+            result.oracle.verdict if result.oracle is not None else None,
+            result.fidelity.melody_recall if result.fidelity is not None else None,
+            result.critic.overall if result.critic is not None else None,
+            result.candidates_tried,
+        )
+        assert (trace_digest, fingerprint) == expected[name]
 
 
 def test_deterministic() -> None:
