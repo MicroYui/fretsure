@@ -51,14 +51,28 @@ def _config(
             "cache_creation_input_tokens": 272_000,
             "cache_read_input_tokens": 271_999,
             "input_tokens": 271_998,
-            "output_tokens": 16_384,
+            "output_tokens": 128_000,
         },
         "enforcement": {
             "input_upper_bound_method": "utf8_bytes_plus_256",
             "required_before": "before_observation_retry_network",
         },
+        "output_usage_contract": {
+            "billing_field": "output_tokens",
+            "captured_at_utc": "2026-07-18T02:31:25Z",
+            "includes_non_visible_tokens": True,
+            "maximum_tokens": 128_000,
+            "model_id": "gpt-5.6-sol",
+            "source_model_ref": (
+                "https://developers.openai.com/api/docs/models/gpt-5.6-sol"
+            ),
+            "source_token_counting_ref": (
+                "https://developers.openai.com/api/docs/guides/token-counting"
+                "#understand-output-token-counts"
+            ),
+        },
         "pricing_contract_raw_sha256": "4" * 64,
-        "schema": "benchmark-formal-billing-envelope@0.1.0",
+        "schema": "benchmark-formal-billing-envelope@0.2.0",
         "scope": "formal_collection",
     }
     return build_pre_call_config(
@@ -105,11 +119,12 @@ def test_pre_call_round_trip_binds_runtime_model_contracts_and_budget(
     assert config.analysis_code_sha256 == "3" * 64
     assert config.collection_attempt == 1
     assert config.run_id == "benchmark-v2-formal-20260717-attempt-001"
+    assert config.to_dict()["schema"] == "benchmark-pre-call-config@0.3.0"
     assert config.to_dict()["budget"]["ceiling_scope"] == (  # type: ignore[index]
         "single_collection_attempt_nontransferable"
     )
     assert config.formal_input_token_ceiling == 271_998
-    assert config.formal_output_token_ceiling == 16_384
+    assert config.formal_output_token_ceiling == 128_000
     assert config.maximum_spend_microunits == 1_000_000
     assert config.formal_budget_gate_raw_sha256 == "5" * 64
     envelope = cast(dict[str, object], config.to_dict()["billing_envelope"])
@@ -160,6 +175,31 @@ def test_pre_call_rejects_binding_budget_and_model_drift(
         (
             "billing_envelope.wire.enforcement.input_upper_bound_method",
             bad_enforcement,
+        )
+    )
+
+    bad_output_contract = copy.deepcopy(original)
+    bad_output_contract["billing_envelope"]["wire"]["output_usage_contract"][  # type: ignore[index]
+        "maximum_tokens"
+    ] = 127_999
+    mutations.append(
+        (
+            "billing_envelope.wire.output_usage_contract.maximum_tokens",
+            bad_output_contract,
+        )
+    )
+
+    bad_input_ceiling = copy.deepcopy(original)
+    bad_input_ceiling["billing_envelope"]["wire"][  # type: ignore[index]
+        "billable_token_ceiling_per_attempt"
+    ]["input_tokens"] = 272_001
+    mutations.append(
+        (
+            (
+                "billing_envelope.wire.billable_token_ceiling_per_attempt."
+                "input_tokens"
+            ),
+            bad_input_ceiling,
         )
     )
 

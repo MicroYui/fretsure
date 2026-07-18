@@ -284,7 +284,7 @@ def _formal_pre_call(*, input_token_ceiling: int = 272_000):
         formal_billing_envelope_raw_sha256=hashlib.sha256(envelope_bytes).hexdigest(),
         cost_status="available",
         currency="USD",
-        maximum_spend_microunits=538_865_486_400,
+        maximum_spend_microunits=1_167_905_640_000,
         pricing_contract_sha256=pricing_sha256,
         formal_budget_gate_raw_sha256="4" * 64,
     )
@@ -343,7 +343,9 @@ def test_live_requires_exact_spend_before_client_or_output(
         calls += 1
         raise AssertionError("authorization failure must precede client creation")
 
-    for index, supplied in enumerate((None, 538_865_486_399, 538_865_486_401)):
+    for index, supplied in enumerate(
+        (None, 1_167_905_639_999, 1_167_905_640_001)
+    ):
         output = tmp_path / f"unauthorized-{index}"
         with pytest.raises(ValueError):
             collect_benchmark_v2(
@@ -600,7 +602,7 @@ def test_formal_context_round_trip_embeds_the_billing_envelope() -> None:
     embedded = cast(dict[str, object], context.manifest.parameters["pre_call"])
     envelope = cast(dict[str, object], embedded["billing_envelope"])
     assert envelope["raw_sha256"] == (
-        "5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d"
+        "a1969546babcdcbcbf281c682260c38551b2fd12ef382014eb34a79e85df5544"
     )
 
 
@@ -800,7 +802,7 @@ def test_v2_cli_redacts_live_integrity_abort_as_exit_one(
                 "--pre-call-config",
                 str(pre_call_path),
                 "--authorized-maximum-spend-microunits",
-                "538865486400",
+                "1167905640000",
                 "--output-dir",
                 str(tmp_path / "output"),
             ]

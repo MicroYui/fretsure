@@ -22,24 +22,26 @@ from fretsure.bench.preregistration import (
     preregistration_from_dict,
 )
 from fretsure.llm.client import (
-    MAX_PROXY_OUTPUT_TOKENS,
+    MAX_PROXY_USAGE_TOKENS,
     LLMModelIdError,
     validate_llm_model_id,
 )
 
-BENCHMARK_PRE_CALL_CONFIG_VERSION: Final = "benchmark-pre-call-config@0.2.0"
+BENCHMARK_PRE_CALL_CONFIG_VERSION: Final = "benchmark-pre-call-config@0.3.0"
 FORMAL_BILLING_ENVELOPE_VERSION: Final = (
-    "benchmark-formal-billing-envelope@0.1.0"
+    "benchmark-formal-billing-envelope@0.2.0"
 )
 FORMAL_BILLING_ENVELOPE_SCOPE: Final = "formal_collection"
 FORMAL_INPUT_UPPER_BOUND_METHOD: Final = "utf8_bytes_plus_256"
 FORMAL_ENFORCEMENT_POINT: Final = "before_observation_retry_network"
+FORMAL_SHORT_CONTEXT_MAX_INPUT_TOKENS: Final = 272_000
 MAX_COLLECTION_ATTEMPT: Final = 999_999
 SINGLE_ATTEMPT_CEILING_SCOPE: Final = "single_collection_attempt_nontransferable"
 _PROMPT_BINDING_DOMAIN = b"fretsure:benchmark-pre-call-prompts@0.1.0\0"
 _SCHEMA_BINDING_DOMAIN = b"fretsure:benchmark-pre-call-schemas@0.1.0\0"
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _GIT_SHA = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
+_UTC_SECONDS = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _ANALYSIS_KINDS = frozenset({"analysis_module_sha256", "wheel_record_sha256"})
 _MAX_BUDGET = (1 << 63) - 1
 _BILLABLE_TOKEN_FIELDS = frozenset(
@@ -308,6 +310,7 @@ def _validate_billing_envelope(value: object) -> dict[str, object]:
             {
                 "billable_token_ceiling_per_attempt",
                 "enforcement",
+                "output_usage_contract",
                 "pricing_contract_raw_sha256",
                 "schema",
                 "scope",
@@ -335,11 +338,76 @@ def _validate_billing_envelope(value: object) -> dict[str, object]:
         )
         for field in sorted(_BILLABLE_TOKEN_FIELDS)
     }
-    if ceilings["output_tokens"] > MAX_PROXY_OUTPUT_TOKENS:
+    for field in _FORMAL_INPUT_TOKEN_FIELDS:
+        if ceilings[field] > FORMAL_SHORT_CONTEXT_MAX_INPUT_TOKENS:
+            _fail(
+                f"billing_envelope.wire.billable_token_ceiling_per_attempt.{field}",
+                f"must not exceed {FORMAL_SHORT_CONTEXT_MAX_INPUT_TOKENS}",
+            )
+    if ceilings["output_tokens"] > MAX_PROXY_USAGE_TOKENS:
         _fail(
             "billing_envelope.wire.billable_token_ceiling_per_attempt.output_tokens",
-            f"must not exceed {MAX_PROXY_OUTPUT_TOKENS}",
+            f"must not exceed {MAX_PROXY_USAGE_TOKENS}",
         )
+    raw_output_contract = _object(
+        wire["output_usage_contract"],
+        "billing_envelope.wire.output_usage_contract",
+        frozenset(
+            {
+                "billing_field",
+                "captured_at_utc",
+                "includes_non_visible_tokens",
+                "maximum_tokens",
+                "model_id",
+                "source_model_ref",
+                "source_token_counting_ref",
+            }
+        ),
+    )
+    if raw_output_contract["billing_field"] != "output_tokens":
+        _fail(
+            "billing_envelope.wire.output_usage_contract.billing_field",
+            "must equal output_tokens",
+        )
+    captured_at = _text(
+        raw_output_contract["captured_at_utc"],
+        "billing_envelope.wire.output_usage_contract.captured_at_utc",
+        maximum=20,
+    )
+    if _UTC_SECONDS.fullmatch(captured_at) is None:
+        _fail(
+            "billing_envelope.wire.output_usage_contract.captured_at_utc",
+            "must use UTC seconds form",
+        )
+    if raw_output_contract["includes_non_visible_tokens"] is not True:
+        _fail(
+            "billing_envelope.wire.output_usage_contract.includes_non_visible_tokens",
+            "must explicitly acknowledge non-visible generated tokens",
+        )
+    output_maximum = _integer(
+        raw_output_contract["maximum_tokens"],
+        "billing_envelope.wire.output_usage_contract.maximum_tokens",
+        minimum=1,
+    )
+    if output_maximum != ceilings["output_tokens"]:
+        _fail(
+            "billing_envelope.wire.output_usage_contract.maximum_tokens",
+            "must equal the billable output-token ceiling",
+        )
+    output_model = _model(
+        raw_output_contract["model_id"],
+        "billing_envelope.wire.output_usage_contract.model_id",
+    )
+    source_model_ref = _text(
+        raw_output_contract["source_model_ref"],
+        "billing_envelope.wire.output_usage_contract.source_model_ref",
+        maximum=2_048,
+    )
+    source_token_counting_ref = _text(
+        raw_output_contract["source_token_counting_ref"],
+        "billing_envelope.wire.output_usage_contract.source_token_counting_ref",
+        maximum=2_048,
+    )
     raw_enforcement = _object(
         wire["enforcement"],
         "billing_envelope.wire.enforcement",
@@ -360,6 +428,15 @@ def _validate_billing_envelope(value: object) -> dict[str, object]:
         "enforcement": {
             "input_upper_bound_method": FORMAL_INPUT_UPPER_BOUND_METHOD,
             "required_before": FORMAL_ENFORCEMENT_POINT,
+        },
+        "output_usage_contract": {
+            "billing_field": "output_tokens",
+            "captured_at_utc": captured_at,
+            "includes_non_visible_tokens": True,
+            "maximum_tokens": output_maximum,
+            "model_id": output_model,
+            "source_model_ref": source_model_ref,
+            "source_token_counting_ref": source_token_counting_ref,
         },
         "pricing_contract_raw_sha256": pricing_sha256,
         "schema": FORMAL_BILLING_ENVELOPE_VERSION,
@@ -594,6 +671,14 @@ def _validate_wire(value: object) -> BenchmarkPreCallConfig:
         or rule != {"operator": "exact_equal", "value": requested}
     ):
         _fail("model", "does not match the preregistered exact model rule")
+    output_usage_contract = cast(
+        dict[str, object], envelope_wire["output_usage_contract"]
+    )
+    if output_usage_contract["model_id"] != requested:
+        _fail(
+            "billing_envelope.wire.output_usage_contract.model_id",
+            "does not match the preregistered requested model",
+        )
 
     prompt_templates = _prompt_bindings(prereg_model)
     bindings = _object(

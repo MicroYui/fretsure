@@ -17,10 +17,10 @@ from fretsure.bench.preregistration import preregistration_from_bytes
 ROOT = Path(__file__).resolve().parents[2]
 PREREG_PATH = ROOT / "docs" / "experiments" / "2026-07-17-benchmark-v2-prereg.json"
 PRICING_SOURCE_PATH = (
-    ROOT / "docs" / "experiments" / "2026-07-18-gpt-5.6-sol-pricing-source.json"
+    ROOT / "docs" / "experiments" / "2026-07-18-gpt-5.6-sol-pricing-source-v2.json"
 )
 PRICING_CONTRACT_PATH = (
-    ROOT / "docs" / "experiments" / "2026-07-18-gpt-5.6-sol-pricing-contract.json"
+    ROOT / "docs" / "experiments" / "2026-07-18-gpt-5.6-sol-pricing-contract-v2.json"
 )
 FORMAL_ENVELOPE_PATH = (
     ROOT
@@ -93,11 +93,25 @@ def _formal_envelope(
     *,
     ceilings: dict[str, int] | None = None,
 ) -> Any:
+    frozen_ceilings = _ceilings() if ceilings is None else ceilings
     return gate.build_formal_billing_envelope(
         pricing_contract_raw_sha256=pricing.raw_sha256,
-        billable_token_ceiling_per_attempt=(
-            _ceilings() if ceilings is None else ceilings
-        ),
+        billable_token_ceiling_per_attempt=frozen_ceilings,
+        output_usage_contract={
+            "billing_field": "output_tokens",
+            "captured_at_utc": "2026-07-18T02:31:25Z",
+            "includes_non_visible_tokens": True,
+            "maximum_tokens": frozen_ceilings["output_tokens"],
+            "model_id": pricing.billing_model_id,
+            "source_model_ref": (
+                "https://developers.openai.com/api/docs/models/"
+                f"{pricing.billing_model_id}"
+            ),
+            "source_token_counting_ref": (
+                "https://developers.openai.com/api/docs/guides/token-counting"
+                "#understand-output-token-counts"
+            ),
+        },
     )
 
 
@@ -222,7 +236,7 @@ def test_committed_openai_reference_price_is_canonical_and_mechanical(
     source_bytes = PRICING_SOURCE_PATH.read_bytes()
     source = cast(dict[str, object], parse_canonical_json_bytes(source_bytes))
     source_sha256 = hashlib.sha256(source_bytes).hexdigest()
-    assert source_sha256 == "6293e6c59908b53335e4725f3a36434966ee2e8a083cd79513b2f46746144b0f"
+    assert source_sha256 == "b16339b98c7ad7a269dc6d9d07416f8071a7b14f4ee4afeccea84940230c2062"
     assert source["model_id"] == "gpt-5.6-sol"
     assert source["service_tier"] == "standard"
     assert source["source_pricing_ref"] == "https://developers.openai.com/api/docs/pricing"
@@ -239,30 +253,44 @@ def test_committed_openai_reference_price_is_canonical_and_mechanical(
         "cache_creation_input_tokens": 4_096,
         "cache_read_input_tokens": 4_096,
         "input_tokens": 4_096,
-        "output_tokens": 2_048,
+        "output_tokens": 128_000,
     }
     evidence = cast(dict[str, object], pricing.to_dict()["evidence"])
     assert evidence["source_sha256"] == source_sha256
-    assert gate.pilot_worst_case_budget(pricing)["cost_microunits"] == 10_960_896
+    assert gate.pilot_worst_case_budget(pricing)["cost_microunits"] == 513_232_896
 
     formal_envelope = gate.formal_billing_envelope_from_bytes(
         FORMAL_ENVELOPE_PATH.read_bytes()
     )
     assert formal_envelope.raw_sha256 == (
-        "5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d"
+        "a1969546babcdcbcbf281c682260c38551b2fd12ef382014eb34a79e85df5544"
     )
     assert formal_envelope.pricing_contract_raw_sha256 == pricing.raw_sha256
     assert formal_envelope.ceilings == {
         "cache_creation_input_tokens": 272_000,
         "cache_read_input_tokens": 272_000,
         "input_tokens": 272_000,
-        "output_tokens": 16_384,
+        "output_tokens": 128_000,
+    }
+    assert formal_envelope.output_usage_contract == {
+        "billing_field": "output_tokens",
+        "captured_at_utc": "2026-07-18T09:32:40Z",
+        "includes_non_visible_tokens": True,
+        "maximum_tokens": 128_000,
+        "model_id": "gpt-5.6-sol",
+        "source_model_ref": (
+            "https://developers.openai.com/api/docs/models/gpt-5.6-sol"
+        ),
+        "source_token_counting_ref": (
+            "https://developers.openai.com/api/docs/guides/token-counting"
+            "#understand-output-token-counts"
+        ),
     }
     assert gate.formal_worst_case_budget(
         preregistration,
         pricing,
         formal_envelope,
-    )["cost_microunits"] == 538_865_486_400
+    )["cost_microunits"] == 1_167_905_640_000
 
 
 @pytest.mark.parametrize(
@@ -301,7 +329,7 @@ def test_pricing_contract_rejects_currency_timestamp_rate_and_unit_drift(
         ("cache_creation_input_tokens", 272_001),
         ("cache_read_input_tokens", 272_001),
         ("input_tokens", 272_001),
-        ("output_tokens", 16_385),
+        ("output_tokens", 1_000_000_001),
     ],
 )
 def test_formal_envelope_rejects_values_outside_frozen_provider_bounds(
@@ -312,6 +340,9 @@ def test_formal_envelope_rejects_values_outside_frozen_provider_bounds(
     wire = _formal_envelope(pricing).to_dict()
     ceilings = cast(dict[str, object], wire["billable_token_ceiling_per_attempt"])
     ceilings[field] = value
+    if field == "output_tokens":
+        output_contract = cast(dict[str, object], wire["output_usage_contract"])
+        output_contract["maximum_tokens"] = value
 
     with pytest.raises(gate.Task8BudgetGateError) as caught:
         gate.formal_billing_envelope_from_dict(wire)
@@ -433,7 +464,7 @@ def test_pilot_and_formal_worst_case_iterate_exact_call_templates(
         {"count": 32, "max_output_tokens": 1_024, "stage": "repair"},
         {"count": 4, "max_output_tokens": 512, "stage": "critic"},
     ]
-    assert pilot["cost_microunits"] == 324_756
+    assert pilot["cost_microunits"] == 4_342_932
 
     resources = formal["resources"]
     assert resources == {
@@ -468,7 +499,7 @@ def test_pilot_and_formal_worst_case_iterate_exact_call_templates(
             },
         },
     }
-    assert formal["cost_microunits"] == 579_506_430
+    assert formal["cost_microunits"] == 5_461_236_990
 
 
 def test_per_attempt_per_component_rounding_is_applied_to_worst_case() -> None:
@@ -498,7 +529,7 @@ def test_global_rounding_is_once_across_all_worst_case_components() -> None:
         fixed=0,
         ceil_each=False,
     )
-    assert gate.pilot_worst_case_budget(pricing)["cost_microunits"] == 1
+    assert gate.pilot_worst_case_budget(pricing)["cost_microunits"] == 3
 
 
 def test_gate_scales_projection_with_ceil_and_never_subtracts_pilot_from_formal(
@@ -517,6 +548,7 @@ def test_gate_scales_projection_with_ceil_and_never_subtracts_pilot_from_formal(
         formal_maximum_spend_microunits=None,
     )
     wire = artifact.to_dict()
+    assert wire["schema"] == "benchmark-formal-budget-gate@0.3.0"
     formal = cast(dict[str, object], wire["formal"])
     worst = cast(dict[str, object], formal["worst_case_remaining"])
     projection = cast(dict[str, object], formal["pilot_informed_projection"])
@@ -946,3 +978,8 @@ def test_cli_generates_and_checks_exact_artifact(
     output.write_bytes(output.read_bytes() + b"\n")
     assert gate.main([*argv, "--check"]) == 1
     assert "differs byte-for-byte" in capsys.readouterr().err
+
+    historical = output.read_bytes()
+    assert gate.main(argv) == 1
+    assert output.read_bytes() == historical
+    assert "already exists with different bytes" in capsys.readouterr().err

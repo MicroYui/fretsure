@@ -226,14 +226,23 @@ def _benchmark_extra_smoke(root: Path, wheel: Path) -> None:
                 "cache_creation_input_tokens": 272_000,
                 "cache_read_input_tokens": 272_000,
                 "input_tokens": 272_000,
-                "output_tokens": 16_384,
+                "output_tokens": 128_000,
             },
             "enforcement": {
                 "input_upper_bound_method": "utf8_bytes_plus_256",
                 "required_before": "before_observation_retry_network",
             },
+            "output_usage_contract": {
+                "billing_field": "output_tokens",
+                "captured_at_utc": "2026-07-18T09:32:40Z",
+                "includes_non_visible_tokens": True,
+                "maximum_tokens": 128_000,
+                "model_id": "gpt-5.6-sol",
+                "source_model_ref": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+                "source_token_counting_ref": "https://developers.openai.com/api/docs/guides/token-counting#understand-output-token-counts",
+            },
             "pricing_contract_raw_sha256": "0" * 64,
-            "schema": "benchmark-formal-billing-envelope@0.1.0",
+            "schema": "benchmark-formal-billing-envelope@0.2.0",
             "scope": "formal_collection",
         }
         unpriced = build_pre_call_config(

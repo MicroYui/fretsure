@@ -17,7 +17,7 @@ from fretsure.bench.precall import (
 )
 from fretsure.bench.preregistration import preregistration_from_bytes
 
-FORMAL_BUDGET_GATE_VERSION = "benchmark-formal-budget-gate@0.2.0"
+FORMAL_BUDGET_GATE_VERSION = "benchmark-formal-budget-gate@0.3.0"
 FORMAL_INPUT_UPPER_BOUND_METHOD = "utf8_bytes_plus_256"
 
 
@@ -92,10 +92,14 @@ def _authorized_gate(
     )
     if gate["schema"] != FORMAL_BUDGET_GATE_VERSION:
         _fail("formal_budget_gate has the wrong schema")
+    if gate["authorization_statement"] != (
+        "pricing_actual_and_projected_costs_do_not_authorize_collection"
+    ):
+        _fail("formal_budget_gate has the wrong authorization statement")
     bindings = _object(gate["bindings"], "formal_budget_gate.bindings")
     expected_bindings = {
         "formal_billing_envelope_raw_sha256": envelope_sha256,
-        "pilot_pricing_contract_raw_sha256": pricing_sha256,
+        "pricing_contract_raw_sha256": pricing_sha256,
         "preregistration_raw_sha256": preregistration_sha256,
     }
     for field, expected in expected_bindings.items():
@@ -215,6 +219,17 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _publish_once(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("xb") as stream:
+            stream.write(data)
+            stream.flush()
+    except FileExistsError:
+        if path.read_bytes() != data:
+            _fail("pre-call output already exists with different bytes")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
@@ -223,8 +238,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.output.read_bytes() != artifact:
                 _fail("generated pre-call differs byte-for-byte from output")
         else:
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_bytes(artifact)
+            _publish_once(args.output, artifact)
     except (OSError, ValueError) as error:
         print(str(error), file=sys.stderr)
         return 1

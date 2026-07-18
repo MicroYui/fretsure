@@ -53,6 +53,10 @@ remain unavailable rather than zero.
 The version `arrangement-proposal-compact@0.1.0` uses `128 + 32 × source events`,
 with a 16,384-token cap. It changes the wire representation, not the normalized
 notegraph: no event is truncated, and every work remains one inferential family.
+This is a visible-output request/format cap, not a billable `output_tokens` ceiling.
+Provider-reported output usage includes non-visible generated tokens; the corrected
+formal cost contract therefore uses the official `gpt-5.6-sol` maximum of 128,000
+billable output tokens per attempt.
 Long-score solving admits at most `4` bounded searches:
 `12,000,000` estimated work units per admitted segment and
 `48,000,000` across admitted segment searches.
@@ -95,6 +99,20 @@ All ceilings apply to one numbered collection attempt and are non-transferable.
 After an orphan, a higher attempt needs a fresh pre-call config and cost
 authorization that accounts for prior consumed spend; partial outcomes cannot
 be inspected to choose whether to restart.
+
+### 2026-07-18 billing-contract correction
+
+The historical 16,384-output formal envelope and `$538,865.486400` gate
+are preserved because they bound Task 9 attempt-001, but they are not valid
+for another call. Pricing
+contract v2 and formal envelope v0.2 bind the official 128,000-token billable-output
+maximum. The corrected one-attempt formal mechanical maximum is
+`1,167,905,640,000` micro-USD (`$1,167,905.640000`). This is an
+official-contract audit maximum, not a claim that the local proxy enforces a
+pre-consumption spend hard stop. Task 9 attempt-001 is terminal `INCOMPLETE`; a fresh
+attempt-002 requires `benchmark-pre-call-config@0.3.0` and the corrected
+`benchmark-formal-budget-gate@0.3.0`, SHA-256
+`9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6`.
 
 ## Runner alignment note
 

@@ -108,6 +108,7 @@ from fretsure.bench.report import (
 )
 from fretsure.llm.client import (
     DEFAULT_PROXY_MODEL,
+    MAX_PROXY_OUTPUT_TOKENS,
     MAX_PROXY_TEXT_BYTES_PER_TOKEN,
     MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
     PROXY_REQUEST_TIMEOUT_SECONDS,
@@ -1323,7 +1324,10 @@ def _formal_observation_request_guard(
     """Freeze one envelope check for every request in a formal collection."""
 
     input_ceiling = config.formal_input_token_ceiling
-    output_ceiling = config.formal_output_token_ceiling
+    output_ceiling = min(
+        config.formal_output_token_ceiling,
+        MAX_PROXY_OUTPUT_TOKENS,
+    )
 
     def guard(system_utf8: bytes, user_utf8: bytes, max_tokens: int) -> None:
         input_upper_bound = (

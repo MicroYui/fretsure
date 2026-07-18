@@ -616,7 +616,11 @@ def test_durable_live_sink_rejects_missing_provider_evidence_during_resume(
     assert caught.value.code is ArtifactCode.CORRUPT_JOURNAL
 
 
-def test_durable_sink_rechecks_usage_ceiling_during_resume(tmp_path: Path) -> None:
+@pytest.mark.parametrize("failed_call", [False, True])
+def test_durable_sink_rechecks_usage_ceiling_during_resume(
+    tmp_path: Path,
+    failed_call: bool,
+) -> None:
     seed = InMemoryObservationSink(max_calls=1)
     _make_call(seed)
     provider = ProviderObservation(
@@ -626,18 +630,26 @@ def test_durable_sink_rechecks_usage_ceiling_during_resume(tmp_path: Path) -> No
         retries=0,
         returned_model_id="requested-model",
         response_id_sha256=None,
-        input_tokens=11,
-        output_tokens=1,
+        input_tokens=1,
+        output_tokens=11,
         cache_creation_input_tokens=0,
         cache_read_input_tokens=0,
     )
-    journal = tmp_path / "resume-usage-ceiling.jsonl"
+    result = replace(seed.results[0], provider=provider)
+    if failed_call:
+        result = replace(
+            result,
+            status="failed",
+            reply_sha256=None,
+            failure_code=CallFailureCode.INVALID_REPLY,
+        )
+    journal = tmp_path / f"resume-usage-ceiling-{failed_call}.jsonl"
     journal.touch(mode=0o600)
     with DurableObservationSink(journal, max_calls=1, max_attempts=1) as source:
         source.write_intent(seed.intents[0])
         source.write_attempt_intent(seed.attempt_intents[0])
         source.write_attempt_result(seed.attempt_results[0])
-        source.write_result(replace(seed.results[0], provider=provider))
+        source.write_result(result)
 
     with pytest.raises(ArtifactError) as caught:
         DurableObservationSink(
@@ -656,7 +668,7 @@ def test_durable_sink_rechecks_usage_ceiling_during_resume(tmp_path: Path) -> No
     assert caught.value.code is ArtifactCode.CORRUPT_JOURNAL
     cause = caught.value.__cause__
     assert isinstance(cause, ArtifactError)
-    assert cause.field == "journal.provider.input_tokens"
+    assert cause.field == "journal.provider.output_tokens"
 
 
 def test_artifact_store_enforces_formal_per_attempt_usage_ceilings(
@@ -679,7 +691,7 @@ def test_artifact_store_enforces_formal_per_attempt_usage_ceilings(
         parameters={
             "model": {"allowed_returned_model_id": "requested-model"},
             "pre_call": {
-                "schema": "benchmark-pre-call-config@0.2.0",
+                "schema": "benchmark-pre-call-config@0.3.0",
                 "billing_envelope": {
                     "wire": {"billable_token_ceiling_per_attempt": ceilings}
                 }
@@ -718,11 +730,12 @@ def test_artifact_store_enforces_formal_per_attempt_usage_ceilings(
     assert terminal["failure_code"] == CallFailureCode.PROVIDER_METADATA_INVALID.value  # type: ignore[index]
 
 
-def test_durable_live_sink_rejects_reported_output_above_request_reservation(
+def test_durable_live_sink_accepts_billable_reasoning_above_visible_output_limit(
     tmp_path: Path,
 ) -> None:
     seed = InMemoryObservationSink(max_calls=1)
     _make_call(seed)
+    assert seed.intents[0].max_tokens == 32
     provider = ProviderObservation(
         available=True,
         status="succeeded",
@@ -753,13 +766,112 @@ def test_durable_live_sink_rejects_reported_output_above_request_reservation(
         sink.write_intent(seed.intents[0])
         sink.write_attempt_intent(seed.attempt_intents[0])
         sink.write_attempt_result(seed.attempt_results[0])
+        sink.write_result(replace(seed.results[0], provider=provider))
+
+    terminal = parse_canonical_jsonl_bytes(journal.read_bytes())[-1]["payload"]
+    assert terminal["status"] == "succeeded"  # type: ignore[index]
+    assert terminal["provider"]["output_tokens"] == 33  # type: ignore[index]
+
+
+def test_durable_live_sink_rejects_billable_output_above_envelope(
+    tmp_path: Path,
+) -> None:
+    seed = InMemoryObservationSink(max_calls=1)
+    _make_call(seed)
+    provider = ProviderObservation(
+        available=True,
+        status="succeeded",
+        attempts=1,
+        retries=0,
+        returned_model_id="requested-model",
+        response_id_sha256=None,
+        input_tokens=1,
+        output_tokens=101,
+        cache_creation_input_tokens=0,
+        cache_read_input_tokens=0,
+    )
+    journal = tmp_path / "output-above-envelope.jsonl"
+    journal.touch(mode=0o600)
+
+    with DurableObservationSink(
+        journal,
+        max_calls=1,
+        max_attempts=1,
+        allowed_returned_model_id="requested-model",
+        billable_token_ceiling_per_attempt={
+            "cache_creation_input_tokens": 100,
+            "cache_read_input_tokens": 100,
+            "input_tokens": 100,
+            "output_tokens": 100,
+        },
+    ) as sink:
+        sink.write_intent(seed.intents[0])
+        sink.write_attempt_intent(seed.attempt_intents[0])
+        sink.write_attempt_result(seed.attempt_results[0])
         with pytest.raises(ArtifactError) as caught:
             sink.write_result(replace(seed.results[0], provider=provider))
 
     assert caught.value.code is ArtifactCode.LIMIT_EXCEEDED
     assert caught.value.field == "journal.provider.output_tokens"
-    terminal = parse_canonical_jsonl_bytes(journal.read_bytes())[-1]["payload"]  # type: ignore[index]
+    terminal = parse_canonical_jsonl_bytes(journal.read_bytes())[-1]["payload"]
     assert terminal["status"] == "failed"  # type: ignore[index]
+    assert terminal["failure_code"] == (  # type: ignore[index]
+        CallFailureCode.PROVIDER_METADATA_INVALID.value
+    )
+
+
+def test_durable_live_sink_rejects_failed_call_billable_output_above_envelope(
+    tmp_path: Path,
+) -> None:
+    seed = InMemoryObservationSink(max_calls=1)
+    _make_call(seed)
+    provider = ProviderObservation(
+        available=True,
+        status="succeeded",
+        attempts=1,
+        retries=0,
+        returned_model_id="requested-model",
+        response_id_sha256=None,
+        input_tokens=1,
+        output_tokens=101,
+        cache_creation_input_tokens=0,
+        cache_read_input_tokens=0,
+    )
+    failed_result = replace(
+        seed.results[0],
+        status="failed",
+        reply_sha256=None,
+        failure_code=CallFailureCode.INVALID_REPLY,
+        provider=provider,
+    )
+    journal = tmp_path / "failed-output-above-envelope.jsonl"
+    journal.touch(mode=0o600)
+
+    with DurableObservationSink(
+        journal,
+        max_calls=1,
+        max_attempts=1,
+        allowed_returned_model_id="requested-model",
+        billable_token_ceiling_per_attempt={
+            "cache_creation_input_tokens": 100,
+            "cache_read_input_tokens": 100,
+            "input_tokens": 100,
+            "output_tokens": 100,
+        },
+    ) as sink:
+        sink.write_intent(seed.intents[0])
+        sink.write_attempt_intent(seed.attempt_intents[0])
+        sink.write_attempt_result(seed.attempt_results[0])
+        with pytest.raises(ArtifactError) as caught:
+            sink.write_result(failed_result)
+
+    assert caught.value.code is ArtifactCode.LIMIT_EXCEEDED
+    assert caught.value.field == "journal.provider.output_tokens"
+    terminal = parse_canonical_jsonl_bytes(journal.read_bytes())[-1]["payload"]
+    assert terminal["status"] == "failed"  # type: ignore[index]
+    assert terminal["failure_code"] == (  # type: ignore[index]
+        CallFailureCode.PROVIDER_METADATA_INVALID.value
+    )
 
 
 def test_private_to_sanitized_observations_removes_response_id_and_preserves_usage_nulls() -> None:

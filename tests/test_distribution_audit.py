@@ -183,6 +183,14 @@ def test_sdist_audit_requires_task7_task8_and_task9_evidence_and_exact_sources(
             "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract.json",
         ),
         (
+            "pricing-source-v2",
+            "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-source-v2.json",
+        ),
+        (
+            "pricing-contract-v2",
+            "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract-v2.json",
+        ),
+        (
             "formal-billing-envelope",
             (
                 "docs/experiments/"

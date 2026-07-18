@@ -75,7 +75,7 @@ _WAL_DOMAIN = b"fretsure:benchmark-wal@0.1.0\0"
 _ROW_TABLE_DOMAIN = b"fretsure:benchmark-row-table@0.1.0\0"
 _BLOB_TABLE_DOMAIN = b"fretsure:benchmark-blob-table@0.1.0\0"
 _BLOB_DOMAIN = b"fretsure:benchmark-blob@0.1.0\0"
-_FORMAL_PRE_CALL_CONFIG_VERSION: Final = "benchmark-pre-call-config@0.2.0"
+_FORMAL_PRE_CALL_CONFIG_VERSION: Final = "benchmark-pre-call-config@0.3.0"
 _PROVIDER_USAGE_FIELDS: Final = (
     "input_tokens",
     "output_tokens",
@@ -3153,16 +3153,13 @@ class DurableObservationSink(InMemoryObservationSink):
                         "journal.provider",
                         "successful live call does not satisfy the manifest provider rule",
                     )
-            exceeded = self._provider_usage_ceiling_exceeded(
-                result.provider,
-                requested_output_tokens=self._current_requested_output_tokens(result),
+        exceeded = self._provider_usage_ceiling_exceeded(result.provider)
+        if exceeded is not None:
+            raise _error(
+                ArtifactCode.CORRUPT_JOURNAL,
+                f"journal.provider.{exceeded}",
+                "provider observation exceeds its billable token ceiling",
             )
-            if exceeded is not None:
-                raise _error(
-                    ArtifactCode.CORRUPT_JOURNAL,
-                    f"journal.provider.{exceeded}",
-                    "successful live call exceeds its billable token ceiling",
-                )
         if (
             returned is not None
             and self._allowed_returned_model_id is not None
@@ -3185,8 +3182,6 @@ class DurableObservationSink(InMemoryObservationSink):
     def _provider_usage_ceiling_exceeded(
         self,
         provider: ProviderObservation,
-        *,
-        requested_output_tokens: int | None,
     ) -> str | None:
         ceilings = self._billable_token_ceiling_per_attempt
         if ceilings is None:
@@ -3194,22 +3189,9 @@ class DurableObservationSink(InMemoryObservationSink):
         for field in _PROVIDER_USAGE_FIELDS:
             value = cast(int | None, getattr(provider, field))
             ceiling = ceilings[field]
-            if field == "output_tokens" and requested_output_tokens is not None:
-                ceiling = min(ceiling, requested_output_tokens)
             if value is not None and value > ceiling:
                 return field
         return None
-
-    def _current_requested_output_tokens(self, result: CallResult) -> int | None:
-        if not self.intents:
-            return None
-        intent = self.intents[-1]
-        if (
-            intent.logical_call_id != result.logical_call_id
-            or intent.call_index != result.call_index
-        ):
-            return None
-        return intent.max_tokens
 
     def mark_unit_committed(
         self,
@@ -3299,14 +3281,7 @@ class DurableObservationSink(InMemoryObservationSink):
                 or exact.provider.returned_model_id is None
             )
         )
-        exceeded_usage_field = (
-            self._provider_usage_ceiling_exceeded(
-                exact.provider,
-                requested_output_tokens=self._current_requested_output_tokens(exact),
-            )
-            if exact.status == "succeeded"
-            else None
-        )
+        exceeded_usage_field = self._provider_usage_ceiling_exceeded(exact.provider)
         provider_integrity_failure = (
             model_mismatch
             or missing_live_provider_evidence

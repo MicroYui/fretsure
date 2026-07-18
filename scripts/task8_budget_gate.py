@@ -25,12 +25,12 @@ from fretsure.bench.preregistration import (
     BenchmarkPreregistration,
     preregistration_from_bytes,
 )
-from fretsure.llm.client import MAX_PROXY_OUTPUT_TOKENS, validate_llm_model_id
+from fretsure.llm.client import MAX_PROXY_USAGE_TOKENS, validate_llm_model_id
 
 TOKEN_PRICING_CONTRACT_VERSION: Final = "benchmark-token-pricing-contract@0.1.0"
-FORMAL_BILLING_ENVELOPE_VERSION: Final = "benchmark-formal-billing-envelope@0.1.0"
+FORMAL_BILLING_ENVELOPE_VERSION: Final = "benchmark-formal-billing-envelope@0.2.0"
 OPERATIONAL_USAGE_VERSION: Final = "benchmark-operational-usage@0.1.0"
-FORMAL_BUDGET_GATE_VERSION: Final = "benchmark-formal-budget-gate@0.2.0"
+FORMAL_BUDGET_GATE_VERSION: Final = "benchmark-formal-budget-gate@0.3.0"
 
 TOKEN_UNIT: Final = 1_000_000
 FORMAL_PAIRED_SAMPLES: Final = 5_030
@@ -362,6 +362,7 @@ def _formal_billing_envelope_wire(value: object) -> dict[str, object]:
             {
                 "billable_token_ceiling_per_attempt",
                 "enforcement",
+                "output_usage_contract",
                 "pricing_contract_raw_sha256",
                 "schema",
                 "scope",
@@ -386,11 +387,60 @@ def _formal_billing_envelope_wire(value: object) -> dict[str, object]:
                 f"billable_token_ceiling_per_attempt.{name}",
                 "exceeds the frozen short-context pricing band",
             )
-    if ceilings["output_tokens"] > MAX_PROXY_OUTPUT_TOKENS:
+    if ceilings["output_tokens"] > MAX_PROXY_USAGE_TOKENS:
         _fail(
             "billable_token_ceiling_per_attempt.output_tokens",
-            "exceeds the bounded proxy request output ceiling",
+            "exceeds the bounded reported-usage parser ceiling",
         )
+    output_contract = _object(
+        obj["output_usage_contract"],
+        "output_usage_contract",
+        frozenset(
+            {
+                "billing_field",
+                "captured_at_utc",
+                "includes_non_visible_tokens",
+                "maximum_tokens",
+                "model_id",
+                "source_model_ref",
+                "source_token_counting_ref",
+            }
+        ),
+    )
+    if output_contract["billing_field"] != "output_tokens":
+        _fail("output_usage_contract.billing_field", "must equal output_tokens")
+    captured_at = _captured_utc(
+        output_contract["captured_at_utc"],
+        "output_usage_contract.captured_at_utc",
+    )
+    includes_non_visible = output_contract["includes_non_visible_tokens"]
+    if includes_non_visible is not True:
+        _fail(
+            "output_usage_contract.includes_non_visible_tokens",
+            "must explicitly acknowledge non-visible generated tokens",
+        )
+    output_maximum = _integer(
+        output_contract["maximum_tokens"],
+        "output_usage_contract.maximum_tokens",
+        minimum=1,
+        maximum=MAX_PROXY_USAGE_TOKENS,
+    )
+    if output_maximum != ceilings["output_tokens"]:
+        _fail(
+            "output_usage_contract.maximum_tokens",
+            "must equal the billable output-token ceiling",
+        )
+    output_model = _model(output_contract["model_id"], "output_usage_contract.model_id")
+    source_model_ref = _text(
+        output_contract["source_model_ref"],
+        "output_usage_contract.source_model_ref",
+        maximum=2_048,
+    )
+    source_token_counting_ref = _text(
+        output_contract["source_token_counting_ref"],
+        "output_usage_contract.source_token_counting_ref",
+        maximum=2_048,
+    )
     enforcement = _object(
         obj["enforcement"],
         "enforcement",
@@ -411,6 +461,15 @@ def _formal_billing_envelope_wire(value: object) -> dict[str, object]:
         "enforcement": {
             "input_upper_bound_method": FORMAL_INPUT_UPPER_BOUND_METHOD,
             "required_before": FORMAL_ENFORCEMENT_POINT,
+        },
+        "output_usage_contract": {
+            "billing_field": "output_tokens",
+            "captured_at_utc": captured_at,
+            "includes_non_visible_tokens": True,
+            "maximum_tokens": output_maximum,
+            "model_id": output_model,
+            "source_model_ref": source_model_ref,
+            "source_token_counting_ref": source_token_counting_ref,
         },
         "pricing_contract_raw_sha256": pricing_sha,
         "schema": FORMAL_BILLING_ENVELOPE_VERSION,
@@ -446,11 +505,16 @@ class FormalBillingEnvelope:
     def ceilings(self) -> dict[str, int]:
         return cast(dict[str, int], self.to_dict()["billable_token_ceiling_per_attempt"])
 
+    @property
+    def output_usage_contract(self) -> dict[str, object]:
+        return cast(dict[str, object], self.to_dict()["output_usage_contract"])
+
 
 def build_formal_billing_envelope(
     *,
     pricing_contract_raw_sha256: str,
     billable_token_ceiling_per_attempt: Mapping[str, int],
+    output_usage_contract: Mapping[str, object],
 ) -> FormalBillingEnvelope:
     wire = {
         "billable_token_ceiling_per_attempt": dict(
@@ -460,6 +524,7 @@ def build_formal_billing_envelope(
             "input_upper_bound_method": FORMAL_INPUT_UPPER_BOUND_METHOD,
             "required_before": FORMAL_ENFORCEMENT_POINT,
         },
+        "output_usage_contract": dict(output_usage_contract),
         "pricing_contract_raw_sha256": pricing_contract_raw_sha256,
         "schema": FORMAL_BILLING_ENVELOPE_VERSION,
         "scope": FORMAL_ENVELOPE_SCOPE,
@@ -489,7 +554,17 @@ def _validate_formal_envelope_basis(
     if envelope.pricing_contract_raw_sha256 != pricing.raw_sha256:
         _fail(
             "formal_billing_envelope.pricing_contract_raw_sha256",
-            "does not bind the pilot pricing contract",
+            "does not bind the supplied pricing contract",
+        )
+    if envelope.output_usage_contract["model_id"] != pricing.billing_model_id:
+        _fail(
+            "formal_billing_envelope.output_usage_contract.model_id",
+            "does not equal the pricing contract model",
+        )
+    if envelope.ceilings["output_tokens"] != pricing.ceilings["output_tokens"]:
+        _fail(
+            "formal_billing_envelope.billable_token_ceiling_per_attempt.output_tokens",
+            "does not equal the corrected pricing-contract output ceiling",
         )
 
 
@@ -919,20 +994,14 @@ class _CallTemplate:
 
 def _attempt_cost(
     pricing: TokenPricingContract,
-    max_output_tokens: int,
     *,
     ceilings: Mapping[str, int],
 ) -> int:
-    if max_output_tokens > ceilings["output_tokens"]:
-        _fail(
-            "billing_envelope.billable_token_ceiling_per_attempt.output_tokens",
-            "is below a frozen call-template output ceiling",
-        )
     amounts = {
         "cache_creation_input_tokens": ceilings["cache_creation_input_tokens"],
         "cache_read_input_tokens": ceilings["cache_read_input_tokens"],
         "input_tokens": ceilings["input_tokens"],
-        "output_tokens": max_output_tokens,
+        "output_tokens": ceilings["output_tokens"],
     }
     if pricing.ceil_each_component_per_attempt:
         variable = sum(
@@ -966,7 +1035,6 @@ def _templates_cost(
             * attempts_per_call
             * _attempt_cost(
                 pricing,
-                template.max_output_tokens,
                 ceilings=ceilings,
             )
             for template in templates
@@ -978,10 +1046,7 @@ def _templates_cost(
         ),
         "cache_read_input_tokens": attempts * ceilings["cache_read_input_tokens"],
         "input_tokens": attempts * ceilings["input_tokens"],
-        "output_tokens": sum(
-            template.count * attempts_per_call * template.max_output_tokens
-            for template in templates
-        ),
+        "output_tokens": attempts * ceilings["output_tokens"],
     }
     variable = _ceil_div(
         sum(token_totals[name] * pricing.rates[name] for name in TOKEN_FIELDS),
@@ -1551,7 +1616,7 @@ def build_formal_budget_gate(
             "formal_billing_envelope_raw_sha256": formal_billing_envelope.raw_sha256,
             "pilot_receipt_sha256": receipt_sha,
             "pilot_summary_sha256": summary_sha,
-            "pilot_pricing_contract_raw_sha256": pricing_contract.raw_sha256,
+            "pricing_contract_raw_sha256": pricing_contract.raw_sha256,
             "preregistration_raw_sha256": _raw_sha256(preregistration.wire_json),
         },
         "external_ceiling": {
@@ -1667,7 +1732,13 @@ def _check(path: Path, expected: bytes) -> None:
 
 def _write(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
+    try:
+        with path.open("xb") as stream:
+            stream.write(data)
+            stream.flush()
+    except FileExistsError:
+        if path.read_bytes() != data:
+            _fail("output", "already exists with different bytes")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -1709,7 +1780,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "formal_billing_envelope_sha256": formal_envelope.raw_sha256,
         "gate_sha256": artifact.raw_sha256,
         "output": str(args.output),
-        "pilot_pricing_sha256": pricing.raw_sha256,
+        "pricing_contract_sha256": pricing.raw_sha256,
     }
     print(canonical_json_bytes(summary).decode("utf-8"))
     return 0

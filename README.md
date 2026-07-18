@@ -119,25 +119,36 @@ lead sheet / MIDI / IR
 ## 状态
 
 **Plan 1–5、Oracle 0.2 软件信任门、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR、
-strict MIDI input 与 benchmark v2 Task 1–8 均已闭门；Task 9 formal runner 已实现，正式采集尚未启动。**
+strict MIDI input 与 benchmark v2 Task 1–8 均已闭门；Task 9 formal attempt-001 已终止为
+`INCOMPLETE`，修正计费契约后将从 fresh attempt-002 继续。**
 当前 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、
 faithfulness=`fidelity@0.3.0`，trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、
 API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=
 `oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0` 保持不变，
 `music21==10.5.0` 精确锁定。MIDI 的两正两负 exact producer rows、资源门、诚实限制与 Git receipt
 见 [`docs/MIDI_ACCEPTANCE.md`](docs/MIDI_ACCEPTANCE.md)。benchmark v2 已冻结 500 个 procedural
-families + 3 个许可 public controls、机器预注册、预算、逐项 rows、统计、WAL 与 replay。用户已授权
-attempt-002 的单次 `$10.960896` 上限；连同 attempt-001，已披露累计上限为 `$11.574272`，不含
-Task 9。attempt-002 已 COMPLETE 8/8：27 个 logical calls、31 次 attempts、4 次 retries，provider / host
-耗时分别为 `473,726,578` / `477,264,352` µs，返回模型仅 `gpt-5.6-sol`。25 次成功 attempts 的 usage
-完整，6 次失败 attempts 未返回 usage；已知参考成本为 `$0.438365`、tight upper 为 `$1.095773`，两次
-pilot 合计已知 / tight upper 为 `$0.513140` / `$1.280116`。formal envelope SHA-256 为
-`5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d`，冻结每个 input/cache bucket
-`272,000`、output `16,384`。用户已统一授权模型计费；私有 Task 9 external-ceiling gate 精确声明
-`$538,865.486400` 上限。该 gate 只冻结机械预算，不自行授予调用权限；权限来自用户的独立授权。
-formal runtime 已在 observation/WAL/retry/network 前执行 UTF-8 bytes + 256
-guard，并要求 caller 重复精确 spend；live 只产五个 raw canonical 工件，报告由两个独立 full replay
-生成。正式采集尚未启动，本阶段没有前端改动。详见
+families + 3 个许可 public controls、机器预注册、预算、逐项 rows、统计、WAL 与 replay。Task 8
+attempt-002 已 COMPLETE 8/8：27 个 logical calls、31 次 attempts、4 次 retries，provider / host
+耗时分别为 `473,726,578` / `477,264,352` µs，返回模型仅 `gpt-5.6-sol`。两次
+pilot 合计已知 / corrected tight upper 为 `$0.513140` / `$27.730036`；按官方 `128,000`
+输出 token 契约重算的单次 pilot 机械上限为 `$513.232896`。历史
+`$10.960896` / `$11.574272` 是把 visible request limit 误当 billable output cap 时的已披露授权数，
+保留作为审计记录，不是当前计费上限。
+
+formal envelope 现以官方 `gpt-5.6-sol` 模型上限冻结每个 attempt 的
+`128,000` billable output tokens（包括不可见 tokens）；在该官方契约下，Task 9 机械最大值为
+`1,167,905,640,000` micro-USD（`$1,167,905.640000`）。这是计费契约下的审计上限，
+不是本地代理的预消费硬闸。用户已统一授权项目模型计费；历史
+`$538,865.486400` gate 及 attempt-001 pre-call 保持不变，但不再用于新调用。formal attempt-001
+在 503 个 pure-solver units 和第一个 agent unit 后终止：critic 的 visible limit 为 `512`，
+provider 报告的 billable output usage 为 `704`；旧 validator 将两者误作同一上限。该 run 已
+terminal `INCOMPLETE`，已知 / tight upper 为 `$0.188415` / `$28.332415`，不得恢复或覆盖；
+未检查私有 prompt/response。formal runtime 仍在 observation/WAL/retry/network 前执行
+UTF-8 bytes + 256 guard，要求 caller 重复精确 spend；live 只产五个 raw canonical 工件，
+报告由两个独立 full replay 生成。新 `benchmark-formal-budget-gate@0.3.0` 已生成并通过回检，
+SHA-256=`9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6`。后续只允许在
+修正后的 clean pushed runner SHA 上创建 fresh attempt-002 pre-call；
+本阶段没有前端改动。详见
 [`2026-07-17-benchmark-v2.md`](docs/superpowers/plans/2026-07-17-benchmark-v2.md)。完整 Plan 6 的音频、
 AlphaTab、真实琴颈动画、导出、live A/B/榜单与真人 money moment 仍 open。
 
@@ -194,8 +205,8 @@ attempt-local pre-call 门，并显式重复该 attempt 的精确金额：
 
 ```bash
 uv run fretsure-bench --live --pre-call-config <pre-call.json> \
-  --authorized-maximum-spend-microunits 538865486400 \
-  --output-dir <fresh-attempt>
+  --authorized-maximum-spend-microunits 1167905640000 \
+  --output-dir <fresh-attempt-002>
 ```
 
 默认 model id 为 `gpt-5.6-sol`，服务端网络 engine 另须 `--allow-proxy`。
