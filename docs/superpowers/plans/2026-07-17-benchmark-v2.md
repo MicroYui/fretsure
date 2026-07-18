@@ -7,7 +7,7 @@
 > record and its numerical tables are not a current baseline.
 >
 > **Implementation progress (2026-07-18): Tasks 1–8 complete; Task 9 formal runner
-> implemented; attempt-001 terminal `INCOMPLETE`.** Strict
+> implemented; attempts 001–002 terminal `INCOMPLETE`; fresh attempt-003 pending.** Strict
 > corpus/generator contracts, observable trajectories, the shared ten-sample pool,
 > baselines, registered statistics, durable artifacts, deterministic reports, and
 > full/fast CLI replay have passed their directed and independent gates. The licensed
@@ -37,8 +37,21 @@
 > independently authorized all project model billing. Historical gate/pre-call bytes
 > remain immutable. Task 9 attempt-001 completed 503 pure-solver units and one agent unit,
 > then an incorrect visible-limit versus billable-usage check rejected critic usage
-> `704` above visible limit `512`; the run is terminal `INCOMPLETE`. The next collection
-> must use fresh attempt-002 after corrected artifacts are pushed.
+> `704` above visible limit `512`; the run is terminal `INCOMPLETE`. Fresh attempt-002
+> used pre-call SHA-256
+> `48796200a05af2cbc9ae83d80f06a89ff437841810241954a8b7fe3f794be6eb`, bound to
+> execution commit `1feeef622d96a95b187c473a40e273852cdf6a45`. It committed
+> `524/10,563` rows across 91 logical calls / 131 attempts before a legal edit created a
+> duplicate onset/pitch and target-checkpoint validation escaped as
+> `unexpected_unowned_observation`. Of the attempts, 72 succeeded with complete usage
+> and 59 have missing usage; 19 logical calls ended `DELEGATE_FAILED`. Attempt-002 is
+> terminal `INCOMPLETE`, costs `$0.986494..$416.110494`, and must not be resumed or
+> overwritten. No private prompt/response was inspected or admitted to documentation or
+> canonical artifacts. The narrow fix
+> maps post-edit pitch bounds / onset-pitch collisions to existing
+> `MODEL_EDIT_INVALID` → `RECHECK` without changing prompt, model, corpus, schedule, or
+> trace schema. The next collection must use fresh attempt-003 after that fix is accepted
+> and pushed.
 >
 > **Runtime provenance correction (2026-07-17, before any model outcome):** per the
 > user-approved simplicity boundary, runtime collection/replay must not spawn Git or
@@ -702,7 +715,7 @@ handoff operation rather than runtime behavior.
 ## 12. Task 8 — Operational proxy pilot and explicit budget gate
 
 **Status (2026-07-18): OPERATIONAL PILOT COMPLETE / BILLING CONTRACT CORRECTED /
-TASK 9 ATTEMPT-001 TERMINAL INCOMPLETE.** The canonical
+TASK 9 ATTEMPTS 001–002 TERMINAL INCOMPLETE.** The canonical
 [pilot specification](../../experiments/2026-07-18-benchmark-v2-pilot-spec.json),
 scripts-only collector, exact pricing/budget gate, clean-resume tests, and explicit
 spend-confirmation boundary are complete. See the
@@ -762,8 +775,8 @@ pre-consumption hard gate. The old envelope (`5bcd2458…`) and gates (`a421e1c3
 
 ## 13. Task 9 — Current-model collection and deterministic analysis
 
-**Status (2026-07-18): FORMAL RUNNER IMPLEMENTED / ATTEMPT-001 TERMINAL INCOMPLETE /
-CORRECTED ATTEMPT-002 PENDING.** The historical external-ceiling gate SHA-256 is
+**Status (2026-07-18): FORMAL RUNNER IMPLEMENTED / ATTEMPTS 001–002 TERMINAL
+INCOMPLETE / CORRECTED ATTEMPT-003 PENDING.** The historical external-ceiling gate SHA-256 is
 `931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9`; its
 `$538,865.486400` value and the attempt-001 pre-call remain immutable audit evidence,
 but neither is valid for another provider call. The corrected official-contract
@@ -773,7 +786,7 @@ caller spend confirmation, provider-evidence abort boundary, raw-only live final
 and independent double-replay workflow are implemented. The corrected
 `benchmark-formal-budget-gate@0.3.0` has SHA-256
 `9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6`; fresh
-attempt-002 will use `benchmark-pre-call-config@0.3.0`.
+attempt-003 will use `benchmark-pre-call-config@0.3.0`.
 
 Attempt-001 completed 503 pure-solver units and the first agent unit. On logical call 13,
 a critic request with visible limit `512` returned exact model `gpt-5.6-sol` and `704`
@@ -781,7 +794,27 @@ billable output tokens. The former validator incorrectly compared billable usage
 the visible-output request limit; it durably terminated the run as `INCOMPLETE` with
 `provider_integrity_failure`. Known/tight cost is `$0.188415` / `$28.332415`. No private
 prompt or response content was inspected. Attempt-001 must never be resumed or
-overwritten; continue only with a fresh, corrected attempt-002.
+overwritten. Its successor was the fresh attempt-002 described below.
+
+Attempt-002 pre-call SHA-256
+`48796200a05af2cbc9ae83d80f06a89ff437841810241954a8b7fe3f794be6eb` binds execution
+commit `1feeef622d96a95b187c473a40e273852cdf6a45`. It committed `524/10,563`
+scheduled rows and made 91 logical calls / 131 provider attempts. Seventy-two attempts
+succeeded with complete usage, 59 attempts have missing usage, and 19 logical calls
+ended `DELEGATE_FAILED`. The run durably terminated as `INCOMPLETE` with
+`unexpected_unowned_observation` after a legal edit created a duplicate onset/pitch and
+target-checkpoint local validation raised outside the owning logical-call observation
+boundary. No private prompt or response was inspected or admitted to documentation or
+canonical artifacts. Its known/tight cost
+is `$0.986494` / `$416.110494`; it must never be resumed or overwritten.
+
+Attempts 001 and 002 have a cumulative tight upper bound of `$444.442909`. Adding one
+complete formal attempt's `$1,167,905.640000` mechanical maximum yields a cumulative
+upper bound of `$1,168,350.082909`. Neither amount is a claim that the local proxy has a
+pre-consumption hard gate. The narrow correction maps post-edit pitch-bound violations
+and onset/pitch collisions to existing `MODEL_EDIT_INVALID` → `RECHECK`; it changes no
+prompt, model, corpus, schedule, or trace schema. Continue only with fresh attempt-003
+after that correction passes the release gate and is pushed.
 
 - Before any Task 9 provider call, the formal runner must enforce the billing envelope's
   input ceiling as UTF-8 prompt bytes plus the fixed 256-token framing allowance before
@@ -875,13 +908,13 @@ uv run python scripts/build_benchmark_precall.py \
   --expected-formal-billing-envelope-sha256 a1969546babcdcbcbf281c682260c38551b2fd12ef382014eb34a79e85df5544 \
   --formal-budget-gate outputs/private/benchmark-v2-task9/formal-budget-gate-v3-authorized.json \
   --expected-formal-budget-gate-sha256 9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6 \
-  --collection-attempt 2 --execution-git-sha <pushed-runner-sha> \
+  --collection-attempt 3 --execution-git-sha <pushed-post-edit-validation-fix-sha> \
   --uv-lock-sha256 <uv.lock-sha256> \
   --analysis-binding-kind analysis_module_sha256 \
   --analysis-code-sha256 <report.py-sha256> --output <pre-call.json>
 uv run fretsure-bench --live --pre-call-config <pre-call.json> \
   --authorized-maximum-spend-microunits 1167905640000 \
-  --output-dir <fresh-attempt-002>
+  --output-dir <fresh-attempt-003>
 uv run fretsure-bench --replay-config <config> --replay-receipt <receipt> \
   --replay-rows <rows> --replay-blobs <blobs> \
   --replay-observations <sanitized-observations> --output-dir <fresh-replay-a>

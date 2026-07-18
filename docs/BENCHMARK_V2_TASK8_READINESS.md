@@ -1,15 +1,16 @@
 # Benchmark v2 Task 8 — operational pilot software readiness
 
 > **Status (2026-07-18): TASK 8 PILOT COMPLETE; BILLING CONTRACT CORRECTED; TASK 9
-> ATTEMPT-001 TERMINAL INCOMPLETE.** Task 8 attempt 001 remains an immutable incomplete
+> ATTEMPTS 001–002 TERMINAL INCOMPLETE.** Task 8 attempt 001 remains an immutable incomplete
 > run. After the trace fix and a separate explicit historical `$10.960896`
 > authorization, fresh Task 8 attempt 002 completed all `8/8` scheduled rows. Subsequent
 > live evidence showed that provider `output_tokens` includes non-visible tokens and can
 > exceed a request's visible-output limit. The official 128,000-token model contract now
 > supplies the billable ceiling: the corrected Task 8 combined known/tight interval is
 > `$0.513140..$27.730036`, and the official-contract pilot mechanical maximum is
-> `$513.232896`. Task 9 attempt-001 is preserved as terminal `INCOMPLETE`; the next live
-> run must be a fresh attempt-002 under corrected artifacts.
+> `$513.232896`. Task 9 attempts 001 and 002 are preserved as terminal `INCOMPLETE`;
+> after the narrow post-edit validation correction, the next live run must be a fresh
+> attempt-003.
 
 ## Frozen operational pilot
 
@@ -256,8 +257,38 @@ experiment.
 
 Reported usage prices to a known `$0.188415`. Four attempts lack usage; applying the
 official 128,000-token billable-output maximum produces a corrected tight upper bound of
-`$28.332415`. The next collection must be a fresh attempt-002 with a new
-`benchmark-pre-call-config@0.3.0`, the corrected gate, and a fresh output directory.
+`$28.332415`. Its successor was the fresh attempt-002 recorded below; attempt-001 itself
+remains immutable.
+
+## Task 9 attempt-002 terminal interruption
+
+Attempt-002 used pre-call SHA-256
+`48796200a05af2cbc9ae83d80f06a89ff437841810241954a8b7fe3f794be6eb`, bound to
+execution commit `1feeef622d96a95b187c473a40e273852cdf6a45`. It durably committed
+`524/10,563` scheduled rows before terminal interruption. The run made 91 logical calls
+and 131 provider attempts: 72 attempts succeeded with complete usage, 59 attempts have
+missing usage, and 19 logical calls ended `DELEGATE_FAILED`. Missing usage remains
+unavailable rather than being recorded as zero.
+
+The structural failure began after a legal edit was applied and created a duplicate
+onset/pitch. Local validation of the target checkpoint raised instead of returning the
+existing invalid-edit control result; the collector then terminated the run as
+`INCOMPLETE` with reason code `unexpected_unowned_observation`. No private prompt or
+response was inspected or admitted to documentation or canonical artifacts.
+Attempt-002's known cost is `$0.986494`; applying
+the official per-attempt ceiling to usage-missing attempts gives a tight upper bound of
+`$416.110494`. Attempt-002 must never be resumed or overwritten.
+
+The combined tight upper bound for Task 9 attempts 001 and 002 is `$444.442909`. Adding
+one complete fresh formal attempt's `$1,167,905.640000` mechanical maximum gives a
+cumulative upper bound of `$1,168,350.082909`. These are audit bounds, not claims of a
+local proxy pre-consumption hard gate.
+
+The narrow correction maps post-edit pitch-bound violations and onset/pitch collisions
+to the existing `MODEL_EDIT_INVALID` → `RECHECK` path. It does not change the prompt,
+model, corpus, schedule, or trace schema. After that correction passes its release gate
+and is pushed, collection may continue only as fresh attempt-003 with a new pre-call and
+fresh output directory.
 
 ## Offline evidence
 
@@ -346,13 +377,13 @@ uv run python scripts/task8_budget_gate.py \
 
 ## Subsequent Task 9 authorization
 
-Task 8 is complete; its attempt 002 must not be rerun. The Task 9 collector now enforces the
-formal envelope's `UTF-8 bytes + 256` input bound before observation, retry, or network
-I/O. On 2026-07-18 the user independently authorized all project model billing. The
-corrected official-contract mechanical maximum is `$1,167,905.640000`; this is not a
-local proxy pre-consumption hard gate. Task 9 attempt-001 is terminal `INCOMPLETE` and
-must remain untouched. Continue only with fresh attempt-002 and exact CLI confirmation
-`--authorized-maximum-spend-microunits 1167905640000` after the corrected gate is
-verified and the corrected runner/artifacts are pushed. The corrected gate SHA-256 is
+Task 8 is complete; its attempt 002 must not be rerun. The Task 9 collector now enforces
+the formal envelope's `UTF-8 bytes + 256` input bound before observation, retry, or
+network I/O. On 2026-07-18 the user independently authorized all project model billing.
+The corrected official-contract mechanical maximum is `$1,167,905.640000`; this is not
+a local proxy pre-consumption hard gate. Task 9 attempts 001 and 002 are terminal
+`INCOMPLETE` and must remain untouched. Continue only with fresh attempt-003 and exact
+CLI confirmation `--authorized-maximum-spend-microunits 1167905640000` after the narrow
+post-edit validation correction is verified and pushed. The corrected gate SHA-256 is
 `9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6`; the gate itself
 still grants no authorization.

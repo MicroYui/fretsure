@@ -16,6 +16,17 @@ _INFEASIBLE = (Note(F(0), F(1), 85, "melody"), Note(F(0), F(1), 86, "harmony"))
 _DROP_86 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 86}'
 _DROP_85 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 85}'  # melody -> protected
 _MISS = '{"op": "drop_note", "target_onset": "0", "target_pitch": 84}'
+_OUT_OF_RANGE_EDIT_TARGET = (
+    Note(F(0), F(1), 85, "melody"),
+    Note(F(0), F(1), 120, "harmony"),
+)
+_OCTAVE_120_OUT_OF_RANGE = (
+    '{"op": "octave_shift", "target_onset": "0", "target_pitch": 120, "arg": 12}'
+)
+_DROP_120 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 120}'
+_REVOICE_86_COLLISION = (
+    '{"op": "revoice", "target_onset": "0", "target_pitch": 86, "arg": 85}'
+)
 _AMBER = (Note(F(0), F(1), 41, "harmony"), Note(F(0), F(1), 49, "melody"))
 _DROP_41 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 41}'
 _AMBER_WITHOUT_MEDIAN_DIAGNOSTICS = (
@@ -290,6 +301,64 @@ def test_nonmatching_edit_is_explicit_rejection_not_an_applied_edit() -> None:
     assert rejected.data["status"] == "noop"
     assert rejected.data["state_changed"] is False
     assert not any(step.event == "EDIT_APPLIED" for step in r.trace.steps)
+
+
+@pytest.mark.parametrize(
+    ("target", "invalid_reply", "valid_reply"),
+    [
+        (_OUT_OF_RANGE_EDIT_TARGET, _OCTAVE_120_OUT_OF_RANGE, _DROP_120),
+        (_INFEASIBLE, _REVOICE_86_COLLISION, _DROP_86),
+    ],
+    ids=["pitch-out-of-range", "onset-pitch-collision"],
+)
+def test_invalid_post_edit_target_is_rejected_then_rechecked_unchanged(
+    target: tuple[Note, ...],
+    invalid_reply: str,
+    valid_reply: str,
+) -> None:
+    result = repair(
+        target,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FakeLLM([invalid_reply, valid_reply]),
+        max_iters=2,
+    )
+
+    invalid = next(
+        step
+        for step in result.trace.steps
+        if step.event == "MODEL_EDIT_INVALID" and step.iteration == 1
+    )
+    recheck = next(
+        step
+        for step in result.trace.steps
+        if step.event == "RECHECK_STARTED" and step.iteration == 1
+    )
+    repeated_solve = next(
+        step
+        for step in result.trace.steps
+        if step.event == "SOLVER_RETURNED_NO_TAB" and step.iteration == 1
+    )
+
+    assert invalid.data["reason_code"] == "INVALID_EDIT_SCHEMA"
+    assert invalid.data["state_changed"] is False
+    assert invalid.data["before_target_sha256"] == invalid.data["after_target_sha256"]
+    assert recheck.data["trigger"] == "MODEL_EDIT_INVALID"
+    assert (
+        recheck.data["target_checkpoint"]["sha256"]
+        == repeated_solve.data["target_sha256"]
+        == invalid.data["before_target_sha256"]
+    )
+    assert not any(
+        step.event in {"EDIT_APPLIED", "REPAIR_EDIT_PROPOSED"}
+        and step.iteration == 1
+        for step in result.trace.steps
+    )
+    assert result.oracle is not None and result.oracle.verdict == "GREEN"
+    assert result.target == (Note(F(0), F(1), 85, "melody"),)
+    assert result.iterations == result.model_calls == 2
+    assert result.solve_calls == 3
 
 
 def test_melody_protected_edit_is_skipped_then_valid_edit_applied() -> None:

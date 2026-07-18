@@ -8,7 +8,12 @@ injected (``LLMClient``) so the whole loop is deterministic under ``FakeLLM``.
 
 from dataclasses import dataclass
 
-from fretsure.agent.edit_dsl import MelodyProtected, apply_edit, parse_edit
+from fretsure.agent.edit_dsl import (
+    InvalidEditTarget,
+    MelodyProtected,
+    apply_edit,
+    parse_edit,
+)
 from fretsure.agent.model_calls import ModelCallScopeFactory, model_call_scope
 from fretsure.agent.tools import diagnostics_to_prompt, edit_schema_prompt, solve_and_check
 from fretsure.agent.trace import (
@@ -384,18 +389,32 @@ def repair(
             )
             continue
 
-        structured_edit = edit_trace_payload(edit)
-        trace.add(
-            "REASON",
-            edit_detail(edit),
-            event="REPAIR_EDIT_PROPOSED",
-            candidate_index=candidate_index,
-            iteration=iterations + 1,
-            edit=structured_edit,
-            based_on_diagnostic_codes=_diagnostic_codes(prompt_ctx),
-        )
         try:
             updated = apply_edit(current, edit)
+        except InvalidEditTarget:
+            trace.add(
+                "EDIT",
+                "The model JSON did not satisfy the edit schema.",
+                event="MODEL_EDIT_INVALID",
+                candidate_index=candidate_index,
+                iteration=iterations + 1,
+                edit=None,
+                status="unparseable",
+                reason_code="INVALID_EDIT_SCHEMA",
+                before_target_sha256=target_digest,
+                after_target_sha256=target_digest,
+                state_changed=False,
+            )
+            trace.add(
+                "RECHECK",
+                "Recheck the unchanged target after the rejected edit.",
+                event="RECHECK_STARTED",
+                candidate_index=candidate_index,
+                iteration=iterations + 1,
+                trigger="MODEL_EDIT_INVALID",
+                target_checkpoint=target_state,
+            )
+            continue
         except MelodyProtected:
             updated = current
             trace_event: TraceEvent = "EDIT_REJECTED"
@@ -413,6 +432,16 @@ def repair(
                 status = "applied"
                 reason_code = None
                 detail = "The targeted edit was applied to the repair state."
+        structured_edit = edit_trace_payload(edit)
+        trace.add(
+            "REASON",
+            edit_detail(edit),
+            event="REPAIR_EDIT_PROPOSED",
+            candidate_index=candidate_index,
+            iteration=iterations + 1,
+            edit=structured_edit,
+            based_on_diagnostic_codes=_diagnostic_codes(prompt_ctx),
+        )
         after_state = target_checkpoint(updated)
         after_digest = _checkpoint_digest(after_state)
         trace.add(

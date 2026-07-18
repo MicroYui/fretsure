@@ -19,6 +19,18 @@ _TARGET = (
     Note(F(0), F(1), 55, "harmony"),
 )
 _DROP = '{"op": "drop_note", "target_onset": "0", "target_pitch": 55}'
+_OUT_OF_RANGE_EDIT_TARGET = (
+    Note(F(0), F(1), 64, "melody"),
+    Note(F(0), F(1), 40, "bass"),
+    Note(F(0), F(1), 120, "harmony"),
+)
+_OCTAVE_120_OUT_OF_RANGE = (
+    '{"op": "octave_shift", "target_onset": "0", "target_pitch": 120, "arg": 12}'
+)
+_DROP_120 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 120}'
+_REVOICE_55_COLLISION = (
+    '{"op": "revoice", "target_onset": "0", "target_pitch": 55, "arg": 40}'
+)
 
 
 def test_simplify_dense_chord_to_beginner() -> None:
@@ -104,6 +116,67 @@ def test_simplify_trace_redacts_raw_reply_and_transport_exception() -> None:
     assert "tier-secret" not in failed_json
     assert "proxy.invalid" not in failed_json
     assert any(step.event == "MODEL_CALL_FAILED" for step in failed.trace.steps)
+
+
+@pytest.mark.parametrize(
+    ("target", "invalid_reply", "valid_reply"),
+    [
+        (_OUT_OF_RANGE_EDIT_TARGET, _OCTAVE_120_OUT_OF_RANGE, _DROP_120),
+        (_TARGET, _REVOICE_55_COLLISION, _DROP),
+    ],
+    ids=["pitch-out-of-range", "onset-pitch-collision"],
+)
+def test_invalid_post_edit_target_is_rejected_then_rechecked_unchanged(
+    target: tuple[Note, ...],
+    invalid_reply: str,
+    valid_reply: str,
+) -> None:
+    result = simplify_to_tier(
+        target,
+        BEGINNER,
+        STANDARD_TUNING,
+        0,
+        FakeLLM([invalid_reply, valid_reply]),
+        max_iters=2,
+    )
+
+    invalid = next(
+        step
+        for step in result.trace.steps
+        if step.event == "MODEL_EDIT_INVALID" and step.iteration == 1
+    )
+    recheck = next(
+        step
+        for step in result.trace.steps
+        if step.event == "RECHECK_STARTED" and step.iteration == 1
+    )
+    repeated_state = next(
+        step
+        for step in result.trace.steps
+        if step.event in {"TIER_CHECKED", "SOLVER_RETURNED_NO_TAB"}
+        and step.iteration == 1
+    )
+
+    assert invalid.data["reason_code"] == "INVALID_EDIT_SCHEMA"
+    assert invalid.data["state_changed"] is False
+    assert invalid.data["before_target_sha256"] == invalid.data["after_target_sha256"]
+    assert recheck.data["trigger"] == "MODEL_EDIT_INVALID"
+    assert (
+        recheck.data["target_checkpoint"]["sha256"]
+        == repeated_state.data["target_sha256"]
+        == invalid.data["before_target_sha256"]
+    )
+    assert not any(
+        step.event in {"EDIT_APPLIED", "REPAIR_EDIT_PROPOSED"}
+        and step.iteration == 1
+        for step in result.trace.steps
+    )
+    assert result.tier_result is not None and result.tier_result.meets
+    assert result.target == (
+        Note(F(0), F(1), 40, "bass"),
+        Note(F(0), F(1), 64, "melody"),
+    )
+    assert result.iterations == 2
 
 
 def test_simplifier_validates_target_before_sorting_or_llm() -> None:

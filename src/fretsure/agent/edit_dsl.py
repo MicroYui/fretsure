@@ -9,7 +9,7 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 from typing import Any, Literal
 
-from fretsure.ir import Note
+from fretsure.ir import MAX_IR_FRACTION_COMPONENT_BITS, Note
 
 EditOp = Literal["drop_note", "octave_shift", "revoice", "drop_inner"]
 _VALID_OPS: tuple[EditOp, ...] = ("drop_note", "octave_shift", "revoice", "drop_inner")
@@ -17,6 +17,10 @@ _VALID_OPS: tuple[EditOp, ...] = ("drop_note", "octave_shift", "revoice", "drop_
 
 class MelodyProtected(Exception):
     """Raised when an edit targets a melody note (never allowed)."""
+
+
+class InvalidEditTarget(ValueError):
+    """Raised when an edit would leave the solver target outside its domain."""
 
 
 @dataclass(frozen=True)
@@ -47,7 +51,16 @@ def apply_edit(notes: tuple[Note, ...], edit: Edit) -> tuple[Note, ...]:
                 result.append(replace(n, pitch=edit.arg))
         else:
             result.append(n)
-    return tuple(sorted(result, key=lambda x: (x.onset, x.pitch)))
+    ordered = tuple(sorted(result, key=lambda x: (x.onset, x.pitch)))
+    identities: set[tuple[Fraction, int]] = set()
+    for note in ordered:
+        if not 0 <= note.pitch <= 127:
+            raise InvalidEditTarget("edit would move a note outside the MIDI domain")
+        identity = (note.onset, note.pitch)
+        if identity in identities:
+            raise InvalidEditTarget("edit would create an ambiguous onset/pitch target")
+        identities.add(identity)
+    return ordered
 
 
 def parse_edit(obj: dict[str, Any]) -> Edit:
@@ -55,10 +68,24 @@ def parse_edit(obj: dict[str, Any]) -> Edit:
     op = obj.get("op")
     if op not in _VALID_OPS:
         raise ValueError(f"invalid edit op: {op!r}")
+    pitch_value = obj.get("target_pitch")
+    arg_value = obj.get("arg", 0)
+    if type(pitch_value) is not int or type(arg_value) is not int:
+        raise ValueError("edit pitch and arg values must be JSON integers")
     try:
         onset = Fraction(str(obj["target_onset"]))
-        pitch = int(obj["target_pitch"])
-        arg = int(obj.get("arg", 0))
+        pitch = pitch_value
+        arg = arg_value
     except (KeyError, ValueError, TypeError, ArithmeticError) as exc:
         raise ValueError(f"malformed edit {obj!r}: {exc}") from exc
+    if (
+        onset < 0
+        or onset.numerator.bit_length() > MAX_IR_FRACTION_COMPONENT_BITS
+        or onset.denominator.bit_length() > MAX_IR_FRACTION_COMPONENT_BITS
+        or not 0 <= pitch <= 127
+        or (op in ("drop_note", "drop_inner") and arg != 0)
+        or (op == "octave_shift" and arg not in (-12, 12))
+        or (op == "revoice" and not 0 <= arg <= 127)
+    ):
+        raise ValueError("edit values are outside the target/edit domain")
     return Edit(op, onset, pitch, arg)

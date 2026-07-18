@@ -473,9 +473,9 @@ limit, so the durable sink emitted terminal `INCOMPLETE` with reason code
 `provider_integrity_failure`. The run's known cost is `$0.188415`; four usage-missing
 attempts produce a corrected tight upper bound of `$28.332415` under the official model
 maximum. No private prompt or response content was inspected or admitted to
-documentation. Attempt-001 must never be resumed or overwritten. After the corrected
-runner, pricing/envelope, and gate artifacts are pushed and rebound, collection resumes
-only as fresh attempt-002 with exact CLI confirmation
+documentation. Attempt-001 must never be resumed or overwritten. At this checkpoint,
+the next permitted collection was fresh attempt-002 after the corrected runner,
+pricing/envelope, and gate artifacts were pushed and rebound, with exact CLI confirmation
 `--authorized-maximum-spend-microunits 1167905640000`.
 
 ## 2026-07-18 — Corrected billing release closeout
@@ -488,4 +488,73 @@ generation, the corrected formal gate `--check`, 36-file Markdown links, and whi
 checks all passed. The unchanged frontend passed 29 tests, typecheck, production build,
 and `npm audit` with zero vulnerabilities. Rebuilt distributions passed the 114-wheel /
 320-sdist content audit and all seven clean-install smoke groups. No provider call was
-made by any closeout command.
+made by any command in this corrected-billing closeout.
+
+## 2026-07-18 — Task 9 attempt 002 terminal state and post-edit validation correction
+
+Fresh formal attempt-002 used pre-call SHA-256
+`48796200a05af2cbc9ae83d80f06a89ff437841810241954a8b7fe3f794be6eb`, bound to the
+clean pushed execution commit `1feeef622d96a95b187c473a40e273852cdf6a45`. It committed
+`524/10,563` scheduled rows before the durable collector emitted terminal `INCOMPLETE`
+with reason code `unexpected_unowned_observation`. Attempt-002 made 91 logical calls and
+131 provider attempts. Of those attempts, 72 succeeded with complete usage and 59 have
+missing usage; 19 logical calls ended `DELEGATE_FAILED`. Missing usage was not converted
+to zero.
+
+The structural cause was local, not a change in provider/model behavior or the frozen
+experiment. A legal edit was applied and produced a duplicate onset/pitch. When the
+target checkpoint was constructed, local validation raised instead of mapping the
+post-edit invalid state into the existing recheck control path. That exception reached
+the collector outside the owning logical-call observation boundary. No private prompt
+or response content was inspected, admitted to documentation or canonical artifacts,
+or used to diagnose or change the experiment.
+
+Attempt-002's known cost is `$0.986494`. Charging every usage-missing attempt at the
+official billable ceiling yields a tight upper bound of `$416.110494`. Combined with
+attempt-001, the two terminal runs have a cumulative tight upper bound of
+`$444.442909`; adding one complete formal attempt's `$1,167,905.640000` mechanical
+maximum yields a cumulative upper bound of `$1,168,350.082909`. These remain
+official-contract audit bounds, not a claim that the local proxy implements a
+pre-consumption hard stop.
+
+The 72 complete-usage attempts report 51,264 input, 21,171 output, 15,207 cache-creation,
+and zero cache-read tokens. Each of the 59 usage-missing attempts contributes the frozen
+`$7.036000` per-attempt ceiling to the tight upper bound. The run binds pricing v2
+SHA-256 `7b5ae715a08bb4e1cc7cca32e77db6ffc7e5f000133150194cf70a4b8f62c9b2` and
+billing-envelope SHA-256
+`a1969546babcdcbcbf281c682260c38551b2fd12ef382014eb34a79e85df5544`. The abort
+receipt SHA-256 is `14d7487a1a5e22dea93a919e0ae1e5a9257be316f6d1d6b060a6279d6282d730`;
+the raw WAL and receipt-bound journal SHA-256 values are respectively
+`cb29b2dd19ff354eb78630b3c73bd11af7d7baca2ae4ac6c8a41cf5aa4dedadd` and
+`93cb62375c54d32f2483bd9ffcfbe38b104499a19bfc78552e80b7b0148477a1`.
+All 444 WAL events passed sequence, hash-chain, intent/result, and attempt-pairing
+validation, with no open call or attempt. The terminal receipt has no finalized hashes,
+canonical directory, or private-observations artifact; its empty returned-model summary
+is an abort-receipt construction detail, while the WAL contains 72 exact
+`gpt-5.6-sol` success records.
+
+Attempt-002's pre-call, WAL, and terminal receipt are immutable; it must never be
+resumed or overwritten. The narrow software correction maps post-edit pitch-bound
+violations and onset/pitch collisions to the existing `MODEL_EDIT_INVALID` → `RECHECK`
+path. It changes no prompt, model, corpus, schedule, or trace schema. After directed and
+full release gates pass and the correction is pushed, collection continues only as a
+fresh attempt-003 with a new pre-call and output directory. No frontend surface or
+visual design changed; any future frontend design work still requires confirmation
+against the accepted visual baseline.
+
+### Post-edit correction release gate
+
+The final corrected tree passed `2,498` offline tests with `8` integration tests
+deselected. With proxy variables explicitly removed, the integration selection skipped
+all `8` provider-dependent tests and deselected the same `2,498` offline tests; no
+provider call was made. Ruff, strict mypy over 94 source files and the five release
+scripts, the offline 80-package lock check, machine preregistration, pilot spec, formal
+budget gate, all 36 Markdown link sets, and `git diff --check` passed. An independent
+source/trace review reported zero findings after 122 directed tests.
+
+The unchanged frontend passed 29 tests, TypeScript checking, production build, and
+`npm audit` with zero vulnerabilities and produced no tracked static diff. Rebuilt
+distributions retained the 114-wheel / 320-sdist content audit and passed all seven
+clean-install groups. These gates changed no frozen experimental input or schema and
+made no model call. Attempt-003 must bind the subsequent clean pushed execution commit,
+not either terminal predecessor.

@@ -39,6 +39,23 @@ def test_revoice_harmony() -> None:
     assert 59 in [n.pitch for n in out] and 55 not in [n.pitch for n in out]
 
 
+@pytest.mark.parametrize(
+    "edit",
+    [
+        Edit("octave_shift", F(0), 40, arg=-41),
+        Edit("revoice", F(0), 55, arg=128),
+    ],
+)
+def test_pitch_edit_cannot_leave_midi_domain(edit: Edit) -> None:
+    with pytest.raises(ValueError):
+        apply_edit(_NOTES, edit)
+
+
+def test_pitch_edit_cannot_collide_at_the_same_onset() -> None:
+    with pytest.raises(ValueError):
+        apply_edit(_NOTES, Edit("revoice", F(0), 55, arg=40))
+
+
 def test_apply_no_match_is_noop() -> None:
     out = apply_edit(_NOTES, Edit("drop_note", F(9), 99))
     assert out == tuple(sorted(_NOTES, key=lambda n: (n.onset, n.pitch)))
@@ -62,3 +79,24 @@ def test_parse_edit_bad_op_raises() -> None:
 def test_parse_edit_missing_field_raises() -> None:
     with pytest.raises(ValueError):
         parse_edit({"op": "drop_note", "target_onset": 0})
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        {"op": "drop_note", "target_onset": -1, "target_pitch": 50},
+        {"op": "drop_note", "target_onset": 0, "target_pitch": 128},
+        {"op": "drop_note", "target_onset": 0, "target_pitch": 50, "arg": 1},
+        {"op": "octave_shift", "target_onset": 0, "target_pitch": 50, "arg": 7},
+        {"op": "revoice", "target_onset": 0, "target_pitch": 50, "arg": -1},
+        {"op": "drop_note", "target_onset": 0, "target_pitch": 50.9},
+        {"op": "drop_note", "target_onset": 0, "target_pitch": True},
+        {"op": "octave_shift", "target_onset": 0, "target_pitch": 50, "arg": 12.9},
+        {"op": "revoice", "target_onset": 0, "target_pitch": 50, "arg": "64"},
+    ],
+)
+def test_parse_edit_rejects_values_outside_the_trace_and_target_domain(
+    value: dict[str, object],
+) -> None:
+    with pytest.raises(ValueError):
+        parse_edit(value)
