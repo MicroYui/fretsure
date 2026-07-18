@@ -228,18 +228,28 @@ leaving the real operational pilot unrun:
   bindings. Pilot pre-call parsing embeds and recomputes the complete contract and
   mechanical worst case. Live collection additionally requires the caller to repeat
   that exact maximum spend; declaration generation alone is not authorization.
+- The user selected current official model pricing as the reference basis. A dated
+  OpenAI `gpt-5.6-sol` source snapshot and canonical contract now bind standard
+  short-context input/cache-write/cache-read/output rates. A Task 8-only guard checks
+  UTF-8 prompt bytes plus 256 framing tokens against all declared input buckets before
+  observation, retry, or network I/O, turning the former 4,096-token fixture value into
+  an enforced live ceiling without changing the package.
 - Stage-aware pilot projections preserve the formal 503-item proposal/raw token base.
   Missing provider usage and uncovered retry usage remain unavailable rather than
   becoming zero. Pilot rows cannot enter or alter the formal report.
 
 The canonical pilot-spec SHA-256 is
 `e455a608d4b186f24a2739e009b8f9fe604036fd3a4f34d0ef97d2afb3ab7ad3`. The directed
-Task 8 suites passed 31 tests; Ruff and strict mypy passed both scripts. One-shot stub
+Task 8 suites passed 34 tests; Ruff and strict mypy passed both scripts. One-shot stub
 collection and a clean resume after one row produced byte-identical config, receipt,
 rows, blobs, and observations. Full hashes and resource arithmetic are recorded in
 [`BENCHMARK_V2_TASK8_READINESS.md`](../BENCHMARK_V2_TASK8_READINESS.md).
 
 No `src/`, package metadata, dependency lock, runtime Git behavior, or frontend surface
-changed. No real price contract, proxy, network, or provider call was used. The next
-step is the external pricing and explicit pilot-spend authorization gate; Task 9 has
-not started.
+changed. No real proxy, network, or provider call was used. The official-reference
+contract computes a conservative pilot maximum of `$10.960896`; the next step is
+explicit pilot-spend authorization plus a matching configured proxy. Task 9 has not
+started. Final follow-up verification passed 2,449 offline tests (8 integration tests
+deselected), the empty-provider integration boundary skipped all 8 tests, and the
+distribution audit reported 114 wheel / 315 sdist entries. The wheel SHA-256 remained
+`615025e1d3f0fdc34119880ac79231b9388e3a2d0b513abc1ad7d15ef99b87fb`.

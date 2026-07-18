@@ -173,6 +173,21 @@ def test_sdist_audit_requires_task7_and_task8_evidence_and_exact_sources(
     with pytest.raises(ValueError, match="benchmark-v2-pilot-spec"):
         _audit_sdist(missing_pilot)
 
+    for label, relative in (
+        (
+            "pricing-source",
+            "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-source.json",
+        ),
+        (
+            "pricing-contract",
+            "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract.json",
+        ),
+    ):
+        missing_price = tmp_path / f"missing-task8-{label}.tar.gz"
+        _write_test_sdist(missing_price, omitted=relative)
+        with pytest.raises(ValueError, match=label):
+            _audit_sdist(missing_price)
+
     missing_budget_gate = tmp_path / "missing-task8-budget-gate.tar.gz"
     _write_test_sdist(
         missing_budget_gate,

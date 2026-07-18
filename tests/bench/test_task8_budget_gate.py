@@ -10,11 +10,18 @@ from typing import Any, cast
 
 import pytest
 
+from fretsure.bench.artifacts import parse_canonical_json_bytes
 from fretsure.bench.contracts import canonical_json_bytes
 from fretsure.bench.preregistration import preregistration_from_bytes
 
 ROOT = Path(__file__).resolve().parents[2]
 PREREG_PATH = ROOT / "docs" / "experiments" / "2026-07-17-benchmark-v2-prereg.json"
+PRICING_SOURCE_PATH = (
+    ROOT / "docs" / "experiments" / "2026-07-18-gpt-5.6-sol-pricing-source.json"
+)
+PRICING_CONTRACT_PATH = (
+    ROOT / "docs" / "experiments" / "2026-07-18-gpt-5.6-sol-pricing-contract.json"
+)
 SPEC = importlib.util.spec_from_file_location(
     "fretsure_test_task8_budget_gate",
     ROOT / "scripts" / "task8_budget_gate.py",
@@ -180,6 +187,34 @@ def test_pricing_contract_is_exact_canonical_and_raw_hash_bound() -> None:
     noncanonical = json.dumps(wire, indent=2).encode()
     with pytest.raises(gate.Task8BudgetGateError, match="canonical"):
         gate.token_pricing_contract_from_bytes(noncanonical)
+
+
+def test_committed_openai_reference_price_is_canonical_and_mechanical() -> None:
+    source_bytes = PRICING_SOURCE_PATH.read_bytes()
+    source = cast(dict[str, object], parse_canonical_json_bytes(source_bytes))
+    source_sha256 = hashlib.sha256(source_bytes).hexdigest()
+    assert source_sha256 == "6293e6c59908b53335e4725f3a36434966ee2e8a083cd79513b2f46746144b0f"
+    assert source["model_id"] == "gpt-5.6-sol"
+    assert source["service_tier"] == "standard"
+    assert source["source_pricing_ref"] == "https://developers.openai.com/api/docs/pricing"
+
+    pricing = gate.token_pricing_contract_from_bytes(PRICING_CONTRACT_PATH.read_bytes())
+    assert pricing.billing_provider_id == "openai-standard-reference"
+    assert pricing.rates == {
+        "cache_creation_input_tokens": 6_250_000,
+        "cache_read_input_tokens": 500_000,
+        "input_tokens": 5_000_000,
+        "output_tokens": 30_000_000,
+    }
+    assert pricing.ceilings == {
+        "cache_creation_input_tokens": 4_096,
+        "cache_read_input_tokens": 4_096,
+        "input_tokens": 4_096,
+        "output_tokens": 2_048,
+    }
+    evidence = cast(dict[str, object], pricing.to_dict()["evidence"])
+    assert evidence["source_sha256"] == source_sha256
+    assert gate.pilot_worst_case_budget(pricing)["cost_microunits"] == 10_960_896
 
 
 @pytest.mark.parametrize(

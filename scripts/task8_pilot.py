@@ -81,6 +81,7 @@ from fretsure.llm.client import (
     MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
     PROXY_REQUEST_TIMEOUT_SECONDS,
     LLMClient,
+    LLMIntegrityError,
     LLMModelIdError,
     ProxyLLM,
     close_llm_client,
@@ -125,6 +126,15 @@ PILOT_FULL_ATTEMPTS: Final = PILOT_PAIR_ATTEMPTS * PILOT_PAIR_COUNT
 PILOT_FULL_REQUESTED_OUTPUT_TOKENS: Final = PILOT_PAIR_REQUESTED_OUTPUT_TOKENS * PILOT_PAIR_COUNT
 PILOT_FULL_ATTEMPT_RESERVED_OUTPUT_TOKENS: Final = (
     PILOT_PAIR_ATTEMPT_RESERVED_OUTPUT_TOKENS * PILOT_PAIR_COUNT
+)
+# One visible UTF-8 byte is a conservative upper bound for one tokenizer token.
+# The fixed allowance covers the two-message provider envelope (roles, separators,
+# and terminal markers) without adding a model-tokenizer dependency to this script.
+PILOT_PROVIDER_MESSAGE_OVERHEAD_TOKENS: Final = 256
+PILOT_INPUT_BILLING_FIELDS: Final[tuple[str, ...]] = (
+    "input_tokens",
+    "cache_creation_input_tokens",
+    "cache_read_input_tokens",
 )
 RECORDED_PROVIDER_ELAPSED_CEILING_MICROSECONDS: Final = 5_400_000_000
 ACTIVE_HOST_DEADLINE_MICROSECONDS: Final = 5_400_000_000
@@ -171,6 +181,15 @@ class PilotConfigError(ValueError):
         self.field = field
         self.detail = detail
         super().__init__(f"invalid Task 8 pilot {field}: {detail}")
+
+
+class PilotInputCeilingError(LLMIntegrityError):
+    """A live prompt exceeded the spend declaration before provider execution."""
+
+    def __init__(self, upper_bound: int, ceiling: int) -> None:
+        self.upper_bound = upper_bound
+        self.ceiling = ceiling
+        super().__init__("Task 8 prompt exceeds its declared billable input ceiling")
 
 
 def _fail(field: str, detail: str) -> NoReturn:
@@ -1036,6 +1055,13 @@ def require_explicit_spend_confirmation(
     return actual
 
 
+def _declared_billable_input_ceiling(config: PilotPreCallConfig) -> int:
+    validated = _validated_pre_call_config(config)
+    cost = cast(dict[str, object], validated.to_dict()["cost"])
+    pricing = _pricing_from_dict(cost["pricing_contract"])
+    return min(pricing.ceilings[name] for name in PILOT_INPUT_BILLING_FIELDS)
+
+
 def _limits() -> ArtifactLimits:
     return ArtifactLimits(
         max_rows=PILOT_EXPECTED_ROWS,
@@ -1166,6 +1192,47 @@ class _PilotStubLLM:
 
     def close(self) -> None:
         return None
+
+
+def _input_token_upper_bound(system: str, user: str) -> int:
+    """Conservatively bound visible text plus the fixed two-message envelope."""
+
+    return (
+        len(system.encode("utf-8"))
+        + len(user.encode("utf-8"))
+        + PILOT_PROVIDER_MESSAGE_OVERHEAD_TOKENS
+    )
+
+
+class _PricingBoundLLM:
+    """Apply the priced input ceiling before observation, retries, or network I/O."""
+
+    def __init__(self, delegate: LLMClient, input_token_ceiling: int) -> None:
+        self._delegate = delegate
+        self._model_id = snapshot_llm_model_id(delegate)
+        self._input_token_ceiling = input_token_ceiling
+
+    @property
+    def model_id(self) -> str:
+        return self._model_id
+
+    def complete(
+        self,
+        *,
+        system: str,
+        user: str,
+        max_tokens: int = 1_024,
+        temperature: float = 0.0,
+    ) -> str:
+        upper_bound = _input_token_upper_bound(system, user)
+        if upper_bound > self._input_token_ceiling:
+            raise PilotInputCeilingError(upper_bound, self._input_token_ceiling)
+        return self._delegate.complete(
+            system=system,
+            user=user,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
 
 
 LLMFactory = Callable[[], LLMClient]
@@ -1653,6 +1720,15 @@ def collect_pilot(
                 if observation_clock is None
                 else ObservingLLM(owned_raw, store.sink, clock_ns=observation_clock)
             )
+            if context.stub:
+                run_agent: LLMClient = observed_agent
+                run_raw: LLMClient = observed_raw
+            else:
+                live_pre_call = context.pre_call_config
+                assert live_pre_call is not None
+                input_ceiling = _declared_billable_input_ceiling(live_pre_call)
+                run_agent = _PricingBoundLLM(observed_agent, input_ceiling)
+                run_raw = _PricingBoundLLM(observed_raw, input_ceiling)
             sequence = CallSequence(
                 context.manifest.run_id,
                 start_call_index=len(store.sink.intents),
@@ -1685,7 +1761,7 @@ def collect_pilot(
                     trajectory = build_candidate_trajectory(
                         item.ir,
                         goal_at_source_tempo(goal, item),
-                        observed_agent,
+                        run_agent,
                         profile=MEDIAN_HAND,
                         candidate_index=unit.sample_index,
                         max_iters=PILOT_MAX_REPAIRS,
@@ -1703,7 +1779,7 @@ def collect_pilot(
                 else:
                     outcome = collect_raw_llm_baseline(
                         raw_requests[unit.item_position],
-                        observed_raw,
+                        run_raw,
                         MEDIAN_HAND,
                         sample_index=unit.sample_index,
                         call_scope_factory=scopes,

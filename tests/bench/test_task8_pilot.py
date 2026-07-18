@@ -50,7 +50,12 @@ def spec(formal_preregistration: BenchmarkPreregistration) -> pilot.PilotSpec:
     return pilot.build_pilot_spec(formal_preregistration)
 
 
-def _available_pre_call(spec: pilot.PilotSpec, *, attempt: int = 1) -> pilot.PilotPreCallConfig:
+def _available_pre_call(
+    spec: pilot.PilotSpec,
+    *,
+    attempt: int = 1,
+    input_token_ceiling: int = 4_096,
+) -> pilot.PilotPreCallConfig:
     budget_gate = pilot.load_budget_gate_module()
     pricing = budget_gate.build_token_pricing_contract(
         billing_provider_id="fixture-provider",
@@ -64,9 +69,9 @@ def _available_pre_call(spec: pilot.PilotSpec, *, attempt: int = 1) -> pilot.Pil
         },
         fixed_microunits_per_attempt=0,
         billable_token_ceiling_per_attempt={
-            "cache_creation_input_tokens": 0,
-            "cache_read_input_tokens": 0,
-            "input_tokens": 4_096,
+            "cache_creation_input_tokens": input_token_ceiling,
+            "cache_read_input_tokens": input_token_ceiling,
+            "input_tokens": input_token_ceiling,
             "output_tokens": 2_048,
         },
         ceil_each_component_per_attempt=False,
@@ -398,6 +403,7 @@ def test_pilot_manifest_has_exact_caps_and_formal_context_rejects_it(
 class _ClosableClient:
     def __init__(self, model_id: str) -> None:
         self._model_id = model_id
+        self.calls = 0
         self.closes = 0
 
     @property
@@ -413,6 +419,7 @@ class _ClosableClient:
         temperature: float = 0.0,
     ) -> str:
         del system, user, max_tokens, temperature
+        self.calls += 1
         context = current_call_context()
         if context is not None and context.stage is CallStage.CRITIC:
             return '{"overall":0.8,"voice_leading":0.7,"bass_motion":0.6,"texture":0.5}'
@@ -424,6 +431,59 @@ class _ClosableClient:
 
     def close(self) -> None:
         self.closes += 1
+
+
+def test_pricing_bound_uses_utf8_bytes_and_accepts_the_exact_limit(
+    spec: pilot.PilotSpec,
+) -> None:
+    system = "system-é"
+    user = "用户"
+    exact = pilot._input_token_upper_bound(system, user)
+    assert exact == (
+        len(system.encode("utf-8"))
+        + len(user.encode("utf-8"))
+        + pilot.PILOT_PROVIDER_MESSAGE_OVERHEAD_TOKENS
+    )
+
+    accepted = _ClosableClient(spec.requested_model_id)
+    assert pilot._PricingBoundLLM(accepted, exact).complete(system=system, user=user)
+    assert accepted.calls == 1
+
+    rejected = _ClosableClient(spec.requested_model_id)
+    with pytest.raises(pilot.PilotInputCeilingError) as caught:
+        pilot._PricingBoundLLM(rejected, exact - 1).complete(system=system, user=user)
+    assert caught.value.upper_bound == exact
+    assert caught.value.ceiling == exact - 1
+    assert rejected.calls == 0
+
+
+def test_live_input_ceiling_fails_before_delegate_or_canonical_publication(
+    tmp_path: Path,
+    spec: pilot.PilotSpec,
+) -> None:
+    pre_call = _available_pre_call(
+        spec,
+        input_token_ceiling=pilot.PILOT_PROVIDER_MESSAGE_OVERHEAD_TOKENS,
+    )
+    agent = _ClosableClient(spec.requested_model_id)
+    raw = _ClosableClient(spec.requested_model_id)
+    output = tmp_path / "input-ceiling"
+
+    with pytest.raises(pilot.PilotInputCeilingError) as caught:
+        pilot.collect_pilot(
+            pre_call_config=pre_call,
+            output_dir=output,
+            agent_llm_factory=lambda: agent,
+            raw_llm_factory=lambda: raw,
+            authorized_maximum_spend_microunits=pre_call.maximum_spend_microunits,
+            observation_clock_ns=lambda: 0,
+            host_clock_ns=lambda: 0,
+        )
+
+    assert caught.value.upper_bound > caught.value.ceiling
+    assert agent.calls == raw.calls == 0
+    assert agent.closes == raw.closes == 1
+    assert not (output / "canonical").exists()
 
 
 def test_stub_rejects_injection_and_live_fails_before_output(
@@ -619,6 +679,7 @@ def test_live_completion_writes_budget_gate_operational_usage(
     assert operational.usage_covers_all_attempts is True
     assert set(operational.usage.values()) == {None}
     assert set(operational.stage_totals_by_name) == {"proposal_raw", "repair", "critic"}
+    assert agent.calls + raw.calls == result.summary.logical_calls
     assert agent.closes == raw.closes == 1
 
 

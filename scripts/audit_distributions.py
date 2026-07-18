@@ -96,6 +96,8 @@ SDIST_EXACT_FILES = (
     "docs/experiments/2026-07-17-benchmark-v2-prereg.json",
     "docs/experiments/2026-07-17-benchmark-v2-budget.md",
     "docs/experiments/2026-07-18-benchmark-v2-pilot-spec.json",
+    "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-source.json",
+    "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract.json",
     "docs/BENCHMARK_V2_TASK8_READINESS.md",
     "scripts/build_benchmark_corpus.py",
     "scripts/task8_budget_gate.py",

@@ -16,9 +16,10 @@
 > full-size deterministic stub artifacts. Its full replay, final gates, and external
 > push have closed. After the user's next instruction, Task 8 froze a separate 2×2
 > operational pilot, exact pricing/budget arithmetic, WAL/resume path, and explicit
-> spend-confirmation boundary. The offline software gate is ready, but no real-model
-> collection has started: a verifiable pricing contract and user-approved pilot spend
-> remain external prerequisites.
+> spend-confirmation boundary. The user then selected official current-model pricing
+> as the reference basis; a dated `gpt-5.6-sol` contract and a pre-network 4,096-token
+> input ceiling now compute a `$10.960896` pilot maximum. No real-model collection has
+> started: explicit spend approval and a matching configured proxy remain external.
 >
 > **Runtime provenance correction (2026-07-17, before any model outcome):** per the
 > user-approved simplicity boundary, runtime collection/replay must not spawn Git or
@@ -675,12 +676,13 @@ handoff operation rather than runtime behavior.
 
 ## 12. Task 8 — Operational proxy pilot and explicit budget gate
 
-**Status (2026-07-18): SOFTWARE READY / REAL PILOT NOT RUN.** The canonical
+**Status (2026-07-18): PRICED SOFTWARE READY / REAL PILOT NOT RUN.** The canonical
 [pilot specification](../../experiments/2026-07-18-benchmark-v2-pilot-spec.json),
 scripts-only collector, exact pricing/budget gate, clean-resume tests, and explicit
 spend-confirmation boundary are complete. See the
-[Task 8 readiness record](../../BENCHMARK_V2_TASK8_READINESS.md). No provider call,
-network collection, verified price contract, or budget authorization has occurred.
+[Task 8 readiness record](../../BENCHMARK_V2_TASK8_READINESS.md). The official-reference
+price contract and its pre-network input bound are verified; no provider call, network
+collection, or budget authorization has occurred.
 
 - Run a separately labeled pilot only after the runner-ready SHA is clean and pushed,
   on at most two two-bar procedural families excluded from the formal corpus and two

@@ -1,9 +1,10 @@
 # Benchmark v2 Task 8 — operational pilot software readiness
 
-> **Status (2026-07-18): SOFTWARE READY; REAL PILOT NOT RUN.** The offline pilot,
-> pricing, budget, resume, and authorization boundaries are implemented. No provider,
-> proxy, or network collection has started because no verified pricing contract or
-> user-approved spend ceiling has been supplied.
+> **Status (2026-07-18): PRICED SOFTWARE READY; REAL PILOT NOT RUN.** The offline
+> pilot, official-reference pricing, budget, resume, input ceiling, and authorization
+> boundaries are implemented. No provider, proxy, or network collection has started
+> because the exact pilot spend has not been approved and no matching live proxy is
+> configured.
 
 ## Frozen operational pilot
 
@@ -47,11 +48,25 @@ metadata remain unavailable rather than becoming zero.
 
 [`task8_pilot.py`](../scripts/task8_pilot.py) embeds the complete canonical pricing
 contract in a pre-call declaration, recomputes its raw hash and mechanical pilot cost,
-and requires the billing model and output ceiling to match the frozen pilot. Creating
-that declaration is not authorization: a live invocation must separately provide the
-same exact maximum-spend microunit value. Missing or drifted confirmation fails before
-client construction or output creation. No signature service, price discovery, Git
-query, or runtime subprocess is involved.
+and requires the billing model and output ceiling to match the frozen pilot. Every live
+prompt is also bounded before observation, retry, or network I/O: its visible UTF-8 byte
+length plus a fixed 256-token two-message framing allowance must fit each declared input
+billing bucket. Creating the declaration is not authorization: a live invocation must
+separately provide the same exact maximum-spend microunit value. Missing or drifted
+confirmation fails before client construction or output creation. No signature service,
+runtime price discovery, Git query, or runtime subprocess is involved.
+
+The checked-in [official price source snapshot](experiments/2026-07-18-gpt-5.6-sol-pricing-source.json)
+has SHA-256
+`6293e6c59908b53335e4725f3a36434966ee2e8a083cd79513b2f46746144b0f`. It records the
+OpenAI standard short-context `gpt-5.6-sol` rates per million tokens: input
+`$5.00`, cache write `$6.25`, cache read `$0.50`, and output `$30.00`. The canonical
+[pricing contract](experiments/2026-07-18-gpt-5.6-sol-pricing-contract.json) has SHA-256
+`c93229c60003905d0946bd4d66096943a337a3763839715f296ecb338148baa5`, freezes a
+4,096-token ceiling for each input billing bucket and 2,048 output tokens per attempt,
+and computes a deliberately conservative full-pilot maximum of `10,960,896` micro-USD
+(`$10.960896`). This is an official direct-price reference; a live proxy must use the
+same billing basis rather than add an undisclosed surcharge.
 
 The still-unrun formal workload remains independent of the pilot:
 
@@ -73,8 +88,13 @@ non-authorizing, and the pilot is never subtracted from the formal workload.
 
 ## Offline evidence
 
-- The directed Task 8 suites passed 31 tests: 13 pilot tests and 18 pricing/budget
+- The directed Task 8 suites passed 34 tests: 15 pilot tests and 19 pricing/budget
   tests. Ruff and strict mypy passed both scripts.
+- The full offline suite passed 2,449 tests with 8 integration tests deselected. The
+  empty-provider integration boundary skipped all 8 integration tests without making
+  a call. The rebuilt distribution audit passed with 114 wheel and 315 sdist entries;
+  the wheel retained the Task 7 SHA-256
+  `615025e1d3f0fdc34119880ac79231b9388e3a2d0b513abc1ad7d15ef99b87fb`.
 - One-shot stub collection and a clean resume after one committed agent row produced
   byte-identical five-file canonical bundles. Their SHA-256 values were: config
   `5d56b53a77d79489cfa32c7fa39d3f87cf3b406c62ac231b930faf97492f7d31`, receipt
@@ -103,14 +123,14 @@ uv run python scripts/task8_pilot.py \
   --output-dir /tmp/fretsure-task8-stub
 ```
 
-After a verified pricing contract exists, build a priced declaration only from explicit
-digests; this command does not inspect Git or authorize collection:
+Build a priced declaration from the checked-in contract and explicit execution digests;
+this command does not inspect Git or authorize collection:
 
 ```bash
 uv run python scripts/task8_pilot.py \
   --write-pre-call /secure/path/pilot-pre-call.json \
   --spec docs/experiments/2026-07-18-benchmark-v2-pilot-spec.json \
-  --pricing-contract /secure/path/pricing-contract.json \
+  --pricing-contract docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract.json \
   --collection-attempt 1 \
   --execution-git-sha <task8-commit-sha> \
   --analysis-code-sha256 <pilot-analysis-sha256> \
@@ -143,9 +163,9 @@ uv run python scripts/task8_budget_gate.py \
 
 ## Remaining external gate
 
-Before any real pilot call, supply a verifiable canonical pricing contract and explicitly
-approve its mechanically computed pilot maximum spend. After the live pilot, the formal
-budget gate will bind its receipt, operational summary, pricing contract, and unchanged
-formal preregistration. Task 9 still requires a separate explicit authorization of the
-computed formal spend and call budget. Until those inputs exist, the correct next state
-is paused at the external price/authorization gate.
+Before any real pilot call, explicitly approve the mechanically computed
+`$10.960896` maximum and configure a live proxy that uses the captured official pricing
+basis. After the live pilot, the formal budget gate will bind its receipt, operational
+summary, pricing contract, and unchanged formal preregistration. Task 9 still requires a
+separate explicit authorization of the computed formal spend and call budget. Until
+then, the correct next state is paused at the external spend/proxy gate.
