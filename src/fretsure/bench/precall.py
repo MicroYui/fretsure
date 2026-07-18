@@ -21,9 +21,19 @@ from fretsure.bench.preregistration import (
     BenchmarkPreregistration,
     preregistration_from_dict,
 )
-from fretsure.llm.client import LLMModelIdError, validate_llm_model_id
+from fretsure.llm.client import (
+    MAX_PROXY_OUTPUT_TOKENS,
+    LLMModelIdError,
+    validate_llm_model_id,
+)
 
-BENCHMARK_PRE_CALL_CONFIG_VERSION: Final = "benchmark-pre-call-config@0.1.0"
+BENCHMARK_PRE_CALL_CONFIG_VERSION: Final = "benchmark-pre-call-config@0.2.0"
+FORMAL_BILLING_ENVELOPE_VERSION: Final = (
+    "benchmark-formal-billing-envelope@0.1.0"
+)
+FORMAL_BILLING_ENVELOPE_SCOPE: Final = "formal_collection"
+FORMAL_INPUT_UPPER_BOUND_METHOD: Final = "utf8_bytes_plus_256"
+FORMAL_ENFORCEMENT_POINT: Final = "before_observation_retry_network"
 MAX_COLLECTION_ATTEMPT: Final = 999_999
 SINGLE_ATTEMPT_CEILING_SCOPE: Final = "single_collection_attempt_nontransferable"
 _PROMPT_BINDING_DOMAIN = b"fretsure:benchmark-pre-call-prompts@0.1.0\0"
@@ -32,6 +42,19 @@ _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _GIT_SHA = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 _ANALYSIS_KINDS = frozenset({"analysis_module_sha256", "wheel_record_sha256"})
 _MAX_BUDGET = (1 << 63) - 1
+_BILLABLE_TOKEN_FIELDS = frozenset(
+    {
+        "cache_creation_input_tokens",
+        "cache_read_input_tokens",
+        "input_tokens",
+        "output_tokens",
+    }
+)
+_FORMAL_INPUT_TOKEN_FIELDS = (
+    "input_tokens",
+    "cache_creation_input_tokens",
+    "cache_read_input_tokens",
+)
 
 
 class PreCallConfigError(ValueError):
@@ -268,13 +291,100 @@ def _maximum_budget_from_prereg(
     }
 
 
-def _validate_cost(value: object) -> dict[str, object]:
+def _validate_billing_envelope(value: object) -> dict[str, object]:
+    binding = _object(
+        value,
+        "billing_envelope",
+        frozenset({"raw_sha256", "wire"}),
+    )
+    raw_sha256 = _sha(
+        binding["raw_sha256"],
+        "billing_envelope.raw_sha256",
+    )
+    wire = _object(
+        binding["wire"],
+        "billing_envelope.wire",
+        frozenset(
+            {
+                "billable_token_ceiling_per_attempt",
+                "enforcement",
+                "pricing_contract_raw_sha256",
+                "schema",
+                "scope",
+            }
+        ),
+    )
+    if wire["schema"] != FORMAL_BILLING_ENVELOPE_VERSION:
+        _fail("billing_envelope.wire.schema", "has the wrong version")
+    if wire["scope"] != FORMAL_BILLING_ENVELOPE_SCOPE:
+        _fail("billing_envelope.wire.scope", "must equal formal_collection")
+    pricing_sha256 = _sha(
+        wire["pricing_contract_raw_sha256"],
+        "billing_envelope.wire.pricing_contract_raw_sha256",
+    )
+    raw_ceilings = _object(
+        wire["billable_token_ceiling_per_attempt"],
+        "billing_envelope.wire.billable_token_ceiling_per_attempt",
+        _BILLABLE_TOKEN_FIELDS,
+    )
+    ceilings = {
+        field: _integer(
+            raw_ceilings[field],
+            f"billing_envelope.wire.billable_token_ceiling_per_attempt.{field}",
+            minimum=1,
+        )
+        for field in sorted(_BILLABLE_TOKEN_FIELDS)
+    }
+    if ceilings["output_tokens"] > MAX_PROXY_OUTPUT_TOKENS:
+        _fail(
+            "billing_envelope.wire.billable_token_ceiling_per_attempt.output_tokens",
+            f"must not exceed {MAX_PROXY_OUTPUT_TOKENS}",
+        )
+    raw_enforcement = _object(
+        wire["enforcement"],
+        "billing_envelope.wire.enforcement",
+        frozenset({"input_upper_bound_method", "required_before"}),
+    )
+    if raw_enforcement["input_upper_bound_method"] != FORMAL_INPUT_UPPER_BOUND_METHOD:
+        _fail(
+            "billing_envelope.wire.enforcement.input_upper_bound_method",
+            f"must equal {FORMAL_INPUT_UPPER_BOUND_METHOD}",
+        )
+    if raw_enforcement["required_before"] != FORMAL_ENFORCEMENT_POINT:
+        _fail(
+            "billing_envelope.wire.enforcement.required_before",
+            f"must equal {FORMAL_ENFORCEMENT_POINT}",
+        )
+    exact_wire: dict[str, object] = {
+        "billable_token_ceiling_per_attempt": ceilings,
+        "enforcement": {
+            "input_upper_bound_method": FORMAL_INPUT_UPPER_BOUND_METHOD,
+            "required_before": FORMAL_ENFORCEMENT_POINT,
+        },
+        "pricing_contract_raw_sha256": pricing_sha256,
+        "schema": FORMAL_BILLING_ENVELOPE_VERSION,
+        "scope": FORMAL_BILLING_ENVELOPE_SCOPE,
+    }
+    if raw_sha256 != hashlib.sha256(canonical_json_bytes(exact_wire)).hexdigest():
+        _fail(
+            "billing_envelope.raw_sha256",
+            "does not bind the canonical billing envelope wire",
+        )
+    return {"raw_sha256": raw_sha256, "wire": exact_wire}
+
+
+def _validate_cost(
+    value: object,
+    *,
+    envelope_pricing_contract_sha256: str,
+) -> dict[str, object]:
     cost = _object(
         value,
         "budget.cost",
         frozenset(
             {
                 "currency",
+                "formal_budget_gate_raw_sha256",
                 "maximum_spend_microunits",
                 "pricing_contract_sha256",
                 "status",
@@ -285,7 +395,12 @@ def _validate_cost(value: object) -> dict[str, object]:
     if status == "cost_contract_unavailable":
         if any(
             cost.get(field) is not None
-            for field in ("currency", "maximum_spend_microunits", "pricing_contract_sha256")
+            for field in (
+                "currency",
+                "formal_budget_gate_raw_sha256",
+                "maximum_spend_microunits",
+                "pricing_contract_sha256",
+            )
         ):
             _fail("budget.cost", "unavailable cost fields must be null")
         return cost
@@ -297,7 +412,19 @@ def _validate_cost(value: object) -> dict[str, object]:
         "budget.cost.maximum_spend_microunits",
         minimum=1,
     )
-    _sha(cost.get("pricing_contract_sha256"), "budget.cost.pricing_contract_sha256")
+    pricing_sha256 = _sha(
+        cost.get("pricing_contract_sha256"),
+        "budget.cost.pricing_contract_sha256",
+    )
+    if pricing_sha256 != envelope_pricing_contract_sha256:
+        _fail(
+            "budget.cost.pricing_contract_sha256",
+            "does not equal the billing envelope pricing contract",
+        )
+    _sha(
+        cost.get("formal_budget_gate_raw_sha256"),
+        "budget.cost.formal_budget_gate_raw_sha256",
+    )
     return cost
 
 
@@ -351,6 +478,36 @@ class BenchmarkPreCallConfig:
         cost = cast(dict[str, object], budget["cost"])
         return cost["status"] == "available"
 
+    @property
+    def formal_input_token_ceiling(self) -> int:
+        envelope = cast(dict[str, object], self.to_dict()["billing_envelope"])
+        wire = cast(dict[str, object], envelope["wire"])
+        ceilings = cast(
+            dict[str, int], wire["billable_token_ceiling_per_attempt"]
+        )
+        return min(ceilings[field] for field in _FORMAL_INPUT_TOKEN_FIELDS)
+
+    @property
+    def formal_output_token_ceiling(self) -> int:
+        envelope = cast(dict[str, object], self.to_dict()["billing_envelope"])
+        wire = cast(dict[str, object], envelope["wire"])
+        ceilings = cast(
+            dict[str, int], wire["billable_token_ceiling_per_attempt"]
+        )
+        return ceilings["output_tokens"]
+
+    @property
+    def maximum_spend_microunits(self) -> int | None:
+        budget = cast(dict[str, object], self.to_dict()["budget"])
+        cost = cast(dict[str, object], budget["cost"])
+        return cast(int | None, cost["maximum_spend_microunits"])
+
+    @property
+    def formal_budget_gate_raw_sha256(self) -> str | None:
+        budget = cast(dict[str, object], self.to_dict()["budget"])
+        cost = cast(dict[str, object], budget["cost"])
+        return cast(str | None, cost["formal_budget_gate_raw_sha256"])
+
 
 def _validate_wire(value: object) -> BenchmarkPreCallConfig:
     obj = _object(
@@ -359,6 +516,7 @@ def _validate_wire(value: object) -> BenchmarkPreCallConfig:
         frozenset(
             {
                 "budget",
+                "billing_envelope",
                 "collection_attempt",
                 "contract_bindings",
                 "execution",
@@ -375,6 +533,11 @@ def _validate_wire(value: object) -> BenchmarkPreCallConfig:
         _fail("schema", "has the wrong version")
     if obj["mode"] != "live_collection":
         _fail("mode", "must equal live_collection")
+    billing_envelope = _validate_billing_envelope(obj["billing_envelope"])
+    envelope_wire = cast(dict[str, object], billing_envelope["wire"])
+    envelope_pricing_sha256 = cast(
+        str, envelope_wire["pricing_contract_raw_sha256"]
+    )
     preregistration = preregistration_from_dict(obj["preregistration"])
     prereg_wire, prereg_model, versions, prereg_budgets = _prereg_components(preregistration)
     prereg_sha = hashlib.sha256(preregistration.wire_json).hexdigest()
@@ -483,7 +646,10 @@ def _validate_wire(value: object) -> BenchmarkPreCallConfig:
             _fail(f"budget.{field}", "cannot reserve one complete candidate unit")
     if budget["scheduled_unit_reservation"] != reservation:
         _fail("budget.scheduled_unit_reservation", "differs from preregistration")
-    _validate_cost(budget["cost"])
+    _validate_cost(
+        budget["cost"],
+        envelope_pricing_contract_sha256=envelope_pricing_sha256,
+    )
     return BenchmarkPreCallConfig(canonical_json_bytes(obj))
 
 
@@ -496,10 +662,13 @@ def build_pre_call_config(
     analysis_binding_kind: str,
     analysis_code_sha256: str,
     runtime_identity: dict[str, str],
+    formal_billing_envelope: dict[str, object],
+    formal_billing_envelope_raw_sha256: str,
     cost_status: str = "cost_contract_unavailable",
     currency: str | None = None,
     maximum_spend_microunits: int | None = None,
     pricing_contract_sha256: str | None = None,
+    formal_budget_gate_raw_sha256: str | None = None,
 ) -> BenchmarkPreCallConfig:
     """Build a canonical config from externally accepted release bindings."""
 
@@ -515,12 +684,20 @@ def build_pre_call_config(
     maximum = _maximum_budget_from_prereg(budgets)
     reservation = _reservation_from_prereg(budgets)
     prompt_templates = _prompt_bindings(model)
+    billing_envelope = _validate_billing_envelope(
+        {
+            "raw_sha256": formal_billing_envelope_raw_sha256,
+            "wire": formal_billing_envelope,
+        }
+    )
     wire: dict[str, object] = {
+        "billing_envelope": billing_envelope,
         "budget": {
             **maximum,
             "ceiling_scope": SINGLE_ATTEMPT_CEILING_SCOPE,
             "cost": {
                 "currency": currency,
+                "formal_budget_gate_raw_sha256": formal_budget_gate_raw_sha256,
                 "maximum_spend_microunits": maximum_spend_microunits,
                 "pricing_contract_sha256": pricing_contract_sha256,
                 "status": cost_status,
@@ -571,12 +748,17 @@ def pre_call_config_from_bytes(data: object) -> BenchmarkPreCallConfig:
     return _validate_wire(value)
 
 
+def _validated_config(config: object) -> BenchmarkPreCallConfig:
+    if type(config) is not BenchmarkPreCallConfig:
+        _fail("config", "must be an exact BenchmarkPreCallConfig")
+    return pre_call_config_from_bytes(config.wire_json)
+
+
 def validate_current_runtime(config: BenchmarkPreCallConfig) -> None:
     """Compare only package/Python/OS/architecture; external digests stay declarations."""
 
-    if type(config) is not BenchmarkPreCallConfig:
-        _fail("config", "must be an exact BenchmarkPreCallConfig")
-    execution = cast(dict[str, object], config.to_dict()["execution"])
+    validated = _validated_config(config)
+    execution = cast(dict[str, object], validated.to_dict()["execution"])
     actual = _runtime_wire()
     for field, value in actual.items():
         if execution[field] != value:
@@ -592,10 +774,37 @@ def require_live_authorization(config: BenchmarkPreCallConfig) -> None:
     spend.
     """
 
-    if type(config) is not BenchmarkPreCallConfig:
-        _fail("config", "must be an exact BenchmarkPreCallConfig")
-    if not config.has_priced_attempt_ceiling:
+    validated = _validated_config(config)
+    if not validated.has_priced_attempt_ceiling:
         _fail("budget.cost", "live collection requires an explicit priced spend ceiling")
+
+
+def require_explicit_spend_confirmation(
+    config: BenchmarkPreCallConfig,
+    supplied: object,
+) -> None:
+    """Require an exact external confirmation of this attempt's priced ceiling."""
+
+    validated = _validated_config(config)
+    budget = cast(dict[str, object], validated.to_dict()["budget"])
+    cost = cast(dict[str, object], budget["cost"])
+    if cost["status"] != "available":
+        _fail("budget.cost", "live collection requires an explicit priced spend ceiling")
+    maximum_spend = _integer(
+        cost["maximum_spend_microunits"],
+        "budget.cost.maximum_spend_microunits",
+        minimum=1,
+    )
+    exact = _integer(
+        supplied,
+        "supplied_maximum_spend_microunits",
+        minimum=1,
+    )
+    if exact != maximum_spend:
+        _fail(
+            "supplied_maximum_spend_microunits",
+            "does not exactly equal the pre-call maximum spend",
+        )
 
 
 def preregistered_artifact_budget(
@@ -616,9 +825,8 @@ def pre_call_artifact_budget(
 ) -> tuple[dict[str, int], dict[str, int]]:
     """Return the already validated live ceilings and unit reservation."""
 
-    if type(config) is not BenchmarkPreCallConfig:
-        _fail("config", "must be an exact BenchmarkPreCallConfig")
-    budget = cast(dict[str, object], config.to_dict()["budget"])
+    validated = _validated_config(config)
+    budget = cast(dict[str, object], validated.to_dict()["budget"])
     maximum = {
         name: cast(int, budget[name])
         for name in (
@@ -637,6 +845,10 @@ def pre_call_artifact_budget(
 
 __all__ = [
     "BENCHMARK_PRE_CALL_CONFIG_VERSION",
+    "FORMAL_BILLING_ENVELOPE_SCOPE",
+    "FORMAL_BILLING_ENVELOPE_VERSION",
+    "FORMAL_ENFORCEMENT_POINT",
+    "FORMAL_INPUT_UPPER_BOUND_METHOD",
     "MAX_COLLECTION_ATTEMPT",
     "SINGLE_ATTEMPT_CEILING_SCOPE",
     "BenchmarkPreCallConfig",
@@ -648,5 +860,6 @@ __all__ = [
     "pre_call_artifact_budget",
     "preregistered_artifact_budget",
     "require_live_authorization",
+    "require_explicit_spend_confirmation",
     "validate_current_runtime",
 ]

@@ -3056,9 +3056,13 @@ def _cost_summary_wire(
         if any(value is None for value in elapsed_values)
         else divided(sum(cast(int, value) for value in elapsed_values))
     )
+    complete_usage = (
+        all(cast(int, calls[key]["provider_attempts"]) == 1 for key in selected)
+        and not any(value is None for value in provider_usage.values())
+    )
     complete_provider_tokens = (
         None
-        if any(value is None for value in provider_usage.values())
+        if not complete_usage
         else math.fsum(cast(int | float, value) for value in provider_usage.values())
     )
     return {

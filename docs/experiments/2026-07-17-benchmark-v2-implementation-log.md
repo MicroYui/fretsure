@@ -357,3 +357,59 @@ test awaited a response. These calls were outside both benchmark collection atte
 Task 9; no response content was inspected or admitted to any benchmark artifact. Their
 usage was not durably captured and is therefore unknown, not zero. All authoritative
 closeout results above come from the corrected provider-free commands.
+
+## 2026-07-18 — Task 9 formal runner and externally declared ceiling
+
+The user resumed the previously paused plan and separately authorized all model billing
+in scope. A private, byte-reproducible `external_ceiling_declared` gate records only the
+mechanical ceiling and explicitly does not grant that authorization. It preserves the formal envelope and
+pricing contract unchanged, declares the exact mechanical maximum of
+`538,865,486,400` micro-USD (`$538,865.486400`), and has SHA-256
+`931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9`.
+
+The formal runner now closes the remaining pre-call boundaries:
+
+- pre-call schema `benchmark-pre-call-config@0.2.0` embeds the formal billing envelope
+  and hash-binds the pricing contract, external-ceiling gate, execution declaration, runtime,
+  model, prompts, schemas, attempt number, and full resource budget;
+- live API/CLI callers must repeat the exact maximum spend before client or output
+  creation;
+- every request is checked as strict UTF-8 system bytes + user bytes + the frozen 256
+  framing allowance, plus its output ceiling, before any digest, observation, WAL event,
+  retry, delegate, or network operation;
+- malformed provider response/usage schemas, missing or mismatched successful model
+  evidence, reported usage above the envelope, budget exhaustion, and coverage/integrity
+  failures become terminal aborts rather than ITT fallback or stub substitution;
+- retrying or missing any usage field keeps exact provider-token/cost coverage
+  unavailable while preserving reported known components;
+- live collection atomically publishes only config, rows, blobs, sanitized observations,
+  and receipt. Report generation is restricted to two fresh, independent default full
+  replays whose seven canonical files must be byte-identical.
+
+The deterministic pre-call builder accepts all Git/lock/analysis digests as explicit
+release inputs; runtime code never invokes Git or a subprocess. The current directed
+evidence is 39 runner tests, 9 pre-call/builder tests, 142 provider/artifact/report/client tests,
+and 82 observation/experiment tests, all passing. Ruff, strict mypy for the changed
+source and new builder, and whitespace checks pass.
+
+The first full-repository closeout exposed six Task 8 compatibility regressions: the
+generic artifact sink had applied Task 9 provider-evidence semantics to the older pilot
+pre-call and stub contracts. The fix makes successful-provider evidence an explicit
+sink policy enabled by formal pre-call schema 0.2, while keeping model mismatch
+fail-closed for every caller. Usage ceilings remain independently enforced and are now
+rechecked symmetrically on fresh writes and resume. The full Task 8 pilot file passed
+15 tests, the formal/compatibility boundary passed seven directed cases, and an
+independent release re-review returned zero findings.
+
+Final runner-ready gates passed without a provider call: `2478 passed, 8 deselected`
+for the complete offline suite, then `8 skipped, 2478 deselected` for the explicitly
+proxy-cleared integration boundary. Ruff, strict mypy over 94 source files and five
+scripts, lock/preregistration/pilot-spec generation checks, 36-file Markdown links,
+and whitespace integrity passed. The unchanged frontend passed 29 tests, typecheck,
+production build, and `npm audit` with zero vulnerabilities. Rebuilt distributions
+passed the 114-wheel/318-sdist content audit and the clean-install matrix for core
+replay, benchmark, MusicXML, MIDI, score, service, and MCP. The private external-ceiling
+gate also passed byte-for-byte regeneration with SHA-256
+`931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9`.
+No Task 9 provider call or formal collection artifact has been created yet, and no
+frontend surface changed.

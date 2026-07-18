@@ -6,8 +6,8 @@
 > by the roadmap; the historical 2026-07-10 Plan 4 remains an implementation
 > record and its numerical tables are not a current baseline.
 >
-> **Implementation progress (2026-07-18): Tasks 1–7 complete; Task 8 operational
-> pilot complete; Task 9 not started.** Strict
+> **Implementation progress (2026-07-18): Tasks 1–8 complete; Task 9 formal runner
+> implemented, formal collection not started.** Strict
 > corpus/generator contracts, observable trajectories, the shared ten-sample pool,
 > baselines, registered statistics, durable artifacts, deterministic reports, and
 > full/fast CLI replay have passed their directed and independent gates. The licensed
@@ -27,9 +27,10 @@
 > Task 9), the user separately authorized attempt 002's `$10.960896` ceiling; attempt 002
 > completed all 8/8 rows. The pilot pricing contract remains
 > `c93229c60003905d0946bd4d66096943a337a3763839715f296ecb338148baa5`.
-> A separate formal billing envelope and non-authorizing gate now compute the formal
-> worst case, but Task 9 still requires its runtime input guard and independent spend
-> authorization.
+> A separate formal billing envelope and non-authorizing gate compute the formal worst
+> case. Task 9 now enforces its runtime input guard, and the user independently
+> authorized all project model billing. Runner release gates have passed; a clean pushed
+> runner SHA remains before collection.
 >
 > **Runtime provenance correction (2026-07-17, before any model outcome):** per the
 > user-approved simplicity boundary, runtime collection/replay must not spawn Git or
@@ -693,7 +694,7 @@ handoff operation rather than runtime behavior.
 ## 12. Task 8 — Operational proxy pilot and explicit budget gate
 
 **Status (2026-07-18): OPERATIONAL PILOT COMPLETE / FORMAL GATE NON-AUTHORIZING /
-TASK 9 NOT STARTED.** The canonical
+TASK 9 RUNNER READY, FORMAL COLLECTION NOT STARTED.** The canonical
 [pilot specification](../../experiments/2026-07-18-benchmark-v2-pilot-spec.json),
 scripts-only collector, exact pricing/budget gate, clean-resume tests, and explicit
 spend-confirmation boundary are complete. See the
@@ -750,10 +751,19 @@ authorization.
 
 ## 13. Task 9 — Current-model collection and deterministic analysis
 
+**Status (2026-07-18): FORMAL RUNNER IMPLEMENTED / EXTERNAL CEILING DECLARED /
+FORMAL COLLECTION NOT STARTED.** The private external-ceiling gate SHA-256 is
+`931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9` and declares
+the exact `$538,865.486400` mechanical maximum. The gate does not grant authorization;
+the user's separate project-wide model-billing authorization does. The runtime guard, exact caller spend
+confirmation, provider-evidence abort boundary, raw-only live finalization, and
+independent double-replay workflow are implemented; the commit-bound attempt-001
+pre-call is generated only after the runner-ready SHA is clean and pushed.
+
 - Before any Task 9 provider call, the formal runner must enforce the billing envelope's
   input ceiling as UTF-8 prompt bytes plus the fixed 256-token framing allowance before
-  observation, retry, or network I/O. The user must then independently authorize the
-  formal maximum; the computed `$538,865.486400` gate is non-authorizing.
+  observation, retry, or network I/O. The user independently authorized the formal
+  maximum on 2026-07-18; the computed `$538,865.486400` gate remains non-authorizing.
 - Run the frozen primary and secondary suites with requested `gpt-5.6-sol` from the
   runner-ready clean SHA. Resume only from a validated, orphan-free WAL with the same
   config. Any orphan marks that run incomplete and forces a fresh formal run ID.
@@ -788,6 +798,8 @@ authorization.
 - Record corpus composition, exclusions, hashes, execution SHA, exact commands,
   counts/denominators/CI, paired tests, multiplicity, usage availability, component
   keep/cut outcomes, nulls/negatives, and exact replay receipt.
+- Treat byte-identical replay as authoritative only on the manifest-bound package,
+  Python, OS, and architecture runtime; cross-platform equality is not claimed.
 - Acceptance is split into `software/statistical`, `external collection`, and `human
   empirical`. Never mark the last complete without real human evidence.
 - Re-run all offline/proxy/distribution gates and independent scope, security/privacy,
@@ -805,9 +817,7 @@ These do not excuse incomplete software, but they block the corresponding claims
 - expert rankings block human difficulty calibration and tier accuracy claims;
 - a real design partner blocks real-world playability/generalization promises;
 - independently authorized provider access blocks cross-provider judge comparison;
-- unavailable or ambiguous upstream licenses block affected public corpus/baseline rows;
-- an unapproved material proxy budget blocks the formal current-model collection, not
-  deterministic software acceptance.
+- unavailable or ambiguous upstream licenses block affected public corpus/baseline rows.
 
 ## 16. Stop lines
 
@@ -833,16 +843,37 @@ shapes are:
 uv run fretsure-bench ... --stub --output-dir <fresh-a>
 uv run fretsure-bench ... --stub --output-dir <fresh-b>
 diff -rq <fresh-a>/canonical <fresh-b>/canonical
+uv run python scripts/build_benchmark_precall.py \
+  --prereg docs/experiments/2026-07-17-benchmark-v2-prereg.json \
+  --pricing-contract docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract.json \
+  --expected-pricing-sha256 c93229c60003905d0946bd4d66096943a337a3763839715f296ecb338148baa5 \
+  --formal-billing-envelope docs/experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json \
+  --expected-formal-billing-envelope-sha256 5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d \
+  --formal-budget-gate <private-external-ceiling-gate> \
+  --expected-formal-budget-gate-sha256 931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9 \
+  --collection-attempt 1 --execution-git-sha <pushed-runner-sha> \
+  --uv-lock-sha256 <uv.lock-sha256> \
+  --analysis-binding-kind analysis_module_sha256 \
+  --analysis-code-sha256 <report.py-sha256> --output <pre-call.json>
+uv run fretsure-bench --live --pre-call-config <pre-call.json> \
+  --authorized-maximum-spend-microunits 538865486400 \
+  --output-dir <fresh-attempt>
 uv run fretsure-bench --replay-config <config> --replay-receipt <receipt> \
   --replay-rows <rows> --replay-blobs <blobs> \
-  --replay-observations <sanitized-observations> --output-dir <fresh-replay>
+  --replay-observations <sanitized-observations> --output-dir <fresh-replay-a>
+uv run fretsure-bench --replay-config <config> --replay-receipt <receipt> \
+  --replay-rows <rows> --replay-blobs <blobs> \
+  --replay-observations <sanitized-observations> --output-dir <fresh-replay-b>
+diff -rq <fresh-replay-a>/canonical <fresh-replay-b>/canonical
 
 uv run pytest -q -m 'not integration'
-uv run pytest -q -m integration
+env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_BASE_URL \
+  uv run pytest -q -m integration  # provider-free skip/fail-closed boundary
 uv run ruff check .
 uv run mypy --strict src
 uv run mypy --strict scripts/build_benchmark_corpus.py
 uv run mypy --strict scripts/build_benchmark_prereg.py
+uv run mypy --strict scripts/build_benchmark_precall.py
 uv lock --check
 uv run python scripts/build_benchmark_prereg.py --check
 uv run python scripts/check_markdown_links.py

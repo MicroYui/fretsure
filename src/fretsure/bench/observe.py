@@ -574,6 +574,18 @@ class ObservationSink(Protocol):
     def write_result(self, result: CallResult) -> None: ...
 
 
+class ObservationRequestGuard(Protocol):
+    """Fail-closed policy over one fully validated visible request."""
+
+    def __call__(
+        self,
+        system_bytes: bytes,
+        user_bytes: bytes,
+        max_tokens: int,
+        /,
+    ) -> None: ...
+
+
 class _MetadataSource(Protocol):
     @property
     def last_call_metadata(self) -> object: ...
@@ -1108,6 +1120,7 @@ class ObservingLLM:
         sink: ObservationSink,
         *,
         clock_ns: Callable[[], int] = time.monotonic_ns,
+        request_guard: ObservationRequestGuard | None = None,
     ) -> None:
         try:
             self._model_id = snapshot_llm_model_id(delegate)
@@ -1117,9 +1130,12 @@ class ObservingLLM:
             ) from None
         if not callable(clock_ns):
             raise ObservationInputError("clock_ns", "must be callable")
+        if request_guard is not None and not callable(request_guard):
+            raise ObservationInputError("request_guard", "must be null or callable")
         self._delegate = delegate
         self._sink = sink
         self._clock_ns = clock_ns
+        self._request_guard = request_guard
         self._closed = False
 
     @property
@@ -1203,6 +1219,8 @@ class ObservingLLM:
             max_tokens,
             temperature,
         ) = _validate_request(system, user, max_tokens, temperature)
+        if self._request_guard is not None:
+            self._request_guard(system_bytes, user_bytes, max_tokens)
         system_sha256 = _domain_digest(_SYSTEM_DIGEST_DOMAIN, system_bytes)
         user_sha256 = _domain_digest(_USER_DIGEST_DOMAIN, user_bytes)
         intent = CallIntent(

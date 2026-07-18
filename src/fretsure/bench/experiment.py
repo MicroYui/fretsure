@@ -56,6 +56,7 @@ from fretsure.bench.observe import (
     CallSequence,
     CallStage,
     InMemoryObservationSink,
+    ObservationRequestGuard,
     ObservingLLM,
 )
 from fretsure.bench.reliability import pass_at_k, pass_hat_k_item
@@ -1294,6 +1295,7 @@ def run_experiment(
     *,
     observation_sink: InMemoryObservationSink | None = None,
     observation_clock_ns: Callable[[], int] | None = None,
+    observation_request_guard: ObservationRequestGuard | None = None,
     resume_state: ExperimentResumeState | None = None,
     on_pure_solver_complete: Callable[[CorpusItem, PureSolverOutcome], None] | None = None,
     on_unit_complete: Callable[[CompletedExperimentUnit], None] | None = None,
@@ -1368,14 +1370,24 @@ def run_experiment(
         owned_agent = clients.enter_context(managed_llm_client(agent_llm))
         owned_raw = clients.enter_context(managed_llm_client(raw_llm))
         observed_agent = (
-            ObservingLLM(owned_agent, sink)
+            ObservingLLM(owned_agent, sink, request_guard=observation_request_guard)
             if observation_clock_ns is None
-            else ObservingLLM(owned_agent, sink, clock_ns=observation_clock_ns)
+            else ObservingLLM(
+                owned_agent,
+                sink,
+                clock_ns=observation_clock_ns,
+                request_guard=observation_request_guard,
+            )
         )
         observed_raw = (
-            ObservingLLM(owned_raw, sink)
+            ObservingLLM(owned_raw, sink, request_guard=observation_request_guard)
             if observation_clock_ns is None
-            else ObservingLLM(owned_raw, sink, clock_ns=observation_clock_ns)
+            else ObservingLLM(
+                owned_raw,
+                sink,
+                clock_ns=observation_clock_ns,
+                request_guard=observation_request_guard,
+            )
         )
         if observed_agent.model_id != observed_raw.model_id:
             raise ExperimentInputError(

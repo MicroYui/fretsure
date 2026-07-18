@@ -1,5 +1,7 @@
+import hashlib
 import json
 from dataclasses import replace
+from functools import lru_cache
 from pathlib import Path
 from typing import cast
 
@@ -9,6 +11,12 @@ import fretsure.bench.report as report_module
 import fretsure.bench.runner as runner_module
 from fretsure.bench.artifacts import manifest_to_dict
 from fretsure.bench.contracts import canonical_json_bytes
+from fretsure.bench.precall import (
+    BenchmarkPreCallConfig,
+    PreCallConfigError,
+    build_pre_call_config,
+    current_runtime_identity,
+)
 from fretsure.bench.preregistration import preregistration_from_bytes
 from fretsure.bench.report import ReplayMode
 from fretsure.bench.runner import (
@@ -44,6 +52,19 @@ class _ClosableConstant(ConstantLLM):
 
     def close(self) -> None:
         self.closes += 1
+
+
+class _ClosableFailure(_ClosableConstant):
+    def complete(
+        self,
+        *,
+        system: str,
+        user: str,
+        max_tokens: int = 1024,
+        temperature: float = 0.0,
+    ) -> str:
+        del system, user, max_tokens, temperature
+        raise RuntimeError("deterministic live-like failure")
 
 
 def test_run_benchmark_reproducible() -> None:
@@ -229,6 +250,46 @@ def _canonical_bytes(path: Path) -> dict[str, bytes]:
     return {value.name: value.read_bytes() for value in (path / "canonical").iterdir()}
 
 
+@lru_cache
+def _formal_pre_call(*, input_token_ceiling: int = 272_000):
+    root = Path(__file__).resolve().parents[2]
+    preregistration = preregistration_from_bytes(
+        (root / "docs/experiments/2026-07-17-benchmark-v2-prereg.json").read_bytes()
+    )
+    envelope_path = (
+        root
+        / "docs/experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json"
+    )
+    envelope = cast(dict[str, object], json.loads(envelope_path.read_text()))
+    ceilings = cast(
+        dict[str, object], envelope["billable_token_ceiling_per_attempt"]
+    )
+    for field in (
+        "input_tokens",
+        "cache_creation_input_tokens",
+        "cache_read_input_tokens",
+    ):
+        ceilings[field] = input_token_ceiling
+    envelope_bytes = canonical_json_bytes(envelope)
+    pricing_sha256 = cast(str, envelope["pricing_contract_raw_sha256"])
+    return build_pre_call_config(
+        preregistration,
+        collection_attempt=1,
+        execution_git_sha="1" * 40,
+        uv_lock_sha256="2" * 64,
+        analysis_binding_kind="analysis_module_sha256",
+        analysis_code_sha256="3" * 64,
+        runtime_identity=current_runtime_identity(),
+        formal_billing_envelope=envelope,
+        formal_billing_envelope_raw_sha256=hashlib.sha256(envelope_bytes).hexdigest(),
+        cost_status="available",
+        currency="USD",
+        maximum_spend_microunits=538_865_486_400,
+        pricing_contract_sha256=pricing_sha256,
+        formal_budget_gate_raw_sha256="4" * 64,
+    )
+
+
 def test_v2_config_rejects_seeds_that_cannot_fit_frozen_report_offsets() -> None:
     with pytest.raises(BenchmarkInputError) as bootstrap:
         BenchmarkV2Config(
@@ -253,6 +314,220 @@ def test_live_scalar_config_fails_before_creating_output(tmp_path: Path) -> None
 
     assert caught.value.field == "pre_call_config"
     assert not output.exists()
+
+
+def test_formal_request_guard_enforces_utf8_plus_256_and_output_ceiling() -> None:
+    pre_call = _formal_pre_call(input_token_ceiling=300)
+    guard = runner_module._formal_observation_request_guard(pre_call)
+
+    guard("é".encode() * 20, b"abcd", 16_384)
+    with pytest.raises(runner_module.FormalRequestCeilingError) as input_error:
+        guard(b"x" * 45, b"", 1)
+    assert input_error.value.field == "input_tokens"
+    assert input_error.value.upper_bound == 301
+    assert input_error.value.ceiling == 300
+
+    with pytest.raises(runner_module.FormalRequestCeilingError) as output_error:
+        guard(b"", b"", 16_385)
+    assert output_error.value.field == "output_tokens"
+
+
+def test_live_requires_exact_spend_before_client_or_output(
+    tmp_path: Path,
+) -> None:
+    pre_call = _formal_pre_call()
+    calls = 0
+
+    def forbidden() -> ConstantLLM:
+        nonlocal calls
+        calls += 1
+        raise AssertionError("authorization failure must precede client creation")
+
+    for index, supplied in enumerate((None, 538_865_486_399, 538_865_486_401)):
+        output = tmp_path / f"unauthorized-{index}"
+        with pytest.raises(ValueError):
+            collect_benchmark_v2(
+                pre_call_config=pre_call,
+                output_dir=output,
+                agent_llm_factory=forbidden,
+                raw_llm_factory=forbidden,
+                authorized_maximum_spend_microunits=supplied,
+            )
+        assert not output.exists()
+
+    forged_wire = pre_call.to_dict()
+    forged_wire["budget"]["cost"]["maximum_spend_microunits"] = 1  # type: ignore[index]
+    forged_wire["billing_envelope"]["raw_sha256"] = "0" * 64  # type: ignore[index]
+    forged = BenchmarkPreCallConfig(canonical_json_bytes(forged_wire))
+    forged_output = tmp_path / "forged"
+    with pytest.raises(PreCallConfigError):
+        collect_benchmark_v2(
+            pre_call_config=forged,
+            output_dir=forged_output,
+            agent_llm_factory=forbidden,
+            raw_llm_factory=forbidden,
+            authorized_maximum_spend_microunits=1,
+        )
+    assert not forged_output.exists()
+    assert calls == 0
+
+
+def test_live_like_collection_is_raw_only_then_two_replays_are_identical(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pre_call = _formal_pre_call()
+    base = runner_module.build_benchmark_v2_context(
+        replace(
+            _v2_config(),
+            requested_model_id=pre_call.requested_model_id,
+            run_id="task9-live-like-raw-only",
+        )
+    )
+    live_like = replace(
+        base,
+        config=replace(base.config, stub=False),
+        pre_call_config=pre_call,
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "build_benchmark_v2_live_context",
+        lambda _config: live_like,
+    )
+    created: list[_ClosableFailure] = []
+
+    def factory() -> _ClosableFailure:
+        client = _ClosableFailure(live_like.requested_model_id)
+        created.append(client)
+        return client
+
+    source = tmp_path / "source"
+    result = collect_benchmark_v2(
+        pre_call_config=pre_call,
+        output_dir=source,
+        agent_llm_factory=factory,
+        raw_llm_factory=factory,
+        authorized_maximum_spend_microunits=pre_call.maximum_spend_microunits,
+    )
+
+    assert result.report is None
+    assert set(_canonical_bytes(source)) == {
+        "blobs.jsonl",
+        "config.json",
+        "observations.json",
+        "receipt.json",
+        "rows.jsonl",
+    }
+    assert [client.closes for client in created] == [1, 1]
+
+    outputs = [tmp_path / "replay-a", tmp_path / "replay-b"]
+    for output in outputs:
+        replay_benchmark_v2(
+            config_path=source / "canonical/config.json",
+            receipt_path=source / "canonical/receipt.json",
+            rows_path=source / "canonical/rows.jsonl",
+            blobs_path=source / "canonical/blobs.jsonl",
+            observations_path=source / "canonical/observations.json",
+            output_dir=output,
+        )
+    assert _canonical_bytes(outputs[0]) == _canonical_bytes(outputs[1])
+
+
+def test_formal_guard_failure_writes_terminal_abort_receipt_without_observation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pre_call = _formal_pre_call(input_token_ceiling=256)
+    base = runner_module.build_benchmark_v2_context(
+        replace(
+            _v2_config(),
+            requested_model_id=pre_call.requested_model_id,
+            run_id="task9-guard-abort",
+        )
+    )
+    live_like = replace(
+        base,
+        config=replace(base.config, stub=False),
+        pre_call_config=pre_call,
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "build_benchmark_v2_live_context",
+        lambda _config: live_like,
+    )
+    clients: list[_ClosableConstant] = []
+
+    def factory() -> _ClosableConstant:
+        client = _ClosableConstant(live_like.requested_model_id)
+        clients.append(client)
+        return client
+
+    output = tmp_path / "guard-abort"
+    with pytest.raises(runner_module.FormalRequestCeilingError):
+        collect_benchmark_v2(
+            pre_call_config=pre_call,
+            output_dir=output,
+            agent_llm_factory=factory,
+            raw_llm_factory=factory,
+            authorized_maximum_spend_microunits=pre_call.maximum_spend_microunits,
+        )
+
+    receipt = json.loads((output / "abort-receipt.json").read_text())
+    assert receipt["status"] == "INCOMPLETE"
+    assert receipt["reason_code"] == "formal_billing_envelope_violation"
+    assert not (output / "canonical").exists()
+    assert (output / "journal.jsonl").read_bytes() == b""
+    assert [client.closes for client in clients] == [1, 1]
+
+
+def test_post_call_row_conversion_failure_writes_terminal_abort_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pre_call = _formal_pre_call()
+    base = runner_module.build_benchmark_v2_context(
+        replace(
+            _v2_config(),
+            requested_model_id=pre_call.requested_model_id,
+            run_id="task9-post-call-abort",
+        )
+    )
+    live_like = replace(
+        base,
+        config=replace(base.config, stub=False),
+        pre_call_config=pre_call,
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "build_benchmark_v2_live_context",
+        lambda _config: live_like,
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "completed_unit_to_row_bundle",
+        lambda *_args: (_ for _ in ()).throw(
+            runner_module.ReportInputError("fixture", "injected post-call failure")
+        ),
+    )
+
+    def factory() -> _ClosableFailure:
+        return _ClosableFailure(live_like.requested_model_id)
+
+    output = tmp_path / "post-call-abort"
+    with pytest.raises(runner_module.ReportInputError):
+        collect_benchmark_v2(
+            pre_call_config=pre_call,
+            output_dir=output,
+            agent_llm_factory=factory,
+            raw_llm_factory=factory,
+            authorized_maximum_spend_microunits=pre_call.maximum_spend_microunits,
+        )
+
+    receipt = json.loads((output / "abort-receipt.json").read_text())
+    assert receipt["status"] == "INCOMPLETE"
+    assert receipt["reason_code"] == "report_input_integrity_failure"
+    assert (output / "journal.jsonl").stat().st_size > 0
+    assert not (output / "canonical").exists()
 
 
 def test_stub_rejects_client_factories_before_call_or_output(tmp_path: Path) -> None:
@@ -312,6 +587,21 @@ def test_preregistered_mixed_context_is_self_contained_and_replayable() -> None:
         "execution_git_sha": None,
         "mode": "stub",
     }
+
+
+def test_formal_context_round_trip_embeds_the_billing_envelope() -> None:
+    pre_call = _formal_pre_call()
+
+    context = runner_module.build_benchmark_v2_live_context(pre_call)
+    restored = runner_module.benchmark_v2_context_from_manifest(context.manifest)
+
+    assert restored.manifest == context.manifest
+    assert restored.pre_call_config == pre_call
+    embedded = cast(dict[str, object], context.manifest.parameters["pre_call"])
+    envelope = cast(dict[str, object], embedded["billing_envelope"])
+    assert envelope["raw_sha256"] == (
+        "5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d"
+    )
 
 
 def test_v2_client_creation_closes_first_client_when_second_factory_fails() -> None:
@@ -481,3 +771,40 @@ def test_v2_cli_requires_explicit_collection_mode_and_output(tmp_path: Path) -> 
             ]
         )
     assert wrong_binding.value.code == 2
+
+
+def test_v2_cli_redacts_live_integrity_abort_as_exit_one(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    pre_call_path = tmp_path / "pre-call.json"
+    pre_call_path.write_bytes(b"ignored by fixture")
+    monkeypatch.setattr(
+        runner_module,
+        "pre_call_config_from_bytes",
+        lambda _data: _formal_pre_call(),
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "collect_benchmark_v2",
+        lambda **_kwargs: (_ for _ in ()).throw(
+            runner_module.LLMIntegrityError("stable integrity failure")
+        ),
+    )
+
+    assert (
+        main(
+            [
+                "--live",
+                "--pre-call-config",
+                str(pre_call_path),
+                "--authorized-maximum-spend-microunits",
+                "538865486400",
+                "--output-dir",
+                str(tmp_path / "output"),
+            ]
+        )
+        == 1
+    )
+    assert capsys.readouterr().err == "stable integrity failure\n"

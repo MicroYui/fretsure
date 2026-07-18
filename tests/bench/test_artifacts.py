@@ -545,6 +545,223 @@ def test_durable_sink_records_returned_model_mismatch_as_terminal_failure(
     assert terminal["failure_code"] == CallFailureCode.RETURNED_MODEL_MISMATCH.value  # type: ignore[index]
 
 
+@pytest.mark.parametrize("provider_available", [False, True])
+def test_durable_live_sink_requires_non_null_provider_model_evidence(
+    tmp_path: Path,
+    provider_available: bool,
+) -> None:
+    seed = InMemoryObservationSink(max_calls=1)
+    _make_call(seed)
+    provider = (
+        ProviderObservation(
+            available=True,
+            status="succeeded",
+            attempts=1,
+            retries=0,
+            returned_model_id=None,
+            response_id_sha256=None,
+            input_tokens=1,
+            output_tokens=1,
+            cache_creation_input_tokens=None,
+            cache_read_input_tokens=None,
+        )
+        if provider_available
+        else seed.results[0].provider
+    )
+    journal = tmp_path / f"missing-provider-{provider_available}.jsonl"
+    journal.touch(mode=0o600)
+
+    with DurableObservationSink(
+        journal,
+        max_calls=1,
+        max_attempts=1,
+        allowed_returned_model_id="requested-model",
+        require_successful_provider_evidence=True,
+    ) as sink:
+        sink.write_intent(seed.intents[0])
+        sink.write_attempt_intent(seed.attempt_intents[0])
+        sink.write_attempt_result(seed.attempt_results[0])
+        with pytest.raises(ArtifactError) as caught:
+            sink.write_result(replace(seed.results[0], provider=provider))
+
+    assert caught.value.code is ArtifactCode.HASH_MISMATCH
+    terminal = parse_canonical_jsonl_bytes(journal.read_bytes())[-1]["payload"]  # type: ignore[index]
+    assert terminal["status"] == "failed"  # type: ignore[index]
+    assert terminal["failure_code"] == CallFailureCode.PROVIDER_METADATA_INVALID.value  # type: ignore[index]
+
+
+def test_durable_live_sink_rejects_missing_provider_evidence_during_resume(
+    tmp_path: Path,
+) -> None:
+    seed = InMemoryObservationSink(max_calls=1)
+    _make_call(seed)
+    journal = tmp_path / "resume-missing-provider.jsonl"
+    journal.touch(mode=0o600)
+    with DurableObservationSink(journal, max_calls=1, max_attempts=1) as source:
+        source.write_intent(seed.intents[0])
+        source.write_attempt_intent(seed.attempt_intents[0])
+        source.write_attempt_result(seed.attempt_results[0])
+        source.write_result(seed.results[0])
+
+    with pytest.raises(ArtifactError) as caught:
+        DurableObservationSink(
+            journal,
+            max_calls=1,
+            max_attempts=1,
+            allowed_returned_model_id="requested-model",
+            require_successful_provider_evidence=True,
+            resume=True,
+        )
+
+    assert caught.value.code is ArtifactCode.CORRUPT_JOURNAL
+
+
+def test_durable_sink_rechecks_usage_ceiling_during_resume(tmp_path: Path) -> None:
+    seed = InMemoryObservationSink(max_calls=1)
+    _make_call(seed)
+    provider = ProviderObservation(
+        available=True,
+        status="succeeded",
+        attempts=1,
+        retries=0,
+        returned_model_id="requested-model",
+        response_id_sha256=None,
+        input_tokens=11,
+        output_tokens=1,
+        cache_creation_input_tokens=0,
+        cache_read_input_tokens=0,
+    )
+    journal = tmp_path / "resume-usage-ceiling.jsonl"
+    journal.touch(mode=0o600)
+    with DurableObservationSink(journal, max_calls=1, max_attempts=1) as source:
+        source.write_intent(seed.intents[0])
+        source.write_attempt_intent(seed.attempt_intents[0])
+        source.write_attempt_result(seed.attempt_results[0])
+        source.write_result(replace(seed.results[0], provider=provider))
+
+    with pytest.raises(ArtifactError) as caught:
+        DurableObservationSink(
+            journal,
+            max_calls=1,
+            max_attempts=1,
+            billable_token_ceiling_per_attempt={
+                "cache_creation_input_tokens": 10,
+                "cache_read_input_tokens": 10,
+                "input_tokens": 10,
+                "output_tokens": 10,
+            },
+            resume=True,
+        )
+
+    assert caught.value.code is ArtifactCode.CORRUPT_JOURNAL
+    cause = caught.value.__cause__
+    assert isinstance(cause, ArtifactError)
+    assert cause.field == "journal.provider.input_tokens"
+
+
+def test_artifact_store_enforces_formal_per_attempt_usage_ceilings(
+    tmp_path: Path,
+) -> None:
+    base = _manifest()
+    ceilings = {
+        "cache_creation_input_tokens": 10,
+        "cache_read_input_tokens": 10,
+        "input_tokens": 10,
+        "output_tokens": 10,
+    }
+    manifest = build_manifest(
+        run_id=base.run_id,
+        corpus_sha256=base.corpus_sha256,
+        analysis_code_sha256=base.analysis_code_sha256,
+        stub=False,
+        expected_rows=base.expected_rows,
+        limits=base.limits,
+        parameters={
+            "model": {"allowed_returned_model_id": "requested-model"},
+            "pre_call": {
+                "schema": "benchmark-pre-call-config@0.2.0",
+                "billing_envelope": {
+                    "wire": {"billable_token_ceiling_per_attempt": ceilings}
+                }
+            },
+        },
+    )
+    seed = InMemoryObservationSink(max_calls=1)
+    _make_call(seed)
+    provider = ProviderObservation(
+        available=True,
+        status="succeeded",
+        attempts=1,
+        retries=0,
+        returned_model_id="requested-model",
+        response_id_sha256=None,
+        input_tokens=11,
+        output_tokens=1,
+        cache_creation_input_tokens=None,
+        cache_read_input_tokens=None,
+    )
+    output = tmp_path / "formal-usage"
+
+    with ArtifactStore.create(output, manifest) as store:
+        store.sink.write_intent(seed.intents[0])
+        store.sink.write_attempt_intent(seed.attempt_intents[0])
+        store.sink.write_attempt_result(seed.attempt_results[0])
+        with pytest.raises(ArtifactError) as caught:
+            store.sink.write_result(replace(seed.results[0], provider=provider))
+
+    assert caught.value.code is ArtifactCode.LIMIT_EXCEEDED
+    assert caught.value.field == "journal.provider.input_tokens"
+    terminal = parse_canonical_jsonl_bytes((output / "journal.jsonl").read_bytes())[-1][
+        "payload"
+    ]
+    assert terminal["status"] == "failed"  # type: ignore[index]
+    assert terminal["failure_code"] == CallFailureCode.PROVIDER_METADATA_INVALID.value  # type: ignore[index]
+
+
+def test_durable_live_sink_rejects_reported_output_above_request_reservation(
+    tmp_path: Path,
+) -> None:
+    seed = InMemoryObservationSink(max_calls=1)
+    _make_call(seed)
+    provider = ProviderObservation(
+        available=True,
+        status="succeeded",
+        attempts=1,
+        retries=0,
+        returned_model_id="requested-model",
+        response_id_sha256=None,
+        input_tokens=1,
+        output_tokens=33,
+        cache_creation_input_tokens=0,
+        cache_read_input_tokens=0,
+    )
+    journal = tmp_path / "output-above-request.jsonl"
+    journal.touch(mode=0o600)
+
+    with DurableObservationSink(
+        journal,
+        max_calls=1,
+        max_attempts=1,
+        allowed_returned_model_id="requested-model",
+        billable_token_ceiling_per_attempt={
+            "cache_creation_input_tokens": 100,
+            "cache_read_input_tokens": 100,
+            "input_tokens": 100,
+            "output_tokens": 100,
+        },
+    ) as sink:
+        sink.write_intent(seed.intents[0])
+        sink.write_attempt_intent(seed.attempt_intents[0])
+        sink.write_attempt_result(seed.attempt_results[0])
+        with pytest.raises(ArtifactError) as caught:
+            sink.write_result(replace(seed.results[0], provider=provider))
+
+    assert caught.value.code is ArtifactCode.LIMIT_EXCEEDED
+    assert caught.value.field == "journal.provider.output_tokens"
+    terminal = parse_canonical_jsonl_bytes(journal.read_bytes())[-1]["payload"]  # type: ignore[index]
+    assert terminal["status"] == "failed"  # type: ignore[index]
+
+
 def test_private_to_sanitized_observations_removes_response_id_and_preserves_usage_nulls() -> None:
     memory = InMemoryObservationSink(max_calls=4)
     _make_call(memory)

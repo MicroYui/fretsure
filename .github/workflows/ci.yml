@@ -27,6 +27,7 @@ jobs:
           uv run mypy --strict src
           uv run mypy --strict scripts/build_benchmark_corpus.py
           uv run mypy --strict scripts/build_benchmark_prereg.py
+          uv run mypy --strict scripts/build_benchmark_precall.py
           uv run mypy --strict scripts/task8_budget_gate.py
           uv run mypy --strict scripts/task8_pilot.py
 

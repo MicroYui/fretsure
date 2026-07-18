@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 from pathlib import Path
 from typing import cast
 
@@ -8,6 +9,7 @@ import pytest
 
 from fretsure.agent.critic import CRITIC_MAX_TOKENS
 from fretsure.agent.repair import REPAIR_MAX_TOKENS
+from fretsure.bench.contracts import canonical_json_bytes
 from fretsure.bench.experiment import EXPERIMENT_MAX_REPAIR_ITERS
 from fretsure.bench.precall import (
     BenchmarkPreCallConfig,
@@ -17,6 +19,7 @@ from fretsure.bench.precall import (
     pre_call_artifact_budget,
     pre_call_config_from_bytes,
     pre_call_config_from_dict,
+    require_explicit_spend_confirmation,
     require_live_authorization,
     validate_current_runtime,
 )
@@ -43,6 +46,21 @@ def _config(
     *,
     cost_status: str = "available",
 ) -> BenchmarkPreCallConfig:
+    formal_billing_envelope: dict[str, object] = {
+        "billable_token_ceiling_per_attempt": {
+            "cache_creation_input_tokens": 272_000,
+            "cache_read_input_tokens": 271_999,
+            "input_tokens": 271_998,
+            "output_tokens": 16_384,
+        },
+        "enforcement": {
+            "input_upper_bound_method": "utf8_bytes_plus_256",
+            "required_before": "before_observation_retry_network",
+        },
+        "pricing_contract_raw_sha256": "4" * 64,
+        "schema": "benchmark-formal-billing-envelope@0.1.0",
+        "scope": "formal_collection",
+    }
     return build_pre_call_config(
         preregistration,
         collection_attempt=1,
@@ -51,10 +69,17 @@ def _config(
         analysis_binding_kind="analysis_module_sha256",
         analysis_code_sha256="3" * 64,
         runtime_identity=current_runtime_identity(),
+        formal_billing_envelope=formal_billing_envelope,
+        formal_billing_envelope_raw_sha256=hashlib.sha256(
+            canonical_json_bytes(formal_billing_envelope)
+        ).hexdigest(),
         cost_status=cost_status,
         currency=None if cost_status != "available" else "USD",
         maximum_spend_microunits=None if cost_status != "available" else 1_000_000,
         pricing_contract_sha256=None if cost_status != "available" else "4" * 64,
+        formal_budget_gate_raw_sha256=(
+            None if cost_status != "available" else "5" * 64
+        ),
     )
 
 
@@ -83,6 +108,14 @@ def test_pre_call_round_trip_binds_runtime_model_contracts_and_budget(
     assert config.to_dict()["budget"]["ceiling_scope"] == (  # type: ignore[index]
         "single_collection_attempt_nontransferable"
     )
+    assert config.formal_input_token_ceiling == 271_998
+    assert config.formal_output_token_ceiling == 16_384
+    assert config.maximum_spend_microunits == 1_000_000
+    assert config.formal_budget_gate_raw_sha256 == "5" * 64
+    envelope = cast(dict[str, object], config.to_dict()["billing_envelope"])
+    assert envelope["raw_sha256"] == hashlib.sha256(
+        canonical_json_bytes(envelope["wire"])
+    ).hexdigest()
 
 
 def test_pre_call_rejects_binding_budget_and_model_drift(
@@ -112,8 +145,27 @@ def test_pre_call_rejects_binding_budget_and_model_drift(
     mutations.append(("model", bad_model))
 
     bad_budget = copy.deepcopy(original)
-    bad_budget["budget"]["max_logical_calls"] += 1  # type: ignore[index,operator]
+    bad_budget["budget"]["max_logical_calls"] += 1  # type: ignore[index]
     mutations.append(("budget.max_logical_calls", bad_budget))
+
+    bad_envelope_hash = copy.deepcopy(original)
+    bad_envelope_hash["billing_envelope"]["raw_sha256"] = "0" * 64  # type: ignore[index]
+    mutations.append(("billing_envelope.raw_sha256", bad_envelope_hash))
+
+    bad_enforcement = copy.deepcopy(original)
+    bad_enforcement["billing_envelope"]["wire"]["enforcement"][  # type: ignore[index]
+        "input_upper_bound_method"
+    ] = "tokenizer_estimate"
+    mutations.append(
+        (
+            "billing_envelope.wire.enforcement.input_upper_bound_method",
+            bad_enforcement,
+        )
+    )
+
+    bad_pricing_binding = copy.deepcopy(original)
+    bad_pricing_binding["budget"]["cost"]["pricing_contract_sha256"] = "6" * 64  # type: ignore[index]
+    mutations.append(("budget.cost.pricing_contract_sha256", bad_pricing_binding))
 
     for field, value in mutations:
         with pytest.raises(PreCallConfigError) as caught:
@@ -207,3 +259,40 @@ def test_cost_unavailable_and_runtime_drift_fail_before_live_authorization(
     with pytest.raises(PreCallConfigError) as runtime:
         validate_current_runtime(parsed)
     assert runtime.value.field == "execution.architecture"
+
+
+def test_explicit_spend_confirmation_requires_an_exact_integer_match(
+    preregistration: BenchmarkPreregistration,
+) -> None:
+    config = _config(preregistration)
+
+    require_explicit_spend_confirmation(config, 1_000_000)
+    for supplied in (999_999, 1_000_001, 1_000_000.0, True):
+        with pytest.raises(PreCallConfigError) as caught:
+            require_explicit_spend_confirmation(config, supplied)
+        assert caught.value.field == "supplied_maximum_spend_microunits"
+
+    unavailable = _config(preregistration, cost_status="cost_contract_unavailable")
+    with pytest.raises(PreCallConfigError) as unavailable_error:
+        require_explicit_spend_confirmation(unavailable, 1_000_000)
+    assert unavailable_error.value.field == "budget.cost"
+
+
+def test_public_constructor_cannot_bypass_helper_revalidation(
+    preregistration: BenchmarkPreregistration,
+) -> None:
+    wire = _config(preregistration).to_dict()
+    wire["budget"]["cost"]["maximum_spend_microunits"] = 1  # type: ignore[index]
+    wire["billing_envelope"]["raw_sha256"] = "0" * 64  # type: ignore[index]
+    forged = BenchmarkPreCallConfig(canonical_json_bytes(wire))
+
+    checks = (
+        lambda: require_explicit_spend_confirmation(forged, 1),
+        lambda: require_live_authorization(forged),
+        lambda: validate_current_runtime(forged),
+        lambda: pre_call_artifact_budget(forged),
+    )
+    for check in checks:
+        with pytest.raises(PreCallConfigError) as caught:
+            check()
+        assert caught.value.field == "billing_envelope.raw_sha256"

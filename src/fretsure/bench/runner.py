@@ -33,6 +33,8 @@ from fretsure.bench.ablation import (
     paired_critic,
 )
 from fretsure.bench.artifacts import (
+    ArtifactCode,
+    ArtifactError,
     ArtifactLimits,
     ArtifactStore,
     BenchmarkManifest,
@@ -66,6 +68,7 @@ from fretsure.bench.corpus import (
 from fretsure.bench.experiment import (
     EXPERIMENT_N_SAMPLES,
     CompletedExperimentUnit,
+    ExperimentInputError,
     ExperimentPlan,
     MatchedPrefix,
     ObservationLedger,
@@ -80,6 +83,7 @@ from fretsure.bench.precall import (
     pre_call_artifact_budget,
     pre_call_config_from_bytes,
     preregistered_artifact_budget,
+    require_explicit_spend_confirmation,
     require_live_authorization,
     validate_current_runtime,
 )
@@ -93,6 +97,7 @@ from fretsure.bench.report import (
 )
 from fretsure.bench.report import (
     ReplayMode,
+    ReportInputError,
     build_benchmark_report,
     collection_to_row_bundle,
     completed_unit_to_row_bundle,
@@ -107,6 +112,7 @@ from fretsure.llm.client import (
     MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
     PROXY_REQUEST_TIMEOUT_SECONDS,
     LLMClient,
+    LLMIntegrityError,
     LLMModelIdError,
     close_llm_client,
     snapshot_llm_model_id,
@@ -132,7 +138,7 @@ MAX_BENCHMARK_CORPUS_BARS = 4_096
 MAX_BENCHMARK_SEED = (1 << 63) - 1
 
 BENCHMARK_V2_RUN_CONFIG_VERSION = "benchmark-v2-run-config@0.1.0"
-BENCHMARK_V2_ANALYSIS_VERSION = "benchmark-v2-analysis@0.1.0"
+BENCHMARK_V2_ANALYSIS_VERSION = "benchmark-v2-analysis@0.2.0"
 BENCHMARK_V2_STUB_MODEL_ID = "fretsure-benchmark-stub@0.1.0"
 MAX_BENCHMARK_V2_ITEMS = 900
 DEFAULT_BENCHMARK_V2_BOOTSTRAP_REPETITIONS = 10_000
@@ -184,6 +190,21 @@ class BenchmarkInputError(ValueError):
         self.field = field
         self.detail = detail
         super().__init__(f"invalid benchmark {field}: {detail}")
+
+
+FORMAL_PROVIDER_MESSAGE_OVERHEAD_TOKENS = 256
+
+
+class FormalRequestCeilingError(LLMIntegrityError):
+    """A live request falls outside its pre-call billing envelope."""
+
+    def __init__(self, field: str, upper_bound: int, ceiling: int) -> None:
+        self.field = field
+        self.upper_bound = upper_bound
+        self.ceiling = ceiling
+        super().__init__(
+            f"formal request {field} upper bound {upper_bound} exceeds ceiling {ceiling}"
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -278,7 +299,7 @@ class BenchmarkV2Context:
 @dataclass(frozen=True, slots=True)
 class BenchmarkV2Result:
     receipt: BenchmarkReceipt
-    report: BenchmarkV2Report
+    report: BenchmarkV2Report | None
 
 
 def _benchmark_model_id(value: object) -> str:
@@ -756,12 +777,13 @@ def build_benchmark_v2_live_context(
         raise BenchmarkInputError(
             "pre_call_config", "must be an exact BenchmarkPreCallConfig"
         )
-    validate_current_runtime(pre_call_config)
-    require_live_authorization(pre_call_config)
+    validated = pre_call_config_from_bytes(pre_call_config.wire_json)
+    validate_current_runtime(validated)
+    require_live_authorization(validated)
     return _preregistration_context(
-        pre_call_config.preregistration,
+        validated.preregistration,
         stub=False,
-        pre_call_config=pre_call_config,
+        pre_call_config=validated,
     )
 
 
@@ -1295,6 +1317,67 @@ def _configure_next_unit_reservation(
     store.reserve_next_unit(reservation)
 
 
+def _formal_observation_request_guard(
+    config: BenchmarkPreCallConfig,
+) -> Callable[[bytes, bytes, int], None]:
+    """Freeze one envelope check for every request in a formal collection."""
+
+    input_ceiling = config.formal_input_token_ceiling
+    output_ceiling = config.formal_output_token_ceiling
+
+    def guard(system_utf8: bytes, user_utf8: bytes, max_tokens: int) -> None:
+        input_upper_bound = (
+            len(system_utf8)
+            + len(user_utf8)
+            + FORMAL_PROVIDER_MESSAGE_OVERHEAD_TOKENS
+        )
+        if input_upper_bound > input_ceiling:
+            raise FormalRequestCeilingError(
+                "input_tokens",
+                input_upper_bound,
+                input_ceiling,
+            )
+        if max_tokens > output_ceiling:
+            raise FormalRequestCeilingError(
+                "output_tokens",
+                max_tokens,
+                output_ceiling,
+            )
+
+    return guard
+
+
+def _store_has_clean_resume_boundary(store: ArtifactStore) -> bool:
+    sink = store.sink
+    if sink.has_open_intent or sink.has_open_attempt:
+        return False
+    owned = {
+        (key.logical_call_id, key.call_index)
+        for row in store.completed_rows
+        for key in row.observation_keys
+    }
+    observed = {(intent.logical_call_id, intent.call_index) for intent in sink.intents}
+    return owned == observed
+
+
+def _formal_abort_reason(error: BaseException) -> str:
+    if isinstance(error, FormalRequestCeilingError):
+        return "formal_billing_envelope_violation"
+    if isinstance(error, LLMIntegrityError):
+        return "provider_integrity_failure"
+    if isinstance(error, ArtifactError):
+        return {
+            ArtifactCode.LIMIT_EXCEEDED: "collection_budget_exhausted",
+            ArtifactCode.HASH_MISMATCH: "provider_or_artifact_mismatch",
+            ArtifactCode.COVERAGE_MISMATCH: "expected_key_coverage_failure",
+        }.get(error.code, "artifact_integrity_failure")
+    if isinstance(error, ExperimentInputError):
+        return "experiment_integrity_failure"
+    if isinstance(error, ReportInputError):
+        return "report_input_integrity_failure"
+    return "collection_integrity_failure"
+
+
 def collect_benchmark_v2(
     *,
     config: BenchmarkV2Config | None = None,
@@ -1304,8 +1387,9 @@ def collect_benchmark_v2(
     resume: bool = False,
     agent_llm_factory: Callable[[], LLMClient] | None = None,
     raw_llm_factory: Callable[[], LLMClient] | None = None,
+    authorized_maximum_spend_microunits: int | None = None,
 ) -> BenchmarkV2Result:
-    """Collect one scalar stub, preregistered stub, or authorized live run."""
+    """Collect one stub run or one explicitly authorized raw-only live run."""
 
     if not isinstance(output_dir, Path):
         raise BenchmarkInputError("output_dir", "must be a Path")
@@ -1323,6 +1407,21 @@ def collect_benchmark_v2(
             "collection_config",
             "requires exactly one scalar config, preregistration, or pre-call config",
         )
+    if pre_call_config is not None:
+        if type(pre_call_config) is not BenchmarkPreCallConfig:
+            raise BenchmarkInputError(
+                "pre_call_config", "must be an exact BenchmarkPreCallConfig"
+            )
+        pre_call_config = pre_call_config_from_bytes(pre_call_config.wire_json)
+        require_explicit_spend_confirmation(
+            pre_call_config,
+            authorized_maximum_spend_microunits,
+        )
+    elif authorized_maximum_spend_microunits is not None:
+        raise BenchmarkInputError(
+            "authorized_maximum_spend_microunits",
+            "stub collection must not supply a spend authorization",
+        )
     if config is not None:
         context = build_benchmark_v2_context(config)
     elif preregistration is not None:
@@ -1333,6 +1432,13 @@ def collect_benchmark_v2(
     if context.config.stub and agent_llm_factory is not None:
         raise BenchmarkInputError(
             "llm_factory", "stub collection does not accept client factories"
+        )
+    if context.config.stub:
+        observation_request_guard: Callable[[bytes, bytes, int], None] | None = None
+    else:
+        assert context.pre_call_config is not None
+        observation_request_guard = _formal_observation_request_guard(
+            context.pre_call_config
         )
 
     prepared_clients: tuple[LLMClient, LLMClient] | None = None
@@ -1348,7 +1454,8 @@ def collect_benchmark_v2(
     store_factory = ArtifactStore.resume if resume else ArtifactStore.create
     report_result: BenchmarkV2Report | None = None
     try:
-        with store_factory(output_dir, context.manifest) as store:
+        store = store_factory(output_dir, context.manifest)
+        try:
             staged_rows = store.completed_rows
             staged_blobs = _staged_blobs(store)
             resume_state = (
@@ -1419,6 +1526,7 @@ def collect_benchmark_v2(
                 context.profile,
                 observation_sink=store.sink,
                 observation_clock_ns=(lambda: 0) if context.config.stub else None,
+                observation_request_guard=observation_request_guard,
                 resume_state=resume_state,
                 on_pure_solver_complete=pure_complete,
                 on_unit_complete=unit_complete,
@@ -1453,15 +1561,40 @@ def collect_benchmark_v2(
                 markdown = report_to_markdown(report_result).encode("utf-8")
                 return FinalizedReport(report_result.wire_json, markdown)
 
-            receipt = store.finalize(report_callback=report_callback)
+            if context.config.stub:
+                receipt = store.finalize(report_callback=report_callback)
+            else:
+                # Formal collection publishes only the five hash-bound raw inputs.
+                # Reports are produced later by two independent offline replays.
+                receipt = store.finalize()
+        except KeyboardInterrupt:
+            if not context.config.stub and not _store_has_clean_resume_boundary(store):
+                store.abort("interrupted_with_unowned_observation")
+            raise
+        except (
+            ArtifactError,
+            BenchmarkInputError,
+            ExperimentInputError,
+            LLMIntegrityError,
+            ReportInputError,
+        ) as error:
+            if not context.config.stub:
+                store.abort(_formal_abort_reason(error))
+            raise
+        except Exception:
+            if not context.config.stub and not _store_has_clean_resume_boundary(store):
+                store.abort("unexpected_unowned_observation")
+            raise
+        finally:
+            store.close()
+        if context.config.stub and report_result is None:  # pragma: no cover - invariant
+            raise AssertionError("stub finalization did not build a report")
     finally:
         if prepared_clients is not None and not clients_transferred:
             try:
                 close_llm_client(prepared_clients[1])
             finally:
                 close_llm_client(prepared_clients[0])
-    if report_result is None:  # pragma: no cover - callback invariant
-        raise AssertionError("finalization did not build a report")
     return BenchmarkV2Result(receipt, report_result)
 
 
@@ -1519,6 +1652,7 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--prereg", type=Path)
     parser.add_argument("--pre-call-config", type=Path)
+    parser.add_argument("--authorized-maximum-spend-microunits", type=int)
     parser.add_argument("--run-id")
     parser.add_argument("--model")
     parser.add_argument("--seed", type=int)
@@ -1567,6 +1701,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         or args.resume
         or args.prereg is not None
         or args.pre_call_config is not None
+        or args.authorized_maximum_spend_microunits is not None
     ):
         parser.error("replay flags cannot be combined with collection mode flags")
     if not replay and not (args.stub or args.live):
@@ -1587,10 +1722,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     if args.stub and args.pre_call_config is not None:
         parser.error("--stub cannot be combined with --pre-call-config")
+    if args.stub and args.authorized_maximum_spend_microunits is not None:
+        parser.error("--stub cannot be combined with spend authorization")
     if args.live and args.prereg is not None:
         parser.error("--live cannot be combined with --prereg")
     if args.live and args.pre_call_config is None and not replay:
         parser.error("--live requires --pre-call-config")
+    if (
+        args.live
+        and args.authorized_maximum_spend_microunits is None
+        and not replay
+    ):
+        parser.error("--live requires --authorized-maximum-spend-microunits")
     if args.stub and args.prereg is not None and any(
         value is not None for value in scalar_values
     ):
@@ -1626,6 +1769,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 pre_call_config=pre_call,
                 output_dir=args.output_dir,
                 resume=args.resume,
+                authorized_maximum_spend_microunits=(
+                    args.authorized_maximum_spend_microunits
+                ),
             )
         else:
             result = collect_benchmark_v2(
@@ -1661,13 +1807,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
     except KeyboardInterrupt:
         return 130
-    except (OSError, RuntimeError, ValueError) as error:
+    except (LLMIntegrityError, OSError, RuntimeError, ValueError) as error:
         print(str(error), file=sys.stderr)
         return 1
     print(
         json.dumps(
             {
-                "report_sha256": result.report.sha256,
+                "report_sha256": (
+                    None if result.report is None else result.report.sha256
+                ),
                 "run_id": result.receipt.run_id,
                 "status": result.receipt.status.value,
             },

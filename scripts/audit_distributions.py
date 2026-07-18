@@ -101,6 +101,7 @@ SDIST_EXACT_FILES = (
     "docs/experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json",
     "docs/BENCHMARK_V2_TASK8_READINESS.md",
     "scripts/build_benchmark_corpus.py",
+    "scripts/build_benchmark_precall.py",
     "scripts/task8_budget_gate.py",
     "scripts/task8_pilot.py",
     "scripts/audit_distributions.py",

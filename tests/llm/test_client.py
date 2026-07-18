@@ -4,7 +4,7 @@ import os
 import sys
 import traceback
 from types import SimpleNamespace
-from typing import cast
+from typing import Literal, cast
 
 import anthropic
 import httpx
@@ -21,13 +21,16 @@ from fretsure.llm.client import (
     PROXY_REQUEST_TIMEOUT_SECONDS,
     FakeLLM,
     LLMClientCloseError,
+    LLMIntegrityError,
     LLMProxyConfigurationError,
     LLMProxyRequestError,
+    LLMProxyResponseIntegrityError,
     ProxyCallMetadata,
     ProxyLLM,
     close_llm_client,
     extract_json,
     managed_llm_client,
+    observe_proxy_attempts,
     proxy_environment_configured,
 )
 
@@ -189,6 +192,10 @@ def test_proxy_llm_snapshots_bounded_provider_metadata(
             usage=SimpleNamespace(input_tokens=True),
         ),
         SimpleNamespace(
+            content=[SimpleNamespace(type="text", text="ok")],
+            usage=SimpleNamespace(unknown_usage_field=1),
+        ),
+        SimpleNamespace(
             content=[SimpleNamespace(type=object(), text="must not be ignored")],
         ),
     ],
@@ -198,6 +205,20 @@ def test_proxy_llm_rejects_unbounded_or_malformed_provider_response_without_retr
     message: object,
 ) -> None:
     calls = 0
+    attempt_events: list[tuple[object, ...]] = []
+
+    class AttemptObserver:
+        def before_attempt(self, attempt_index: int) -> None:
+            attempt_events.append(("before", attempt_index))
+
+        def after_attempt(
+            self,
+            attempt_index: int,
+            *,
+            status: Literal["succeeded", "failed"],
+            retryable: bool,
+        ) -> None:
+            attempt_events.append(("after", attempt_index, status, retryable))
 
     class FakeMessages:
         def create(self, **_kwargs: object) -> object:
@@ -214,10 +235,19 @@ def test_proxy_llm_rejects_unbounded_or_malformed_provider_response_without_retr
     monkeypatch.setattr("anthropic.Anthropic", FakeAnthropic)
     llm = ProxyLLM()
 
-    with pytest.raises(RuntimeError, match="proxy response failed validation"):
-        llm.complete(system="s", user="u", max_tokens=20)
+    with observe_proxy_attempts(AttemptObserver()):
+        with pytest.raises(
+            LLMProxyResponseIntegrityError,
+            match="proxy response failed validation",
+        ) as caught:
+            llm.complete(system="s", user="u", max_tokens=20)
 
     assert calls == 1
+    assert isinstance(caught.value, LLMIntegrityError)
+    assert attempt_events == [
+        ("before", 0),
+        ("after", 0, "failed", False),
+    ]
     assert llm.last_call_metadata is not None
     assert llm.last_call_metadata.status == "failed"
     assert llm.last_call_metadata.attempts == 1
@@ -245,7 +275,7 @@ def test_declared_optional_metadata_attribute_error_is_invalid_not_missing(
     monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "test-token")
     monkeypatch.setattr("anthropic.Anthropic", FakeAnthropic)
 
-    with pytest.raises(RuntimeError) as caught:
+    with pytest.raises(LLMProxyResponseIntegrityError) as caught:
         ProxyLLM().complete(system="s", user="u", max_tokens=20)
 
     assert str(caught.value) == "LLM proxy response failed validation"

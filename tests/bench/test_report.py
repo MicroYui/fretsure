@@ -11,6 +11,7 @@ from fretsure.agent.arranger import ArrangeGoal, arrangement_source_context_sha2
 from fretsure.bench.artifacts import (
     BenchmarkRow,
     BlobKind,
+    ObservationKey,
     RowType,
     SanitizedObservations,
     blob_record_to_dict,
@@ -525,6 +526,61 @@ def test_pareto_uses_complete_token_sum_not_componentwise_dominance() -> None:
 
     assert complete is True
     assert nondominated is False
+
+
+def test_cost_summary_preserves_reported_usage_but_marks_retries_incomplete() -> None:
+    key = ObservationKey("call-0", 0)
+    calls = {
+        key: {
+            "provider_attempts": 2,
+            "requested_output_tokens": 10,
+            "attempt_reserved_output_tokens": 20,
+        }
+    }
+    observations = {
+        key: {
+            "elapsed_microseconds": 30,
+            "usage": {
+                "input_tokens": 7,
+                "output_tokens": 3,
+                "cache_creation_input_tokens": 2,
+                "cache_read_input_tokens": 1,
+            },
+        }
+    }
+
+    summary = report_module._cost_summary_wire(  # noqa: SLF001
+        (key,),
+        calls,
+        observations,
+    )
+
+    assert summary["provider_usage"] == {
+        "input_tokens": 7,
+        "output_tokens": 3,
+        "cache_creation_input_tokens": 2,
+        "cache_read_input_tokens": 1,
+    }
+    assert "usage_covers_all_attempts" not in summary
+    assert summary["complete_provider_tokens"] is None
+
+    missing_usage = {
+        key: {
+            **observations[key],
+            "usage": {
+                **observations[key]["usage"],
+                "cache_read_input_tokens": None,
+            },
+        }
+    }
+    no_retry_calls = {key: {**calls[key], "provider_attempts": 1}}
+    missing_summary = report_module._cost_summary_wire(  # noqa: SLF001
+        (key,),
+        no_retry_calls,
+        missing_usage,
+    )
+    assert "usage_covers_all_attempts" not in missing_summary
+    assert missing_summary["complete_provider_tokens"] is None
 
 
 def test_incremental_helpers_emit_exact_source_bound_single_rows(

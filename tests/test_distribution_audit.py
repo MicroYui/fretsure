@@ -150,7 +150,7 @@ def test_wheel_audit_rejects_private_or_formal_run_artifacts(
         _audit_wheel(wheel, expected_version=_VERSION)
 
 
-def test_sdist_audit_requires_task7_and_task8_evidence_and_exact_sources(
+def test_sdist_audit_requires_task7_task8_and_task9_evidence_and_exact_sources(
     tmp_path: Path,
 ) -> None:
     complete = tmp_path / f"fretsure_oracle-{_VERSION}.tar.gz"
@@ -202,6 +202,14 @@ def test_sdist_audit_requires_task7_and_task8_evidence_and_exact_sources(
     )
     with pytest.raises(ValueError, match="task8_budget_gate"):
         _audit_sdist(missing_budget_gate)
+
+    missing_pre_call_builder = tmp_path / "missing-task9-precall-builder.tar.gz"
+    _write_test_sdist(
+        missing_pre_call_builder,
+        omitted="scripts/build_benchmark_precall.py",
+    )
+    with pytest.raises(ValueError, match="build_benchmark_precall"):
+        _audit_sdist(missing_pre_call_builder)
 
     source_name = next(iter(_licensed_source_files()))
     missing_source = tmp_path / "missing-source.tar.gz"

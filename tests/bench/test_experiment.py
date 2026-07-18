@@ -1361,6 +1361,44 @@ def test_run_accepts_durable_sink_subclass_and_deterministic_clock() -> None:
     assert all(result.elapsed_microseconds == 0 for result in sink.results)
 
 
+def test_run_passes_one_request_guard_to_agent_and_raw_observation_arms() -> None:
+    plan = preflight_experiment(
+        (_melody_item(position=0),),
+        run_id="request-guard",
+        schedule_seed=1,
+    )
+    guarded_requests: list[tuple[bytes, bytes, int]] = []
+
+    def guard(system_bytes: bytes, user_bytes: bytes, max_tokens: int, /) -> None:
+        guarded_requests.append((system_bytes, user_bytes, max_tokens))
+
+    collection = run_experiment(
+        plan,
+        ArrangeGoal(),
+        FakeLLM([reply for _index in range(10) for reply in (_PROPOSAL, _CRITIC)]),
+        FakeLLM([_RAW_TAB] * 10),
+        MEDIAN_HAND,
+        observation_clock_ns=lambda: 7,
+        observation_request_guard=guard,
+    )
+
+    intents = collection.observations.intents
+    assert len(guarded_requests) == len(intents) == 30
+    assert {intent.stage for intent in intents} == {
+        CallStage.PROPOSAL,
+        CallStage.CRITIC,
+        CallStage.RAW,
+    }
+    assert all(
+        max_tokens == intent.max_tokens
+        for (_system_bytes, _user_bytes, max_tokens), intent in zip(
+            guarded_requests,
+            intents,
+            strict=True,
+        )
+    )
+
+
 def test_wrapper_construction_failure_closes_both_owned_clients_once() -> None:
     plan = preflight_experiment(
         (_melody_item(position=0),),

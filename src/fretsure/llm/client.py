@@ -67,6 +67,10 @@ class LLMIntegrityError(Exception):
     """A fail-closed harness boundary failed and must not become model fallback."""
 
 
+class LLMProxyResponseIntegrityError(LLMIntegrityError):
+    """The provider returned a response that cannot be trusted as model output."""
+
+
 def _best_effort_close(close: Callable[[], object]) -> None:
     """Run a GC-only close callback without leaking raw exceptions."""
 
@@ -303,6 +307,12 @@ def _snapshot_proxy_response(
         response_id_sha256 = hashlib.sha256(raw_response_id.encode("utf-8")).hexdigest()
 
     usage = _optional_response_field(message, "usage")
+    if usage is not None:
+        for required_usage_field in ("input_tokens", "output_tokens"):
+            try:
+                inspect.getattr_static(usage, required_usage_field)
+            except Exception:
+                raise _ProxyResponseValidationError from None
     metadata = ProxyCallMetadata(
         status="succeeded",
         attempts=attempts,
@@ -590,7 +600,9 @@ class ProxyLLM:
                     status="failed",
                     retryable=False,
                 )
-                raise RuntimeError("LLM proxy response failed validation") from None
+                raise LLMProxyResponseIntegrityError(
+                    "LLM proxy response failed validation"
+                ) from None
             except Exception as exc:  # noqa: BLE001 - classified, bounded, and redacted
                 self._last_call_metadata = _failed_proxy_metadata(attempt + 1)
                 transport_boundary = _contains_proxy_transport_boundary(exc)

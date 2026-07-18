@@ -140,6 +140,7 @@ def _benchmark_extra_smoke(root: Path, wheel: Path) -> None:
         work,
         """
         import importlib.util
+        import hashlib
         from importlib.resources import files
         from pathlib import Path
 
@@ -148,6 +149,7 @@ def _benchmark_extra_smoke(root: Path, wheel: Path) -> None:
         import httpx
         import music21
         from fretsure.bench import runner
+        from fretsure.bench.contracts import canonical_json_bytes
         from fretsure.bench.precall import (
             PreCallConfigError,
             build_pre_call_config,
@@ -219,6 +221,21 @@ def _benchmark_extra_smoke(root: Path, wheel: Path) -> None:
         assert not live_output.exists()
 
         unpriced_output = Path.cwd() / "unpriced-live-must-not-exist"
+        formal_envelope = {
+            "billable_token_ceiling_per_attempt": {
+                "cache_creation_input_tokens": 272_000,
+                "cache_read_input_tokens": 272_000,
+                "input_tokens": 272_000,
+                "output_tokens": 16_384,
+            },
+            "enforcement": {
+                "input_upper_bound_method": "utf8_bytes_plus_256",
+                "required_before": "before_observation_retry_network",
+            },
+            "pricing_contract_raw_sha256": "0" * 64,
+            "schema": "benchmark-formal-billing-envelope@0.1.0",
+            "scope": "formal_collection",
+        }
         unpriced = build_pre_call_config(
             preregistration,
             collection_attempt=1,
@@ -227,6 +244,10 @@ def _benchmark_extra_smoke(root: Path, wheel: Path) -> None:
             analysis_binding_kind="wheel_record_sha256",
             analysis_code_sha256="0" * 64,
             runtime_identity=current_runtime_identity(),
+            formal_billing_envelope=formal_envelope,
+            formal_billing_envelope_raw_sha256=hashlib.sha256(
+                canonical_json_bytes(formal_envelope)
+            ).hexdigest(),
         )
         try:
             runner.collect_benchmark_v2(

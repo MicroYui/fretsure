@@ -290,10 +290,10 @@ uv run python scripts/task8_budget_gate.py \
   --output /secure/path/formal-budget-gate.json
 ```
 
-## Remaining external gate
+## Subsequent Task 9 authorization
 
-Task 8 is complete; attempt 002 must not be rerun. Task 9 remains paused before any
-formal provider call. Its collector must first enforce the formal envelope's
-`UTF-8 bytes + 256` input bound before observation, retry, or network I/O. The user must
-then independently authorize the exact `$538,865.486400` mechanical formal ceiling and
-the frozen call envelope. The generated gate itself grants no such authorization.
+Task 8 is complete; attempt 002 must not be rerun. The Task 9 collector now enforces the
+formal envelope's `UTF-8 bytes + 256` input bound before observation, retry, or network
+I/O. On 2026-07-18 the user independently authorized all project model billing,
+including the exact `$538,865.486400` mechanical formal ceiling and frozen call
+envelope. The generated gate itself still grants no such authorization.

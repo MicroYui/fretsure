@@ -19,6 +19,7 @@ from fretsure.bench.observe import (
     InMemoryObservationSink,
     ObservationContextError,
     ObservationInputError,
+    ObservationRequestGuard,
     ObservationSinkError,
     ObservedCallError,
     ObservingLLM,
@@ -196,6 +197,67 @@ def test_intent_is_written_before_delegate_invocation() -> None:
 
     with call_scope(_context()):
         assert observed.complete(system="s", user="u") == "ok"
+
+
+def test_request_guard_uses_exact_utf8_bytes_and_precedes_all_call_activity() -> None:
+    class RequestCeilingExceeded(LLMIntegrityError):
+        pass
+
+    ceiling = len("é界".encode())
+    rejected = RequestCeilingExceeded("request exceeds the test ceiling")
+    guarded_requests: list[tuple[bytes, bytes, int]] = []
+
+    def guard(system_bytes: bytes, user_bytes: bytes, max_tokens: int, /) -> None:
+        guarded_requests.append((system_bytes, user_bytes, max_tokens))
+        if len(system_bytes) + len(user_bytes) > ceiling:
+            raise rejected
+
+    accepted_delegate = _Delegate("ok")
+    accepted_sink = InMemoryObservationSink()
+    accepted = ObservingLLM(
+        accepted_delegate,
+        accepted_sink,
+        clock_ns=_Clock(0, 0),
+        request_guard=guard,
+    )
+    with call_scope(_context()):
+        assert accepted.complete(system="é", user="界", max_tokens=17) == "ok"
+
+    assert guarded_requests == [("é".encode(), "界".encode(), 17)]
+    assert accepted_delegate.calls == 1
+    assert len(accepted_sink.intents) == len(accepted_sink.attempt_intents) == 1
+
+    rejected_delegate = _Delegate("must-not-run")
+    rejected_sink = InMemoryObservationSink()
+
+    def unexpected_clock() -> int:
+        raise AssertionError("request guard must run before the observation clock")
+
+    guarded = ObservingLLM(
+        rejected_delegate,
+        rejected_sink,
+        clock_ns=unexpected_clock,
+        request_guard=guard,
+    )
+    with call_scope(_context()):
+        with pytest.raises(RequestCeilingExceeded) as caught:
+            guarded.complete(system="é", user="界x", max_tokens=17)
+
+    assert caught.value is rejected
+    assert guarded_requests[-1] == ("é".encode(), "界x".encode(), 17)
+    assert rejected_delegate.calls == 0
+    assert rejected_sink.journal_events == ()
+
+
+def test_request_guard_must_be_null_or_callable() -> None:
+    with pytest.raises(ObservationInputError) as caught:
+        ObservingLLM(
+            _Delegate("ok"),
+            InMemoryObservationSink(),
+            request_guard=cast(ObservationRequestGuard, object()),
+        )
+
+    assert caught.value.field == "request_guard"
 
 
 def test_request_digest_binds_the_requested_model() -> None:

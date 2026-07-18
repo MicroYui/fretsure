@@ -48,6 +48,7 @@ from fretsure.bench.observe import (
 from fretsure.llm.client import (
     MAX_PROXY_TEXT_BYTES_PER_TOKEN,
     MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
+    MAX_PROXY_USAGE_TOKENS,
     LLMModelIdError,
     validate_llm_model_id,
 )
@@ -74,6 +75,13 @@ _WAL_DOMAIN = b"fretsure:benchmark-wal@0.1.0\0"
 _ROW_TABLE_DOMAIN = b"fretsure:benchmark-row-table@0.1.0\0"
 _BLOB_TABLE_DOMAIN = b"fretsure:benchmark-blob-table@0.1.0\0"
 _BLOB_DOMAIN = b"fretsure:benchmark-blob@0.1.0\0"
+_FORMAL_PRE_CALL_CONFIG_VERSION: Final = "benchmark-pre-call-config@0.2.0"
+_PROVIDER_USAGE_FIELDS: Final = (
+    "input_tokens",
+    "output_tokens",
+    "cache_creation_input_tokens",
+    "cache_read_input_tokens",
+)
 
 
 class ArtifactCode(StrEnum):
@@ -105,6 +113,24 @@ class ArtifactError(ValueError):
 
 def _error(code: ArtifactCode, field: str, detail: str) -> ArtifactError:
     return ArtifactError(code, field, detail)
+
+
+def _provider_usage_ceilings(
+    value: object,
+    field: str,
+) -> dict[str, int] | None:
+    if value is None:
+        return None
+    obj = _require_exact_dict(value, field, frozenset(_PROVIDER_USAGE_FIELDS))
+    return {
+        name: _require_int(
+            obj[name],
+            f"{field}.{name}",
+            minimum=1,
+            maximum=MAX_PROXY_USAGE_TOKENS,
+        )
+        for name in _PROVIDER_USAGE_FIELDS
+    }
 
 
 def _require_exact_dict(
@@ -2834,6 +2860,8 @@ class DurableObservationSink(InMemoryObservationSink):
         max_wall_microseconds: int = MAX_ARTIFACT_BUDGET,
         complete_unit_reservation: CompleteUnitReservation | None = None,
         allowed_returned_model_id: str | None = None,
+        require_successful_provider_evidence: bool = False,
+        billable_token_ceiling_per_attempt: dict[str, int] | None = None,
         resume: bool = False,
     ) -> None:
         super().__init__(max_calls=max_calls)
@@ -2891,6 +2919,23 @@ class DurableObservationSink(InMemoryObservationSink):
             allowed_returned_model_id,
             "allowed_returned_model_id",
             optional=True,
+        )
+        if type(require_successful_provider_evidence) is not bool:
+            raise _error(
+                ArtifactCode.INVALID_INPUT,
+                "require_successful_provider_evidence",
+                "must be an exact bool",
+            )
+        if require_successful_provider_evidence and self._allowed_returned_model_id is None:
+            raise _error(
+                ArtifactCode.INVALID_INPUT,
+                "allowed_returned_model_id",
+                "is required when successful provider evidence is required",
+            )
+        self._require_successful_provider_evidence = require_successful_provider_evidence
+        self._billable_token_ceiling_per_attempt = _provider_usage_ceilings(
+            billable_token_ceiling_per_attempt,
+            "billable_token_ceiling_per_attempt",
         )
         self._requested_output_tokens = 0
         self._attempt_reserved_output_tokens = 0
@@ -3096,6 +3141,28 @@ class DurableObservationSink(InMemoryObservationSink):
 
     def _account_replayed_result(self, result: CallResult) -> None:
         returned = result.provider.returned_model_id
+        if result.status == "succeeded":
+            if self._require_successful_provider_evidence:
+                if (
+                    not result.provider.available
+                    or result.provider.status != "succeeded"
+                    or returned != self._allowed_returned_model_id
+                ):
+                    raise _error(
+                        ArtifactCode.CORRUPT_JOURNAL,
+                        "journal.provider",
+                        "successful live call does not satisfy the manifest provider rule",
+                    )
+            exceeded = self._provider_usage_ceiling_exceeded(
+                result.provider,
+                requested_output_tokens=self._current_requested_output_tokens(result),
+            )
+            if exceeded is not None:
+                raise _error(
+                    ArtifactCode.CORRUPT_JOURNAL,
+                    f"journal.provider.{exceeded}",
+                    "successful live call exceeds its billable token ceiling",
+                )
         if (
             returned is not None
             and self._allowed_returned_model_id is not None
@@ -3114,6 +3181,35 @@ class DurableObservationSink(InMemoryObservationSink):
                 "journal.wall_microseconds",
                 "recorded wall-time ceiling is exceeded",
             )
+
+    def _provider_usage_ceiling_exceeded(
+        self,
+        provider: ProviderObservation,
+        *,
+        requested_output_tokens: int | None,
+    ) -> str | None:
+        ceilings = self._billable_token_ceiling_per_attempt
+        if ceilings is None:
+            return None
+        for field in _PROVIDER_USAGE_FIELDS:
+            value = cast(int | None, getattr(provider, field))
+            ceiling = ceilings[field]
+            if field == "output_tokens" and requested_output_tokens is not None:
+                ceiling = min(ceiling, requested_output_tokens)
+            if value is not None and value > ceiling:
+                return field
+        return None
+
+    def _current_requested_output_tokens(self, result: CallResult) -> int | None:
+        if not self.intents:
+            return None
+        intent = self.intents[-1]
+        if (
+            intent.logical_call_id != result.logical_call_id
+            or intent.call_index != result.call_index
+        ):
+            return None
+        return intent.max_tokens
 
     def mark_unit_committed(
         self,
@@ -3189,30 +3285,68 @@ class DurableObservationSink(InMemoryObservationSink):
     def write_result(self, result: CallResult) -> None:
         self._require_writable()
         exact = result
-        mismatch = (
+        model_mismatch = (
             exact.provider.returned_model_id is not None
             and self._allowed_returned_model_id is not None
             and exact.provider.returned_model_id != self._allowed_returned_model_id
         )
-        if mismatch:
+        missing_live_provider_evidence = (
+            exact.status == "succeeded"
+            and self._require_successful_provider_evidence
+            and (
+                not exact.provider.available
+                or exact.provider.status != "succeeded"
+                or exact.provider.returned_model_id is None
+            )
+        )
+        exceeded_usage_field = (
+            self._provider_usage_ceiling_exceeded(
+                exact.provider,
+                requested_output_tokens=self._current_requested_output_tokens(exact),
+            )
+            if exact.status == "succeeded"
+            else None
+        )
+        provider_integrity_failure = (
+            model_mismatch
+            or missing_live_provider_evidence
+            or exceeded_usage_field is not None
+        )
+        if provider_integrity_failure:
             exact = CallResult(
                 exact.logical_call_id,
                 exact.call_index,
                 "failed",
                 None,
                 exact.elapsed_microseconds,
-                CallFailureCode.RETURNED_MODEL_MISMATCH,
+                (
+                    CallFailureCode.RETURNED_MODEL_MISMATCH
+                    if model_mismatch
+                    else CallFailureCode.PROVIDER_METADATA_INVALID
+                ),
                 exact.provider,
             )
         super().write_result(exact)
         self._append(exact)
         self._wall_microseconds += exact.elapsed_microseconds
         wall_exceeded = self._wall_microseconds > self._max_wall_microseconds
-        if mismatch:
+        if model_mismatch:
             raise _error(
                 ArtifactCode.HASH_MISMATCH,
                 "journal.returned_model_id",
                 "does not equal the manifest's requested model",
+            )
+        if missing_live_provider_evidence:
+            raise _error(
+                ArtifactCode.HASH_MISMATCH,
+                "journal.provider",
+                "successful live call lacks the required provider model evidence",
+            )
+        if exceeded_usage_field is not None:
+            raise _error(
+                ArtifactCode.LIMIT_EXCEEDED,
+                f"journal.provider.{exceeded_usage_field}",
+                "exceeds the formal per-attempt billable token ceiling",
             )
         if wall_exceeded:
             raise _error(
@@ -3414,6 +3548,61 @@ def _manifest_allowed_returned_model_id(manifest: BenchmarkManifest) -> str | No
     )
 
 
+def _manifest_billable_token_ceilings(
+    manifest: BenchmarkManifest,
+) -> dict[str, int] | None:
+    """Read a validated live pre-call envelope without importing the cyclic parser."""
+
+    if manifest.stub:
+        return None
+    pre_call = manifest.parameters.get("pre_call")
+    if pre_call is None:
+        return None
+    if type(pre_call) is not dict:
+        raise _error(
+            ArtifactCode.INVALID_INPUT,
+            "manifest.parameters.pre_call",
+            "must be an exact object or null",
+        )
+    pre_call_obj = cast(dict[str, object], pre_call)
+    if pre_call_obj.get("schema") != _FORMAL_PRE_CALL_CONFIG_VERSION:
+        return None
+    billing = pre_call_obj.get("billing_envelope")
+    if type(billing) is not dict:
+        raise _error(
+            ArtifactCode.INVALID_INPUT,
+            "manifest.parameters.pre_call.billing_envelope",
+            "must be an exact object",
+        )
+    wire = cast(dict[str, object], billing).get("wire")
+    if type(wire) is not dict:
+        raise _error(
+            ArtifactCode.INVALID_INPUT,
+            "manifest.parameters.pre_call.billing_envelope.wire",
+            "must be an exact object",
+        )
+    return _provider_usage_ceilings(
+        cast(dict[str, object], wire).get("billable_token_ceiling_per_attempt"),
+        (
+            "manifest.parameters.pre_call.billing_envelope.wire."
+            "billable_token_ceiling_per_attempt"
+        ),
+    )
+
+
+def _manifest_requires_successful_provider_evidence(
+    manifest: BenchmarkManifest,
+) -> bool:
+    if manifest.stub:
+        return False
+    pre_call = manifest.parameters.get("pre_call")
+    return (
+        type(pre_call) is dict
+        and cast(dict[str, object], pre_call).get("schema")
+        == _FORMAL_PRE_CALL_CONFIG_VERSION
+    )
+
+
 class ArtifactStore:
     """Exclusive owner of one fresh or resumable benchmark output directory."""
 
@@ -3471,6 +3660,12 @@ class ArtifactStore:
                 max_wall_microseconds=manifest.limits.max_wall_microseconds,
                 complete_unit_reservation=manifest.limits.complete_unit_reservation,
                 allowed_returned_model_id=_manifest_allowed_returned_model_id(manifest),
+                require_successful_provider_evidence=(
+                    _manifest_requires_successful_provider_evidence(manifest)
+                ),
+                billable_token_ceiling_per_attempt=(
+                    _manifest_billable_token_ceilings(manifest)
+                ),
             )
         except BaseException:
             fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
@@ -3512,6 +3707,12 @@ class ArtifactStore:
                 max_wall_microseconds=manifest.limits.max_wall_microseconds,
                 complete_unit_reservation=manifest.limits.complete_unit_reservation,
                 allowed_returned_model_id=_manifest_allowed_returned_model_id(manifest),
+                require_successful_provider_evidence=(
+                    _manifest_requires_successful_provider_evidence(manifest)
+                ),
+                billable_token_ceiling_per_attempt=(
+                    _manifest_billable_token_ceilings(manifest)
+                ),
                 resume=True,
             )
             units = cls._read_units(output_dir, manifest)
