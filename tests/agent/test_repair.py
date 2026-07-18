@@ -18,6 +18,11 @@ _DROP_85 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 85}'  # mel
 _MISS = '{"op": "drop_note", "target_onset": "0", "target_pitch": 84}'
 _AMBER = (Note(F(0), F(1), 41, "harmony"), Note(F(0), F(1), 49, "melody"))
 _DROP_41 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 41}'
+_AMBER_WITHOUT_MEDIAN_DIAGNOSTICS = (
+    Note(F(0), F(1), 44, "harmony"),
+    Note(F(0), F(1), 71, "melody"),
+)
+_DROP_44 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 44}'
 
 
 def test_already_green_returns_immediately() -> None:
@@ -85,6 +90,27 @@ def test_iteration_zero_retains_tab_and_oracle_before_repair() -> None:
     assert result.iteration_zero.infeasible is None
     assert result.terminal.oracle is not None
     assert result.terminal.oracle.verdict == "GREEN"
+
+
+def test_repair_accepts_amber_without_median_profile_diagnostics() -> None:
+    result = repair(
+        _AMBER_WITHOUT_MEDIAN_DIAGNOSTICS,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        FakeLLM([_DROP_44]),
+        max_iters=2,
+    )
+
+    checks = [step for step in result.trace.steps if step.event == "PLAYABILITY_CHECKED"]
+    proposed = next(step for step in result.trace.steps if step.event == "REPAIR_EDIT_PROPOSED")
+    assert result.iteration_zero.oracle is not None
+    assert result.iteration_zero.oracle.verdict == "AMBER"
+    assert result.iteration_zero.oracle.diagnostics == ()
+    assert checks[0].data["diagnostic_count"] == 0
+    assert proposed.data["based_on_diagnostic_codes"] == []
+    assert result.oracle is not None and result.oracle.verdict == "GREEN"
+    assert result.iterations == 1
 
 
 def test_repair_trace_is_digest_linked_and_candidate_scoped() -> None:

@@ -361,6 +361,15 @@ def test_every_product_event_has_one_frozen_valid_example() -> None:
         assert wire["steps"][0]["event"] == event
 
 
+def test_repair_edit_proposal_accepts_no_median_profile_diagnostics() -> None:
+    wire = _product_event(
+        "REPAIR_EDIT_PROPOSED",
+        based_on_diagnostic_codes=[],
+    ).to_wire()
+
+    assert wire["steps"][0]["data"]["based_on_diagnostic_codes"] == []
+
+
 def test_candidate_selection_accepts_canonical_unavailable_fidelity_dimensions() -> None:
     wire = _product_event(
         "CANDIDATE_SELECTED",

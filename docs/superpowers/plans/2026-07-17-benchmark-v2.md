@@ -6,7 +6,8 @@
 > by the roadmap; the historical 2026-07-10 Plan 4 remains an implementation
 > record and its numerical tables are not a current baseline.
 >
-> **Implementation progress (2026-07-18): Tasks 1–7 complete; Task 8 software-ready.** Strict
+> **Implementation progress (2026-07-18): Tasks 1–7 complete; Task 8 attempt 001
+> incomplete and repaired offline.** Strict
 > corpus/generator contracts, observable trajectories, the shared ten-sample pool,
 > baselines, registered statistics, durable artifacts, deterministic reports, and
 > full/fast CLI replay have passed their directed and independent gates. The licensed
@@ -18,8 +19,11 @@
 > operational pilot, exact pricing/budget arithmetic, WAL/resume path, and explicit
 > spend-confirmation boundary. The user then selected official current-model pricing
 > as the reference basis; a dated `gpt-5.6-sol` contract and a pre-network 4,096-token
-> input ceiling now compute a `$10.960896` pilot maximum. No real-model collection has
-> started: explicit spend approval and a matching configured proxy remain external.
+> input ceiling compute a `$10.960896` per-collection-attempt pilot maximum. The user
+> authorized attempt 001 and the proxy returned canonical `gpt-5.6-sol`, but collection
+> stopped at 0/8 rows after a valid empty diagnostic-code list exposed a trace-validator
+> inconsistency. The minimal fix passed the full offline gate. Attempt 001 cannot resume;
+> attempt 002 needs a new execution-bound pre-call, directory, and explicit authorization.
 >
 > **Runtime provenance correction (2026-07-17, before any model outcome):** per the
 > user-approved simplicity boundary, runtime collection/replay must not spawn Git or
@@ -360,6 +364,12 @@ status. An abort receipt preserves an incomplete run but cannot enter a report; 
 fully validated `COMPLETE` receipt owns a canonical raw-table hash. The pre-call
 manifest never owns run-after facts.
 
+Task 8 attempt 001 hit an unexpected local exception after closed calls but before the
+collector published an abort receipt. Its byte-preserved private pre-call, manifest, and
+WAL plus public hashes establish the incomplete boundary; no abort receipt exists, and
+the run remains non-resumable and ineligible for reporting. This exception does not
+relax the formal runner's abort-receipt or complete-receipt requirements.
+
 Rows are uniquely keyed and deterministically sorted before finalization. Report replay
 first resolves every blob and re-runs solver/oracle/fidelity (`rescore`), then derives
 all arms/statistics from those verified outcomes (`reaggregate`). A separate fast
@@ -676,13 +686,18 @@ handoff operation rather than runtime behavior.
 
 ## 12. Task 8 — Operational proxy pilot and explicit budget gate
 
-**Status (2026-07-18): PRICED SOFTWARE READY / REAL PILOT NOT RUN.** The canonical
+**Status (2026-07-18): ATTEMPT 001 INCOMPLETE / TRACE FIX VERIFIED / ATTEMPT 002 NOT
+AUTHORIZED.** The canonical
 [pilot specification](../../experiments/2026-07-18-benchmark-v2-pilot-spec.json),
 scripts-only collector, exact pricing/budget gate, clean-resume tests, and explicit
 spend-confirmation boundary are complete. See the
 [Task 8 readiness record](../../BENCHMARK_V2_TASK8_READINESS.md). The official-reference
-price contract and its pre-network input bound are verified; no provider call, network
-collection, or budget authorization has occurred.
+price contract and its pre-network input bound are verified. The user authorized
+attempt 001, which made 6 logical calls/7 provider attempts and committed 0/8 rows
+before the trace exception. Its exact billed cost is unavailable; the conservative
+upper bound is `$0.613376`. The run cannot resume. Attempt 002 requires a fresh pre-call,
+directory, and `$10.960896` authorization after disclosure of the two-collection-attempt
+`$11.574272` cumulative mechanical upper bound.
 
 - Run a separately labeled pilot only after the runner-ready SHA is clean and pushed,
   on at most two two-bar procedural families excluded from the formal corpus and two

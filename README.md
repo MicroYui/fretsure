@@ -119,15 +119,17 @@ lead sheet / MIDI / IR
 ## 状态
 
 **Plan 1–5、Oracle 0.2 软件信任门、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR、
-strict MIDI input 与 benchmark v2 Task 1–7 runner-ready 软件门均已闭门；尚未发起真模型收集。**
+strict MIDI input 与 benchmark v2 Task 1–7 runner-ready 软件门均已闭门；Task 8 的首次真实
+pilot 已中止，最小 trace 修复已通过完整离线回归，完成 pilot 仍待全新的 attempt-002。**
 当前 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、
 faithfulness=`fidelity@0.3.0`，trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、
 API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=
 `oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0` 保持不变，
 `music21==10.5.0` 精确锁定。MIDI 的两正两负 exact producer rows、资源门、诚实限制与 Git receipt
 见 [`docs/MIDI_ACCEPTANCE.md`](docs/MIDI_ACCEPTANCE.md)。benchmark v2 已冻结 500 个 procedural
-families + 3 个许可 public controls、机器预注册、预算、逐项 rows、统计、WAL 与 replay；真实代理
-pilot/收集仍须经过独立价格与用户授权门。详见
+families + 3 个许可 public controls、机器预注册、预算、逐项 rows、统计、WAL 与 replay。已授权的
+attempt-001 在 6 个逻辑调用后因合法空诊断列表与 trace 约束冲突而停止，0/8 行落盘且不可 resume；
+attempt-002 仍须新 pre-call、新目录和新的精确用户授权。详见
 [`2026-07-17-benchmark-v2.md`](docs/superpowers/plans/2026-07-17-benchmark-v2.md)。完整 Plan 6 的音频、
 AlphaTab、真实琴颈动画、导出、live A/B/榜单与真人 money moment 仍 open。
 

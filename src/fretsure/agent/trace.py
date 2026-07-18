@@ -1016,10 +1016,10 @@ def _validate_product_payload(
             raise TraceInputError(path, "tier result and violation count disagree")
     elif event == "REPAIR_EDIT_PROPOSED":
         codes = data["based_on_diagnostic_codes"]
-        if type(codes) is not list or not codes or len(codes) > MAX_TRACE_DIAGNOSTICS_PER_STEP:
+        if type(codes) is not list or len(codes) > MAX_TRACE_DIAGNOSTICS_PER_STEP:
             raise TraceInputError(
                 f"{path}.based_on_diagnostic_codes",
-                "must be a non-empty bounded list",
+                "must be a bounded list",
             )
         seen_codes: set[str] = set()
         for index, value in enumerate(cast(list[object], codes)):

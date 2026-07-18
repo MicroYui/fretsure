@@ -253,3 +253,47 @@ started. Final follow-up verification passed 2,449 offline tests (8 integration 
 deselected), the empty-provider integration boundary skipped all 8 tests, and the
 distribution audit reported 114 wheel / 315 sdist entries. The wheel SHA-256 remained
 `615025e1d3f0fdc34119880ac79231b9388e3a2d0b513abc1ad7d15ef99b87fb`.
+
+## 2026-07-18 — Task 8 live attempt 001 interruption and trace fix
+
+The user explicitly authorized the priced pilot's exact `$10.960896` maximum and the
+configured loopback proxy returned `gpt-5.6-sol`. Attempt 001 stopped before committing
+its first row after 6 logical calls and 7 provider attempts. The WAL is closed and
+hash-valid, but its terminal calls are not owned by a complete staged unit, so the
+existing recovery contract correctly refuses `--resume` before any new provider request
+or network attempt.
+
+No raw prompt or response text was inspected or used to change the experiment; diagnosis
+used only the typed exception, aggregate WAL metadata, and offline deterministic
+reproduction.
+
+The reported successful usage was 4,515 input and 1,740 output tokens with no cache
+usage, which is `$0.074775` under the checked-in reference contract. One failed retry
+has no usage metadata, so exact billed cost is unavailable; applying all contractual
+input ceilings to the seven attempts plus their 9,216 stage-specific reserved output
+tokens gives a conservative `$0.613376` upper bound. The private
+pre-call, manifest, and WAL were preserved outside Git under ignored `outputs/private/`;
+their public audit hashes are recorded in
+[`BENCHMARK_V2_TASK8_READINESS.md`](../BENCHMARK_V2_TASK8_READINESS.md).
+
+The exception exposed one narrow trace inconsistency. AMBER can legitimately have zero
+median-profile diagnostics because its verdict also considers optimistic/pessimistic
+profiles. Repair preserved that fact as an empty diagnostic-code list, while the trace
+validator incorrectly required a non-empty list. The validator now accepts an empty
+list while retaining its exact-list, bounded-length, unique-code, and stable-code
+checks. Trace-level and repair-level regressions cover the state. The directed repair,
+trace, pipeline, and Task 8 pilot suite passed 147 tests; the full offline suite passed
+2,451 tests with 8 integration tests deselected; Ruff, strict mypy, the empty-provider
+integration boundary, lock/prereg/spec checks, Markdown links, and diff integrity all
+passed. The rebuilt 0.6.0 distributions passed the 114-wheel/315-sdist audit and clean
+install matrix; wheel SHA-256 is
+`f24e510a56219d1c7673d03ec5870736b523c195adea73f82a1765a71738372d`.
+No frontend, model, prompt, corpus, schedule, pricing, runtime Git, or subprocess behavior
+changed.
+
+Attempt 001 is terminal. Attempt 002 needs a new commit-bound pre-call, a fresh output
+directory, and a new explicit `$10.960896` authorization. Including attempt 001's
+conservative bound, the disclosed two-collection-attempt cumulative mechanical upper
+bound is `$11.574272`.
+
+Task 9 has not started.
