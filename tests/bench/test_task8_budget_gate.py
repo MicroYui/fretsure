@@ -22,6 +22,12 @@ PRICING_SOURCE_PATH = (
 PRICING_CONTRACT_PATH = (
     ROOT / "docs" / "experiments" / "2026-07-18-gpt-5.6-sol-pricing-contract.json"
 )
+FORMAL_ENVELOPE_PATH = (
+    ROOT
+    / "docs"
+    / "experiments"
+    / "2026-07-18-gpt-5.6-sol-formal-billing-envelope.json"
+)
 SPEC = importlib.util.spec_from_file_location(
     "fretsure_test_task8_budget_gate",
     ROOT / "scripts" / "task8_budget_gate.py",
@@ -80,6 +86,27 @@ def _pricing(
         evidence_captured_at_utc="2026-07-18T03:04:05Z",
         evidence_source_sha256="a" * 64,
     )
+
+
+def _formal_envelope(
+    pricing: Any,
+    *,
+    ceilings: dict[str, int] | None = None,
+) -> Any:
+    return gate.build_formal_billing_envelope(
+        pricing_contract_raw_sha256=pricing.raw_sha256,
+        billable_token_ceiling_per_attempt=(
+            _ceilings() if ceilings is None else ceilings
+        ),
+    )
+
+
+def _formal_envelope_kwargs(pricing: Any) -> dict[str, object]:
+    envelope = _formal_envelope(pricing)
+    return {
+        "formal_billing_envelope": envelope,
+        "expected_formal_billing_envelope_sha256": envelope.raw_sha256,
+    }
 
 
 def _stage(
@@ -189,7 +216,9 @@ def test_pricing_contract_is_exact_canonical_and_raw_hash_bound() -> None:
         gate.token_pricing_contract_from_bytes(noncanonical)
 
 
-def test_committed_openai_reference_price_is_canonical_and_mechanical() -> None:
+def test_committed_openai_reference_price_is_canonical_and_mechanical(
+    preregistration: Any,
+) -> None:
     source_bytes = PRICING_SOURCE_PATH.read_bytes()
     source = cast(dict[str, object], parse_canonical_json_bytes(source_bytes))
     source_sha256 = hashlib.sha256(source_bytes).hexdigest()
@@ -215,6 +244,25 @@ def test_committed_openai_reference_price_is_canonical_and_mechanical() -> None:
     evidence = cast(dict[str, object], pricing.to_dict()["evidence"])
     assert evidence["source_sha256"] == source_sha256
     assert gate.pilot_worst_case_budget(pricing)["cost_microunits"] == 10_960_896
+
+    formal_envelope = gate.formal_billing_envelope_from_bytes(
+        FORMAL_ENVELOPE_PATH.read_bytes()
+    )
+    assert formal_envelope.raw_sha256 == (
+        "5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d"
+    )
+    assert formal_envelope.pricing_contract_raw_sha256 == pricing.raw_sha256
+    assert formal_envelope.ceilings == {
+        "cache_creation_input_tokens": 272_000,
+        "cache_read_input_tokens": 272_000,
+        "input_tokens": 272_000,
+        "output_tokens": 16_384,
+    }
+    assert gate.formal_worst_case_budget(
+        preregistration,
+        pricing,
+        formal_envelope,
+    )["cost_microunits"] == 538_865_486_400
 
 
 @pytest.mark.parametrize(
@@ -244,6 +292,29 @@ def test_pricing_contract_rejects_currency_timestamp_rate_and_unit_drift(
     mutation(wire)
     with pytest.raises(gate.Task8BudgetGateError) as caught:
         gate.token_pricing_contract_from_dict(wire)
+    assert caught.value.field.endswith(field)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("cache_creation_input_tokens", 272_001),
+        ("cache_read_input_tokens", 272_001),
+        ("input_tokens", 272_001),
+        ("output_tokens", 16_385),
+    ],
+)
+def test_formal_envelope_rejects_values_outside_frozen_provider_bounds(
+    field: str,
+    value: int,
+) -> None:
+    pricing = _pricing()
+    wire = _formal_envelope(pricing).to_dict()
+    ceilings = cast(dict[str, object], wire["billable_token_ceiling_per_attempt"])
+    ceilings[field] = value
+
+    with pytest.raises(gate.Task8BudgetGateError) as caught:
+        gate.formal_billing_envelope_from_dict(wire)
     assert caught.value.field.endswith(field)
 
 
@@ -319,7 +390,11 @@ def test_pilot_and_formal_worst_case_iterate_exact_call_templates(
 ) -> None:
     pricing = _pricing()
     pilot = gate.pilot_worst_case_budget(pricing)
-    formal = gate.formal_worst_case_budget(preregistration, pricing)
+    formal = gate.formal_worst_case_budget(
+        preregistration,
+        pricing,
+        _formal_envelope(pricing),
+    )
 
     assert pilot["resources"] == {
         "attempt_reserved_output_tokens": 153_600,
@@ -435,6 +510,7 @@ def test_gate_scales_projection_with_ceil_and_never_subtracts_pilot_from_formal(
         preregistration=preregistration,
         pricing_contract=pricing,
         expected_pricing_contract_sha256=pricing.raw_sha256,
+        **_formal_envelope_kwargs(pricing),
         operational_usage=usage,
         pilot_receipt_sha256="b" * 64,
         pilot_summary_sha256=usage.raw_sha256,
@@ -493,6 +569,67 @@ def test_gate_scales_projection_with_ceil_and_never_subtracts_pilot_from_formal(
     )
 
 
+def test_projection_rounds_calls_before_fixed_stage_token_reservations(
+    preregistration: Any,
+) -> None:
+    pricing = _pricing()
+    usage = _usage(
+        logical_calls=27,
+        attempts=31,
+        requested=34_304,
+        reserved=42_496,
+        elapsed=473_726_578,
+        input_tokens=None,
+        output_tokens=None,
+        cache_creation_input_tokens=None,
+        cache_read_input_tokens=None,
+        stage_totals=(
+            _stage(
+                "proposal_raw",
+                logical_calls=8,
+                retries=4,
+                max_output_tokens=2_048,
+            ),
+            _stage(
+                "repair",
+                logical_calls=16,
+                retries=0,
+                max_output_tokens=1_024,
+            ),
+            _stage(
+                "critic",
+                logical_calls=3,
+                retries=0,
+                max_output_tokens=512,
+            ),
+        ),
+        usage_covers_all_attempts=False,
+    )
+    artifact = gate.build_formal_budget_gate(
+        preregistration=preregistration,
+        pricing_contract=pricing,
+        expected_pricing_contract_sha256=pricing.raw_sha256,
+        **_formal_envelope_kwargs(pricing),
+        operational_usage=usage,
+        pilot_receipt_sha256="b" * 64,
+        pilot_summary_sha256=usage.raw_sha256,
+        formal_maximum_spend_microunits=None,
+    ).to_dict()
+    formal = cast(dict[str, object], artifact["formal"])
+    projection = cast(dict[str, object], formal["pilot_informed_projection"])
+    resources = cast(dict[str, object], projection["resources"])
+    stages = cast(dict[str, object], resources["stage_totals"])
+
+    assert stages["critic"] == {
+        "attempt_reserved_output_tokens": 1_931_776,
+        "logical_calls": 3_773,
+        "projected_retries": 0,
+        "requested_output_tokens": 1_931_776,
+    }
+    assert resources["requested_output_tokens"] == 71_658_496
+    assert resources["attempt_reserved_output_tokens"] == 96_220_416
+
+
 def test_gate_null_usage_propagates_to_actual_and_projection(
     preregistration: Any,
 ) -> None:
@@ -502,6 +639,7 @@ def test_gate_null_usage_propagates_to_actual_and_projection(
         preregistration=preregistration,
         pricing_contract=pricing,
         expected_pricing_contract_sha256=pricing.raw_sha256,
+        **_formal_envelope_kwargs(pricing),
         operational_usage=usage,
         pilot_receipt_sha256="b" * 64,
         pilot_summary_sha256=usage.raw_sha256,
@@ -529,6 +667,7 @@ def test_gate_null_usage_propagates_to_actual_and_projection(
         preregistration=preregistration,
         pricing_contract=pricing,
         expected_pricing_contract_sha256=pricing.raw_sha256,
+        **_formal_envelope_kwargs(pricing),
         operational_usage=incomplete_usage,
         pilot_receipt_sha256="b" * 64,
         pilot_summary_sha256=incomplete_usage.raw_sha256,
@@ -563,13 +702,18 @@ def test_gate_rejects_pricing_hash_model_ceiling_and_projection_errors(
 ) -> None:
     pricing = _pricing()
     other_model_pricing = _pricing(model="other-model")
-    low_output_ceiling_pricing = _pricing(ceilings=_ceilings(output_tokens=1_000))
+    foreign_envelope = _formal_envelope(other_model_pricing)
+    low_output_envelope = _formal_envelope(
+        pricing,
+        ceilings=_ceilings(output_tokens=1_000),
+    )
     usage = _usage()
     excessive_elapsed_usage = _usage(elapsed=5_400_000_000)
     kwargs = {
         "preregistration": preregistration,
         "pricing_contract": pricing,
         "expected_pricing_contract_sha256": pricing.raw_sha256,
+        **_formal_envelope_kwargs(pricing),
         "operational_usage": usage,
         "pilot_receipt_sha256": "b" * 64,
         "pilot_summary_sha256": usage.raw_sha256,
@@ -581,18 +725,38 @@ def test_gate_rejects_pricing_hash_model_ceiling_and_projection_errors(
         (
             {
                 **kwargs,
+                "expected_formal_billing_envelope_sha256": "0" * 64,
+            },
+            "formal_billing_envelope",
+        ),
+        (
+            {
+                **kwargs,
                 "pricing_contract": other_model_pricing,
                 "expected_pricing_contract_sha256": other_model_pricing.raw_sha256,
+                **_formal_envelope_kwargs(other_model_pricing),
             },
             "model",
         ),
         (
             {
                 **kwargs,
-                "pricing_contract": low_output_ceiling_pricing,
-                "expected_pricing_contract_sha256": low_output_ceiling_pricing.raw_sha256,
+                "formal_billing_envelope": low_output_envelope,
+                "expected_formal_billing_envelope_sha256": (
+                    low_output_envelope.raw_sha256
+                ),
             },
             "output_tokens",
+        ),
+        (
+            {
+                **kwargs,
+                "formal_billing_envelope": foreign_envelope,
+                "expected_formal_billing_envelope_sha256": (
+                    foreign_envelope.raw_sha256
+                ),
+            },
+            "pricing_contract_raw_sha256",
         ),
         ({**kwargs, "formal_maximum_spend_microunits": 1}, "maximum_spend"),
         (
@@ -613,13 +777,18 @@ def test_positive_external_ceiling_must_equal_mechanical_formal_worst_case(
 ) -> None:
     pricing = _pricing()
     usage = _usage()
-    formal_cost = gate.formal_worst_case_budget(preregistration, pricing)[
+    formal_cost = gate.formal_worst_case_budget(
+        preregistration,
+        pricing,
+        _formal_envelope(pricing),
+    )[
         "cost_microunits"
     ]
     artifact = gate.build_formal_budget_gate(
         preregistration=preregistration,
         pricing_contract=pricing,
         expected_pricing_contract_sha256=pricing.raw_sha256,
+        **_formal_envelope_kwargs(pricing),
         operational_usage=usage,
         pilot_receipt_sha256="b" * 64,
         pilot_summary_sha256=usage.raw_sha256,
@@ -644,13 +813,18 @@ def test_exact_zero_external_ceiling_is_declared_not_treated_as_missing(
         fixed=0,
     )
     usage = _usage()
-    assert gate.formal_worst_case_budget(preregistration, pricing)[
+    assert gate.formal_worst_case_budget(
+        preregistration,
+        pricing,
+        _formal_envelope(pricing),
+    )[
         "cost_microunits"
     ] == 0
     artifact = gate.build_formal_budget_gate(
         preregistration=preregistration,
         pricing_contract=pricing,
         expected_pricing_contract_sha256=pricing.raw_sha256,
+        **_formal_envelope_kwargs(pricing),
         operational_usage=usage,
         pilot_receipt_sha256="b" * 64,
         pilot_summary_sha256=usage.raw_sha256,
@@ -671,6 +845,7 @@ def test_gate_round_trip_recomputes_bindings_and_rejects_tampering(
         preregistration=preregistration,
         pricing_contract=pricing,
         expected_pricing_contract_sha256=pricing.raw_sha256,
+        **_formal_envelope_kwargs(pricing),
         operational_usage=usage,
         pilot_receipt_sha256="b" * 64,
         pilot_summary_sha256=usage.raw_sha256,
@@ -681,6 +856,7 @@ def test_gate_round_trip_recomputes_bindings_and_rejects_tampering(
         preregistration=preregistration,
         pricing_contract=pricing,
         expected_pricing_contract_sha256=pricing.raw_sha256,
+        **_formal_envelope_kwargs(pricing),
         operational_usage=usage,
         pilot_receipt_sha256="b" * 64,
         pilot_summary_sha256=usage.raw_sha256,
@@ -694,6 +870,7 @@ def test_gate_round_trip_recomputes_bindings_and_rejects_tampering(
             preregistration=preregistration,
             pricing_contract=pricing,
             expected_pricing_contract_sha256=pricing.raw_sha256,
+            **_formal_envelope_kwargs(pricing),
             operational_usage=usage,
             pilot_receipt_sha256="b" * 64,
             pilot_summary_sha256=usage.raw_sha256,
@@ -707,14 +884,17 @@ def test_cli_generates_and_checks_exact_artifact(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     pricing = _pricing()
+    formal_envelope = _formal_envelope(pricing)
     usage = _usage()
     prereg_path = tmp_path / "prereg.json"
     pricing_path = tmp_path / "pricing.json"
+    formal_envelope_path = tmp_path / "formal-envelope.json"
     usage_path = tmp_path / "usage.json"
     receipt_path = tmp_path / "receipt.json"
     output = tmp_path / "gate.json"
     prereg_path.write_bytes(preregistration.wire_json)
     pricing_path.write_bytes(pricing.wire_json)
+    formal_envelope_path.write_bytes(formal_envelope.wire_json)
     usage_path.write_bytes(usage.wire_json)
     receipt_path.write_bytes(b"pilot receipt fixture")
     # This test owns CLI mechanics, not the preregistration module's expensive
@@ -733,6 +913,10 @@ def test_cli_generates_and_checks_exact_artifact(
         str(pricing_path),
         "--expected-pricing-sha256",
         pricing.raw_sha256,
+        "--formal-billing-envelope",
+        str(formal_envelope_path),
+        "--expected-formal-billing-envelope-sha256",
+        formal_envelope.raw_sha256,
         "--pilot-summary",
         str(usage_path),
         "--pilot-receipt",
@@ -747,6 +931,8 @@ def test_cli_generates_and_checks_exact_artifact(
         preregistration=preregistration,
         pricing_contract=pricing,
         expected_pricing_contract_sha256=pricing.raw_sha256,
+        formal_billing_envelope=formal_envelope,
+        expected_formal_billing_envelope_sha256=formal_envelope.raw_sha256,
         operational_usage=usage,
         pilot_receipt_sha256=hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
         pilot_summary_sha256=usage.raw_sha256,

@@ -1,11 +1,11 @@
 # Benchmark v2 Task 8 — operational pilot software readiness
 
-> **Status (2026-07-18): ATTEMPT 001 INCOMPLETE; TRACE FIX VERIFIED; ATTEMPT 002 NOT
-> AUTHORIZED.** The user authorized the exact `$10.960896` attempt-001 ceiling and the
-> live proxy returned canonical `gpt-5.6-sol`. Collection stopped before its first row
-> committed when a valid empty diagnostic-code list met an inconsistent non-empty trace
-> constraint. The run is retained as private evidence and cannot be resumed. Task 9 has
-> not started.
+> **Status (2026-07-18): TASK 8 PILOT COMPLETE; FORMAL BUDGET GATE GENERATED; TASK 9
+> NOT AUTHORIZED.** Attempt 001 remains an immutable incomplete run. After the trace fix
+> and a separate explicit `$10.960896` authorization, fresh attempt 002 completed all
+> `8/8` scheduled rows. Its six failed provider attempts do not expose usage, so actual
+> and projected cost remain `incomplete_attempt_usage`. The formal gate is explicitly
+> non-authorizing; no Task 9 model call has started.
 
 ## Frozen operational pilot
 
@@ -38,14 +38,14 @@ before the following raw row it reserves the remaining raw unit.
 
 ## Price and authorization gate
 
-[`task8_budget_gate.py`](../scripts/task8_budget_gate.py) accepts only a canonical,
-evidence-bound pricing contract with exact integer microunit rates, billing model and
-provider, currency, fixed per-attempt cost, four billable token ceilings, rounding
-semantics, evidence timestamp/reference, and evidence SHA-256. It computes both pilot
-and formal worst cases without floating-point arithmetic. Aggregate billing rounds the
-combined token amount once; per-attempt/per-component billing is used only when the
-contract explicitly selects it. Missing usage and retry attempts not covered by usage
-metadata remain unavailable rather than becoming zero.
+[`task8_budget_gate.py`](../scripts/task8_budget_gate.py) accepts an immutable canonical
+pilot pricing contract plus a separately hashed formal billing envelope. The pricing
+contract binds exact integer microunit rates, model/provider, currency, fixed
+per-attempt cost, rounding semantics, evidence, and the pilot ceilings used by both live
+pre-calls. The formal envelope binds only the wider formal ceilings, its enforcement
+scope, and the exact pilot-pricing SHA. Rate terms are never silently replaced. All
+cost arithmetic is integer-only; missing usage remains unavailable rather than becoming
+zero.
 
 [`task8_pilot.py`](../scripts/task8_pilot.py) embeds the complete canonical pricing
 contract in a pre-call declaration, recomputes its raw hash and mechanical pilot cost,
@@ -68,6 +68,17 @@ OpenAI standard short-context `gpt-5.6-sol` rates per million tokens: input
 and computes a deliberately conservative full-pilot maximum of `10,960,896` micro-USD
 (`$10.960896`). This is an official direct-price reference; a live proxy must use the
 same billing basis rather than add an undisclosed surcharge.
+
+The checked-in
+[formal billing envelope](experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json)
+has SHA-256
+`5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d`. It is bound to
+the pricing-contract SHA above and declares per-attempt ceilings of `272,000` for each
+input/cache billing bucket and `16,384` output tokens. The formal output templates retain
+their item-specific request limits—the largest is `15,968`—while `92,904,960` is the
+full-run requested-output total, not a per-call limit. Before Task 9 can start, every
+formal prompt must enforce the envelope's `UTF-8 bytes + 256` input upper bound before
+observation, retry, or network I/O.
 
 The still-unrun formal workload remains independent of the pilot:
 
@@ -95,9 +106,9 @@ attempts, one retry, 6 successful call results, and no open intent. All returned
 IDs were exactly `gpt-5.6-sol`. The reported successful usage totals were 4,515 input
 tokens, 1,740 output tokens, and zero cache-creation/cache-read tokens; those reported
 values price to `$0.074775` under the reference contract. The failed retry attempt had
-no usage metadata, so exact billed cost is unavailable. Applying all three 4,096-token
-input-bucket ceilings to each of the 7 attempts, plus their stage-specific 9,216
-reserved output tokens, gives a conservative attempt-001 upper bound of `$0.613376`.
+no usage metadata, so exact billed cost is unavailable. Combining the known usage with
+that one attempt's input and stage-specific output ceilings gives the tight reference
+interval `$0.074775..$0.184343`.
 
 No row was committed before the exception. Six terminal calls therefore have no owning
 staged unit, so the existing fail-closed resume contract rejects this directory before
@@ -121,19 +132,87 @@ type, maximum length, unique codes, and stable-code validation remain unchanged.
 not fabricate a diagnosis or change repair policy. The WAL alone establishes the call
 boundary and incomplete unit, not the exception's cause.
 
-Attempt 002 requires a new execution commit, `collection_attempt=2` pre-call, fresh
-directory, and a new exact `$10.960896` authorization. Adding the conservative
-attempt-001 upper bound makes the disclosed two-collection-attempt mechanical upper
-bound `$11.574272`. The partial outcome was not used to change the model, prompts,
-corpus, schedule, or acceptance criteria.
+The partial outcome was not used to change the model, prompts, corpus, schedule, or
+acceptance criteria. Attempt 002 used a new execution commit, `collection_attempt=2`
+pre-call, fresh directory, and separate authorization; attempt 001 was never resumed.
+
+## Live attempt 002 completion
+
+The user independently authorized attempt 002's exact `10,960,896` micro-USD ceiling
+after reviewing attempt 001. The fresh run completed all `8/8` scheduled rows and
+finalized its canonical receipt, rows, blobs, observations, and operational summary.
+
+| Operational measure | Attempt 002 |
+|---|---:|
+| Logical calls | 27 |
+| Provider attempts | 31 |
+| Retries | 4 |
+| Requested output tokens | 34,304 |
+| Attempt-reserved output tokens | 42,496 |
+| Recorded provider elapsed | 473,726,578 µs |
+| Active host elapsed | 477,264,352 µs |
+| Committed rows | 8/8 |
+
+The active-host value is from the live command's completion output; the canonical
+operational-summary artifact intentionally persists provider elapsed time, not host wall
+time.
+
+Twenty-five successful attempts reported 18,781 input tokens, 11,482 output tokens,
+and zero cache-creation/cache-read tokens. Six failed attempts did not report usage.
+The known usage prices to `$0.438365`; applying only the missing attempts' applicable
+ceilings gives the tight reference interval `$0.438365..$1.095773`. Because usage does
+not cover every attempt, both the formal gate's pilot actual cost and pilot-informed
+projection correctly remain `incomplete_attempt_usage` rather than treating missing
+tokens as zero.
+
+Across attempts 001 and 002, known reported usage costs `$0.513140`; the combined tight
+upper bound is `$1.280116`. These are audit intervals, not replacements for provider
+billing records and not authorization for another collection.
+
+The following are SHA-256 hashes of the exact retained file bytes; the underlying files
+remain private and gitignored:
+
+| Attempt-002 artifact | Raw-file SHA-256 |
+|---|---|
+| Config | `99064424dedf4087c4299adaf6836790277d7011bde8f6202188c0d1deb00dbc` |
+| WAL journal | `3be360890e7f090fb48ad7836e471f1876ccc12895d035c9011db85bb7b2992a` |
+| Operational summary | `d299678367dccc9b9fb1b2f0c386daf961522b937cf04b0017a9aa2f1f5e041c` |
+| Canonical receipt | `10802ea02d4b6188122338fb99b4327efcf175e55f59c138e1194805b204a5da` |
+| Canonical rows | `61a84ad1329df420ef16d7ce37a417ccc8f1bb172356f204f6d35ca94d810d75` |
+| Canonical blobs | `fd74a399ba30d084371606a0fd685d6cb0d1365ff1181983f8730b9ea5137f37` |
+| Canonical observations | `bae49ce5e3081ddce80f99cd55f09981c159611e86b91b657af83601ae582f98` |
+
+These raw-file hashes intentionally differ from any domain-separated hashes embedded
+inside the receipt. A receipt binding authenticates its defined canonical domain; it is
+not specified as the ordinary SHA-256 of the enclosing file bytes.
+
+## Formal budget gate and Task 9 boundary
+
+The non-authorizing formal gate binds the pilot pricing contract SHA
+`c93229c60003905d0946bd4d66096943a337a3763839715f296ecb338148baa5`, formal envelope
+SHA `5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d`, completed
+attempt-002 receipt/summary, and unchanged formal preregistration. Its raw-file SHA-256
+is `a421e1c330b600dbd19cdc3da145967033c9740132278c0c7afa7f62711fc57e`.
+
+The mechanical formal worst case is `538,865,486,400` micro-USD
+(`$538,865.486400`). The gate leaves the external ceiling null with status
+`authorization_required`; its actual and projected costs remain
+`incomplete_attempt_usage`. Generating this artifact does not authorize the formal run.
+Task 9 has not started and requires both the pre-network formal input guard and a new,
+independent user authorization for the exact formal spend and call envelope.
+
+The corrected pilot-informed resource projection is 33,953 logical calls, 38,983
+attempts, 71,658,496 requested output tokens, and 96,220,416 attempt-reserved output
+tokens. It remains a non-authorizing projection, not a reduction of the formal worst
+case.
 
 ## Offline evidence
 
-- The directed Task 8 suites passed 34 tests: 15 pilot tests and 19 pricing/budget
+- The directed Task 8 suites passed 39 tests: 15 pilot tests and 24 pricing/budget
   tests. Ruff and strict mypy passed both scripts.
-- The full offline suite passed 2,451 tests with 8 integration tests deselected. The
+- The full offline suite passed 2,456 tests with 8 integration tests deselected. The
   empty-provider integration boundary skipped all 8 integration tests without making
-  a call. The rebuilt distribution audit passed with 114 wheel and 315 sdist entries;
+  a call. The rebuilt distribution audit passed with 114 wheel and 316 sdist entries;
   the clean install matrix passed for core replay, benchmark, MusicXML, MIDI, score,
   service, and MCP.
 - One-shot stub collection and a clean resume after one committed agent row produced
@@ -152,6 +231,10 @@ corpus, schedule, or acceptance criteria.
   version, lockfile, frontend, and visual design remain unchanged; the trace-validation
   runtime and execution/wheel digests changed. The repaired wheel SHA-256 is
   `f24e510a56219d1c7673d03ec5870736b523c195adea73f82a1765a71738372d`.
+- Attempt 002 satisfied the operational acceptance purpose: a fresh authorized run
+  completed every scheduled row, finalized all canonical pilot artifacts, and retained
+  missing failed-attempt usage as unavailable. The formal envelope and budget gate bind
+  the completed receipt without moving any outcome threshold or starting Task 9.
 
 ## Commands
 
@@ -166,8 +249,8 @@ uv run python scripts/task8_pilot.py \
   --output-dir /tmp/fretsure-task8-stub
 ```
 
-Build a priced declaration from the checked-in contract and explicit execution digests;
-this command does not inspect Git or authorize collection:
+The following declaration/live sequence is retained only as the completed attempt-002
+procedure. It must not be rerun or resumed:
 
 ```bash
 uv run python scripts/task8_pilot.py \
@@ -180,9 +263,6 @@ uv run python scripts/task8_pilot.py \
   --uv-lock-sha256 <uv-lock-sha256>
 ```
 
-Only after the user approves the exact computed value may a live invocation supply the
-second, matching confirmation:
-
 ```bash
 uv run python scripts/task8_pilot.py \
   --live \
@@ -191,14 +271,20 @@ uv run python scripts/task8_pilot.py \
   --output-dir /secure/path/pilot-attempt-002
 ```
 
-The completed live receipt and root operational summary then feed the non-authorizing
-formal gate:
+The completed receipt and operational summary feed the non-authorizing formal gate. The
+absence of `--formal-maximum-spend-microunits` is intentional: this command records that
+authorization is still required.
 
 ```bash
 uv run python scripts/task8_budget_gate.py \
   --prereg docs/experiments/2026-07-17-benchmark-v2-prereg.json \
-  --pricing-contract /secure/path/pricing-contract.json \
-  --expected-pricing-sha256 <pricing-contract-sha256> \
+  --pricing-contract docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract.json \
+  --expected-pricing-sha256 \
+    c93229c60003905d0946bd4d66096943a337a3763839715f296ecb338148baa5 \
+  --formal-billing-envelope \
+    docs/experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json \
+  --expected-formal-billing-envelope-sha256 \
+    5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d \
   --pilot-summary /secure/path/pilot-attempt-002/operational-summary.json \
   --pilot-receipt /secure/path/pilot-attempt-002/canonical/receipt.json \
   --output /secure/path/formal-budget-gate.json
@@ -206,10 +292,8 @@ uv run python scripts/task8_budget_gate.py \
 
 ## Remaining external gate
 
-Before attempt 002, explicitly approve its mechanically computed `$10.960896` maximum
-after seeing the cumulative `$11.574272` two-collection-attempt upper bound. Then the new live run
-must use the captured official pricing basis, new pre-call, and new output directory.
-After a complete pilot, the formal budget gate will bind its receipt, operational
-summary, pricing contract, and unchanged formal preregistration. Task 9 still requires a
-separate explicit authorization of the computed formal spend and call budget. Until
-then, the correct state is paused at the fresh-attempt spend gate.
+Task 8 is complete; attempt 002 must not be rerun. Task 9 remains paused before any
+formal provider call. Its collector must first enforce the formal envelope's
+`UTF-8 bytes + 256` input bound before observation, retry, or network I/O. The user must
+then independently authorize the exact `$538,865.486400` mechanical formal ceiling and
+the frozen call envelope. The generated gate itself grants no such authorization.

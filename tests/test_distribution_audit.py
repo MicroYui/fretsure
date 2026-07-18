@@ -182,6 +182,13 @@ def test_sdist_audit_requires_task7_and_task8_evidence_and_exact_sources(
             "pricing-contract",
             "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract.json",
         ),
+        (
+            "formal-billing-envelope",
+            (
+                "docs/experiments/"
+                "2026-07-18-gpt-5.6-sol-formal-billing-envelope.json"
+            ),
+        ),
     ):
         missing_price = tmp_path / f"missing-task8-{label}.tar.gz"
         _write_test_sdist(missing_price, omitted=relative)

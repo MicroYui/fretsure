@@ -6,8 +6,8 @@
 > by the roadmap; the historical 2026-07-10 Plan 4 remains an implementation
 > record and its numerical tables are not a current baseline.
 >
-> **Implementation progress (2026-07-18): Tasks 1–7 complete; Task 8 attempt 001
-> incomplete and repaired offline.** Strict
+> **Implementation progress (2026-07-18): Tasks 1–7 complete; Task 8 operational
+> pilot complete; Task 9 not started.** Strict
 > corpus/generator contracts, observable trajectories, the shared ten-sample pool,
 > baselines, registered statistics, durable artifacts, deterministic reports, and
 > full/fast CLI replay have passed their directed and independent gates. The licensed
@@ -22,8 +22,14 @@
 > input ceiling compute a `$10.960896` per-collection-attempt pilot maximum. The user
 > authorized attempt 001 and the proxy returned canonical `gpt-5.6-sol`, but collection
 > stopped at 0/8 rows after a valid empty diagnostic-code list exposed a trace-validator
-> inconsistency. The minimal fix passed the full offline gate. Attempt 001 cannot resume;
-> attempt 002 needs a new execution-bound pre-call, directory, and explicit authorization.
+> inconsistency. The minimal fix passed the full offline gate and attempt 001 remains
+> terminal. After disclosure of the `$11.574272` cumulative two-attempt ceiling (excluding
+> Task 9), the user separately authorized attempt 002's `$10.960896` ceiling; attempt 002
+> completed all 8/8 rows. The pilot pricing contract remains
+> `c93229c60003905d0946bd4d66096943a337a3763839715f296ecb338148baa5`.
+> A separate formal billing envelope and non-authorizing gate now compute the formal
+> worst case, but Task 9 still requires its runtime input guard and independent spend
+> authorization.
 >
 > **Runtime provenance correction (2026-07-17, before any model outcome):** per the
 > user-approved simplicity boundary, runtime collection/replay must not spawn Git or
@@ -686,18 +692,36 @@ handoff operation rather than runtime behavior.
 
 ## 12. Task 8 — Operational proxy pilot and explicit budget gate
 
-**Status (2026-07-18): ATTEMPT 001 INCOMPLETE / TRACE FIX VERIFIED / ATTEMPT 002 NOT
-AUTHORIZED.** The canonical
+**Status (2026-07-18): OPERATIONAL PILOT COMPLETE / FORMAL GATE NON-AUTHORIZING /
+TASK 9 NOT STARTED.** The canonical
 [pilot specification](../../experiments/2026-07-18-benchmark-v2-pilot-spec.json),
 scripts-only collector, exact pricing/budget gate, clean-resume tests, and explicit
 spend-confirmation boundary are complete. See the
 [Task 8 readiness record](../../BENCHMARK_V2_TASK8_READINESS.md). The official-reference
 price contract and its pre-network input bound are verified. The user authorized
 attempt 001, which made 6 logical calls/7 provider attempts and committed 0/8 rows
-before the trace exception. Its exact billed cost is unavailable; the conservative
-upper bound is `$0.613376`. The run cannot resume. Attempt 002 requires a fresh pre-call,
-directory, and `$10.960896` authorization after disclosure of the two-collection-attempt
-`$11.574272` cumulative mechanical upper bound.
+before the trace exception. The run cannot resume; its known cost is `$0.074775`, and
+retry-aware accounting bounds it at `$0.184343`. The minimal trace fix passed the full
+offline gate. After disclosure of the `$11.574272` cumulative two-attempt ceiling
+(excluding Task 9), the user separately authorized attempt 002's `$10.960896` ceiling.
+Attempt 002 then completed 8/8 rows with 27 logical calls, 31 provider attempts, 4
+retries, 34,304 requested output tokens, 42,496 attempt-reserved output tokens,
+473,726,578 µs recorded provider elapsed time, and 477,264,352 µs active host time.
+Twenty-five successful attempts reported 18,781 input and 11,482 output tokens with
+zero cache usage; six failed attempts had no usage metadata. Its known cost is
+`$0.438365`, its retry-aware tight upper bound is `$1.095773`, and the two attempts'
+cumulative known/tight-upper costs are `$0.513140` / `$1.280116`.
+
+The pilot pricing contract SHA-256 remains
+`c93229c60003905d0946bd4d66096943a337a3763839715f296ecb338148baa5`. A separate
+formal billing envelope with SHA-256
+`5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d` binds that
+contract, formal scope/enforcement, 272,000-token ceilings for input, cache creation,
+and cache read, and a 16,384-token output ceiling. The resulting formal gate SHA-256 is
+`a421e1c330b600dbd19cdc3da145967033c9740132278c0c7afa7f62711fc57e`; it computes a
+`$538,865.486400` formal worst case. Pilot actual cost and pilot-informed formal
+projection remain unavailable because failed-attempt usage is missing. The gate is not
+authorization.
 
 - Run a separately labeled pilot only after the runner-ready SHA is clean and pushed,
   on at most two two-bar procedural families excluded from the formal corpus and two
@@ -726,6 +750,10 @@ directory, and `$10.960896` authorization after disclosure of the two-collection
 
 ## 13. Task 9 — Current-model collection and deterministic analysis
 
+- Before any Task 9 provider call, the formal runner must enforce the billing envelope's
+  input ceiling as UTF-8 prompt bytes plus the fixed 256-token framing allowance before
+  observation, retry, or network I/O. The user must then independently authorize the
+  formal maximum; the computed `$538,865.486400` gate is non-authorizing.
 - Run the frozen primary and secondary suites with requested `gpt-5.6-sol` from the
   runner-ready clean SHA. Resume only from a validated, orphan-free WAL with the same
   config. Any orphan marks that run incomplete and forces a fresh formal run ID.

@@ -297,3 +297,63 @@ conservative bound, the disclosed two-collection-attempt cumulative mechanical u
 bound is `$11.574272`.
 
 Task 9 has not started.
+
+## 2026-07-18 — Task 8 attempt 002 completion and formal budget gate
+
+Attempt 001 remains terminal and its trace-validator repair remains unchanged. A later
+retry-aware accounting pass tightened that attempt's bound from the original coarse
+`$0.613376` ceiling to `$0.184343` while preserving its `$0.074775` known cost. No raw
+prompt or response content entered this calculation.
+
+After the user saw the `$11.574272` cumulative two-attempt ceiling, explicitly excluding
+any Task 9 spend, they separately authorized attempt 002's exact `$10.960896` ceiling.
+The fresh commit-bound pre-call and output directory completed all 8/8 pilot rows. The
+run made 27 logical calls and 31 provider attempts, including 4 retries; it requested
+34,304 output tokens and reserved 42,496 across attempts. Recorded provider elapsed time
+was 473,726,578 microseconds and active host time was 477,264,352 microseconds.
+
+Twenty-five successful attempts reported 18,781 input tokens, 11,482 output tokens, and
+zero cache-creation/cache-read tokens. Six failed attempts had no usage metadata, so
+exact actual cost and the pilot-informed formal projection remain unavailable rather
+than treating those attempts as free. The reported usage prices to a known `$0.438365`;
+stage-specific retry accounting gives attempt 002 a tight `$1.095773` upper bound. Across
+attempts 001 and 002, known cost is `$0.513140` and the tight upper bound is `$1.280116`.
+
+The original pilot pricing contract remains byte-identical at SHA-256
+`c93229c60003905d0946bd4d66096943a337a3763839715f296ecb338148baa5`. Formal pricing
+uses the same rate evidence through a separate billing envelope rather than widening the
+pilot contract. The envelope SHA-256 is
+`5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d`; it binds the
+pilot pricing SHA, formal-only scope and enforcement, 272,000-token ceilings for each of
+input, cache creation, and cache read, and a 16,384-token output ceiling. Its mechanical
+formal worst case is `$538,865.486400`. That artifact is explicitly non-authorizing.
+
+Independent review then found that the pilot-informed projection independently rounded
+critic calls and critic token totals. For attempt 002, 3,773 projected critic calls at
+512 tokens each require 1,931,776 requested/reserved tokens; the first artifact was 256
+tokens low in each field. The fix rounds calls and retries first, then multiplies by the
+frozen per-call ceiling. Corrected projection totals are 71,658,496 requested and
+96,220,416 attempt-reserved output tokens. The formal worst case and authorization
+status are unchanged. The final gate SHA-256 is
+`a421e1c330b600dbd19cdc3da145967033c9740132278c0c7afa7f62711fc57e`.
+
+Task 9 has not started. Before it can start, the formal runtime must enforce the billing
+envelope before every provider attempt by checking UTF-8 prompt bytes plus the fixed
+256-token framing allowance, and the user must independently authorize the formal spend.
+
+Final closeout reran the provider-free CI boundary: 2,456 tests passed with all 8
+integration tests deselected, then the same 8 integration tests skipped with both proxy
+environment variables explicitly empty. Ruff, the CI strict-mypy set (94 source files
+and four frozen scripts), lock/preregistration/pilot-spec checks, Markdown links, and
+whitespace integrity passed. The rebuilt distributions passed the 114-wheel/316-sdist
+entry audit and the clean-install matrix for core replay, benchmark, MusicXML, MIDI,
+score, service, and MCP. The unchanged frontend passed 29 tests, TypeScript checking,
+production build byte verification, and an audit with zero vulnerabilities.
+
+One initial closeout command accidentally omitted the integration marker while the local
+proxy environment was still configured. It completed the existing arrangement and
+critic integration smoke tests and was interrupted while a third end-to-end integration
+test awaited a response. These calls were outside both benchmark collection attempts and
+Task 9; no response content was inspected or admitted to any benchmark artifact. Their
+usage was not durably captured and is therefore unknown, not zero. All authoritative
+closeout results above come from the corrected provider-free commands.

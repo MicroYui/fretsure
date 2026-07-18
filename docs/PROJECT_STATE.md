@@ -3,7 +3,7 @@
 > 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-18。
 
 ## 0. 现状一句话
-设计已锁定；**Plan 1–5、Pre-Plan 6 MusicXML-first、Oracle 0.2、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR、strict MIDI input 与 benchmark v2 Task 1–7 runner-ready 软件门均已闭门；Task 8 的 attempt-001 已真实调用但中止，修复已离线闭门，完成 pilot 仍待 attempt-002**。MIDI 的 local/tracking/remote receipt 一致指向 `46ff8ac070e97422b4aecf5c0f2a22b588a5fda4`。benchmark v2 已冻结 500 个 procedural families + 3 个许可 public controls、十槽共享候选池、raw/pure baselines、ITT/统计、WAL、版本化 artifact/report、机器预注册、attempt-local pre-call 与离线 replay；Task 8 另冻结了 2×2 operational pilot、精确 pricing/budget 算术、clean resume 与显式 spend confirmation，见 [`BENCHMARK_V2_TASK8_READINESS.md`](BENCHMARK_V2_TASK8_READINESS.md)。当前 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`、profile=`median@0.1` 保持不变，runtime 精确锁定 `music21==10.5.0`。用户已授权并启动 canonical `gpt-5.6-sol` attempt-001；它在 6 个逻辑调用/7 次 attempts 后因合法 `AMBER + 0 median diagnostics` 与 trace 非空约束冲突而停止，0/8 行落盘且不可 resume。已报告 usage 的参考成本为 `$0.074775`，该次保守上界为 `$0.613376`；最小 validator 修复已通过 2,451 项离线测试。attempt-002 需新 pre-call 与新授权，连同旧次累计机械上界为 `$11.574272`。完整 Plan 6 的音频、AlphaTab、琴颈动画、导出、live A/B/榜单与真人 money moment 仍 open。
+设计已锁定；**Plan 1–5、Pre-Plan 6 MusicXML-first、Oracle 0.2、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR、strict MIDI input 与 benchmark v2 Task 1–7 runner-ready 软件门均已闭门；Task 8 operational pilot 已完成，Task 9 尚未启动**。MIDI 的 local/tracking/remote receipt 一致指向 `46ff8ac070e97422b4aecf5c0f2a22b588a5fda4`。benchmark v2 已冻结 500 个 procedural families + 3 个许可 public controls、十槽共享候选池、raw/pure baselines、ITT/统计、WAL、版本化 artifact/report、机器预注册、attempt-local pre-call 与离线 replay；Task 8 另冻结了 2×2 operational pilot、精确 pricing/budget 算术、clean resume 与显式 spend confirmation，见 [`BENCHMARK_V2_TASK8_READINESS.md`](BENCHMARK_V2_TASK8_READINESS.md)。当前 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`、profile=`median@0.1` 保持不变，runtime 精确锁定 `music21==10.5.0`。用户已授权 attempt-002 的单次 `$10.960896` 上限；attempt-001 + 002 的已披露累计上限为 `$11.574272`，不含 Task 9。attempt-002 已 COMPLETE 8/8：27 个 logical calls、31 次 attempts、4 次 retries，provider / host elapsed 为 `473,726,578` / `477,264,352` µs，返回模型仅 `gpt-5.6-sol`。25 次成功 attempts 的 usage 完整，6 次失败 attempts 未返回 usage；attempt-002 已知参考成本 / tight upper 为 `$0.438365` / `$1.095773`，两次 pilot 合计为 `$0.513140` / `$1.280116`。formal envelope SHA-256=`5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d`，冻结每个 input/cache bucket `272,000`、output `16,384`；formal worst case `$538,865.486400` 是非授权上界。Task 9 仍需独立授权，runtime formal input guard 也是其开跑前置，并非 Task 8 已实现能力。本阶段没有前端改动。完整 Plan 6 的音频、AlphaTab、琴颈动画、导出、live A/B/榜单与真人 money moment 仍 open。
 - **Plan 1**（`plan-1-core-oracle`）：可弹性 oracle + 自验证台。终审 Ready。
 - **Plan 2**（`plan-2-solver-m0`）：beam 求解器（永不返回 RED）+ M0。复核 Ready。
 - **Plan 3**（`plan-3-agent-loop`）：oracle 当环境、LLM 当策略——修复脊柱 + 提议器 + critic + best-of-N。真 LLM 端到端。Ready-with-minor（已修）。
@@ -77,7 +77,7 @@
 - **诚实记分卡**：历史 repair 强正信号；best-of-N 薄利；**critic 未挣得（观察/待砍）**。这些旧数来自 legacy/unversioned harmony metric，不是当前 `fidelity@0.3.0` benchmark 基线。
 - **Plan 6A 闭门质量门（历史快照）**：收集 `1500` 项；离线 `1494 passed, 6 deselected`，真实本地 `gpt-5.6-sol` integration `6 passed, 1494 deselected`。ruff、strict mypy、`uv lock --check`、Markdown local-link 与 `git diff --check` 全绿；前端 `20 passed`、typecheck/build、`npm audit` 0 vulnerabilities，真实浏览器 desktop/mobile 的 landing/result/trace 与 focus/retry/CSP/MIME/cache 路径通过。`fretsure_oracle-0.3.0` wheel/sdist 经过路径 allowlist、字体 OFL、静态资源审计；clean core、`[musicxml]`、`[service,musicxml,agent]`、`[mcp]` 四组合安装 smoke 全绿。FastAPI 0.139 TestClient 仍发出上游 httpx2 迁移 warning，运行时代码无对应 warning。producer 阶段的新门不从这组历史数字推断，以 `docs/PRODUCER_MUSICXML_ACCEPTANCE.md` 为准。
 - **分支**：plan-1→2→3→4→5→`consolidation` 已**全部 ff 并入 `master`（trunk）**（trunk 原只有 spec 脚手架；现含完整后端）。
-- **下一步已冻结**：Task 8 attempt-001 的失败证据已保留，且不得 `--resume` 或拿 partial outcome 调参。修复提交后生成 `collection_attempt=2` 的新 pre-call；只有用户再次明确确认 attempt-002 的 `$10.960896` 上限（两次累计机械上界 `$11.574272`）才可发起新 provider 调用。运行时不调用 Git/子进程，Task 9 尚未开始。完整 Plan 6B 仍后置；新的前端/音频审美、真人演奏或 calibration gate 需先请求用户确认。
+- **下一步已冻结**：Task 8 attempt-002 已 COMPLETE 8/8；不得用 6 次失败 attempts 的缺失 usage 冒充零，也不得拿 pilot outcome 调参。Task 9 尚未开始，必须先实现并验证 runtime formal input guard，再以独立授权确认非授权 formal worst case `$538,865.486400`；attempt-001 + 002 的 `$11.574272` 累计上限不包含 Task 9。运行时不调用 Git/子进程。完整 Plan 6B 仍后置；新的前端/音频审美、真人演奏或 calibration gate 需先请求用户确认。
 - **已知点**：solve_fingering 是资源有界、非完备搜索；tier/忠实度/难度参数占位待 design partner 校准；leave-one-out 各臂对随机 LLM **非配对**（大效应 repair 不受影响；best-of-N/critic 已另有**配对**测量，见 RESULTS）。
 
 ## 1. 这是什么
@@ -116,8 +116,8 @@
     license-audited public controls，real/procedural 独立报告并有无 denominator 的 cross-stratum
     collision gate；checker-vs-judge 仅有 `SOFTWARE_FIXTURE_ONLY` 证据，真人标签与跨供应商比较仍
     unavailable。Task 7 已冻结 runner-ready 预注册、预算、混合语料执行、attempt/orphan、release 与
-    clean-install 合同；程序生成层扛主结果，旧 Claude/旧 fidelity 数不同比。Task 8 的真实 pilot、
-    价格与用户授权仍 open。
+    clean-install 合同；程序生成层扛主结果，旧 Claude/旧 fidelity 数不同比。Task 8 operational pilot
+    已 COMPLETE；formal envelope 与非授权 worst case 已冻结，Task 9 的 runtime input guard 和独立授权仍 open。
     CLI/JSON/JSONL/文档阶段不改前端；若增加 dashboard、图表页面或 live leaderboard，须先与用户
     确认统一视觉。
 
@@ -149,5 +149,5 @@
 - 不重做 Plan 1–5 或 MusicXML-first 纵切。
 - Oracle 0.2 软件信任门已经完成；不要重做。
 - 安全 `.mxl` container reader 已完成；不要重做。
-- Benchmark v2 Task 7 已闭环。Task 8 attempt-001 已在授权后真实启动并留下不可恢复的 0-row WAL；不要重放或检查私密输出内容。trace 空诊断列表修复已闭门。若之后继续，从“生成 attempt-002 pre-call → 明确确认新的 `$10.960896` 上限 → 新目录收集”开始；Task 9 正式收集仍需 pilot 后的独立预算授权。新的前端/音频审美、真人听感或 calibration gate 仍需用户确认。
+- Benchmark v2 Task 7 已闭环，Task 8 attempt-002 也已 COMPLETE 8/8；不要检查私密 prompt/response，也不要把失败 attempts 的缺失 usage 写成零。若之后继续，从“实现并验证 runtime formal input guard → 生成 Task 9 pre-call → 单独确认 `$538,865.486400` formal worst-case 上限”开始；该上限当前不构成授权。新的前端/音频审美、真人听感或 calibration gate 仍需用户确认。
 - 真人 gold/calibration 可并行，不阻塞上述软件实现；它仍阻塞现实世界 GREEN 误接受率、profile/tier 校准与“真实琴手一定能弹”的强主张。

@@ -119,17 +119,23 @@ lead sheet / MIDI / IR
 ## 状态
 
 **Plan 1–5、Oracle 0.2 软件信任门、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR、
-strict MIDI input 与 benchmark v2 Task 1–7 runner-ready 软件门均已闭门；Task 8 的首次真实
-pilot 已中止，最小 trace 修复已通过完整离线回归，完成 pilot 仍待全新的 attempt-002。**
+strict MIDI input 与 benchmark v2 Task 1–7 runner-ready 软件门均已闭门；Task 8 operational
+pilot 已完成，Task 9 尚未启动。**
 当前 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、
 faithfulness=`fidelity@0.3.0`，trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、
 API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=
 `oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0` 保持不变，
 `music21==10.5.0` 精确锁定。MIDI 的两正两负 exact producer rows、资源门、诚实限制与 Git receipt
 见 [`docs/MIDI_ACCEPTANCE.md`](docs/MIDI_ACCEPTANCE.md)。benchmark v2 已冻结 500 个 procedural
-families + 3 个许可 public controls、机器预注册、预算、逐项 rows、统计、WAL 与 replay。已授权的
-attempt-001 在 6 个逻辑调用后因合法空诊断列表与 trace 约束冲突而停止，0/8 行落盘且不可 resume；
-attempt-002 仍须新 pre-call、新目录和新的精确用户授权。详见
+families + 3 个许可 public controls、机器预注册、预算、逐项 rows、统计、WAL 与 replay。用户已授权
+attempt-002 的单次 `$10.960896` 上限；连同 attempt-001，已披露累计上限为 `$11.574272`，不含
+Task 9。attempt-002 已 COMPLETE 8/8：27 个 logical calls、31 次 attempts、4 次 retries，provider / host
+耗时分别为 `473,726,578` / `477,264,352` µs，返回模型仅 `gpt-5.6-sol`。25 次成功 attempts 的 usage
+完整，6 次失败 attempts 未返回 usage；已知参考成本为 `$0.438365`、tight upper 为 `$1.095773`，两次
+pilot 合计已知 / tight upper 为 `$0.513140` / `$1.280116`。formal envelope SHA-256 为
+`5bcd24585db7a062955b2dc3de543e8ecc7e875c4647b6d767e348ee1cb15b5d`，冻结每个 input/cache bucket
+`272,000`、output `16,384`；formal worst case `$538,865.486400` 只是非授权上界。Task 9 仍需独立授权，
+且 runtime formal input guard 是开跑前置，并非 Task 8 已实现能力。本阶段没有前端改动。详见
 [`2026-07-17-benchmark-v2.md`](docs/superpowers/plans/2026-07-17-benchmark-v2.md)。完整 Plan 6 的音频、
 AlphaTab、真实琴颈动画、导出、live A/B/榜单与真人 money moment 仍 open。
 

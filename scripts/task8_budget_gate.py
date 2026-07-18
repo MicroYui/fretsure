@@ -25,11 +25,12 @@ from fretsure.bench.preregistration import (
     BenchmarkPreregistration,
     preregistration_from_bytes,
 )
-from fretsure.llm.client import validate_llm_model_id
+from fretsure.llm.client import MAX_PROXY_OUTPUT_TOKENS, validate_llm_model_id
 
 TOKEN_PRICING_CONTRACT_VERSION: Final = "benchmark-token-pricing-contract@0.1.0"
+FORMAL_BILLING_ENVELOPE_VERSION: Final = "benchmark-formal-billing-envelope@0.1.0"
 OPERATIONAL_USAGE_VERSION: Final = "benchmark-operational-usage@0.1.0"
-FORMAL_BUDGET_GATE_VERSION: Final = "benchmark-formal-budget-gate@0.1.0"
+FORMAL_BUDGET_GATE_VERSION: Final = "benchmark-formal-budget-gate@0.2.0"
 
 TOKEN_UNIT: Final = 1_000_000
 FORMAL_PAIRED_SAMPLES: Final = 5_030
@@ -64,6 +65,16 @@ PILOT_CALL_TEMPLATES: Final[tuple[tuple[str, int, int], ...]] = (
     ("proposal_raw", 8, 2_048),
     ("repair", 32, 1_024),
     ("critic", 4, 512),
+)
+
+FORMAL_INPUT_UPPER_BOUND_METHOD: Final = "utf8_bytes_plus_256"
+FORMAL_ENFORCEMENT_POINT: Final = "before_observation_retry_network"
+FORMAL_ENVELOPE_SCOPE: Final = "formal_collection"
+FORMAL_SHORT_CONTEXT_MAX_INPUT_TOKENS: Final = 272_000
+FORMAL_INPUT_BILLING_FIELDS: Final = (
+    "input_tokens",
+    "cache_creation_input_tokens",
+    "cache_read_input_tokens",
 )
 
 
@@ -341,6 +352,145 @@ def token_pricing_contract_from_dict(value: object) -> TokenPricingContract:
 def token_pricing_contract_from_bytes(data: object) -> TokenPricingContract:
     exact = _pricing_wire(_parse_canonical(data, "pricing_contract"))
     return TokenPricingContract(canonical_json_bytes(exact))
+
+
+def _formal_billing_envelope_wire(value: object) -> dict[str, object]:
+    obj = _object(
+        value,
+        "$",
+        frozenset(
+            {
+                "billable_token_ceiling_per_attempt",
+                "enforcement",
+                "pricing_contract_raw_sha256",
+                "schema",
+                "scope",
+            }
+        ),
+    )
+    if obj["schema"] != FORMAL_BILLING_ENVELOPE_VERSION:
+        _fail("schema", "has the wrong formal-billing-envelope version")
+    if obj["scope"] != FORMAL_ENVELOPE_SCOPE:
+        _fail("scope", "must equal formal_collection")
+    pricing_sha = _sha256(
+        obj["pricing_contract_raw_sha256"],
+        "pricing_contract_raw_sha256",
+    )
+    ceilings = _token_map(
+        obj["billable_token_ceiling_per_attempt"],
+        "billable_token_ceiling_per_attempt",
+    )
+    for name in FORMAL_INPUT_BILLING_FIELDS:
+        if ceilings[name] > FORMAL_SHORT_CONTEXT_MAX_INPUT_TOKENS:
+            _fail(
+                f"billable_token_ceiling_per_attempt.{name}",
+                "exceeds the frozen short-context pricing band",
+            )
+    if ceilings["output_tokens"] > MAX_PROXY_OUTPUT_TOKENS:
+        _fail(
+            "billable_token_ceiling_per_attempt.output_tokens",
+            "exceeds the bounded proxy request output ceiling",
+        )
+    enforcement = _object(
+        obj["enforcement"],
+        "enforcement",
+        frozenset({"input_upper_bound_method", "required_before"}),
+    )
+    if enforcement["input_upper_bound_method"] != FORMAL_INPUT_UPPER_BOUND_METHOD:
+        _fail(
+            "enforcement.input_upper_bound_method",
+            "must use the frozen conservative UTF-8 byte bound",
+        )
+    if enforcement["required_before"] != FORMAL_ENFORCEMENT_POINT:
+        _fail(
+            "enforcement.required_before",
+            "must require enforcement before observation, retry, or network",
+        )
+    return {
+        "billable_token_ceiling_per_attempt": ceilings,
+        "enforcement": {
+            "input_upper_bound_method": FORMAL_INPUT_UPPER_BOUND_METHOD,
+            "required_before": FORMAL_ENFORCEMENT_POINT,
+        },
+        "pricing_contract_raw_sha256": pricing_sha,
+        "schema": FORMAL_BILLING_ENVELOPE_VERSION,
+        "scope": FORMAL_ENVELOPE_SCOPE,
+    }
+
+
+@dataclass(frozen=True, slots=True)
+class FormalBillingEnvelope:
+    """One workload envelope bound to rates without rewriting pilot provenance."""
+
+    wire_json: bytes
+
+    def __post_init__(self) -> None:
+        _formal_billing_envelope_wire(
+            _parse_canonical(self.wire_json, "formal_billing_envelope")
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return _formal_billing_envelope_wire(
+            _parse_canonical(self.wire_json, "formal_billing_envelope")
+        )
+
+    @property
+    def raw_sha256(self) -> str:
+        return _raw_sha256(self.wire_json)
+
+    @property
+    def pricing_contract_raw_sha256(self) -> str:
+        return cast(str, self.to_dict()["pricing_contract_raw_sha256"])
+
+    @property
+    def ceilings(self) -> dict[str, int]:
+        return cast(dict[str, int], self.to_dict()["billable_token_ceiling_per_attempt"])
+
+
+def build_formal_billing_envelope(
+    *,
+    pricing_contract_raw_sha256: str,
+    billable_token_ceiling_per_attempt: Mapping[str, int],
+) -> FormalBillingEnvelope:
+    wire = {
+        "billable_token_ceiling_per_attempt": dict(
+            billable_token_ceiling_per_attempt
+        ),
+        "enforcement": {
+            "input_upper_bound_method": FORMAL_INPUT_UPPER_BOUND_METHOD,
+            "required_before": FORMAL_ENFORCEMENT_POINT,
+        },
+        "pricing_contract_raw_sha256": pricing_contract_raw_sha256,
+        "schema": FORMAL_BILLING_ENVELOPE_VERSION,
+        "scope": FORMAL_ENVELOPE_SCOPE,
+    }
+    return FormalBillingEnvelope(canonical_json_bytes(_formal_billing_envelope_wire(wire)))
+
+
+def formal_billing_envelope_from_dict(value: object) -> FormalBillingEnvelope:
+    return FormalBillingEnvelope(
+        canonical_json_bytes(_formal_billing_envelope_wire(value))
+    )
+
+
+def formal_billing_envelope_from_bytes(data: object) -> FormalBillingEnvelope:
+    exact = _formal_billing_envelope_wire(
+        _parse_canonical(data, "formal_billing_envelope")
+    )
+    return FormalBillingEnvelope(canonical_json_bytes(exact))
+
+
+def _validate_formal_envelope_basis(
+    pricing: TokenPricingContract,
+    envelope: FormalBillingEnvelope,
+) -> None:
+    if type(envelope) is not FormalBillingEnvelope:
+        _fail("formal_billing_envelope", "must be an exact FormalBillingEnvelope")
+    if envelope.pricing_contract_raw_sha256 != pricing.raw_sha256:
+        _fail(
+            "formal_billing_envelope.pricing_contract_raw_sha256",
+            "does not bind the pilot pricing contract",
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -679,8 +829,8 @@ def _ceil_div(numerator: int, denominator: int) -> int:
     return (numerator + denominator - 1) // denominator
 
 
-def _validate_usage_against_pricing(
-    pricing: TokenPricingContract,
+def _validate_usage_against_ceilings(
+    ceilings: Mapping[str, int],
     *,
     attempts: int,
     usage: Mapping[str, int | None],
@@ -688,8 +838,23 @@ def _validate_usage_against_pricing(
 ) -> None:
     for name in TOKEN_FIELDS:
         amount = usage[name]
-        if amount is not None and amount > attempts * pricing.ceilings[name]:
+        if amount is not None and amount > attempts * ceilings[name]:
             _fail(f"{field}.{name}", "exceeds attempts times the billable ceiling")
+
+
+def _validate_usage_against_pricing(
+    pricing: TokenPricingContract,
+    *,
+    attempts: int,
+    usage: Mapping[str, int | None],
+    field: str,
+) -> None:
+    _validate_usage_against_ceilings(
+        pricing.ceilings,
+        attempts=attempts,
+        usage=usage,
+        field=field,
+    )
 
 
 def _cost_for_totals(
@@ -752,16 +917,21 @@ class _CallTemplate:
         }
 
 
-def _attempt_cost(pricing: TokenPricingContract, max_output_tokens: int) -> int:
-    if max_output_tokens > pricing.ceilings["output_tokens"]:
+def _attempt_cost(
+    pricing: TokenPricingContract,
+    max_output_tokens: int,
+    *,
+    ceilings: Mapping[str, int],
+) -> int:
+    if max_output_tokens > ceilings["output_tokens"]:
         _fail(
-            "pricing.billable_token_ceiling_per_attempt.output_tokens",
+            "billing_envelope.billable_token_ceiling_per_attempt.output_tokens",
             "is below a frozen call-template output ceiling",
         )
     amounts = {
-        "cache_creation_input_tokens": pricing.ceilings["cache_creation_input_tokens"],
-        "cache_read_input_tokens": pricing.ceilings["cache_read_input_tokens"],
-        "input_tokens": pricing.ceilings["input_tokens"],
+        "cache_creation_input_tokens": ceilings["cache_creation_input_tokens"],
+        "cache_read_input_tokens": ceilings["cache_read_input_tokens"],
+        "input_tokens": ceilings["input_tokens"],
         "output_tokens": max_output_tokens,
     }
     if pricing.ceil_each_component_per_attempt:
@@ -782,28 +952,32 @@ def _templates_cost(
     templates: Sequence[_CallTemplate],
     *,
     attempts_per_call: int,
+    ceilings: Mapping[str, int],
 ) -> int:
     for template in templates:
-        if template.max_output_tokens > pricing.ceilings["output_tokens"]:
+        if template.max_output_tokens > ceilings["output_tokens"]:
             _fail(
-                "pricing.billable_token_ceiling_per_attempt.output_tokens",
+                "billing_envelope.billable_token_ceiling_per_attempt.output_tokens",
                 "is below a frozen call-template output ceiling",
             )
     if pricing.ceil_each_component_per_attempt:
         return sum(
             template.count
             * attempts_per_call
-            * _attempt_cost(pricing, template.max_output_tokens)
+            * _attempt_cost(
+                pricing,
+                template.max_output_tokens,
+                ceilings=ceilings,
+            )
             for template in templates
         )
     attempts = sum(template.count * attempts_per_call for template in templates)
     token_totals = {
         "cache_creation_input_tokens": (
-            attempts * pricing.ceilings["cache_creation_input_tokens"]
+            attempts * ceilings["cache_creation_input_tokens"]
         ),
-        "cache_read_input_tokens": attempts
-        * pricing.ceilings["cache_read_input_tokens"],
-        "input_tokens": attempts * pricing.ceilings["input_tokens"],
+        "cache_read_input_tokens": attempts * ceilings["cache_read_input_tokens"],
+        "input_tokens": attempts * ceilings["input_tokens"],
         "output_tokens": sum(
             template.count * attempts_per_call * template.max_output_tokens
             for template in templates
@@ -888,6 +1062,7 @@ def pilot_worst_case_budget(pricing: TokenPricingContract) -> dict[str, object]:
             pricing,
             templates,
             attempts_per_call=MAX_ATTEMPTS_PER_CALL,
+            ceilings=pricing.ceilings,
         ),
         "cost_status": "mechanical_worst_case_not_authorization",
         "resources": _resource_dict(
@@ -975,11 +1150,13 @@ def _formal_templates(
 def formal_worst_case_budget(
     preregistration: BenchmarkPreregistration,
     pricing: TokenPricingContract,
+    formal_billing_envelope: FormalBillingEnvelope,
 ) -> dict[str, object]:
     if type(preregistration) is not BenchmarkPreregistration:
         _fail("preregistration", "must be an exact BenchmarkPreregistration")
     if type(pricing) is not TokenPricingContract:
         _fail("pricing_contract", "must be an exact TokenPricingContract")
+    _validate_formal_envelope_basis(pricing, formal_billing_envelope)
     requested_model = _prereg_model(preregistration)
     if pricing.billing_model_id != requested_model:
         _fail("pricing.billing_model_id", "does not match the preregistered model")
@@ -1029,6 +1206,7 @@ def formal_worst_case_budget(
             pricing,
             templates,
             attempts_per_call=attempts_per_call,
+            ceilings=formal_billing_envelope.ceilings,
         ),
         "cost_status": "mechanical_worst_case_not_authorization",
         "resources": _resource_dict(
@@ -1055,6 +1233,7 @@ def _scale(value: int, pair_count: int) -> int:
 def _projection(
     usage: OperationalUsage,
     pricing: TokenPricingContract,
+    formal_billing_envelope: FormalBillingEnvelope,
     formal: Mapping[str, object],
 ) -> dict[str, object]:
     formal_resources = _object(formal["resources"], "formal.resources")
@@ -1095,17 +1274,17 @@ def _projection(
     }
     for name in ("repair", "critic"):
         observed = observed_stages[name]
+        projected_calls = _scale(observed.logical_calls, usage.pair_count)
+        projected_retries = _scale(observed.retries, usage.pair_count)
+        max_output_tokens = STAGE_MAX_OUTPUT_TOKENS[name]
         projected_stages[name] = {
-            "attempt_reserved_output_tokens": _scale(
-                observed.attempt_reserved_output_tokens,
-                usage.pair_count,
-            ),
-            "logical_calls": _scale(observed.logical_calls, usage.pair_count),
-            "projected_retries": _scale(observed.retries, usage.pair_count),
-            "requested_output_tokens": _scale(
-                observed.requested_output_tokens,
-                usage.pair_count,
-            ),
+            "attempt_reserved_output_tokens": (
+                projected_calls + projected_retries
+            )
+            * max_output_tokens,
+            "logical_calls": projected_calls,
+            "projected_retries": projected_retries,
+            "requested_output_tokens": projected_calls * max_output_tokens,
         }
     for name in STAGE_NAMES:
         projected_stage = _object(
@@ -1210,8 +1389,8 @@ def _projection(
         for name in TOKEN_FIELDS
     }
     projected_attempts = cast(int, projected_resources["attempts"])
-    _validate_usage_against_pricing(
-        pricing,
+    _validate_usage_against_ceilings(
+        formal_billing_envelope.ceilings,
         attempts=projected_attempts,
         usage=projected_usage,
         field="projection.usage",
@@ -1289,6 +1468,8 @@ def build_formal_budget_gate(
     preregistration: BenchmarkPreregistration,
     pricing_contract: TokenPricingContract,
     expected_pricing_contract_sha256: str,
+    formal_billing_envelope: FormalBillingEnvelope,
+    expected_formal_billing_envelope_sha256: str,
     operational_usage: OperationalUsage,
     pilot_receipt_sha256: str,
     pilot_summary_sha256: str,
@@ -1298,6 +1479,8 @@ def build_formal_budget_gate(
         _fail("preregistration", "must be an exact BenchmarkPreregistration")
     if type(pricing_contract) is not TokenPricingContract:
         _fail("pricing_contract", "must be an exact TokenPricingContract")
+    if type(formal_billing_envelope) is not FormalBillingEnvelope:
+        _fail("formal_billing_envelope", "must be an exact FormalBillingEnvelope")
     if type(operational_usage) is not OperationalUsage:
         _fail("operational_usage", "must be an exact OperationalUsage")
     expected_pricing = _sha256(
@@ -1306,6 +1489,16 @@ def build_formal_budget_gate(
     )
     if pricing_contract.raw_sha256 != expected_pricing:
         _fail("pricing_contract_sha256", "does not match the externally expected pricing hash")
+    expected_formal_envelope = _sha256(
+        expected_formal_billing_envelope_sha256,
+        "expected_formal_billing_envelope_sha256",
+    )
+    if formal_billing_envelope.raw_sha256 != expected_formal_envelope:
+        _fail(
+            "formal_billing_envelope_sha256",
+            "does not match the externally expected formal envelope hash",
+        )
+    _validate_formal_envelope_basis(pricing_contract, formal_billing_envelope)
     receipt_sha = _sha256(pilot_receipt_sha256, "pilot_receipt_sha256")
     summary_sha = _sha256(pilot_summary_sha256, "pilot_summary_sha256")
     if operational_usage.raw_sha256 != summary_sha:
@@ -1320,7 +1513,11 @@ def build_formal_budget_gate(
         field="operational_usage.usage",
     )
     pilot_worst = pilot_worst_case_budget(pricing_contract)
-    formal_worst = formal_worst_case_budget(preregistration, pricing_contract)
+    formal_worst = formal_worst_case_budget(
+        preregistration,
+        pricing_contract,
+        formal_billing_envelope,
+    )
     formal_cost = _integer(
         formal_worst["cost_microunits"],
         "formal.cost_microunits",
@@ -1347,12 +1544,14 @@ def build_formal_budget_gate(
             "billing_model_id": pricing_contract.billing_model_id,
             "billing_provider_id": pricing_contract.billing_provider_id,
             "currency": pricing_contract.currency,
+            "formal_input_upper_bound_method": FORMAL_INPUT_UPPER_BOUND_METHOD,
             "token_unit": TOKEN_UNIT,
         },
         "bindings": {
+            "formal_billing_envelope_raw_sha256": formal_billing_envelope.raw_sha256,
             "pilot_receipt_sha256": receipt_sha,
             "pilot_summary_sha256": summary_sha,
-            "pricing_contract_raw_sha256": pricing_contract.raw_sha256,
+            "pilot_pricing_contract_raw_sha256": pricing_contract.raw_sha256,
             "preregistration_raw_sha256": _raw_sha256(preregistration.wire_json),
         },
         "external_ceiling": {
@@ -1364,6 +1563,7 @@ def build_formal_budget_gate(
             "pilot_informed_projection": _projection(
                 operational_usage,
                 pricing_contract,
+                formal_billing_envelope,
                 formal_worst,
             ),
             "worst_case_remaining": formal_worst,
@@ -1384,6 +1584,8 @@ def formal_budget_gate_from_dict(
     preregistration: BenchmarkPreregistration,
     pricing_contract: TokenPricingContract,
     expected_pricing_contract_sha256: str,
+    formal_billing_envelope: FormalBillingEnvelope,
+    expected_formal_billing_envelope_sha256: str,
     operational_usage: OperationalUsage,
     pilot_receipt_sha256: str,
     pilot_summary_sha256: str,
@@ -1398,6 +1600,10 @@ def formal_budget_gate_from_dict(
         preregistration=preregistration,
         pricing_contract=pricing_contract,
         expected_pricing_contract_sha256=expected_pricing_contract_sha256,
+        formal_billing_envelope=formal_billing_envelope,
+        expected_formal_billing_envelope_sha256=(
+            expected_formal_billing_envelope_sha256
+        ),
         operational_usage=operational_usage,
         pilot_receipt_sha256=pilot_receipt_sha256,
         pilot_summary_sha256=pilot_summary_sha256,
@@ -1414,6 +1620,8 @@ def formal_budget_gate_from_bytes(
     preregistration: BenchmarkPreregistration,
     pricing_contract: TokenPricingContract,
     expected_pricing_contract_sha256: str,
+    formal_billing_envelope: FormalBillingEnvelope,
+    expected_formal_billing_envelope_sha256: str,
     operational_usage: OperationalUsage,
     pilot_receipt_sha256: str,
     pilot_summary_sha256: str,
@@ -1423,6 +1631,10 @@ def formal_budget_gate_from_bytes(
         preregistration=preregistration,
         pricing_contract=pricing_contract,
         expected_pricing_contract_sha256=expected_pricing_contract_sha256,
+        formal_billing_envelope=formal_billing_envelope,
+        expected_formal_billing_envelope_sha256=(
+            expected_formal_billing_envelope_sha256
+        ),
         operational_usage=operational_usage,
         pilot_receipt_sha256=pilot_receipt_sha256,
         pilot_summary_sha256=pilot_summary_sha256,
@@ -1435,6 +1647,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--prereg", type=Path, required=True)
     parser.add_argument("--pricing-contract", type=Path, required=True)
     parser.add_argument("--expected-pricing-sha256", required=True)
+    parser.add_argument("--formal-billing-envelope", type=Path, required=True)
+    parser.add_argument("--expected-formal-billing-envelope-sha256", required=True)
     parser.add_argument("--pilot-summary", type=Path, required=True)
     parser.add_argument("--pilot-receipt", type=Path, required=True)
     parser.add_argument("--formal-maximum-spend-microunits", type=int)
@@ -1461,12 +1675,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         preregistration = preregistration_from_bytes(args.prereg.read_bytes())
         pricing = token_pricing_contract_from_bytes(args.pricing_contract.read_bytes())
+        formal_envelope = formal_billing_envelope_from_bytes(
+            args.formal_billing_envelope.read_bytes()
+        )
         usage = operational_usage_from_bytes(args.pilot_summary.read_bytes())
         receipt_sha = _raw_sha256(args.pilot_receipt.read_bytes())
         artifact = build_formal_budget_gate(
             preregistration=preregistration,
             pricing_contract=pricing,
             expected_pricing_contract_sha256=args.expected_pricing_sha256,
+            formal_billing_envelope=formal_envelope,
+            expected_formal_billing_envelope_sha256=(
+                args.expected_formal_billing_envelope_sha256
+            ),
             operational_usage=usage,
             pilot_receipt_sha256=receipt_sha,
             pilot_summary_sha256=usage.raw_sha256,
@@ -1485,9 +1706,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     summary = {
         "authorization_status": external["status"],
         "formal_worst_case_cost_microunits": worst["cost_microunits"],
+        "formal_billing_envelope_sha256": formal_envelope.raw_sha256,
         "gate_sha256": artifact.raw_sha256,
         "output": str(args.output),
-        "pricing_sha256": pricing.raw_sha256,
+        "pilot_pricing_sha256": pricing.raw_sha256,
     }
     print(canonical_json_bytes(summary).decode("utf-8"))
     return 0
