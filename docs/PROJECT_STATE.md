@@ -31,6 +31,17 @@ unit/h、667.036338 calls/h、9 retries。8/4 unit/call 比 `0.979490526 / 0.989
 attempts 的缺失 usage 未写成零。按 4 路 block 分布外推 10,060 个网络 units：乐观 35:29、
 中位 41:14、合并速率 44:33、保守 67:22，正式进度会在 30 分钟及约每 5% 更新。
 
+Formal attempt-004 现正 detached 运行，绑定 execution commit
+`773c69deca4d2b00cdcdc5a33841369cb3016955`、pre-call SHA-256
+`facafd058cba2eb5223bde1ddf6f6da802cdbc6ab439eb40e749171a8ec9b76b` 与 budget-gate SHA-256
+`26260e11ebbbdffc05f9770957075f2a88b8925888887cb5564789e5f9f8c5d7`；并发保持 4。
+canonical operator sequence 24 是精确 5% checkpoint：网络段 elapsed `16,980.321718` 秒，
+503/10,060 network units、1,006/10,563 total rows、2,451 completed calls，overall/recent
+吞吐为 106.641089 / 112.0 units/hour，`stalled=false`。该行 SHA-256=
+`eda86df690b9b588f825b6a57d0f52ee4f71a39c6508c5006235f40221673bdb`；其乐观/中位/保守
+剩余 ETA 为 307,190 / 322,627 / 322,627 秒（约 3天13小时20分–3天17小时37分）。本 checkpoint
+不是 terminal outcome，尚无完整 usage/cost receipt；不得把当前 retry 缺失 usage 写成零。
+
 P1 wall-reservation amendment 前的完整普通 stub A/B 已覆盖全部 `10,563` rows。A 在
 167 个 durable units 时只发送一次
 `SIGINT`，排空到 212 后以同一 output directory `--resume`，总耗时 30:05；B 不间断运行
@@ -45,9 +56,10 @@ finalize 已降到约 4–5 分钟；缓存按 item 释放，不随全表累计 
 resume，最终与不间断 B 的 5 个 canonical 文件一致。两者均为 `COMPLETE`、10,563 rows / 15,090
 calls；A / B 总 wall time 30:12 / 27:24。完整 provider-free release gates 已通过：离线全套
 `2599 passed, 8 deselected`，integration 边界 `8 skipped, 2599 deselected`，Ruff、strict mypy、
-lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。当前下一步是
-提交/push pilot 决策证据，生成 fresh attempt-004 pre-call 绑定，再 detached 启动正式采集。正式与
-pilot 在建客户端前机械要求数值 loopback，拒绝 `localhost`。
+lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。attempt-004
+已按上述绑定启动并越过 5% durable checkpoint；当前下一步是继续 detached 采集，在后续约每 5% 与
+terminal 更新证据，完成后才做双离线 replay。正式与 pilot 在建客户端前机械要求数值 loopback，
+拒绝 `localhost`。
 
 ## 0a. 其余现状
 

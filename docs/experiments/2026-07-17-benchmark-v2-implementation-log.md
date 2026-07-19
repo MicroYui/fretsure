@@ -825,3 +825,24 @@ pauses and later offline replay/finalization; canonical progress will replace th
 estimate with actual durable throughput after 30 minutes and near each additional 5%.
 No private prompt, response, or checkpoint payload was inspected, and the pilot changed no
 formal analysis artifact or frontend surface.
+
+### Attempt-004 live 5% checkpoint
+
+Fresh formal attempt-004 started detached with four lanes. Its immutable bindings are
+execution commit `773c69deca4d2b00cdcdc5a33841369cb3016955`, pre-call SHA-256
+`facafd058cba2eb5223bde1ddf6f6da802cdbc6ab439eb40e749171a8ec9b76b`, and formal
+budget-gate SHA-256 `26260e11ebbbdffc05f9770957075f2a88b8925888887cb5564789e5f9f8c5d7`.
+The process is supervised outside the runtime by detached `screen`; the collector itself
+still invokes neither Git nor a subprocess.
+
+Canonical operator sequence 24 recorded the exact 5% network checkpoint after
+16,980.321718 active seconds: 503/10,060 network units, 1,006/10,563 total rows, and 2,451
+completed calls. Overall and recent-15-minute throughput were 106.641089 and 112.0
+units/hour, respectively. The record was not stalled and estimated 307,190 optimistic and
+322,627 median/conservative seconds remaining. Its canonical line SHA-256 is
+`eda86df690b9b588f825b6a57d0f52ee4f71a39c6508c5006235f40221673bdb`.
+
+This is operational progress evidence, not a benchmark result. No terminal receipt or
+complete usage/cost summary exists yet; retry attempts with missing usage remain unavailable
+rather than zero. No prompt, response, unit artifact, lane payload, or private observation
+was inspected to produce this checkpoint, and no frontend surface changed.
