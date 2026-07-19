@@ -28,9 +28,9 @@ attempt-004 已绑定 execution `773c69de…` / pre-call `facafd05…` detached 
 3,125 rows / 8,445 calls；4 个 active lanes 留下 open provider boundary，旧 `--resume` 生成
 INCOMPLETE checkpoint。用户批准的 post-hoc orphan-lane recovery 已由 pushed operator-only 工具
 按 plan `bf662a67…` 应用，receipt=`c53c1d8a…`；原 `773c69de…` runtime 已从 2,622 durable units
-同目录 resume。重跑的 4 units 已全部越过，并通过恢复后的精确 30% checkpoint；最新只读计数
-为 3,091 READY / 3,095 admitted、3,594 rows / 10,793 completed calls（30.73%），overall/recent
-为 115.44 / 108.0 units/h，ETA 约 2天13小时–2天17小时12分，无 abort。隔离的 9 attempts
+同目录 resume。重跑的 4 units 已全部越过，并通过恢复后的精确 30% / 35% checkpoints；最新
+只读计数为 3,542 READY / 3,544 admitted、4,045 rows / 13,021 completed calls（35.21%），
+overall/recent 为 112.34 / 128.0 units/h，ETA 约 2天3小时5分–2天10小时12分，无 abort。隔离的 9 attempts
 （5 usage 完整、4 unknown）须进最终 cost addendum，不能记零。完成前不得启动 Task 10；现有
 pre-call、WAL、config、历史 receipt 与金额均须保留。
 

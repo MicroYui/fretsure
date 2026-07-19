@@ -982,3 +982,20 @@ intent/result. The content-free extra-attempt count was therefore 404. PID and d
 `screen` were healthy, and no terminal or abort marker existed. Only progress metadata and
 aggregate event types were inspected; the execution binding, private payloads, and frontend
 remained untouched.
+
+### Attempt-004 live 35% checkpoint after recovery
+
+Canonical post-recovery operator sequence 42 recorded exactly 35% after 28,807.810163 active
+segment seconds: 3,521 network units, 4,024 total rows, and 12,928 completed calls. Segment
+overall/recent-15-minute throughput was 112.344534/128.0 units/hour and
+560.223075/608.0 calls/hour. The record was not stalled and reported 183,910 optimistic and
+209,538 median/conservative seconds remaining, approximately 2 days 3 hours 5 minutes through
+2 days 10 hours 12 minutes. Its exact canonical line SHA-256 is
+`3dd048c77e0ed21f85ed438acf479a0cd2561a68f10fc5cbc0ccfc22b0104f35`.
+
+The subsequent read-only snapshot had 3,544 `UNIT_ADMITTED` and 3,542 `UNIT_READY` events;
+lane event types were 13,449/13,447 attempt intent/result and 13,023/13,021 call
+intent/result. The content-free extra-attempt count was 426. PID and detached `screen`
+remained healthy, and no terminal or abort marker existed. Only progress metadata and
+aggregate event types were inspected; the execution binding, private payloads, and frontend
+remained untouched.
