@@ -912,3 +912,45 @@ intent/result and 8,386/8,382 call intent/result. The content-free extra-attempt
 
 Only operator progress metadata and aggregate event types were inspected. The process,
 immutable execution SHA, configuration, private payloads, and frontend remained untouched.
+
+### Attempt-004 abrupt disconnect and orphan-lane recovery amendment
+
+The host later went offline and the detached process disappeared. The last operator record
+reported 2,621 network units, 3,124 rows, and 8,444 calls (26.053678%). The subsequent local
+resume reconstruction established a main durable prefix of 2,622 network units plus 503
+controls: 3,125 rows and 8,445 calls. It found four admitted but non-READY lanes, indices
+2622 through 2625, each with one open call and attempt boundary. The original frozen resume
+contract therefore failed closed and emitted an `INCOMPLETE` abort receipt with SHA-256
+`2abbeb9f609acc6e01fdb5bb7461eda884dfbe5563f9bdfbbf89f45d996c4efe`.
+
+The operator explicitly overrode the whole-attempt fail-closed policy for current and future
+machine disconnects. The amendment retains every durable and READY unit, quarantines each
+active lane as a complete byte-exact WAL, creates an empty WAL at the same active index, and
+retries at most four complete units. It never truncates an event chain or pretends an open
+attempt did not happen. The previous abort receipt and its concurrent audit are quarantined
+byte-exact as the recovery transaction's final commit gate.
+
+`scripts/task9_recover_orphan_lanes.py` implements this as a provider-free external operator
+tool, leaving `src/fretsure/**` and the bound `773c69de…` collector unchanged. It acquires the
+existing writer lock, rejects canonical output or binding drift, emits a mutation-free plan,
+requires the exact plan SHA for apply, fsyncs every move and empty replacement, can roll
+forward an interrupted apply, and emits a canonical applied receipt. Directed synthetic
+tests verify that coordinator/main-journal bytes remain unchanged, active artifacts are also
+quarantined, the original coordinator resume accepts the recovered state, apply is
+idempotent, wrong hashes make no mutation, and receipt bytes contain no request/response
+payload.
+
+The exact real plan SHA-256 is
+`bf662a673a380c18365384c04f107652ae1941a226bd9923b5d9e50fce41d90c`
+(tool SHA-256 `d0d8eac7262b46029a43b2d4e335e4ab0f996dfcfa76f280f453dfcfe634dd6e`).
+It binds the original execution/pre-call/budget gate, abort receipt/audit, config, main
+journal, coordinator, and all four active lane hashes. The quarantined supplement contains
+nine attempt intents, five terminal complete-usage records, and four open usage-unknown
+attempts. Known tokens are 15 input, 5,757 output, 7,403 cache-creation, and zero cache-read.
+Under pricing v2 this is `$0.219054` known and `$28.363054` tight. It will be added to the
+eventual COMPLETE canonical cost instead of being counted as zero or as benchmark outcome
+data.
+
+This is a disclosed post-hoc recovery amendment, not a claim that the original fail-closed
+preregistration was unchanged. No prompt, response, unit payload, or private observation was
+inspected, and no frontend surface changed.
