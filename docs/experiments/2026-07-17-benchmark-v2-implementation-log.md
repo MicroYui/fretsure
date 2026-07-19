@@ -954,3 +954,13 @@ data.
 This is a disclosed post-hoc recovery amendment, not a claim that the original fail-closed
 preregistration was unchanged. No prompt, response, unit payload, or private observation was
 inspected, and no frontend surface changed.
+
+The operator-only amendment was pushed as commit `12cf262`. Applying the exact plan produced
+APPLIED receipt SHA-256
+`c53c1d8a05709a7f72ca71d9ed36660ad0b9fef960dab29fc4e81f1ad6ded31c`.
+The post-check verified four empty active replacements, byte-exact quarantined WALs, and
+unchanged main config/journal plus concurrent config/coordinator hashes. The original runner
+then accepted same-directory `--resume` with 2,622 completed units, 3,125 rows, and 8,445
+calls. All four retried units subsequently became READY and collection continued beyond them;
+the first stable post-recovery snapshot had 2,627 READY / 2,631 admitted, approximately 3,130
+rows and 8,458 completed calls (26.11%), with no abort marker.

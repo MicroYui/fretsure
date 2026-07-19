@@ -28,11 +28,12 @@ attempt-004 已绑定 execution `773c69de…` / pre-call `facafd05…` detached 
 3,104/10,563 rows、8,350 calls（25.85%），overall/recent 214.45 / 120.0 units/h，剩余 ETA
 范围约 1天10小时47分–2天14小时10分。随后机器离线，main durable prefix 停在 2,622 units /
 3,125 rows / 8,445 calls；4 个 active lanes 留下 open provider boundary，旧 `--resume` 生成
-INCOMPLETE checkpoint。用户已批准 post-hoc orphan-lane recovery：使用 pushed operator-only 工具
-按 plan `bf662a67…` 原字节隔离这 4 lanes 与 abort/audit、重跑最多 4 units，再由原 `773c69de…`
-runtime 从 26.06% 同目录 resume。隔离的 9 attempts（5 usage 完整、4 unknown）须进最终 cost
-addendum，不能记零。完成前不得启动 Task 10；现有 pre-call、WAL、config、历史 receipt 与金额
-均须保留。
+INCOMPLETE checkpoint。用户批准的 post-hoc orphan-lane recovery 已由 pushed operator-only 工具
+按 plan `bf662a67…` 应用，receipt=`c53c1d8a…`；原 `773c69de…` runtime 已从 2,622 durable units
+同目录 resume。重跑的 4 units 已全部越过，最新只读计数为 2,627 READY / 2,631 admitted、约
+3,130 rows / 8,458 completed calls（26.11%），无 abort。隔离的 9 attempts（5 usage 完整、4
+unknown）须进最终 cost addendum，不能记零。完成前不得启动 Task 10；现有 pre-call、WAL、
+config、历史 receipt 与金额均须保留。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。
 

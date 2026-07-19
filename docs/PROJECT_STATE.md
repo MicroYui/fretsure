@@ -96,10 +96,12 @@ resume，最终与不间断 B 的 5 个 canonical 文件一致。两者均为 `C
 calls；A / B 总 wall time 30:12 / 27:24。完整 provider-free release gates 已通过：离线全套
 `2599 passed, 8 deselected`，integration 边界 `8 skipped, 2599 deselected`，Ruff、strict mypy、
 lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。attempt-004
-已按上述绑定启动并越过 5%、10%、15%、20%、25% durable checkpoints；当前下一步是推送
-recovery amendment，按 exact plan 隔离 4 个 active units，并从 26.06% durable prefix 恢复 detached
-采集。在后续约每 5% 与 terminal 更新证据，完成后才做双离线 replay。正式与 pilot 在建客户端前
-机械要求数值 loopback，拒绝 `localhost`。
+已按上述绑定启动并越过 5%、10%、15%、20%、25% durable checkpoints。recovery plan `bf662a67…`
+已应用并由 receipt `c53c1d8a…` 回检；原 runtime 从 2,622 durable units 接受同目录 resume，4 个
+重跑 units 均已越过。恢复后首个稳定快照是 2,627 READY / 2,631 admitted、约 3,130 rows /
+8,458 completed calls（26.11%），无 abort。当前继续 detached 采集，在后续约每 5% 与 terminal
+更新证据，完成后才做双离线 replay。正式与 pilot 在建客户端前机械要求数值 loopback，拒绝
+`localhost`。
 
 ## 0a. 其余现状
 
