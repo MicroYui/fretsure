@@ -81,6 +81,14 @@ private quarantine，建立空 lane 后由原 `773c69de…` runner 同目录 res
 7,403、cache-read 0，必须在最终 cost addendum 中另计，unknown 不得写零。本次恢复是用户批准的
 post-hoc protocol amendment，最终结果须明确披露，不能声称原 fail-closed 预注册未偏离。
 
+恢复段 canonical operator sequence 17 记录精确 30% checkpoint：segment elapsed
+`12,349.713427` 秒，3,018/10,060 network units、3,521/10,563 rows、10,451 completed calls；
+恢复段 overall/recent 吞吐为 115.435877 / 108.0 units/hour、584.758508 / 616.0
+calls/hour，`stalled=false`，剩余 ETA 219,613–234,734 秒（约 2天13小时–2天17小时12分）。
+该行 SHA-256=`82b8c541e06f5451e4976fce83557b64f02dfa337c58be72745da212dbb38e13`。
+随后只读快照为 3,091 READY / 3,095 admitted、3,594 rows / 10,793 completed calls
+（30.73%），aggregate extra attempts=404；PID/screen 正常且无 terminal/abort。
+
 P1 wall-reservation amendment 前的完整普通 stub A/B 已覆盖全部 `10,563` rows。A 在
 167 个 durable units 时只发送一次
 `SIGINT`，排空到 212 后以同一 output directory `--resume`，总耗时 30:05；B 不间断运行
@@ -96,12 +104,12 @@ resume，最终与不间断 B 的 5 个 canonical 文件一致。两者均为 `C
 calls；A / B 总 wall time 30:12 / 27:24。完整 provider-free release gates 已通过：离线全套
 `2599 passed, 8 deselected`，integration 边界 `8 skipped, 2599 deselected`，Ruff、strict mypy、
 lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。attempt-004
-已按上述绑定启动并越过 5%、10%、15%、20%、25% durable checkpoints。recovery plan `bf662a67…`
+已按上述绑定启动并越过 5%、10%、15%、20%、25%、30% durable checkpoints。recovery plan `bf662a67…`
 已应用并由 receipt `c53c1d8a…` 回检；原 runtime 从 2,622 durable units 接受同目录 resume，4 个
-重跑 units 均已越过。恢复后首个稳定快照是 2,627 READY / 2,631 admitted、约 3,130 rows /
-8,458 completed calls（26.11%），无 abort。当前继续 detached 采集，在后续约每 5% 与 terminal
-更新证据，完成后才做双离线 replay。正式与 pilot 在建客户端前机械要求数值 loopback，拒绝
-`localhost`。
+重跑 units 均已越过。当前只读快照是 3,091 READY / 3,095 admitted、3,594 rows / 10,793
+completed calls（30.73%），extra attempts=404，无 abort。当前继续 detached 采集，在后续约每
+5% 与 terminal 更新证据，完成后才做双离线 replay。正式与 pilot 在建客户端前机械要求数值
+loopback，拒绝 `localhost`。
 
 ## 0a. 其余现状
 

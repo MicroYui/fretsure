@@ -964,3 +964,21 @@ then accepted same-directory `--resume` with 2,622 completed units, 3,125 rows, 
 calls. All four retried units subsequently became READY and collection continued beyond them;
 the first stable post-recovery snapshot had 2,627 READY / 2,631 admitted, approximately 3,130
 rows and 8,458 completed calls (26.11%), with no abort marker.
+
+### Attempt-004 live 30% checkpoint after recovery
+
+Canonical post-recovery operator sequence 17 recorded exactly 30% after 12,349.713427 active
+segment seconds: 3,018/10,060 network units, 3,521/10,563 total rows, and 10,451 completed
+calls. The resume prefix was 2,622 units and 8,445 calls, so this segment had durably added
+396 units and 2,006 calls at the checkpoint. Overall/recent-15-minute segment throughput was
+115.435877/108.0 units/hour and 584.758508/616.0 calls/hour. The record was not stalled and
+reported 219,613 optimistic/median and 234,734 conservative seconds remaining, approximately
+2 days 13 hours through 2 days 17 hours 12 minutes. Its exact canonical line SHA-256 is
+`82b8c541e06f5451e4976fce83557b64f02dfa337c58be72745da212dbb38e13`.
+
+The subsequent read-only snapshot had 3,095 `UNIT_ADMITTED` and 3,091 `UNIT_READY` events;
+lane event types were 11,200/11,197 attempt intent/result and 10,796/10,793 call
+intent/result. The content-free extra-attempt count was therefore 404. PID and detached
+`screen` were healthy, and no terminal or abort marker existed. Only progress metadata and
+aggregate event types were inspected; the execution binding, private payloads, and frontend
+remained untouched.
