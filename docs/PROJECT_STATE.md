@@ -55,6 +55,16 @@ overall/recent 吞吐 282.685522 / 124.0 units/hour、769.798198 / 624.0 calls/h
 coordinator 为 2,017 admitted / 2,013 ready，lane event-type 计数给出 253 个 extra attempts；
 仍无 terminal/abort 文件。
 
+Sequence 62 在 elapsed `41,149.404322` 秒记录精确 25% checkpoint：2,515 units / 3,018 rows /
+7,887 calls，overall/recent 吞吐 220.027486 / 112.0 units/hour、690.002698 / 608.0
+calls/hour，剩余 ETA 123,449–242,518 秒（约 1天10小时17分–2天19小时22分），
+`stalled=false`。该行 SHA-256=
+`ce9aa6843a774eb3a290dc55ec422eebdbf578939a5e8562ec445faf5c037d9e`。后续 sequence 66
+快照为 2,601 units / 3,104 rows / 8,350 calls（25.854871%），overall/recent 为
+214.450061 / 120.0 units/hour，ETA 125,216–223,770 秒。只读 event-type 计数为 coordinator
+2,610 admitted / 2,606 ready、lane 8,673/8,669 attempt intent/result 与 8,386/8,382 call
+intent/result，即 287 个 extra attempts；仍无 terminal/abort 文件。
+
 P1 wall-reservation amendment 前的完整普通 stub A/B 已覆盖全部 `10,563` rows。A 在
 167 个 durable units 时只发送一次
 `SIGINT`，排空到 212 后以同一 output directory `--resume`，总耗时 30:05；B 不间断运行
@@ -70,9 +80,9 @@ resume，最终与不间断 B 的 5 个 canonical 文件一致。两者均为 `C
 calls；A / B 总 wall time 30:12 / 27:24。完整 provider-free release gates 已通过：离线全套
 `2599 passed, 8 deselected`，integration 边界 `8 skipped, 2599 deselected`，Ruff、strict mypy、
 lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。attempt-004
-已按上述绑定启动并越过 5%、10%、15%、20% durable checkpoints；当前下一步是继续 detached
-采集，在后续约每 5% 与 terminal 更新证据，完成后才做双离线 replay。正式与 pilot 在建客户端前
-机械要求数值 loopback，拒绝 `localhost`。
+已按上述绑定启动并越过 5%、10%、15%、20%、25% durable checkpoints；当前下一步是继续
+detached 采集，在后续约每 5% 与 terminal 更新证据，完成后才做双离线 replay。正式与 pilot
+在建客户端前机械要求数值 loopback，拒绝 `localhost`。
 
 ## 0a. 其余现状
 

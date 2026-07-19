@@ -892,3 +892,23 @@ At the same read-only snapshot, coordinator event types were 2,017 `UNIT_ADMITTE
 PID 54154 and detached screen 54151 remained healthy, and no terminal or abort marker
 existed. Only progress metadata and aggregate event types were inspected; the live process,
 execution binding, configuration, private payloads, and frontend were untouched.
+
+### Attempt-004 live 25% checkpoint
+
+Canonical operator sequence 62 recorded exactly 25% after 41,149.404322 active seconds:
+2,515/10,060 network units, 3,018/10,563 total rows, and 7,887 completed calls. Overall and
+recent-15-minute rates were 220.027486/112.0 units/hour and 690.002698/608.0 calls/hour.
+The record was not stalled and reported 123,449 optimistic/median and 242,518 conservative
+seconds remaining, approximately 1 day 10 hours 17 minutes through 2 days 19 hours
+22 minutes. Its exact canonical line SHA-256 is
+`ce9aa6843a774eb3a290dc55ec422eebdbf578939a5e8562ec445faf5c037d9e`.
+
+The subsequent sequence-66 snapshot reported 2,601 units, 3,104 rows, and 8,350 calls
+(25.854871%), with overall/recent rates of 214.450061/120.0 units/hour and a remaining range
+of 125,216–223,770 seconds. At the same read-only check, coordinator event types were
+2,610 `UNIT_ADMITTED` and 2,606 `UNIT_READY`; lane event types were 8,673/8,669 attempt
+intent/result and 8,386/8,382 call intent/result. The content-free extra-attempt count was
+287. PID and detached `screen` were healthy, and no terminal or abort marker existed.
+
+Only operator progress metadata and aggregate event types were inspected. The process,
+immutable execution SHA, configuration, private payloads, and frontend remained untouched.
