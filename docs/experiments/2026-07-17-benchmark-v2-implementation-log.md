@@ -846,3 +846,32 @@ This is operational progress evidence, not a benchmark result. No terminal recei
 complete usage/cost summary exists yet; retry attempts with missing usage remain unavailable
 rather than zero. No prompt, response, unit artifact, lane payload, or private observation
 was inspected to produce this checkpoint, and no frontend surface changed.
+
+### Attempt-004 live 10% and 15% checkpoints
+
+The same detached process and immutable execution binding crossed two further durable
+milestones without a stall. Canonical operator sequence 29 recorded exactly 10% after
+19,688.674576 active seconds: 1,006/10,060 network units, 1,509/10,563 total rows, and
+3,446 completed calls. Overall/recent-15-minute unit throughput was
+183.943311/1,780.0 per hour, and its optimistic/median/conservative remaining estimates
+were 18,312/177,199/177,199 seconds. The exact line SHA-256 is
+`d69ca7d4e31baa53482c6206ae09526e1e09d0cfd11120888353b30f30ff9a48`.
+
+Sequence 30 recorded exactly 15% after 19,798.344881 active seconds: 1,509 units,
+2,012 rows, and 4,187 completed calls. Overall/recent unit throughput was
+274.386573/3,740.0 per hour, and its optimistic/median/conservative remaining estimates
+were 8,231/112,191/112,191 seconds. The exact line SHA-256 is
+`d154bc8525501152dca55468c4fb5a76af7ecfef10f226e0b5ec62f37d065a6e`.
+
+Those recent-window rates reflect a durable-emission burst and are not treated as a stable
+completion forecast. The subsequent sequence-33 snapshot reported 1,899 units, 2,402 rows,
+and 4,958 calls (18.876740%), with overall/recent rates of 313.749257/96.0 units/hour and
+819.151561/480.0 calls/hour. Its remaining range widened to 93,641–306,038 seconds. At the
+same read-only check, coordinator event types were 1,907 `UNIT_ADMITTED` and 1,903
+`UNIT_READY`; lane event types were 5,225/5,221 attempt intent/result and 4,982/4,978 call
+intent/result. Thus the content-free extra-attempt count was 243. PID and detached `screen`
+were healthy, and no terminal or abort marker existed.
+
+Only operator progress fields and aggregate event-type counts were inspected. No prompt,
+response, unit artifact, lane payload, or private observation was read, and the live process,
+execution SHA, configuration, and frontend remained unchanged.
