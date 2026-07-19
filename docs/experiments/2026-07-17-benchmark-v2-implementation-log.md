@@ -875,3 +875,20 @@ were healthy, and no terminal or abort marker existed.
 Only operator progress fields and aggregate event-type counts were inspected. No prompt,
 response, unit artifact, lane payload, or private observation was read, and the live process,
 execution SHA, configuration, and frontend remained unchanged.
+
+### Attempt-004 live 20% checkpoint
+
+Canonical operator sequence 39 recorded exactly 20% after 25,622.819133 active seconds:
+2,012/10,060 network units, 2,515/10,563 total rows, and 5,479 completed calls. Overall and
+recent-15-minute rates were 282.685522/124.0 units/hour and 769.798198/624.0 calls/hour.
+The record was not stalled and reported 102,492 optimistic/median and 233,652 conservative
+seconds remaining, or approximately 1 day 4 hours 28 minutes through 2 days 16 hours
+54 minutes. Its exact canonical line SHA-256 is
+`0975c7b1499fc4c7d5df7b86dd668d0702ec36db6956cee8b71481d2a49d6c4a`.
+
+At the same read-only snapshot, coordinator event types were 2,017 `UNIT_ADMITTED` and
+2,013 `UNIT_READY`; lane event types were 5,745/5,741 attempt intent/result and
+5,492/5,488 call intent/result. The content-free extra-attempt count was therefore 253.
+PID 54154 and detached screen 54151 remained healthy, and no terminal or abort marker
+existed. Only progress metadata and aggregate event types were inspected; the live process,
+execution binding, configuration, private payloads, and frontend were untouched.

@@ -24,11 +24,11 @@ throughput pilot 已在 pushed commit
 `08f456d2…` 完成 4/8 路各 8 blocks；8/4 unit/call 吞吐比仅 `0.9795 / 0.9897`，独立确认后正式
 并发保持 `4`。comparison SHA-256=`452d31be314bd66a6fe73548bb8d12078c38a132c968c3b95f92b212c9901d6d`；
 attempt-004 已绑定 execution `773c69de…` / pre-call `facafd05…` detached 启动，并通过精确
-5% / 10% / 15% checkpoints。最新 operator 快照为 1,899/10,060 network units、
-2,402/10,563 rows、4,958 calls（18.88%），overall/recent 313.75 / 96.0 units/h；durable burst
-后的剩余 ETA 范围约 1天02小时01分–3天13小时00分。它仍在运行，尚无 terminal usage/cost
-receipt；下一步只继续采集与约每 5% 记录，完成前不得启动 Task 10。现有 pre-call、WAL、config、
-abort receipt 与金额均为冻结历史证据。
+5% / 10% / 15% / 20% checkpoints。最新 operator 快照为 2,012/10,060 network units、
+2,515/10,563 rows、5,479 calls（20%），overall/recent 282.69 / 124.0 units/h，剩余 ETA 范围约
+1天04小时28分–2天16小时54分。它仍在运行，尚无 terminal usage/cost receipt；下一步只继续采集
+与约每 5% 记录，完成前不得启动 Task 10。现有 pre-call、WAL、config、abort receipt 与金额均为
+冻结历史证据。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。
 

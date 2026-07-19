@@ -47,11 +47,13 @@ canonical operator sequence 24 是精确 5% checkpoint：网络段 elapsed `16,9
 `d69ca7d4e31baa53482c6206ae09526e1e09d0cfd11120888353b30f30ff9a48`；sequence 30 的精确
 15% checkpoint 为 elapsed `19,798.344881` 秒、1,509 units / 2,012 rows / 4,187 calls，行
 SHA-256=`d154bc8525501152dca55468c4fb5a76af7ecfef10f226e0b5ec62f37d065a6e`。两行都
-`stalled=false`。这次 burst 令 checkpoint 的 recent-window ETA 暂时偏短；sequence 33 的后续快照
-为 1,899 units / 2,402 rows / 4,958 calls（18.876740%），overall/recent 吞吐
-313.749257 / 96.0 units/hour、819.151561 / 480.0 calls/hour，当前剩余 ETA 范围为
-93,641–306,038 秒（约 1天02小时01分–3天13小时00分）。lane event-type 计数给出 243 个
-extra attempts；仍无 terminal/abort 文件。
+`stalled=false`。这次 burst 令 checkpoint 的 recent-window ETA 暂时偏短；sequence 39 随后在
+elapsed `25,622.819133` 秒记录精确 20%：2,012 units / 2,515 rows / 5,479 calls，
+overall/recent 吞吐 282.685522 / 124.0 units/hour、769.798198 / 624.0 calls/hour，剩余 ETA
+102,492–233,652 秒（约 1天04小时28分–2天16小时54分），`stalled=false`。该行 SHA-256=
+`0975c7b1499fc4c7d5df7b86dd668d0702ec36db6956cee8b71481d2a49d6c4a`。同次只读检查的
+coordinator 为 2,017 admitted / 2,013 ready，lane event-type 计数给出 253 个 extra attempts；
+仍无 terminal/abort 文件。
 
 P1 wall-reservation amendment 前的完整普通 stub A/B 已覆盖全部 `10,563` rows。A 在
 167 个 durable units 时只发送一次
@@ -68,9 +70,9 @@ resume，最终与不间断 B 的 5 个 canonical 文件一致。两者均为 `C
 calls；A / B 总 wall time 30:12 / 27:24。完整 provider-free release gates 已通过：离线全套
 `2599 passed, 8 deselected`，integration 边界 `8 skipped, 2599 deselected`，Ruff、strict mypy、
 lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。attempt-004
-已按上述绑定启动并越过 5%、10%、15% durable checkpoints；当前下一步是继续 detached 采集，在
-后续约每 5% 与 terminal 更新证据，完成后才做双离线 replay。正式与 pilot 在建客户端前机械要求
-数值 loopback，拒绝 `localhost`。
+已按上述绑定启动并越过 5%、10%、15%、20% durable checkpoints；当前下一步是继续 detached
+采集，在后续约每 5% 与 terminal 更新证据，完成后才做双离线 replay。正式与 pilot 在建客户端前
+机械要求数值 loopback，拒绝 `localhost`。
 
 ## 0a. 其余现状
 
