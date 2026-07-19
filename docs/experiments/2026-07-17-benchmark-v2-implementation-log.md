@@ -798,3 +798,30 @@ The rebuilt 0.6.0 wheel and sdist passed the exact content audit with `116` whee
 `331` sdist entries. The isolated clean-wheel matrix passed core replay, benchmark,
 MusicXML, MIDI, score, service, and MCP groups. These gates made no provider call, inspected
 no private prompt/response or staging payload, and changed no frontend surface.
+
+### Replicated throughput pilot and four-lane freeze
+
+The analysis-excluded pilot bound execution commit
+`08f456d2a21b63dc01e2586fc842e9e8cb64c34a`, analysis SHA-256
+`495ac3870a79ef394323f59cd664d551f1696ae58b52184f8e9fc351ec495281`, the unchanged lock,
+pricing, model, timeout, and Task 8 pilot corpus. One two-lane smoke block and eight complete
+blocks each at four and eight lanes produced 17/17 terminal summaries. Across all summaries,
+408 logical calls succeeded, none failed, and nine provider retries were retained. Recorded
+known/tight cost was `$11.680634 / $46.673786`; missing usage from failed retry attempts was
+not treated as zero.
+
+Four lanes completed 64 units and 191 calls at 225.824948 units/hour and 673.946328
+calls/hour, with zero retry and P50/P95 latency 9.552/70.288 seconds. Eight lanes completed
+64 units and 193 calls at 221.193397 units/hour and 667.036338 calls/hour, with nine retries
+and P50/P95 9.687/77.732 seconds. The 8/4 unit and call ratios were `0.979490526` and
+`0.989746973`, below the frozen `1.35` and `1.25` requirements. An independent content-free
+audit confirmed all bindings, summary hashes, usage coverage, and the conclusion that formal
+collection must retain four lanes. The comparison SHA-256 is
+`452d31be314bd66a6fe73548bb8d12078c38a132c968c3b95f92b212c9901d6d`.
+
+For 10,060 network units, the observed four-lane blocks imply an optimistic 35:29, median
+41:14, pooled-rate 44:33, and conservative 67:22 completion estimate. These exclude operator
+pauses and later offline replay/finalization; canonical progress will replace the pilot
+estimate with actual durable throughput after 30 minutes and near each additional 5%.
+No private prompt, response, or checkpoint payload was inspected, and the pilot changed no
+formal analysis artifact or frontend surface.

@@ -17,9 +17,19 @@ attempt-003 使用 pre-call SHA-256
 及慢分块响应的 300 秒整段硬 deadline，并另预留 10 秒 WAL/timeout-delivery 记录开销；当前正式候选保持最多
 `4` 个 in-flight units。正式门前的 analysis-excluded pilot 按 `2 → 4 → 8` 运行；`8` 只有在
 `4` 与 `8` 各至少八个完整 block（各 64 units）并经独立确认后才能冻结，否则保持 `4`。
-amended runner、预注册/预算绑定、crash/resume 测试、pilot 和完整 release gates 必须先推送。
+amended runner、预注册/预算绑定、crash/resume 测试和完整 release gates 已在 commit
+`08f456d2a21b63dc01e2586fc842e9e8cb64c34a` 推送；pilot 也绑定该 commit 完成。
 正式进程须脱离交互会话运行，按 durable completed-unit 边界恢复；canonical progress JSONL 只进
 append-only operator log，不进分析工件。运行时不调用 Git 或子进程。历史工件与金额均保持原样。
+
+最终 pilot comparison SHA-256=
+`452d31be314bd66a6fe73548bb8d12078c38a132c968c3b95f92b212c9901d6d`。4/8 路各 8 个完整
+block / 64 units：4 路 225.824948 unit/h、673.946328 calls/h、0 retries；8 路 221.193397
+unit/h、667.036338 calls/h、9 retries。8/4 unit/call 比 `0.979490526 / 0.989746973`，均未过
+`1.35 / 1.25` 门槛；独立确认结论是 formal 必须保持 `4`。17 个 pilot blocks 合计 408 个
+成功 calls、0 失败，recorded known / tight cost 为 `$11.680634 / $46.673786`；失败 retry
+attempts 的缺失 usage 未写成零。按 4 路 block 分布外推 10,060 个网络 units：乐观 35:29、
+中位 41:14、合并速率 44:33、保守 67:22，正式进度会在 30 分钟及约每 5% 更新。
 
 P1 wall-reservation amendment 前的完整普通 stub A/B 已覆盖全部 `10,563` rows。A 在
 167 个 durable units 时只发送一次
@@ -35,9 +45,9 @@ finalize 已降到约 4–5 分钟；缓存按 item 释放，不随全表累计 
 resume，最终与不间断 B 的 5 个 canonical 文件一致。两者均为 `COMPLETE`、10,563 rows / 15,090
 calls；A / B 总 wall time 30:12 / 27:24。完整 provider-free release gates 已通过：离线全套
 `2599 passed, 8 deselected`，integration 边界 `8 skipped, 2599 deselected`，Ruff、strict mypy、
-lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。当前剩余门为
-commit/push、analysis-excluded live pilot，再生成 fresh attempt-004 绑定。正式与 pilot 在建客户端前
-机械要求数值 loopback，拒绝 `localhost`。
+lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。当前下一步是
+提交/push pilot 决策证据，生成 fresh attempt-004 pre-call 绑定，再 detached 启动正式采集。正式与
+pilot 在建客户端前机械要求数值 loopback，拒绝 `localhost`。
 
 ## 0a. 其余现状
 

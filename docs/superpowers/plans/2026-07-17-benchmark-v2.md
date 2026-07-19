@@ -842,8 +842,13 @@ As of 2026-07-19, the amended ordinary and four-lane provider-free A/B recovery 
 the complete provider-free release suite are closed. The release evidence is `2599 passed,
 8 deselected`, an empty-provider integration boundary of `8 skipped, 2599 deselected`, a
 116-wheel/331-sdist content audit, and seven passing isolated clean-install smoke groups.
-The remaining order is commit/push, the analysis-excluded live throughput pilot, then fresh
-attempt-004 bindings and detached collection.
+The live throughput pilot subsequently completed eight blocks / 64 units at both four and
+eight lanes. Eight lanes failed both frozen throughput gates: its 8/4 unit and call ratios
+were `0.979490526` and `0.989746973`, with nine retries versus zero at four lanes. Independent
+confirmation retained the default four-lane formal level. Comparison SHA-256 is
+`452d31be314bd66a6fe73548bb8d12078c38a132c968c3b95f92b212c9901d6d`. The remaining order
+is to push this decision receipt, build fresh attempt-004 bindings, and start detached
+collection.
 
 - Before any Task 9 provider call, the formal runner must enforce the billing envelope's
   input ceiling as UTF-8 prompt bytes plus the fixed 256-token framing allowance before

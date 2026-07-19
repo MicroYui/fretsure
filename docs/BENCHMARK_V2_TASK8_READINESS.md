@@ -9,8 +9,8 @@
 > supplies the billable ceiling: the corrected Task 8 combined known/tight interval is
 > `$0.513140..$27.730036`, and the official-contract pilot mechanical maximum is
 > `$513.232896`. Task 9 attempts 001, 002, and 003 are preserved as terminal `INCOMPLETE`;
-> the next live run may only be a fresh attempt-004 after the operational amendment,
-> throughput pilot, and release gates are pushed.
+> the operational amendment and release gates are pushed, and the replicated throughput
+> pilot independently confirmed that fresh attempt-004 must retain four lanes.
 
 ## Frozen operational pilot
 
@@ -311,6 +311,13 @@ whole-attempt deadline across pool/connect/TLS/write/read and slow chunking, wit
 (64 units per level) plus independent confirmation, otherwise `4` remains frozen. Formal
 collection runs detached, resumes only at verified durable-unit boundaries, emits progress
 JSONL only to the append-only operator log, and invokes neither Git nor subprocesses at runtime.
+
+The replicated pilot completed eight live blocks at both `4` and `8`. Four lanes produced
+225.824948 units/hour and 673.946328 calls/hour with no retry; eight lanes produced
+221.193397 units/hour and 667.036338 calls/hour with nine retries. The 8/4 ratios,
+`0.979490526` for units and `0.989746973` for calls, failed the frozen `1.35` and `1.25`
+gates. Independent confirmation therefore retained four lanes. Comparison SHA-256 is
+`452d31be314bd66a6fe73548bb8d12078c38a132c968c3b95f92b212c9901d6d`.
 
 ## Offline evidence
 
