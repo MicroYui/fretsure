@@ -7,6 +7,7 @@ import stat
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
+from typing import NoReturn
 
 import pytest
 
@@ -115,13 +116,15 @@ def _blob() -> BlobRecord:
 def _row(
     *,
     run_id: str = "run-0",
+    key: RowKey | None = None,
     observations: tuple[ObservationKey, ...] = (),
     blobs: tuple[BlobRecord, ...] | None = None,
 ) -> BenchmarkRow:
     records = (_blob(),) if blobs is None else blobs
+    exact_key = _row_key() if key is None else key
     return build_row(
         run_id=run_id,
-        key=_row_key(),
+        key=exact_key,
         family_id="family-0",
         cluster_id="cluster-0",
         observation_keys=observations,
@@ -137,18 +140,24 @@ def _row(
     )
 
 
-def _make_call(sink: InMemoryObservationSink, *, run_id: str = "run-0") -> ObservationKey:
+def _make_call(
+    sink: InMemoryObservationSink,
+    *,
+    run_id: str = "run-0",
+    item_id: str = "item-0",
+) -> ObservationKey:
+    call_index = sink.intent_count
     clocks = iter((1_000_000, 2_000_000))
     llm = ObservingLLM(ConstantLLM("valid"), sink, clock_ns=lambda: next(clocks))
-    scopes = CallSequence(run_id).bind_candidate(
-        item_id="item-0",
+    scopes = CallSequence(run_id, start_call_index=call_index).bind_candidate(
+        item_id=item_id,
         family_id="family-0",
         cluster_id="cluster-0",
-        pair_id="pair:item-0:0",
+        pair_id=f"pair:{item_id}:0",
     )
     with scopes(CallStage.PROPOSAL.value, 0, 0):
         assert llm.complete(system="system", user="user", max_tokens=32) == "valid"
-    intent = sink.intents[0]
+    intent = sink.intents_since(call_index)[0]
     return ObservationKey(intent.logical_call_id, intent.call_index)
 
 
@@ -405,6 +414,27 @@ def test_durable_sink_appends_one_fsynced_hash_chained_event_per_observation_eve
         assert current["previous_event_sha256"] == previous_hash  # type: ignore[index]
     assert final_hash == artifacts.wal_event_sha256(events[-1])
     assert len(calls) >= len(events)
+
+
+def test_durable_sink_replays_constant_time_counts_and_suffixes(tmp_path: Path) -> None:
+    journal = tmp_path / "suffixes.jsonl"
+    journal.touch(mode=0o600)
+    with DurableObservationSink(journal, max_calls=2) as sink:
+        _make_call(sink)
+        _make_call(sink)
+
+    with DurableObservationSink(journal, max_calls=2, resume=True) as resumed:
+        assert (
+            resumed.intent_count
+            == resumed.result_count
+            == resumed.attempt_intent_count
+            == resumed.attempt_result_count
+            == 2
+        )
+        assert [value.call_index for value in resumed.intents_since(1)] == [1]
+        assert [value.call_index for value in resumed.results_since(1)] == [1]
+        assert [value.call_index for value in resumed.attempt_intents_since(1)] == [1]
+        assert [value.call_index for value in resumed.attempt_results_since(1)] == [1]
 
 
 def test_durable_sink_resume_rejects_partial_or_corrupt_hash_chain(tmp_path: Path) -> None:
@@ -671,8 +701,13 @@ def test_durable_sink_rechecks_usage_ceiling_during_resume(
     assert cause.field == "journal.provider.output_tokens"
 
 
+@pytest.mark.parametrize(
+    "pre_call_schema",
+    ["benchmark-pre-call-config@0.3.0", "benchmark-pre-call-config@0.4.0"],
+)
 def test_artifact_store_enforces_formal_per_attempt_usage_ceilings(
     tmp_path: Path,
+    pre_call_schema: str,
 ) -> None:
     base = _manifest()
     ceilings = {
@@ -691,10 +726,8 @@ def test_artifact_store_enforces_formal_per_attempt_usage_ceilings(
         parameters={
             "model": {"allowed_returned_model_id": "requested-model"},
             "pre_call": {
-                "schema": "benchmark-pre-call-config@0.3.0",
-                "billing_envelope": {
-                    "wire": {"billable_token_ceiling_per_attempt": ceilings}
-                }
+                "schema": pre_call_schema,
+                "billing_envelope": {"wire": {"billable_token_ceiling_per_attempt": ceilings}},
             },
         },
     )
@@ -723,9 +756,7 @@ def test_artifact_store_enforces_formal_per_attempt_usage_ceilings(
 
     assert caught.value.code is ArtifactCode.LIMIT_EXCEEDED
     assert caught.value.field == "journal.provider.input_tokens"
-    terminal = parse_canonical_jsonl_bytes((output / "journal.jsonl").read_bytes())[-1][
-        "payload"
-    ]
+    terminal = parse_canonical_jsonl_bytes((output / "journal.jsonl").read_bytes())[-1]["payload"]
     assert terminal["status"] == "failed"  # type: ignore[index]
     assert terminal["failure_code"] == CallFailureCode.PROVIDER_METADATA_INVALID.value  # type: ignore[index]
 
@@ -1049,6 +1080,97 @@ def test_artifact_store_commits_atomic_units_resumes_and_finalizes_sorted_tables
     )
     assert receipt_from_dict(read_canonical_json(canonical / "receipt.json")) == receipt
     assert not list(output.rglob("*.tmp"))
+
+
+def test_artifact_store_resume_commit_uses_cached_ownership_and_is_byte_identical(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    second_key = RowKey(RowType.CANDIDATE, "item-1", 0, 0, "pair:item-1:0")
+    manifest = _manifest(rows=(_row_key(), second_key))
+    blob = _blob()
+
+    def commit(store: ArtifactStore, key: RowKey) -> None:
+        observation = _make_call(store.sink, item_id=key.item_id)
+        store.commit_unit(
+            store.completed_unit_count,
+            _row(key=key, observations=(observation,), blobs=(blob,)),
+            (blob,),
+        )
+
+    uninterrupted = tmp_path / "uninterrupted"
+    with ArtifactStore.create(uninterrupted, manifest) as store:
+        commit(store, _row_key())
+        commit(store, second_key)
+        assert store.completed_unit_count == 2
+        store.finalize()
+
+    interrupted = tmp_path / "interrupted"
+    with ArtifactStore.create(interrupted, manifest) as store:
+        commit(store, _row_key())
+
+    class NoHistoricalIteration(list[object]):
+        def __iter__(self) -> NoReturn:
+            raise AssertionError("commit must not rescan historical staged units")
+
+    def snapshot_forbidden(_sink: object) -> object:
+        raise AssertionError("hot paths must not construct full observation snapshots")
+
+    with monkeypatch.context() as guarded:
+        guarded.setattr(
+            DurableObservationSink,
+            "intents",
+            property(snapshot_forbidden),
+        )
+        guarded.setattr(
+            DurableObservationSink,
+            "attempt_intents",
+            property(snapshot_forbidden),
+        )
+        with ArtifactStore.resume(interrupted, manifest) as resumed:
+            resumed._units = NoHistoricalIteration(resumed.completed_units)
+            commit(resumed, second_key)
+            assert resumed.completed_unit_count == 2
+
+    with ArtifactStore.resume(interrupted, manifest) as resumed:
+        resumed.finalize()
+
+    def artifact_bytes(root: Path) -> dict[str, bytes]:
+        return {
+            path.relative_to(root).as_posix(): path.read_bytes()
+            for path in root.rglob("*")
+            if path.is_file()
+        }
+
+    assert artifact_bytes(interrupted) == artifact_bytes(uninterrupted)
+
+
+def test_artifact_store_resume_for_abort_terminalizes_unowned_calls(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "incomplete-run"
+    manifest = _manifest()
+    with ArtifactStore.create(output, manifest) as store:
+        _make_call(store.sink)
+
+    with pytest.raises(ArtifactError) as caught:
+        ArtifactStore.resume(output, manifest)
+    assert caught.value.code is ArtifactCode.INCOMPLETE
+
+    with ArtifactStore.resume_for_abort(output, manifest) as terminal:
+        with pytest.raises(ArtifactError) as sink_error:
+            _ = terminal.sink
+        assert sink_error.value.code is ArtifactCode.INCOMPLETE
+        with pytest.raises(ArtifactError) as finalize_error:
+            terminal.finalize()
+        assert finalize_error.value.code is ArtifactCode.INCOMPLETE
+        receipt = terminal.abort("concurrent_audit_fixture")
+
+    assert receipt.status is CompletionStatus.INCOMPLETE
+    assert receipt.observed_calls == 1
+    assert receipt.observed_rows == 0
+    assert receipt.reason_code == "concurrent_audit_fixture"
+    assert (output / "abort-receipt.json").is_file()
 
 
 def test_report_callback_failure_publishes_nothing_and_same_inputs_can_retry(

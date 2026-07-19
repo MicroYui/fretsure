@@ -8,10 +8,18 @@ deterministic stub or live collection, complete-unit resume, and offline replay.
 import argparse
 import hashlib
 import json
+import os
+import queue
+import signal
 import sys
-from collections.abc import Callable, Sequence
-from dataclasses import asdict, dataclass
+import tempfile
+import threading
+from collections.abc import Callable, Iterator, Sequence
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from contextlib import contextmanager
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
+from types import FrameType
 from typing import Any, cast
 
 from fretsure.agent.arranger import (
@@ -19,6 +27,7 @@ from fretsure.agent.arranger import (
     PROPOSAL_COMPACT_PROTOCOL_VERSION,
     PROPOSAL_OBJECT_PROTOCOL_VERSION,
     ArrangeGoal,
+    arrangement_source_context_sha256,
 )
 from fretsure.agent.critic import CRITIC_MAX_TOKENS
 from fretsure.agent.repair import REPAIR_MAX_TOKENS
@@ -39,6 +48,7 @@ from fretsure.bench.artifacts import (
     ArtifactStore,
     BenchmarkManifest,
     BenchmarkReceipt,
+    BenchmarkRow,
     BlobRecord,
     CompleteUnitReservation,
     FinalizationInputs,
@@ -46,14 +56,32 @@ from fretsure.bench.artifacts import (
     ReplayBundle,
     RowKey,
     RowType,
+    blob_record_from_dict,
+    blob_record_to_dict,
     build_manifest,
+    build_row,
     load_replay_bundle,
+    parse_canonical_json_bytes,
     publish_replay_bundle,
+    row_from_dict,
+    row_to_dict,
 )
 from fretsure.bench.baselines import (
     RAW_COMPACT_PROTOCOL_VERSION,
     RAW_OBJECT_PROTOCOL_VERSION,
     PureSolverOutcome,
+    run_pure_solver_baseline,
+)
+from fretsure.bench.concurrent import (
+    CollectionExecutionContract,
+    ConcurrentExecutionCode,
+    ConcurrentExecutionError,
+    ConcurrentUnitCoordinator,
+    LaneObservationPolicy,
+    ReadyUnit,
+    UnitPermit,
+    rebase_journal_events,
+    rebase_observation_key,
 )
 from fretsure.bench.contracts import canonical_json_bytes
 from fretsure.bench.corpus import (
@@ -68,16 +96,27 @@ from fretsure.bench.corpus import (
 from fretsure.bench.experiment import (
     EXPERIMENT_N_SAMPLES,
     CompletedExperimentUnit,
+    CompletedPureSolver,
     ExperimentInputError,
     ExperimentPlan,
     MatchedPrefix,
     ObservationLedger,
+    assemble_experiment_collection,
+    execute_scheduled_unit,
     item_pair_id,
     preflight_experiment,
     run_experiment,
     sample_pair_id,
 )
 from fretsure.bench.generator import GenConfig, generate_leadsheet
+from fretsure.bench.observe import (
+    AttemptIntent,
+    AttemptResult,
+    CallIntent,
+    CallResult,
+    CallSequence,
+    ObservingLLM,
+)
 from fretsure.bench.precall import (
     BenchmarkPreCallConfig,
     pre_call_artifact_budget,
@@ -92,6 +131,7 @@ from fretsure.bench.preregistration import (
     preregistration_from_bytes,
     preregistration_from_dict,
 )
+from fretsure.bench.progress import ProgressConfig, ProgressReporter
 from fretsure.bench.report import (
     BenchmarkReport as BenchmarkV2Report,
 )
@@ -116,6 +156,7 @@ from fretsure.llm.client import (
     LLMIntegrityError,
     LLMModelIdError,
     close_llm_client,
+    require_numeric_loopback_proxy_environment,
     snapshot_llm_model_id,
     validate_llm_model_id,
 )
@@ -145,6 +186,7 @@ MAX_BENCHMARK_V2_ITEMS = 900
 DEFAULT_BENCHMARK_V2_BOOTSTRAP_REPETITIONS = 10_000
 DEFAULT_BENCHMARK_V2_SIGN_FLIP_DRAWS = 100_000
 MAX_BENCHMARK_V2_SIGN_FLIP_SEED = MAX_BENCHMARK_SEED - 120_100
+_OPERATIONAL_PROGRESS_POLL_SECONDS = 60.0
 
 
 def _max_v2_bootstrap_seed(family_count: int) -> int:
@@ -176,9 +218,7 @@ def _analysis_contract_sha256(
         contract["preregistered_prompts"] = model["prompts"]
         contract["preregistered_versions"] = preregistered["versions"]
     payload = canonical_json_bytes(contract)
-    return hashlib.sha256(
-        b"fretsure:benchmark-v2-analysis-contract@0.1.0\0" + payload
-    ).hexdigest()
+    return hashlib.sha256(b"fretsure:benchmark-v2-analysis-contract@0.1.0\0" + payload).hexdigest()
 
 
 BENCHMARK_V2_ANALYSIS_CONTRACT_SHA256 = _analysis_contract_sha256()
@@ -206,6 +246,10 @@ class FormalRequestCeilingError(LLMIntegrityError):
         super().__init__(
             f"formal request {field} upper bound {upper_bound} exceeds ceiling {ceiling}"
         )
+
+
+class _OperationalResumeClientUnavailable(RuntimeError):
+    """A resumable output remains untouched because worker clients could not open."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -451,14 +495,10 @@ def _v2_limits(
         max_json_bytes=256 * 1024 * 1024,
         max_jsonl_line_bytes=4 * 1024 * 1024,
         max_requested_output_tokens=maximum["max_requested_output_tokens"],
-        max_attempt_reserved_output_tokens=maximum[
-            "max_attempt_reserved_output_tokens"
-        ],
+        max_attempt_reserved_output_tokens=maximum["max_attempt_reserved_output_tokens"],
         max_response_text_bytes=maximum["max_response_text_bytes"],
         max_transport_response_bytes=maximum["max_transport_response_bytes"],
-        max_wall_microseconds=maximum[
-            "max_recorded_provider_call_elapsed_microseconds"
-        ],
+        max_wall_microseconds=maximum["max_recorded_provider_call_elapsed_microseconds"],
         complete_unit_reservation=_reservation_from_wire(reservation),
     )
 
@@ -521,9 +561,7 @@ def _v2_parameters(
             "version": BENCHMARK_V2_ANALYSIS_VERSION,
         }
     allowed_returned_model_id = (
-        requested_model_id
-        if pre_call_config is None
-        else pre_call_config.allowed_returned_model_id
+        requested_model_id if pre_call_config is None else pre_call_config.allowed_returned_model_id
     )
     pre_call_wire: dict[str, object] | None = None
     if pre_call_config is not None:
@@ -672,9 +710,7 @@ def _preregistration_context(
     pre_call_config: BenchmarkPreCallConfig | None = None,
 ) -> BenchmarkV2Context:
     if type(preregistration) is not BenchmarkPreregistration:
-        raise BenchmarkInputError(
-            "preregistration", "must be an exact BenchmarkPreregistration"
-        )
+        raise BenchmarkInputError("preregistration", "must be an exact BenchmarkPreregistration")
     if (pre_call_config is None) != stub:
         raise BenchmarkInputError(
             "pre_call_config", "stub must omit and live must provide pre-call config"
@@ -701,9 +737,7 @@ def _preregistration_context(
     primary = _exact_object(
         corpus["primary"],
         "preregistration.corpus.primary",
-        frozenset(
-            {"bars", "base_seed", "family_count", "generator_version", "layer", "split"}
-        ),
+        frozenset({"bars", "base_seed", "family_count", "generator_version", "layer", "split"}),
     )
     inference = cast(dict[str, object], wire["inference"])
     bootstrap = cast(dict[str, object], inference["bootstrap"])
@@ -775,9 +809,7 @@ def build_benchmark_v2_live_context(
     """Build a live context only from one fully validated pre-call config."""
 
     if type(pre_call_config) is not BenchmarkPreCallConfig:
-        raise BenchmarkInputError(
-            "pre_call_config", "must be an exact BenchmarkPreCallConfig"
-        )
+        raise BenchmarkInputError("pre_call_config", "must be an exact BenchmarkPreCallConfig")
     validated = pre_call_config_from_bytes(pre_call_config.wire_json)
     validate_current_runtime(validated)
     require_live_authorization(validated)
@@ -830,9 +862,7 @@ def benchmark_v2_context_from_manifest(manifest: BenchmarkManifest) -> Benchmark
     model = _exact_object(
         parameters["model"],
         "parameters.model",
-        frozenset(
-            {"allowed_returned_model_id", "requested_model_id", "returned_model_rule"}
-        ),
+        frozenset({"allowed_returned_model_id", "requested_model_id", "returned_model_rule"}),
     )
     requested_model_id = _benchmark_model_id(model["requested_model_id"])
     if (
@@ -855,15 +885,11 @@ def benchmark_v2_context_from_manifest(manifest: BenchmarkManifest) -> Benchmark
             "parameters.experiment",
             frozenset({"source"}),
         )
-        if corpus_reference["source"] != (
-            "parameters.preregistration.wire.corpus.snapshot"
-        ):
+        if corpus_reference["source"] != ("parameters.preregistration.wire.corpus.snapshot"):
             raise BenchmarkInputError(
                 "parameters.corpus.source", "does not name the embedded corpus snapshot"
             )
-        if experiment_reference["source"] != (
-            "parameters.preregistration.wire.schedule"
-        ):
+        if experiment_reference["source"] != ("parameters.preregistration.wire.schedule"):
             raise BenchmarkInputError(
                 "parameters.experiment.source", "does not name the embedded schedule"
             )
@@ -908,9 +934,7 @@ def benchmark_v2_context_from_manifest(manifest: BenchmarkManifest) -> Benchmark
             )
         return context
     if raw_pre_call is not None or not manifest.stub:
-        raise BenchmarkInputError(
-            "parameters.pre_call", "scalar contexts are offline stub-only"
-        )
+        raise BenchmarkInputError("parameters.pre_call", "scalar contexts are offline stub-only")
     experiment = _exact_object(
         parameters["experiment"],
         "parameters.experiment",
@@ -1212,7 +1236,15 @@ def _default_v2_client_factory(context: BenchmarkV2Context) -> Callable[[], LLMC
     def live() -> LLMClient:
         from fretsure.llm.client import ProxyLLM
 
-        return ProxyLLM(context.requested_model_id)
+        timeout_seconds = (
+            PROXY_REQUEST_TIMEOUT_SECONDS
+            if context.pre_call_config is None
+            else context.pre_call_config.request_timeout_seconds
+        )
+        return ProxyLLM(
+            context.requested_model_id,
+            request_timeout_seconds=timeout_seconds,
+        )
 
     return live
 
@@ -1224,6 +1256,35 @@ def _store_ledger(store: ArtifactStore) -> ObservationLedger:
         sink.results,
         sink.attempt_intents,
         sink.attempt_results,
+    )
+
+
+_ObservationLedgerOffsets = tuple[int, int, int, int]
+
+
+def _store_ledger_offsets(store: ArtifactStore) -> _ObservationLedgerOffsets:
+    sink = store.sink
+    return (
+        sink.intent_count,
+        sink.result_count,
+        sink.attempt_intent_count,
+        sink.attempt_result_count,
+    )
+
+
+def _store_ledger_since(
+    store: ArtifactStore,
+    offsets: _ObservationLedgerOffsets,
+) -> ObservationLedger:
+    """Detach only the complete observation suffix written after ``offsets``."""
+
+    sink = store.sink
+    intent_offset, result_offset, attempt_intent_offset, attempt_result_offset = offsets
+    return ObservationLedger(
+        sink.intents_since(intent_offset),
+        sink.results_since(result_offset),
+        sink.attempt_intents_since(attempt_intent_offset),
+        sink.attempt_results_since(attempt_result_offset),
     )
 
 
@@ -1278,15 +1339,17 @@ def _staged_blobs(store: ArtifactStore) -> tuple[BlobRecord, ...]:
     return tuple(sorted(by_ref.values(), key=lambda value: value.ref.sort_key))
 
 
-def _configure_next_unit_reservation(
-    store: ArtifactStore,
+def _scheduled_unit_reservation(
     context: BenchmarkV2Context,
-) -> None:
-    if context.manifest.limits.complete_unit_reservation is None:
-        return
-    schedule_index = len(store.completed_units) - len(context.plan.items)
-    if not 0 <= schedule_index < len(context.plan.collection_schedule):
-        return
+    schedule_index: int,
+    *,
+    request_timeout_seconds: float | None = None,
+    recorded_attempt_elapsed_overhead_seconds: float = 0.0,
+) -> CompleteUnitReservation:
+    if type(schedule_index) is not int or not 0 <= schedule_index < len(
+        context.plan.collection_schedule
+    ):
+        raise BenchmarkInputError("schedule_index", "does not identify one planned collection unit")
     unit = context.plan.collection_schedule[schedule_index]
     proposal_tokens = context.plan.matched_budgets[unit.item_position].proposal_tokens
     if unit.arm.value == "raw":
@@ -1295,12 +1358,16 @@ def _configure_next_unit_reservation(
     else:
         logical_calls = 1 + context.plan.max_repair_iters + 1
         requested_tokens = (
-            proposal_tokens
-            + context.plan.max_repair_iters * REPAIR_MAX_TOKENS
-            + CRITIC_MAX_TOKENS
+            proposal_tokens + context.plan.max_repair_iters * REPAIR_MAX_TOKENS + CRITIC_MAX_TOKENS
         )
     attempts = logical_calls * 3
-    reservation = CompleteUnitReservation(
+    if request_timeout_seconds is not None:
+        timeout_seconds = request_timeout_seconds
+    elif context.pre_call_config is not None:
+        timeout_seconds = context.pre_call_config.request_timeout_seconds
+    else:
+        timeout_seconds = PROXY_REQUEST_TIMEOUT_SECONDS
+    return CompleteUnitReservation(
         logical_calls,
         attempts,
         requested_tokens,
@@ -1309,12 +1376,24 @@ def _configure_next_unit_reservation(
         attempts * MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
         int(
             (
-                attempts * PROXY_REQUEST_TIMEOUT_SECONDS
+                attempts * (timeout_seconds + recorded_attempt_elapsed_overhead_seconds)
                 + logical_calls * 1.5
             )
             * 1_000_000
         ),
     )
+
+
+def _configure_next_unit_reservation(
+    store: ArtifactStore,
+    context: BenchmarkV2Context,
+) -> None:
+    if context.manifest.limits.complete_unit_reservation is None:
+        return
+    schedule_index = store.completed_unit_count - len(context.plan.items)
+    if not 0 <= schedule_index < len(context.plan.collection_schedule):
+        return
+    reservation = _scheduled_unit_reservation(context, schedule_index)
     store.reserve_next_unit(reservation)
 
 
@@ -1331,9 +1410,7 @@ def _formal_observation_request_guard(
 
     def guard(system_utf8: bytes, user_utf8: bytes, max_tokens: int) -> None:
         input_upper_bound = (
-            len(system_utf8)
-            + len(user_utf8)
-            + FORMAL_PROVIDER_MESSAGE_OVERHEAD_TOKENS
+            len(system_utf8) + len(user_utf8) + FORMAL_PROVIDER_MESSAGE_OVERHEAD_TOKENS
         )
         if input_upper_bound > input_ceiling:
             raise FormalRequestCeilingError(
@@ -1364,6 +1441,997 @@ def _store_has_clean_resume_boundary(store: ArtifactStore) -> bool:
     return owned == observed
 
 
+_CONCURRENT_UNIT_ARTIFACT_VERSION = "benchmark-concurrent-unit-artifact@0.1.0"
+_CONCURRENT_ABORT_AUDIT_VERSION = "benchmark-concurrent-abort-audit@0.1.0"
+
+
+@contextmanager
+def _deferred_operational_sigint() -> Iterator[Callable[[], bool]]:
+    """Turn main-thread SIGINT into a flag across concurrent durable transitions."""
+
+    requested = threading.Event()
+    if threading.current_thread() is not threading.main_thread():
+        yield requested.is_set
+        return
+
+    previous = signal.getsignal(signal.SIGINT)
+
+    def defer(_signum: int, _frame: FrameType | None) -> None:
+        requested.set()
+
+    signal.signal(signal.SIGINT, defer)
+    try:
+        yield requested.is_set
+    except BaseException:
+        signal.signal(signal.SIGINT, previous)
+        raise
+    else:
+        signal.signal(signal.SIGINT, previous)
+
+
+@dataclass(frozen=True, slots=True)
+class _ConcurrentUnitArtifact:
+    schedule_index: int
+    row: BenchmarkRow
+    blobs: tuple[BlobRecord, ...]
+
+    def __post_init__(self) -> None:
+        if (
+            type(self.schedule_index) is not int
+            or self.schedule_index < 0
+            or type(self.row) is not BenchmarkRow
+            or type(self.blobs) is not tuple
+            or any(type(blob) is not BlobRecord for blob in self.blobs)
+        ):
+            raise BenchmarkInputError("concurrent_unit_artifact", "contains invalid unit fields")
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(
+        path,
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_DIRECTORY", 0),
+    )
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _write_private_artifact(path: Path, data: bytes) -> str:
+    if not isinstance(path, Path) or type(data) is not bytes:
+        raise BenchmarkInputError("concurrent_unit_artifact", "requires one Path and exact bytes")
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=path.parent,
+    )
+    temporary = Path(temporary_name)
+    try:
+        os.fchmod(descriptor, 0o600)
+        offset = 0
+        while offset < len(data):
+            written = os.write(descriptor, data[offset:])
+            if written <= 0:
+                raise OSError("short concurrent unit artifact write")
+            offset += written
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = -1
+        try:
+            os.link(temporary, path, follow_symlinks=False)
+        except FileExistsError:
+            try:
+                existing = path.read_bytes()
+            except OSError as error:
+                raise BenchmarkInputError(
+                    "concurrent_unit_artifact", "existing destination is unreadable"
+                ) from error
+            if existing != data:
+                raise BenchmarkInputError(
+                    "concurrent_unit_artifact",
+                    "destination already exists with different bytes",
+                ) from None
+            return hashlib.sha256(data).hexdigest()
+        os.unlink(temporary)
+        _fsync_directory(path.parent)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+    return hashlib.sha256(data).hexdigest()
+
+
+def _file_binding(path: Path) -> dict[str, object]:
+    data = path.read_bytes()
+    return {
+        "byte_length": len(data),
+        "raw_sha256": hashlib.sha256(data).hexdigest(),
+    }
+
+
+def _abort_operational_with_lane_audit(
+    store: ArtifactStore,
+    context: BenchmarkV2Context,
+    coordinator_root: Path,
+    reason_code: str,
+) -> BenchmarkReceipt:
+    lanes_root = coordinator_root / "lanes"
+    lane_bindings: list[dict[str, object]] = []
+    if lanes_root.is_dir():
+        for path in sorted(lanes_root.iterdir(), key=lambda value: value.name):
+            if not path.is_file() or path.suffix != ".jsonl":
+                continue
+            try:
+                schedule_index = int(path.stem)
+            except ValueError:
+                continue
+            lane_bindings.append(
+                {
+                    **_file_binding(path),
+                    "schedule_index": schedule_index,
+                }
+            )
+    coordinator_bindings: dict[str, object] = {}
+    for name in ("config.json", "coordinator.jsonl"):
+        path = coordinator_root / name
+        coordinator_bindings[name] = None if not path.is_file() else _file_binding(path)
+    audit = canonical_json_bytes(
+        {
+            "coordinator": coordinator_bindings,
+            "lanes": lane_bindings,
+            "main_journal_sha256": store.journal_sha256,
+            "reason_code": reason_code,
+            "run_id": context.plan.run_id,
+            "version": _CONCURRENT_ABORT_AUDIT_VERSION,
+        }
+    )
+    audit_sha256 = hashlib.sha256(audit).hexdigest()
+    audit_sha256 = _write_private_artifact(
+        coordinator_root.parent.parent / f"concurrent-abort-audit-{audit_sha256}.json",
+        audit,
+    )
+    return store.abort(f"concurrent_audit_{audit_sha256}")
+
+
+def _concurrent_unit_artifact_bytes(
+    artifact: _ConcurrentUnitArtifact,
+) -> bytes:
+    return canonical_json_bytes(
+        {
+            "blobs": [blob_record_to_dict(blob) for blob in artifact.blobs],
+            "row": row_to_dict(artifact.row),
+            "schedule_index": artifact.schedule_index,
+            "version": _CONCURRENT_UNIT_ARTIFACT_VERSION,
+        }
+    )
+
+
+def _verify_concurrent_unit_artifact(
+    path: Path,
+    *,
+    schedule_index: int,
+    expected_sha256: str,
+) -> _ConcurrentUnitArtifact:
+    try:
+        data = path.read_bytes()
+        parsed = parse_canonical_json_bytes(data)
+    except (OSError, ValueError) as error:
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.CORRUPT_LANE,
+            f"unit_artifact[{schedule_index}]",
+            "cannot be read as canonical JSON",
+        ) from error
+    if hashlib.sha256(data).hexdigest() != expected_sha256 or type(parsed) is not dict:
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.CORRUPT_LANE,
+            f"unit_artifact[{schedule_index}]",
+            "does not match its durable readiness binding",
+        )
+    obj = cast(dict[str, object], parsed)
+    if (
+        frozenset(obj) != frozenset({"version", "schedule_index", "row", "blobs"})
+        or obj["version"] != _CONCURRENT_UNIT_ARTIFACT_VERSION
+        or obj["schedule_index"] != schedule_index
+        or type(obj["blobs"]) is not list
+    ):
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.CORRUPT_LANE,
+            f"unit_artifact[{schedule_index}]",
+            "has invalid identity fields",
+        )
+    try:
+        row = row_from_dict(obj["row"])
+        blobs = tuple(blob_record_from_dict(blob) for blob in cast(list[object], obj["blobs"]))
+    except ValueError as error:
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.CORRUPT_LANE,
+            f"unit_artifact[{schedule_index}]",
+            "contains an invalid row bundle",
+        ) from error
+    if tuple(sorted((blob.ref for blob in blobs), key=lambda value: value.sort_key)) != (
+        row.blob_refs
+    ):
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.CORRUPT_LANE,
+            f"unit_artifact[{schedule_index}]",
+            "does not resolve its row blob references exactly",
+        )
+    return _ConcurrentUnitArtifact(schedule_index, row, blobs)
+
+
+def _collection_reservation_limits(
+    context: BenchmarkV2Context,
+) -> CompleteUnitReservation:
+    limits = context.manifest.limits
+    return CompleteUnitReservation(
+        limits.max_calls,
+        limits.max_attempts,
+        limits.max_requested_output_tokens,
+        limits.max_attempt_reserved_output_tokens,
+        limits.max_response_text_bytes,
+        limits.max_transport_response_bytes,
+        limits.max_wall_microseconds,
+    )
+
+
+def _formal_lane_policy(config: BenchmarkPreCallConfig) -> LaneObservationPolicy:
+    envelope = cast(dict[str, object], config.to_dict()["billing_envelope"])
+    wire = cast(dict[str, object], envelope["wire"])
+    ceilings = cast(dict[str, int], wire["billable_token_ceiling_per_attempt"])
+    return LaneObservationPolicy(
+        allowed_returned_model_id=config.allowed_returned_model_id,
+        require_successful_provider_evidence=True,
+        billable_token_ceiling_per_attempt=(
+            ceilings["input_tokens"],
+            ceilings["output_tokens"],
+            ceilings["cache_creation_input_tokens"],
+            ceilings["cache_read_input_tokens"],
+        ),
+    )
+
+
+def _close_v2_client_pairs(
+    pairs: Sequence[tuple[LLMClient, LLMClient]],
+) -> None:
+    first_error: BaseException | None = None
+    closed: set[int] = set()
+    for agent, raw in reversed(tuple(pairs)):
+        for client in (raw, agent):
+            identity = id(client)
+            if identity in closed:
+                continue
+            closed.add(identity)
+            try:
+                close_llm_client(client)
+            except BaseException as error:
+                if first_error is None:
+                    first_error = error
+    if first_error is not None:
+        raise first_error
+
+
+def _create_v2_worker_client_pairs(
+    context: BenchmarkV2Context,
+    worker_count: int,
+    agent_factory: Callable[[], LLMClient] | None,
+    raw_factory: Callable[[], LLMClient] | None,
+) -> tuple[tuple[LLMClient, LLMClient], ...]:
+    if type(worker_count) is not int or not 1 <= worker_count <= 8:
+        raise BenchmarkInputError("worker_count", "must be an exact integer in 1..8")
+    pairs: list[tuple[LLMClient, LLMClient]] = []
+    try:
+        for _index in range(worker_count):
+            pairs.append(_create_v2_clients(context, agent_factory, raw_factory))
+        identities = [id(client) for pair in pairs for client in pair]
+        if len(set(identities)) != len(identities):
+            raise BenchmarkInputError("llm_factory", "workers require distinct client instances")
+    except BaseException:
+        _close_v2_client_pairs(pairs)
+        raise
+    return tuple(pairs)
+
+
+def _execute_concurrent_unit(
+    context: BenchmarkV2Context,
+    permit: UnitPermit,
+    clients: tuple[LLMClient, LLMClient],
+    request_guard: Callable[[bytes, bytes, int], None],
+) -> _ConcurrentUnitArtifact:
+    schedule_index = permit.schedule_index
+    unit = context.plan.collection_schedule[schedule_index]
+    if context.config.stub:
+        observed_agent = ObservingLLM(
+            clients[0],
+            permit.sink,
+            clock_ns=lambda: 0,
+            request_guard=request_guard,
+        )
+        observed_raw = ObservingLLM(
+            clients[1],
+            permit.sink,
+            clock_ns=lambda: 0,
+            request_guard=request_guard,
+        )
+    else:
+        observed_agent = ObservingLLM(
+            clients[0],
+            permit.sink,
+            request_guard=request_guard,
+        )
+        observed_raw = ObservingLLM(
+            clients[1],
+            permit.sink,
+            request_guard=request_guard,
+        )
+    completed = execute_scheduled_unit(
+        context.plan,
+        context.goal,
+        context.profile,
+        unit,
+        observed_agent,
+        observed_raw,
+        CallSequence(context.plan.run_id),
+    )
+    ledger = ObservationLedger(
+        permit.sink.intents,
+        permit.sink.results,
+        permit.sink.attempt_intents,
+        permit.sink.attempt_results,
+    )
+    bundle = completed_unit_to_row_bundle(
+        context.plan,
+        context.goal,
+        context.profile,
+        completed,
+        ledger,
+    )
+    return _ConcurrentUnitArtifact(
+        schedule_index,
+        bundle.rows[0],
+        bundle.blobs,
+    )
+
+
+def _rebased_concurrent_row(
+    row: BenchmarkRow,
+    call_offset: int,
+) -> BenchmarkRow:
+    payload = row.payload
+    if row.key.row_type is RowType.CANDIDATE:
+        work = cast(dict[str, object], payload["work"])
+        calls = cast(list[dict[str, object]], work["calls"])
+    elif row.key.row_type is RowType.RAW:
+        outcome = cast(dict[str, object], payload["outcome"])
+        calls = [cast(dict[str, object], outcome["call"])]
+    else:
+        raise BenchmarkInputError("concurrent_unit_artifact", "cannot contain a pure-solver row")
+    for call in calls:
+        local_index = cast(int, call["call_index"])
+        if type(local_index) is not int or call["logical_call_id"] != f"call:{local_index}":
+            raise BenchmarkInputError(
+                "concurrent_unit_artifact", "contains a non-local call identity"
+            )
+        global_index = call_offset + local_index
+        call["call_index"] = global_index
+        call["logical_call_id"] = f"call:{global_index}"
+    return build_row(
+        run_id=row.run_id,
+        key=row.key,
+        family_id=row.family_id,
+        cluster_id=row.cluster_id,
+        observation_keys=tuple(
+            rebase_observation_key(key, call_offset) for key in row.observation_keys
+        ),
+        blob_refs=row.blob_refs,
+        payload=payload,
+    )
+
+
+def _append_rebased_ready_unit(
+    store: ArtifactStore,
+    context: BenchmarkV2Context,
+    ready: ReadyUnit,
+    artifact: _ConcurrentUnitArtifact,
+) -> None:
+    schedule_index = ready.schedule_index
+    if artifact.schedule_index != schedule_index:
+        raise BenchmarkInputError(
+            "concurrent_unit_artifact", "does not match its ready schedule index"
+        )
+    expected_schedule_index = store.completed_unit_count - len(context.plan.items)
+    if schedule_index != expected_schedule_index:
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.OUT_OF_ORDER,
+            "canonical_merge",
+            "ready unit is not the next main-journal schedule index",
+        )
+    call_offset = store.sink.intent_count
+    store.reserve_next_unit(ready.reservation)
+    for event in rebase_journal_events(
+        ready.events,
+        call_offset=call_offset,
+        run_id=context.plan.run_id,
+    ):
+        if type(event) is CallIntent:
+            store.sink.write_intent(event)
+        elif type(event) is AttemptIntent:
+            store.sink.write_attempt_intent(event)
+        elif type(event) is AttemptResult:
+            store.sink.write_attempt_result(event)
+        elif type(event) is CallResult:
+            store.sink.write_result(event)
+        else:  # pragma: no cover - exhaustive internal union
+            raise AssertionError("unsupported observation event")
+    row = _rebased_concurrent_row(artifact.row, call_offset)
+    new_calls = {
+        (intent.logical_call_id, intent.call_index)
+        for intent in store.sink.intents_since(call_offset)
+    }
+    if {(key.logical_call_id, key.call_index) for key in row.observation_keys} != new_calls:
+        raise BenchmarkInputError(
+            "concurrent_unit_artifact",
+            "rebased row does not own exactly the appended unit calls",
+        )
+    store.commit_unit(store.completed_unit_count, row, artifact.blobs)
+
+
+def _collect_missing_pure_controls(
+    store: ArtifactStore,
+    context: BenchmarkV2Context,
+    restored: tuple[CompletedPureSolver | None, ...],
+    stop_requested: Callable[[], bool],
+) -> tuple[CompletedPureSolver, ...]:
+    if len(restored) != len(context.plan.items):
+        raise BenchmarkInputError(
+            "resume_state.pure_solver_outcomes", "does not cover the planned items"
+        )
+    completed = list(restored)
+    for index, item in enumerate(context.plan.items):
+        if stop_requested():
+            raise KeyboardInterrupt
+        if completed[index] is not None:
+            continue
+        item_goal = replace(
+            context.goal,
+            tempo_bpm=item.ir.meta.tempo_bpm,
+            extras=dict(context.goal.extras),
+        )
+        outcome = run_pure_solver_baseline(item.ir, item_goal, context.profile)
+        exact = CompletedPureSolver(
+            item.item_id,
+            arrangement_source_context_sha256(item.ir),
+            outcome,
+        )
+        bundle = pure_outcome_to_row_bundle(
+            context.plan,
+            context.goal,
+            context.profile,
+            item,
+            outcome,
+        )
+        store.commit_unit(store.completed_unit_count, bundle.rows[0], bundle.blobs)
+        completed[index] = exact
+        if stop_requested():
+            raise KeyboardInterrupt
+    if any(value is None for value in completed):  # pragma: no cover - invariant
+        raise AssertionError("every pure control must be complete")
+    return cast(tuple[CompletedPureSolver, ...], tuple(completed))
+
+
+def _run_operational_schedule(
+    store: ArtifactStore,
+    context: BenchmarkV2Context,
+    coordinator: ConcurrentUnitCoordinator,
+    unit_artifact_dir: Path,
+    client_pairs: tuple[tuple[LLMClient, LLMClient], ...],
+    request_guard: Callable[[bytes, bytes, int], None],
+    stop_requested: Callable[[], bool],
+    progress: ProgressReporter,
+    *,
+    committed_count: int,
+) -> tuple[CompletedExperimentUnit, ...]:
+    schedule = context.plan.collection_schedule
+    total_units = len(schedule)
+    admitted_count = len(coordinator.admitted_indices)
+    ready_indices = coordinator.ready_indices
+    active_indices = coordinator.in_flight_indices
+    if (
+        committed_count > len(coordinator.ready_prefix())
+        or set(ready_indices) | set(active_indices) != set(range(admitted_count))
+        or set(ready_indices) & set(active_indices)
+    ):
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.FAIL_CLOSED,
+            "resume_boundary",
+            "coordinator is not aligned to the completed durable unit prefix",
+        )
+    ready_by_index = {unit.schedule_index: unit for unit in coordinator.ready_units}
+    if (
+        sum(ready_by_index[index].local_call_count for index in range(committed_count))
+        != store.sink.intent_count
+    ):
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.CORRUPT_COORDINATOR,
+            "resume_boundary",
+            "coordinator call prefix differs from the main journal",
+        )
+    recovered_artifacts: dict[int, _ConcurrentUnitArtifact] = {}
+    for unit in coordinator.ready_units:
+        if unit.unit_artifact_sha256 is None:
+            raise ConcurrentExecutionError(
+                ConcurrentExecutionCode.CORRUPT_COORDINATOR,
+                f"unit_artifact[{unit.schedule_index}]",
+                "ready unit lacks its durable artifact binding",
+            )
+        artifact = _verify_concurrent_unit_artifact(
+            unit_artifact_dir / f"{unit.schedule_index:08d}.json",
+            schedule_index=unit.schedule_index,
+            expected_sha256=unit.unit_artifact_sha256,
+        )
+        if unit.schedule_index >= committed_count:
+            recovered_artifacts[unit.schedule_index] = artifact
+
+    completed_by_index = recovered_artifacts
+    merged_count = committed_count
+
+    def merge_ready(schedule_index: int) -> None:
+        ready = ready_by_index[schedule_index]
+        artifact = completed_by_index[schedule_index]
+        _append_rebased_ready_unit(
+            store,
+            context,
+            ready,
+            artifact,
+        )
+        del completed_by_index[schedule_index]
+        progress.tick(
+            completed_units=schedule_index + 1,
+            completed_calls=store.sink.intent_count,
+        )
+
+    while merged_count in completed_by_index and merged_count in ready_by_index:
+        merge_ready(merged_count)
+        merged_count += 1
+    if stop_requested():
+        raise KeyboardInterrupt
+    interrupted: bool = False
+    if merged_count == total_units:
+        restored = resume_state_from_rows(
+            context.plan,
+            context.goal,
+            context.profile,
+            store.completed_rows,
+            _staged_blobs(store),
+        )
+        return restored.completed_units
+
+    worker_count = len(client_pairs)
+    if worker_count < 1:
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.NOT_READY,
+            "workers",
+            "unfinished collection requires initialized worker clients",
+        )
+
+    pair_queue: queue.SimpleQueue[tuple[LLMClient, LLMClient]] = queue.SimpleQueue()
+    for pair in client_pairs:
+        pair_queue.put(pair)
+    worker_state = threading.local()
+
+    def initialize_worker() -> None:
+        worker_state.clients = pair_queue.get()
+
+    def execute(permit: UnitPermit) -> _ConcurrentUnitArtifact:
+        clients = cast(tuple[LLMClient, LLMClient], worker_state.clients)
+        return _execute_concurrent_unit(
+            context,
+            permit,
+            clients,
+            request_guard,
+        )
+
+    pending: dict[Future[_ConcurrentUnitArtifact], int] = {}
+    worker_errors: dict[int, BaseException] = {}
+    main_error: BaseException | None = None
+    next_admission = admitted_count
+    stop_admission = interrupted
+    maximum_admitted_window = worker_count * 2
+
+    with ThreadPoolExecutor(
+        max_workers=worker_count,
+        thread_name_prefix="fretsure-benchmark",
+        initializer=initialize_worker,
+    ) as executor:
+        for schedule_index in active_indices:
+            pending[
+                executor.submit(
+                    execute,
+                    coordinator.resume_permit(schedule_index),
+                )
+            ] = schedule_index
+        while merged_count < total_units:
+            try:
+                while merged_count in completed_by_index and merged_count in ready_by_index:
+                    merge_ready(merged_count)
+                    merged_count += 1
+
+                if stop_requested():
+                    interrupted = True
+                    stop_admission = True
+                if merged_count == total_units:
+                    break
+
+                while (
+                    not stop_admission
+                    and not stop_requested()
+                    and next_admission < total_units
+                    and len(pending) < worker_count
+                    and next_admission - merged_count < maximum_admitted_window
+                ):
+                    permit = coordinator.admit_next()
+                    if permit.schedule_index != next_admission:
+                        raise ConcurrentExecutionError(
+                            ConcurrentExecutionCode.OUT_OF_ORDER,
+                            "admission",
+                            "coordinator did not admit the next schedule index",
+                        )
+                    pending[executor.submit(execute, permit)] = next_admission
+                    next_admission += 1
+
+                if stop_requested():
+                    interrupted = True
+                    stop_admission = True
+                if not pending:
+                    if interrupted or worker_errors or main_error is not None:
+                        break
+                    raise ConcurrentExecutionError(
+                        ConcurrentExecutionCode.NOT_READY,
+                        "schedule",
+                        "collection cannot advance to the next ready unit",
+                    )
+
+                done, _not_done = wait(
+                    tuple(pending),
+                    timeout=_OPERATIONAL_PROGRESS_POLL_SECONDS,
+                    return_when=FIRST_COMPLETED,
+                )
+                for future in sorted(done, key=lambda value: pending[value]):
+                    schedule_index = pending.pop(future)
+                    try:
+                        artifact = future.result()
+                    except BaseException as error:
+                        worker_errors.setdefault(schedule_index, error)
+                        stop_admission = True
+                        continue
+                    if artifact.schedule_index != schedule_index:
+                        main_error = ConcurrentExecutionError(
+                            ConcurrentExecutionCode.OUT_OF_ORDER,
+                            "worker_result",
+                            "does not match its admitted schedule index",
+                        )
+                        stop_admission = True
+                        continue
+                    try:
+                        encoded = _concurrent_unit_artifact_bytes(artifact)
+                        artifact_sha256 = _write_private_artifact(
+                            unit_artifact_dir / f"{schedule_index:08d}.json",
+                            encoded,
+                        )
+                        ready_unit = coordinator.mark_ready(
+                            schedule_index,
+                            unit_artifact_sha256=artifact_sha256,
+                        )
+                        completed_by_index[schedule_index] = artifact
+                        ready_by_index[schedule_index] = ready_unit
+                    except BaseException as error:
+                        if main_error is None:
+                            main_error = error
+                        stop_admission = True
+
+                progress.tick(
+                    completed_units=merged_count,
+                    completed_calls=store.sink.intent_count,
+                )
+
+                first_failed = min(worker_errors, default=total_units)
+                while (
+                    main_error is None
+                    and merged_count < first_failed
+                    and merged_count in completed_by_index
+                    and merged_count in ready_by_index
+                ):
+                    merge_ready(merged_count)
+                    merged_count += 1
+                if stop_requested():
+                    interrupted = True
+                    stop_admission = True
+            except KeyboardInterrupt:
+                interrupted = True
+                stop_admission = True
+
+            if stop_admission and not pending:
+                break
+
+    if main_error is not None:
+        raise main_error
+    if worker_errors:
+        failed_index = min(worker_errors)
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.FAIL_CLOSED,
+            f"worker[{failed_index}]",
+            "scheduled unit execution failed before durable readiness",
+        ) from worker_errors[failed_index]
+    if interrupted:
+        if coordinator.in_flight_indices or merged_count != next_admission:
+            raise ConcurrentExecutionError(
+                ConcurrentExecutionCode.FAIL_CLOSED,
+                "interrupt",
+                "admitted work did not drain to a completed durable prefix",
+            )
+        raise KeyboardInterrupt
+    if merged_count != total_units:
+        raise ConcurrentExecutionError(
+            ConcurrentExecutionCode.NOT_READY,
+            "schedule",
+            "collection ended before every scheduled unit was merged",
+        )
+    restored = resume_state_from_rows(
+        context.plan,
+        context.goal,
+        context.profile,
+        store.completed_rows,
+        _staged_blobs(store),
+    )
+    return restored.completed_units
+
+
+def _collect_operational_concurrent(
+    *,
+    context: BenchmarkV2Context,
+    output_dir: Path,
+    resume: bool,
+    agent_llm_factory: Callable[[], LLMClient] | None,
+    raw_llm_factory: Callable[[], LLMClient] | None,
+    stop_requested: Callable[[], bool],
+) -> BenchmarkV2Result:
+    pre_call = context.pre_call_config
+    if pre_call is None or pre_call.collection_execution_contract is None:
+        raise BenchmarkInputError(
+            "pre_call_config", "operational concurrency requires a bound contract"
+        )
+    contract = CollectionExecutionContract.from_dict(pre_call.collection_execution_contract)
+    worker_count = pre_call.max_in_flight_units
+    if contract.max_in_flight_units != worker_count:
+        raise BenchmarkInputError(
+            "pre_call_config.collection_execution",
+            "worker count differs from the bound execution contract",
+        )
+    client_pairs: tuple[tuple[LLMClient, LLMClient], ...] = ()
+    if not resume:
+        client_pairs = _create_v2_worker_client_pairs(
+            context,
+            worker_count,
+            agent_llm_factory,
+            raw_llm_factory,
+        )
+    store_factory = ArtifactStore.resume if resume else ArtifactStore.create
+    coordinator_root = output_dir / "staging" / "concurrent"
+    try:
+        try:
+            store = store_factory(output_dir, context.manifest)
+        except ArtifactError:
+            if (
+                not resume
+                or not output_dir.is_dir()
+                or (output_dir / "canonical").exists()
+                or (output_dir / "abort-receipt.json").exists()
+            ):
+                raise
+            terminal_store = ArtifactStore.resume_for_abort(
+                output_dir,
+                context.manifest,
+            )
+            try:
+                _abort_operational_with_lane_audit(
+                    terminal_store,
+                    context,
+                    coordinator_root,
+                    "resume_integrity_failure",
+                )
+            finally:
+                terminal_store.close()
+            raise
+        try:
+            if stop_requested():
+                raise KeyboardInterrupt
+            staged_rows = store.completed_rows
+            restored = (
+                None
+                if not staged_rows
+                else resume_state_from_rows(
+                    context.plan,
+                    context.goal,
+                    context.profile,
+                    staged_rows,
+                    _staged_blobs(store),
+                )
+            )
+            pure_state = (
+                (None,) * len(context.plan.items)
+                if restored is None
+                else restored.pure_solver_outcomes
+            )
+            completed_pure = _collect_missing_pure_controls(
+                store,
+                context,
+                pure_state,
+                stop_requested,
+            )
+            completed_prefix = () if restored is None else restored.completed_units
+            committed_count = len(completed_prefix)
+            if store.completed_unit_count != len(context.plan.items) + committed_count:
+                raise BenchmarkInputError(
+                    "staging", "rows do not form pure controls plus one schedule prefix"
+                )
+
+            operational_timeout_seconds = pre_call.request_timeout_seconds
+            operational_attempt_overhead_seconds = (
+                pre_call.recorded_attempt_elapsed_overhead_seconds
+            )
+            reservations = tuple(
+                _scheduled_unit_reservation(
+                    context,
+                    index,
+                    request_timeout_seconds=operational_timeout_seconds,
+                    recorded_attempt_elapsed_overhead_seconds=(
+                        operational_attempt_overhead_seconds
+                    ),
+                )
+                for index in range(len(context.plan.collection_schedule))
+            )
+            coordinator_exists = coordinator_root.exists()
+            if not coordinator_exists and committed_count:
+                raise ConcurrentExecutionError(
+                    ConcurrentExecutionCode.FAIL_CLOSED,
+                    "resume_boundary",
+                    "completed rows exist without their concurrency coordinator",
+                )
+            coordinator_factory = (
+                ConcurrentUnitCoordinator.resume
+                if coordinator_exists
+                else ConcurrentUnitCoordinator.create
+            )
+            coordinator = coordinator_factory(
+                coordinator_root,
+                contract,
+                run_id=context.plan.run_id,
+                unit_reservations=reservations,
+                collection_limits=_collection_reservation_limits(context),
+                lane_policy=_formal_lane_policy(pre_call),
+            )
+            try:
+                if stop_requested():
+                    raise KeyboardInterrupt
+                unit_artifact_dir = coordinator_root / "unit-artifacts"
+                if unit_artifact_dir.exists():
+                    if not unit_artifact_dir.is_dir():
+                        raise ConcurrentExecutionError(
+                            ConcurrentExecutionCode.CORRUPT_COORDINATOR,
+                            "unit_artifacts",
+                            "must be a directory",
+                        )
+                elif coordinator.ready_indices or coordinator.in_flight_indices:
+                    raise ConcurrentExecutionError(
+                        ConcurrentExecutionCode.CORRUPT_COORDINATOR,
+                        "unit_artifacts",
+                        "is missing for an admitted coordinator",
+                    )
+                else:
+                    unit_artifact_dir.mkdir(mode=0o700)
+                    _fsync_directory(coordinator_root)
+
+                needs_workers = bool(coordinator.in_flight_indices) or len(
+                    coordinator.admitted_indices
+                ) < len(context.plan.collection_schedule)
+                if needs_workers and not client_pairs:
+                    try:
+                        client_pairs = _create_v2_worker_client_pairs(
+                            context,
+                            worker_count,
+                            agent_llm_factory,
+                            raw_llm_factory,
+                        )
+                    except Exception as error:
+                        raise _OperationalResumeClientUnavailable(
+                            "operational resume could not initialize worker clients"
+                        ) from error
+
+                progress = ProgressReporter(
+                    sys.stderr,
+                    ProgressConfig(
+                        context.plan.run_id,
+                        len(context.plan.collection_schedule),
+                        resume_completed_units=committed_count,
+                        resume_completed_calls=store.sink.intent_count,
+                        completed_control_rows=len(context.plan.items),
+                    ),
+                )
+                completed_units = _run_operational_schedule(
+                    store,
+                    context,
+                    coordinator,
+                    unit_artifact_dir,
+                    client_pairs,
+                    _formal_observation_request_guard(pre_call),
+                    stop_requested,
+                    progress,
+                    committed_count=committed_count,
+                )
+            finally:
+                coordinator.close()
+
+            collection = assemble_experiment_collection(
+                context.plan,
+                context.goal,
+                context.profile,
+                completed_pure,
+                completed_units,
+                _store_ledger(store),
+            )
+            complete_bundle = collection_to_row_bundle(collection)
+            if (
+                tuple(sorted(store.completed_rows, key=lambda value: value.sort_key))
+                != complete_bundle.rows
+                or _staged_blobs(store) != complete_bundle.blobs
+            ):
+                raise BenchmarkInputError(
+                    "staging", "concurrent rows/blobs differ from the complete collection"
+                )
+            receipt = store.finalize()
+        except _OperationalResumeClientUnavailable:
+            raise
+        except KeyboardInterrupt:
+            if not _store_has_clean_resume_boundary(store):
+                _abort_operational_with_lane_audit(
+                    store,
+                    context,
+                    coordinator_root,
+                    "interrupted_with_unowned_observation",
+                )
+            raise
+        except (
+            ArtifactError,
+            BenchmarkInputError,
+            ConcurrentExecutionError,
+            ExperimentInputError,
+            LLMIntegrityError,
+            ReportInputError,
+        ) as error:
+            _abort_operational_with_lane_audit(
+                store,
+                context,
+                coordinator_root,
+                _formal_abort_reason(error),
+            )
+            raise
+        except Exception:
+            _abort_operational_with_lane_audit(
+                store,
+                context,
+                coordinator_root,
+                "unexpected_concurrent_execution_failure",
+            )
+            raise
+        finally:
+            store.close()
+    finally:
+        _close_v2_client_pairs(client_pairs)
+    return BenchmarkV2Result(receipt, None)
+
+
 def _formal_abort_reason(error: BaseException) -> str:
     if isinstance(error, FormalRequestCeilingError):
         return "formal_billing_envelope_violation"
@@ -1379,6 +2447,8 @@ def _formal_abort_reason(error: BaseException) -> str:
         return "experiment_integrity_failure"
     if isinstance(error, ReportInputError):
         return "report_input_integrity_failure"
+    if isinstance(error, ConcurrentExecutionError):
+        return "concurrent_execution_integrity_failure"
     return "collection_integrity_failure"
 
 
@@ -1403,9 +2473,7 @@ def collect_benchmark_v2(
         raise BenchmarkInputError(
             "llm_factory", "agent and raw factories must be supplied together"
         )
-    selected = sum(
-        value is not None for value in (config, preregistration, pre_call_config)
-    )
+    selected = sum(value is not None for value in (config, preregistration, pre_call_config))
     if selected != 1:
         raise BenchmarkInputError(
             "collection_config",
@@ -1413,9 +2481,7 @@ def collect_benchmark_v2(
         )
     if pre_call_config is not None:
         if type(pre_call_config) is not BenchmarkPreCallConfig:
-            raise BenchmarkInputError(
-                "pre_call_config", "must be an exact BenchmarkPreCallConfig"
-            )
+            raise BenchmarkInputError("pre_call_config", "must be an exact BenchmarkPreCallConfig")
         pre_call_config = pre_call_config_from_bytes(pre_call_config.wire_json)
         require_explicit_spend_confirmation(
             pre_call_config,
@@ -1434,16 +2500,30 @@ def collect_benchmark_v2(
         assert pre_call_config is not None
         context = build_benchmark_v2_live_context(pre_call_config)
     if context.config.stub and agent_llm_factory is not None:
-        raise BenchmarkInputError(
-            "llm_factory", "stub collection does not accept client factories"
-        )
+        raise BenchmarkInputError("llm_factory", "stub collection does not accept client factories")
     if context.config.stub:
         observation_request_guard: Callable[[bytes, bytes, int], None] | None = None
     else:
         assert context.pre_call_config is not None
-        observation_request_guard = _formal_observation_request_guard(
-            context.pre_call_config
-        )
+        observation_request_guard = _formal_observation_request_guard(context.pre_call_config)
+
+    operational_concurrent = (
+        not context.config.stub
+        and context.pre_call_config is not None
+        and context.pre_call_config.collection_execution_contract is not None
+    )
+    if operational_concurrent:
+        if agent_llm_factory is None:
+            require_numeric_loopback_proxy_environment()
+        with _deferred_operational_sigint() as stop_requested:
+            return _collect_operational_concurrent(
+                context=context,
+                output_dir=output_dir,
+                resume=resume,
+                agent_llm_factory=agent_llm_factory,
+                raw_llm_factory=raw_llm_factory,
+                stop_requested=stop_requested,
+            )
 
     prepared_clients: tuple[LLMClient, LLMClient] | None = None
     clients_transferred = False
@@ -1491,6 +2571,8 @@ def collect_benchmark_v2(
                     raw_llm_factory,
                 )
 
+            ledger_offsets = _store_ledger_offsets(store)
+
             def pure_complete(item: CorpusItem, outcome: PureSolverOutcome) -> None:
                 bundle = pure_outcome_to_row_bundle(
                     context.plan,
@@ -1500,25 +2582,27 @@ def collect_benchmark_v2(
                     outcome,
                 )
                 store.commit_unit(
-                    len(store.completed_units),
+                    store.completed_unit_count,
                     bundle.rows[0],
                     bundle.blobs,
                 )
                 _configure_next_unit_reservation(store, context)
 
             def unit_complete(completed: CompletedExperimentUnit) -> None:
+                nonlocal ledger_offsets
                 bundle = completed_unit_to_row_bundle(
                     context.plan,
                     context.goal,
                     context.profile,
                     completed,
-                    _store_ledger(store),
+                    _store_ledger_since(store, ledger_offsets),
                 )
                 store.commit_unit(
-                    len(store.completed_units),
+                    store.completed_unit_count,
                     bundle.rows[0],
                     bundle.blobs,
                 )
+                ledger_offsets = _store_ledger_offsets(store)
                 _configure_next_unit_reservation(store, context)
 
             clients_transferred = True
@@ -1732,15 +2816,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("--live cannot be combined with --prereg")
     if args.live and args.pre_call_config is None and not replay:
         parser.error("--live requires --pre-call-config")
-    if (
-        args.live
-        and args.authorized_maximum_spend_microunits is None
-        and not replay
-    ):
+    if args.live and args.authorized_maximum_spend_microunits is None and not replay:
         parser.error("--live requires --authorized-maximum-spend-microunits")
-    if args.stub and args.prereg is not None and any(
-        value is not None for value in scalar_values
-    ):
+    if args.stub and args.prereg is not None and any(value is not None for value in scalar_values):
         parser.error("--prereg cannot be combined with scalar collection controls")
     if args.live and any(value is not None for value in scalar_values):
         parser.error("--pre-call-config cannot be combined with scalar collection controls")
@@ -1773,30 +2851,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                 pre_call_config=pre_call,
                 output_dir=args.output_dir,
                 resume=args.resume,
-                authorized_maximum_spend_microunits=(
-                    args.authorized_maximum_spend_microunits
-                ),
+                authorized_maximum_spend_microunits=(args.authorized_maximum_spend_microunits),
             )
         else:
             result = collect_benchmark_v2(
                 config=BenchmarkV2Config(
                     family_count=1 if args.items is None else args.items,
-                    base_seed=(
-                        PRIMARY_PROCEDURAL_BASE_SEED if args.seed is None else args.seed
-                    ),
+                    base_seed=(PRIMARY_PROCEDURAL_BASE_SEED if args.seed is None else args.seed),
                     bars=1 if args.bars is None else args.bars,
                     schedule_seed=0 if args.schedule_seed is None else args.schedule_seed,
-                    bootstrap_seed=(
-                        0 if args.bootstrap_seed is None else args.bootstrap_seed
-                    ),
+                    bootstrap_seed=(0 if args.bootstrap_seed is None else args.bootstrap_seed),
                     bootstrap_repetitions=(
                         DEFAULT_BENCHMARK_V2_BOOTSTRAP_REPETITIONS
                         if args.bootstrap_repetitions is None
                         else args.bootstrap_repetitions
                     ),
-                    sign_flip_seed=(
-                        0 if args.sign_flip_seed is None else args.sign_flip_seed
-                    ),
+                    sign_flip_seed=(0 if args.sign_flip_seed is None else args.sign_flip_seed),
                     sign_flip_draws=(
                         DEFAULT_BENCHMARK_V2_SIGN_FLIP_DRAWS
                         if args.sign_flip_draws is None
@@ -1817,9 +2887,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(
         json.dumps(
             {
-                "report_sha256": (
-                    None if result.report is None else result.report.sha256
-                ),
+                "report_sha256": (None if result.report is None else result.report.sha256),
                 "run_id": result.receipt.run_id,
                 "status": result.receipt.status.value,
             },

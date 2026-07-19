@@ -4,7 +4,24 @@
 
 **产品目标一句话**：一个 agent，把一首歌（符号谱 / MIDI / lead sheet；mp3 作 best-effort 前端）编配成**人手可证明弹得出来**的吉他谱（HERO = 指弹独奏；也做伴奏、难度简化）。核心 = "LLM 提议 → 确定性可弹性 oracle 逐音把关并修复 → checker 打分 benchmark"。
 
-**当前阶段（2026-07-18）**：**Plan 1–5、MusicXML-first、Oracle 0.2、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR、strict MIDI input 与 benchmark v2 Task 1–8 均已闭门；Task 9 formal attempt-001 / 002 均已 terminal `INCOMPLETE`，修正 post-edit 本地校验边界后从 fresh attempt-003 继续**。当前 package=`0.6.0`，runtime 精确锁定 `music21==10.5.0`。Task 8 attempt-002 已 COMPLETE 8/8；两次 pilot 合计已知 / corrected tight upper 为 `$0.513140` / `$27.730036`，官方 `128,000` output-token 契约下单次 pilot 机械上限为 `$513.232896`。用户已统一授权项目模型计费。formal 官方契约的机械最大值为 `1,167,905,640,000` micro-USD（`$1,167,905.640000`）；这是计费审计上限，不是本地代理预消费硬闸。历史 `$538,865.486400` gate（SHA-256=`931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9`）和 attempt-001 pre-call 保留作审计证据，不得改写或复用。Task 9 attempt-001 在 503 个 pure-solver units 和第一个 agent unit 后，因 critic visible limit `512` 与 provider billable output usage `704` 被旧 validator 误当同一上限而终止；已知 / tight upper 为 `$0.188415` / `$28.332415`。attempt-002 pre-call SHA-256=`48796200a05af2cbc9ae83d80f06a89ff437841810241954a8b7fe3f794be6eb`，绑定 execution commit `1feeef622d96a95b187c473a40e273852cdf6a45`；它提交 `524/10,563` rows，执行 91 logical calls / 131 attempts，其中 72 次成功且 usage 完整、59 次 usage 缺失，19 个 logical calls 为 `DELEGATE_FAILED`。合法 edit 应用后产生重复 onset/pitch，target checkpoint 本地校验异常导致 terminal `INCOMPLETE` / `unexpected_unowned_observation`；未检查或记录私有 prompt/response。attempt-002 已知 / tight upper 为 `$0.986494` / `$416.110494`，不得 resume 或覆盖。attempt-001 + 002 累计 tight upper 为 `$444.442909`；若再计一个完整 formal attempt，累计机械上界为 `$1,168,350.082909`。修复只把 post-edit pitch 越界 / onset-pitch 碰撞映射到既有 `MODEL_EDIT_INVALID` → `RECHECK`，不改 prompt、model、corpus、schedule 或 trace schema。formal runner 仍在 observation/WAL/retry/network 前执行 UTF-8 bytes + 256 guard，成功调用必须返回精确 `gpt-5.6-sol` 证据，live 只发布五个 raw canonical 工件并由两个独立 full replay 生成报告。新 `benchmark-formal-budget-gate@0.3.0` SHA-256=`9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6`，pre-call schema 是 `benchmark-pre-call-config@0.3.0`。下一步是验收并推送 post-edit 修复，再在新 pushed SHA 上生成 fresh attempt-003 pre-call。运行时不调用 Git/子进程。本阶段没有前端设计改动；若要 dashboard、图表页或 live leaderboard，先确认既有视觉基线。
+**当前恢复真源（2026-07-19）**：Task 9 formal attempts 001–003 均已 terminal
+`INCOMPLETE`，不得 resume、覆盖或复用编号；下一次正式采集只能是 fresh attempt-004。
+attempt-003 在 503 个 pure-solver rows 后暴露系统性的 30 秒 request timeout，并以
+`523/10,563` rows、78 logical calls / 113 provider attempts、`$0.955113 / $359.791113`
+known/tight cost 终止。三次累计 known/tight 为 `$2.130022 / $804.234022`；加一个完整
+formal attempt 后的累计审计上界为 `$1,168,709.874022`。attempt-004 前须推送 300 秒整次
+attempt 硬 deadline（另含 10 秒/attempt 记录开销）、
+默认 4-lane 的 operational amendment；analysis-excluded pilot 按 `2 → 4 → 8` 运行，只有
+`4` 与 `8` 各至少八个完整 block（各 64 units）并经独立确认后才能选择 `8`，否则保持 `4`。
+正式进程 detached 运行，按 durable-unit 边界恢复，progress 只进 append-only operator log；
+formal/pilot 在建客户端前要求数值 loopback，拒绝 `localhost`；运行时不调用 Git 或子进程。
+普通 full stub A/B 只验证报告/字节，4-lane 恢复另由 provider-free
+`scripts/task9_operational_stub_gate.py` 对完整 schedule 验证；两类最终 amended A/B 均已通过，
+4-lane A 在 admitted 284 时唯一一次 `SIGINT` 后干净排空并同目录 resume，最终与不间断 B
+逐字节一致。最终 provider-free release gates 也已通过：`2599 passed, 8 deselected`、
+integration 边界 `8 skipped`、116-wheel/331-sdist 审计和七组 clean-install smoke 全绿；下一步为
+commit/push 后运行 live throughput pilot。现有 pre-call、WAL、config、abort receipt 与金额均为
+冻结历史证据。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。
 

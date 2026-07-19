@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+from collections.abc import Iterator
 from dataclasses import replace
 from fractions import Fraction as F
 
@@ -15,6 +17,7 @@ from fretsure.bench.artifacts import (
     RowType,
     SanitizedObservations,
     blob_record_to_dict,
+    build_blob_record,
     build_row,
     canonical_jsonl_bytes,
     canonical_table_sha256,
@@ -35,6 +38,7 @@ from fretsure.bench.experiment import (
     CompletedExperimentUnit,
     CompletedPureSolver,
     ExperimentCollection,
+    ItemMatchedBudget,
     ObservationLedger,
     ScheduledUnit,
     derive_shared_views,
@@ -242,6 +246,39 @@ def test_collection_rows_bind_nested_payload_blobs_observations_and_work(
     }
 
 
+def test_collection_row_bundle_indexes_joined_calls_once_without_byte_drift(
+    report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collection, _sink, _observations = report_source
+    original_joined_calls = report_module._joined_calls
+    joined_iterations = 0
+
+    class _CountingJoined(tuple[report_module._JoinedCall, ...]):
+        def __iter__(self) -> Iterator[report_module._JoinedCall]:
+            nonlocal joined_iterations
+            joined_iterations += 1
+            return super().__iter__()
+
+    def counted_joined_calls(ledger: ObservationLedger) -> _CountingJoined:
+        return _CountingJoined(original_joined_calls(ledger))
+
+    monkeypatch.setattr(report_module, "_joined_calls", counted_joined_calls)
+    bundle = collection_to_row_bundle(collection)
+    rows_bytes = canonical_jsonl_bytes(tuple(row_to_dict(value) for value in bundle.rows))
+    blobs_bytes = canonical_jsonl_bytes(
+        tuple(blob_record_to_dict(value) for value in bundle.blobs)
+    )
+
+    assert joined_iterations == 1
+    assert hashlib.sha256(rows_bytes).hexdigest() == (
+        "6931e13d8625d288d198b7c03aee3bbf0001cf7c2f758814ed49ff5f204f5c95"
+    )
+    assert hashlib.sha256(blobs_bytes).hexdigest() == (
+        "0d074e5ce058b79e6026ae16a9a0a70a45dd9a45c69985f21b73321135fa26b2"
+    )
+
+
 def test_rows_restore_a_complete_or_prefix_resume_state(
     report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
 ) -> None:
@@ -294,6 +331,67 @@ def test_rows_restore_a_complete_or_prefix_resume_state(
         bundle.blobs,
     )
     assert len(prefix.completed_units) == 3
+
+
+def test_resume_indexes_matched_budgets_once(
+    report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
+) -> None:
+    collection, _sink, _observations = report_source
+    bundle = collection_to_row_bundle(collection)
+    original_budgets = collection.plan.matched_budgets
+    budget_iterations = 0
+
+    class _CountingBudgets(tuple[ItemMatchedBudget, ...]):
+        def __iter__(self) -> Iterator[ItemMatchedBudget]:
+            nonlocal budget_iterations
+            budget_iterations += 1
+            return super().__iter__()
+
+    object.__setattr__(
+        collection.plan,
+        "matched_budgets",
+        _CountingBudgets(original_budgets),
+    )
+    try:
+        state = resume_state_from_rows(
+            collection.plan,
+            collection.goal,
+            collection.profile,
+            bundle.rows,
+            bundle.blobs,
+        )
+    finally:
+        object.__setattr__(collection.plan, "matched_budgets", original_budgets)
+
+    assert len(state.completed_units) == len(collection.plan.collection_schedule)
+    assert budget_iterations == 1
+
+
+def test_resume_hashes_each_source_context_once(
+    report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collection, _sink, _observations = report_source
+    bundle = collection_to_row_bundle(collection)
+    original = report_module.arrangement_source_context_sha256
+    calls = 0
+
+    def counted(*args: object, **kwargs: object) -> str:
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(report_module, "arrangement_source_context_sha256", counted)
+    state = resume_state_from_rows(
+        collection.plan,
+        collection.goal,
+        collection.profile,
+        bundle.rows,
+        bundle.blobs,
+    )
+
+    assert len(state.completed_units) == len(collection.plan.collection_schedule)
+    assert calls == len(collection.plan.items)
 
 
 def test_full_rescore_rechecks_stored_values_and_fast_mode_is_explicit(
@@ -350,6 +448,14 @@ def test_full_rescore_rechecks_stored_values_and_fast_mode_is_explicit(
         "solve_fingering",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("solver called")),
     )
+    for name in ("check_playability", "faithfulness", "fidelity", "propose_fingerstyle"):
+        monkeypatch.setattr(
+            report_module,
+            name,
+            lambda *_args, _name=name, **_kwargs: (_ for _ in ()).throw(
+                AssertionError(f"{_name} called")
+            ),
+        )
     fast = rescore_row_bundle(
         collection.plan,
         collection.goal,
@@ -359,6 +465,268 @@ def test_full_rescore_rechecks_stored_values_and_fast_mode_is_explicit(
         mode=ReplayMode.FAST_REAGGREGATE,
     )
     assert fast.mode is ReplayMode.FAST_REAGGREGATE
+
+
+def test_full_rescore_memoizes_unique_source_target_and_tab_semantics(
+    report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collection, _sink, _observations = report_source
+    bundle = collection_to_row_bundle(collection)
+    solve_calls = 0
+    source_parse_calls = 0
+    target_parse_calls = 0
+    tab_parse_calls = 0
+    original_solve = report_module.solve_fingering
+    original_source_parse = report_module.notegraph_to_ir
+    original_target_parse = report_module._parse_target
+    original_tab_parse = report_module._parse_tab
+
+    def counted_solve(*args: object, **kwargs: object) -> object:
+        nonlocal solve_calls
+        solve_calls += 1
+        return original_solve(*args, **kwargs)  # type: ignore[arg-type]
+
+    def counted_source_parse(*args: object, **kwargs: object) -> object:
+        nonlocal source_parse_calls
+        source_parse_calls += 1
+        return original_source_parse(*args, **kwargs)  # type: ignore[arg-type]
+
+    def counted_target_parse(*args: object, **kwargs: object) -> object:
+        nonlocal target_parse_calls
+        target_parse_calls += 1
+        return original_target_parse(*args, **kwargs)  # type: ignore[arg-type]
+
+    def counted_tab_parse(*args: object, **kwargs: object) -> object:
+        nonlocal tab_parse_calls
+        tab_parse_calls += 1
+        return original_tab_parse(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(report_module, "solve_fingering", counted_solve)
+    monkeypatch.setattr(report_module, "notegraph_to_ir", counted_source_parse)
+    monkeypatch.setattr(report_module, "_parse_target", counted_target_parse)
+    monkeypatch.setattr(report_module, "_parse_tab", counted_tab_parse)
+    rescored = rescore_row_bundle(
+        collection.plan,
+        collection.goal,
+        collection.profile,
+        bundle.rows,
+        bundle.blobs,
+        mode=ReplayMode.FULL_RESCORE,
+    )
+
+    target_semantics: set[tuple[str, str]] = set()
+    source_semantics: set[tuple[str, str]] = set()
+    tab_semantics: set[tuple[str, str]] = set()
+    for row in bundle.rows:
+        source = row.payload["source"]  # type: ignore[index]
+        source_semantics.add((row.key.item_id, source["notegraph_blob_sha256"]))  # type: ignore[index]
+        if row.key.row_type is RowType.CANDIDATE:
+            for checkpoint in ("initial", "terminal"):
+                payload = row.payload[checkpoint]  # type: ignore[index]
+                target_semantics.add((row.key.item_id, payload["target_blob_sha256"]))  # type: ignore[index]
+        elif row.key.row_type is RowType.PURE_SOLVER:
+            outcome = row.payload["outcome"]  # type: ignore[index]
+            target_semantics.add((row.key.item_id, outcome["target_blob_sha256"]))  # type: ignore[index]
+        for ref in row.blob_refs:
+            if ref.kind is BlobKind.TAB:
+                tab_semantics.add((row.key.item_id, ref.sha256))
+
+    assert len(rescored.rows) == len(bundle.rows)
+    assert solve_calls == len(target_semantics)
+    assert source_parse_calls == len(source_semantics)
+    assert target_parse_calls == len(target_semantics)
+    assert tab_parse_calls == len(tab_semantics)
+    assert solve_calls < len(collection.items) * 21
+
+
+@pytest.mark.parametrize(
+    ("field", "expected_error"),
+    (
+        ("diagnostic_codes", "stored oracle values"),
+        ("verdict", "stored oracle values"),
+        ("ranking_fidelity", "stored ranking fidelity"),
+    ),
+)
+def test_full_rescore_cache_hit_still_checks_every_stored_snapshot_field(
+    report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
+    field: str,
+    expected_error: str,
+) -> None:
+    collection, _sink, _observations = report_source
+    bundle = collection_to_row_bundle(collection)
+    candidate = next(row for row in bundle.rows if row.key.row_type is RowType.CANDIDATE)
+    payload = candidate.payload
+    terminal = dict(payload["terminal"])  # type: ignore[arg-type]
+    if field == "diagnostic_codes":
+        terminal[field] = [*terminal[field], "FORGED"]  # type: ignore[misc]
+    elif field == "verdict":
+        terminal[field] = "RED" if terminal[field] != "RED" else "GREEN"
+    else:
+        ranking = dict(terminal[field])  # type: ignore[arg-type]
+        ranking["melody_recall"] = 0.0 if ranking["melody_recall"] != 0.0 else 1.0
+        terminal[field] = ranking
+    payload["terminal"] = terminal
+    changed = build_row(
+        run_id=candidate.run_id,
+        key=candidate.key,
+        family_id=candidate.family_id,
+        cluster_id=candidate.cluster_id,
+        observation_keys=candidate.observation_keys,
+        blob_refs=candidate.blob_refs,
+        payload=payload,
+    )
+
+    with pytest.raises(ReportInputError, match=expected_error):
+        rescore_row_bundle(
+            collection.plan,
+            collection.goal,
+            collection.profile,
+            tuple(changed if row.key == candidate.key else row for row in bundle.rows),
+            bundle.blobs,
+            mode=ReplayMode.FULL_RESCORE,
+        )
+
+
+def test_rescore_cache_key_separates_source_goal_profile_and_target_blob(
+    report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collection, _sink, _observations = report_source
+    bundle = collection_to_row_bundle(collection)
+    candidate = next(row for row in bundle.rows if row.key.row_type is RowType.CANDIDATE)
+    target_sha = candidate.payload["initial"]["target_blob_sha256"]  # type: ignore[index]
+    target_record = next(
+        blob
+        for blob in bundle.blobs
+        if blob.ref.kind is BlobKind.TARGET and blob.ref.sha256 == target_sha
+    )
+    target = report_module._parse_target(target_record.content, "target")
+    other_record = build_blob_record(
+        BlobKind.TARGET,
+        report_module._target_content((Note(F(0), F(1), 67, "melody"),)),
+    )
+    other_target = report_module._parse_target(other_record.content, "other_target")
+    first_item, second_item = collection.plan.items
+    exact_goal = report_module._goal_at_source_tempo(collection.goal, first_item)
+    cache = report_module._RescoreCache()
+    solve_calls = 0
+    original_solve = report_module.solve_fingering
+
+    def counted_solve(*args: object, **kwargs: object) -> object:
+        nonlocal solve_calls
+        solve_calls += 1
+        return original_solve(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(report_module, "solve_fingering", counted_solve)
+    for _repeat in range(2):
+        report_module._cached_solved_target(
+            cache, first_item, target_record, target, exact_goal, collection.profile
+        )
+    report_module._cached_solved_target(
+        cache,
+        first_item,
+        target_record,
+        target,
+        replace(exact_goal, capo=1),
+        collection.profile,
+    )
+    report_module._cached_solved_target(
+        cache, first_item, target_record, target, exact_goal, SMALL_HAND
+    )
+    report_module._cached_solved_target(
+        cache, first_item, other_record, other_target, exact_goal, collection.profile
+    )
+    report_module._cached_solved_target(
+        cache,
+        second_item,
+        target_record,
+        target,
+        report_module._goal_at_source_tempo(collection.goal, second_item),
+        collection.profile,
+    )
+
+    assert solve_calls == 5
+
+
+def test_checkpoint_scoring_reuses_each_profile_oracle_across_provenance_scores(
+    report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collection, _sink, _observations = report_source
+    item = collection.items[0].item
+    tab = next(
+        trajectory.terminal.tab
+        for trajectory in collection.items[0].trajectories
+        if trajectory.terminal.tab is not None
+    )
+    tab_record = build_blob_record(BlobKind.TAB, report_module._tab_content(tab))
+    check_calls = 0
+    original_check = report_module.check_playability
+
+    def counted_check(*args: object, **kwargs: object) -> object:
+        nonlocal check_calls
+        check_calls += 1
+        return original_check(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(report_module, "check_playability", counted_check)
+    report_module._checkpoint_score(
+        item,
+        tab,
+        fallback_assisted=False,
+        llm_generated=True,
+        profile=collection.profile,
+    )
+    assert check_calls == 3
+
+    check_calls = 0
+    cache = report_module._RescoreCache()
+    for fallback, generated in ((False, True), (True, False)):
+        report_module._cached_checkpoint_score(
+            cache,
+            item,
+            tab_record,
+            tab,
+            collection.profile,
+            fallback_assisted=fallback,
+            llm_generated=generated,
+        )
+    assert check_calls == 3
+
+
+def test_collection_materialization_reuses_unique_tab_profile_oracles(
+    report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collection, _sink, _observations = report_source
+    expected = collection_to_row_bundle(collection)
+    items = {item.item_id: item for item in collection.plan.items}
+    oracle_keys = {
+        (
+            row.key.item_id,
+            ref.sha256,
+            profile.fingerprint,
+            items[row.key.item_id].ir.meta.tempo_bpm,
+            items[row.key.item_id].ir.meta.time_sig[0],
+        )
+        for row in expected.rows
+        for ref in row.blob_refs
+        if ref.kind is BlobKind.TAB
+        for profile in (SMALL_HAND, collection.profile, LARGE_HAND)
+    }
+    check_calls = 0
+    original_check = report_module.check_playability
+
+    def counted_check(*args: object, **kwargs: object) -> object:
+        nonlocal check_calls
+        check_calls += 1
+        return original_check(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(report_module, "check_playability", counted_check)
+    actual = collection_to_row_bundle(collection)
+
+    assert actual == expected
+    assert check_calls == len(oracle_keys)
 
 
 def test_report_aggregates_separate_strata_inference_baselines_usage_and_wire(
@@ -382,6 +750,9 @@ def test_report_aggregates_separate_strata_inference_baselines_usage_and_wire(
     )
     wire = report_to_dict(report)
 
+    assert hashlib.sha256(report.wire_json).hexdigest() == (
+        "8d57ca8b783798c02c02d256db6687b97ced77cb7ca370e4885484e76a9feed8"
+    )
     assert report == build_benchmark_report(
         collection.plan,
         collection.goal,
@@ -652,6 +1023,97 @@ def test_incremental_helpers_emit_exact_source_bound_single_rows(
             if row.key.item_id == item.item.item_id and row.key.row_type is RowType.PURE_SOLVER
         ),
     )
+
+
+def test_incremental_unit_helper_accepts_global_index_suffix_but_requires_tail(
+    report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
+) -> None:
+    collection, sink, _observations = report_source
+    complete = collection_to_row_bundle(collection)
+
+    def row_for(unit: ScheduledUnit) -> BenchmarkRow:
+        row_type = RowType.CANDIDATE if unit.arm is CollectionArm.AGENT else RowType.RAW
+        return next(
+            row
+            for row in complete.rows
+            if row.key.item_id == unit.item_id
+            and row.key.candidate_index == unit.candidate_index
+            and row.key.row_type is row_type
+        )
+
+    def ledger_between(start: int, end: int) -> ObservationLedger:
+        return ObservationLedger(
+            tuple(value for value in sink.intents if start <= value.call_index < end),
+            tuple(value for value in sink.results if start <= value.call_index < end),
+            tuple(value for value in sink.attempt_intents if start <= value.call_index < end),
+            tuple(value for value in sink.attempt_results if start <= value.call_index < end),
+        )
+
+    unit = collection.plan.collection_schedule[1]
+    item = collection.items[unit.item_position]
+    existing = row_for(unit)
+    start = min(value.call_index for value in existing.observation_keys)
+    end = max(value.call_index for value in existing.observation_keys) + 1
+    assert start > 0
+    completed = CompletedExperimentUnit(
+        unit,
+        arrangement_source_context_sha256(item.item.ir),
+        trajectory=(
+            item.trajectories[unit.candidate_index] if unit.arm is CollectionArm.AGENT else None
+        ),
+        raw_outcome=(
+            item.raw_outcomes[unit.candidate_index] if unit.arm is CollectionArm.RAW else None
+        ),
+    )
+
+    incremental = completed_unit_to_row_bundle(
+        collection.plan,
+        collection.goal,
+        collection.profile,
+        completed,
+        ledger_between(start, end),
+    )
+    assert incremental.rows == (existing,)
+
+    following = row_for(collection.plan.collection_schedule[2])
+    following_end = max(value.call_index for value in following.observation_keys) + 1
+    with pytest.raises(ReportInputError, match="contiguous ledger suffix"):
+        completed_unit_to_row_bundle(
+            collection.plan,
+            collection.goal,
+            collection.profile,
+            completed,
+            ledger_between(start, following_end),
+        )
+
+
+def test_pure_row_helper_uses_the_frozen_item_position_without_plan_scan(
+    report_source: tuple[ExperimentCollection, InMemoryObservationSink, SanitizedObservations],
+) -> None:
+    collection, _sink, _observations = report_source
+    original_items = collection.plan.items
+    item_iterations = 0
+
+    class _CountingItems(tuple[CorpusItem, ...]):
+        def __iter__(self) -> Iterator[CorpusItem]:
+            nonlocal item_iterations
+            item_iterations += 1
+            return super().__iter__()
+
+    object.__setattr__(collection.plan, "items", _CountingItems(original_items))
+    try:
+        bundle = report_module.pure_outcome_to_row_bundle(
+            collection.plan,
+            collection.goal,
+            collection.profile,
+            collection.items[0].item,
+            collection.items[0].pure_solver,
+        )
+    finally:
+        object.__setattr__(collection.plan, "items", original_items)
+
+    assert len(bundle.rows) == 1
+    assert item_iterations == 0
 
 
 def test_report_rejects_row_observation_metadata_drift(

@@ -12,10 +12,12 @@ dependencies = [
 [project.optional-dependencies]
 agent = [
     "anthropic>=0.40",
+    "httpcore>=1.0.9,<1.1",
     "httpx>=0.28,<0.29",
 ]
 benchmark = [
     "anthropic>=0.40",
+    "httpcore>=1.0.9,<1.1",
     "httpx>=0.28,<0.29",
     "defusedxml>=0.7.1,<1",
     "music21==10.5.0",
@@ -46,6 +48,7 @@ dev = [
     "anthropic>=0.40",
     "defusedxml>=0.7.1,<1",
     "fastapi>=0.139,<0.140",
+    "httpcore>=1.0.9,<1.1",
     "httpx>=0.28,<0.29",
     "mcp>=1.28.1,<1.29",
     "music21==10.5.0",
@@ -71,7 +74,7 @@ packages = ["src/fretsure"]
 "data/benchmark/sources/mutopia-bach-bwv774.mid" = "fretsure/bench/data/sources/mutopia-bach-bwv774.mid"
 "data/benchmark/sources/mutopia-bach-bwv775.mid" = "fretsure/bench/data/sources/mutopia-bach-bwv775.mid"
 "data/benchmark/sources/openscore-lieder-beethoven-op48-5.mxl" = "fretsure/bench/data/sources/openscore-lieder-beethoven-op48-5.mxl"
-"docs/experiments/2026-07-17-benchmark-v2-prereg.json" = "fretsure/bench/data/benchmark-v2-prereg.json"
+"docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json" = "fretsure/bench/data/benchmark-v2-prereg.json"
 
 [tool.hatch.build.targets.sdist]
 include = [

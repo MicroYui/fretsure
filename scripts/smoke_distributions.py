@@ -270,6 +270,7 @@ def _benchmark_extra_smoke(root: Path, wheel: Path) -> None:
         assert not unpriced_output.exists()
         assert importlib.util.find_spec("anthropic") is not None
         assert importlib.util.find_spec("defusedxml") is not None
+        assert importlib.util.find_spec("httpcore") is not None
         assert importlib.util.find_spec("httpx") is not None
         assert importlib.util.find_spec("music21") is not None
         """,

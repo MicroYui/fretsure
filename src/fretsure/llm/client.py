@@ -206,6 +206,10 @@ def _contains_proxy_transport_boundary(error: BaseException) -> bool:
 def _is_retryable_proxy_exception(error: Exception) -> bool:
     if _contains_proxy_transport_boundary(error):
         return False
+    from fretsure.llm._proxy_transport import ProxyAttemptDeadlineError
+
+    if isinstance(error, ProxyAttemptDeadlineError):
+        return True
     try:
         import anthropic
     except Exception:
@@ -320,9 +324,7 @@ def _snapshot_proxy_response(
         response_id_sha256=response_id_sha256,
         input_tokens=_optional_usage_count(usage, "input_tokens"),
         output_tokens=_optional_usage_count(usage, "output_tokens"),
-        cache_creation_input_tokens=_optional_usage_count(
-            usage, "cache_creation_input_tokens"
-        ),
+        cache_creation_input_tokens=_optional_usage_count(usage, "cache_creation_input_tokens"),
         cache_read_input_tokens=_optional_usage_count(usage, "cache_read_input_tokens"),
     )
     return "".join(texts), metadata
@@ -369,6 +371,16 @@ def proxy_environment_configured() -> bool:
     except LLMProxyConfigurationError:
         return False
     return True
+
+
+def require_numeric_loopback_proxy_environment() -> None:
+    """Require a configured proxy whose host needs no DNS/NSS resolution."""
+
+    base_url, _auth_token = _proxy_environment()
+    if urlsplit(base_url).hostname not in {"127.0.0.1", "::1"}:
+        raise LLMProxyConfigurationError(
+            "local proxy base URL must use numeric loopback for bounded execution"
+        )
 
 
 class LLMClient(Protocol):
@@ -485,8 +497,22 @@ class ProxyLLM:
 
     supports_attempt_observation = True
 
-    def __init__(self, model: str = DEFAULT_PROXY_MODEL) -> None:
+    def __init__(
+        self,
+        model: str = DEFAULT_PROXY_MODEL,
+        *,
+        request_timeout_seconds: float = PROXY_REQUEST_TIMEOUT_SECONDS,
+    ) -> None:
         model = validate_llm_model_id(model)
+        if type(request_timeout_seconds) not in (int, float):
+            raise LLMProxyConfigurationError(
+                "request_timeout_seconds must be a positive finite number"
+            )
+        exact_request_timeout = float(request_timeout_seconds)
+        if not math.isfinite(exact_request_timeout) or exact_request_timeout <= 0.0:
+            raise LLMProxyConfigurationError(
+                "request_timeout_seconds must be a positive finite number"
+            )
         base_url, auth_token = _proxy_environment()
         http_client: Any | None = None
         try:
@@ -495,7 +521,7 @@ class ProxyLLM:
             from fretsure.llm._proxy_transport import build_proxy_http_client
 
             http_client = build_proxy_http_client(
-                timeout_seconds=PROXY_REQUEST_TIMEOUT_SECONDS,
+                timeout_seconds=exact_request_timeout,
                 connect_timeout_seconds=PROXY_CONNECT_TIMEOUT_SECONDS,
                 max_response_bytes=MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
             )
@@ -512,9 +538,7 @@ class ProxyLLM:
                     http_client.close()
                 except Exception:
                     pass
-            raise LLMProxyConfigurationError(
-                "LLM proxy client initialization failed"
-            ) from None
+            raise LLMProxyConfigurationError("LLM proxy client initialization failed") from None
         assert http_client is not None
         self._http_client_close = http_client.close
         self._http_client_finalizer = weakref.finalize(
@@ -523,6 +547,7 @@ class ProxyLLM:
             self._http_client_close,
         )
         self._model = model
+        self._request_timeout_seconds = exact_request_timeout
         self._last_call_metadata: ProxyCallMetadata | None = None
         self._closed = False
 
@@ -572,13 +597,16 @@ class ProxyLLM:
         for attempt in range(3):  # transient proxy/network errors -> back off and retry
             _before_proxy_attempt(attempt)
             try:
-                message = self._client.messages.create(
-                    model=self._model,
-                    system=system,
-                    messages=[{"role": "user", "content": user}],
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                )
+                from fretsure.llm._proxy_transport import proxy_attempt_deadline
+
+                with proxy_attempt_deadline(self._request_timeout_seconds):
+                    message = self._client.messages.create(
+                        model=self._model,
+                        system=system,
+                        messages=[{"role": "user", "content": user}],
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                    )
                 text, metadata = _snapshot_proxy_response(
                     message,
                     attempts=attempt + 1,

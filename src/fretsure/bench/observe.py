@@ -339,10 +339,7 @@ def _validate_attempt_intent(intent: object) -> AttemptIntent:
     _require_identifier(exact.logical_call_id, "attempt.logical_call_id")
     _require_index(exact.call_index, "attempt.call_index")
     _require_identifier(exact.attempt_id, "attempt.attempt_id")
-    if (
-        type(exact.attempt_index) is not int
-        or not 0 <= exact.attempt_index < MAX_OBSERVED_ATTEMPTS
-    ):
+    if type(exact.attempt_index) is not int or not 0 <= exact.attempt_index < MAX_OBSERVED_ATTEMPTS:
         raise ObservationInputError(
             "attempt.attempt_index",
             f"must be an exact integer in 0..{MAX_OBSERVED_ATTEMPTS - 1}",
@@ -383,10 +380,7 @@ def _validate_attempt_result(result: object) -> AttemptResult:
     _require_identifier(exact.logical_call_id, "attempt.logical_call_id")
     _require_index(exact.call_index, "attempt.call_index")
     _require_identifier(exact.attempt_id, "attempt.attempt_id")
-    if (
-        type(exact.attempt_index) is not int
-        or not 0 <= exact.attempt_index < MAX_OBSERVED_ATTEMPTS
-    ):
+    if type(exact.attempt_index) is not int or not 0 <= exact.attempt_index < MAX_OBSERVED_ATTEMPTS:
         raise ObservationInputError(
             "attempt.attempt_index",
             f"must be an exact integer in 0..{MAX_OBSERVED_ATTEMPTS - 1}",
@@ -435,9 +429,7 @@ def _validate_optional_tokens(value: object, field: str) -> int | None:
 
 def _validate_provider_observation(value: object) -> ProviderObservation:
     if type(value) is not ProviderObservation:
-        raise ObservationInputError(
-            "provider_observation", "must be an exact ProviderObservation"
-        )
+        raise ObservationInputError("provider_observation", "must be an exact ProviderObservation")
     exact = value
     if type(exact.available) is not bool:
         raise ObservationInputError("provider.available", "must be an exact bool")
@@ -460,10 +452,7 @@ def _validate_provider_observation(value: object) -> ProviderObservation:
         return exact
     if type(exact.status) is not str or exact.status not in ("succeeded", "failed"):
         raise ObservationInputError("provider.status", "must be succeeded or failed")
-    if (
-        type(exact.attempts) is not int
-        or not 1 <= exact.attempts <= MAX_OBSERVED_ATTEMPTS
-    ):
+    if type(exact.attempts) is not int or not 1 <= exact.attempts <= MAX_OBSERVED_ATTEMPTS:
         raise ObservationInputError(
             "provider.attempts",
             f"must be an exact integer in 1..{MAX_OBSERVED_ATTEMPTS}",
@@ -604,9 +593,7 @@ class InMemoryObservationSink:
         self._intents: list[CallIntent] = []
         self._results: list[CallResult] = []
         self._events: list[CallIntent | CallResult] = []
-        self._journal_events: list[
-            CallIntent | AttemptIntent | AttemptResult | CallResult
-        ] = []
+        self._journal_events: list[CallIntent | AttemptIntent | AttemptResult | CallResult] = []
         self._attempt_intents: list[AttemptIntent] = []
         self._attempt_results: list[AttemptResult] = []
         self._attempt_events: list[AttemptIntent | AttemptResult] = []
@@ -700,18 +687,12 @@ class InMemoryObservationSink:
             exact.status == "failed" and exact.failure_code is CallFailureCode.CLOCK_FAILED
         ):
             raise ObservationInputError("result", "logical calls require at least one attempt")
-        if (
-            exact.provider.available
-            and exact.provider.attempts != self._next_attempt_index
-        ):
+        if exact.provider.available and exact.provider.attempts != self._next_attempt_index:
             raise ObservationInputError(
                 "provider.attempts",
                 "must equal the number of terminal attempt records",
             )
-        if (
-            exact.logical_call_id != intent.logical_call_id
-            or exact.call_index != intent.call_index
-        ):
+        if exact.logical_call_id != intent.logical_call_id or exact.call_index != intent.call_index:
             raise ObservationInputError("result", "does not match the open intent")
         self._open_intent = None
         self._next_attempt_index = 0
@@ -724,16 +705,80 @@ class InMemoryObservationSink:
         return tuple(self._intents)
 
     @property
+    def intent_count(self) -> int:
+        """Return the logical-call count without snapshotting the journal."""
+
+        return len(self._intents)
+
+    def intents_since(self, start_index: int) -> tuple[CallIntent, ...]:
+        """Return only the immutable logical-intent suffix at ``start_index``."""
+
+        if type(start_index) is not int or not 0 <= start_index <= len(self._intents):
+            raise ObservationInputError(
+                "start_index",
+                "must be an exact integer inside the logical-intent journal",
+            )
+        return tuple(self._intents[start_index:])
+
+    @property
     def results(self) -> tuple[CallResult, ...]:
         return tuple(self._results)
+
+    @property
+    def result_count(self) -> int:
+        """Return the terminal logical-call count without snapshotting the journal."""
+
+        return len(self._results)
+
+    def results_since(self, start_index: int) -> tuple[CallResult, ...]:
+        """Return only the immutable logical-result suffix at ``start_index``."""
+
+        if type(start_index) is not int or not 0 <= start_index <= len(self._results):
+            raise ObservationInputError(
+                "start_index",
+                "must be an exact integer inside the logical-result journal",
+            )
+        return tuple(self._results[start_index:])
 
     @property
     def attempt_intents(self) -> tuple[AttemptIntent, ...]:
         return tuple(self._attempt_intents)
 
     @property
+    def attempt_intent_count(self) -> int:
+        """Return the provider-attempt count without snapshotting the journal."""
+
+        return len(self._attempt_intents)
+
+    def attempt_intents_since(self, start_index: int) -> tuple[AttemptIntent, ...]:
+        """Return only the immutable attempt-intent suffix at ``start_index``."""
+
+        if type(start_index) is not int or not 0 <= start_index <= len(self._attempt_intents):
+            raise ObservationInputError(
+                "start_index",
+                "must be an exact integer inside the attempt-intent journal",
+            )
+        return tuple(self._attempt_intents[start_index:])
+
+    @property
     def attempt_results(self) -> tuple[AttemptResult, ...]:
         return tuple(self._attempt_results)
+
+    @property
+    def attempt_result_count(self) -> int:
+        """Return the terminal provider-attempt count without snapshotting the journal."""
+
+        return len(self._attempt_results)
+
+    def attempt_results_since(self, start_index: int) -> tuple[AttemptResult, ...]:
+        """Return only the immutable attempt-result suffix at ``start_index``."""
+
+        if type(start_index) is not int or not 0 <= start_index <= len(self._attempt_results):
+            raise ObservationInputError(
+                "start_index",
+                "must be an exact integer inside the attempt-result journal",
+            )
+        return tuple(self._attempt_results[start_index:])
 
     @property
     def attempt_events(self) -> tuple[AttemptIntent | AttemptResult, ...]:
@@ -1328,8 +1373,7 @@ class ObservingLLM:
             except ObservationInputError:
                 provider = _UNAVAILABLE_PROVIDER
             if provider.available and (
-                provider.status != "succeeded"
-                or provider.attempts != attempt_journal.completed
+                provider.status != "succeeded" or provider.attempts != attempt_journal.completed
             ):
                 provider = _UNAVAILABLE_PROVIDER
             self._write_result(self._failed_result(context, error.code, 0, provider))

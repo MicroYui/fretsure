@@ -603,11 +603,13 @@ dependencies = [
 [package.optional-dependencies]
 agent = [
     { name = "anthropic" },
+    { name = "httpcore" },
     { name = "httpx" },
 ]
 benchmark = [
     { name = "anthropic" },
     { name = "defusedxml" },
+    { name = "httpcore" },
     { name = "httpx" },
     { name = "music21" },
 ]
@@ -615,6 +617,7 @@ dev = [
     { name = "anthropic" },
     { name = "defusedxml" },
     { name = "fastapi" },
+    { name = "httpcore" },
     { name = "httpx" },
     { name = "hypothesis" },
     { name = "mcp" },
@@ -654,6 +657,9 @@ requires-dist = [
     { name = "defusedxml", marker = "extra == 'score'", specifier = ">=0.7.1,<1" },
     { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.139,<0.140" },
     { name = "fastapi", marker = "extra == 'service'", specifier = ">=0.139,<0.140" },
+    { name = "httpcore", marker = "extra == 'agent'", specifier = ">=1.0.9,<1.1" },
+    { name = "httpcore", marker = "extra == 'benchmark'", specifier = ">=1.0.9,<1.1" },
+    { name = "httpcore", marker = "extra == 'dev'", specifier = ">=1.0.9,<1.1" },
     { name = "httpx", marker = "extra == 'agent'", specifier = ">=0.28,<0.29" },
     { name = "httpx", marker = "extra == 'benchmark'", specifier = ">=0.28,<0.29" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28,<0.29" },

@@ -99,6 +99,7 @@ def test_task7_project_version_and_benchmark_extra_are_frozen() -> None:
     assert _validate_project_metadata(_PROJECT) == _VERSION
     assert _PROJECT["project"]["optional-dependencies"]["benchmark"] == [
         "anthropic>=0.40",
+        "httpcore>=1.0.9,<1.1",
         "httpx>=0.28,<0.29",
         "defusedxml>=0.7.1,<1",
         "music21==10.5.0",
@@ -140,9 +141,7 @@ def test_wheel_audit_rejects_incomplete_benchmark_extra(tmp_path: Path) -> None:
         "blobs.jsonl",
     ),
 )
-def test_wheel_audit_rejects_private_or_formal_run_artifacts(
-    tmp_path: Path, filename: str
-) -> None:
+def test_wheel_audit_rejects_private_or_formal_run_artifacts(tmp_path: Path, filename: str) -> None:
     wheel = tmp_path / f"forbidden-{filename}.whl"
     _write_test_wheel(wheel, extra_name=f"fretsure/bench/data/{filename}")
 
@@ -157,12 +156,12 @@ def test_sdist_audit_requires_task7_task8_and_task9_evidence_and_exact_sources(
     _write_test_sdist(complete)
     assert _audit_sdist(complete) > 0
 
-    missing_prereg = tmp_path / "missing-prereg.tar.gz"
+    missing_prereg = tmp_path / "missing-operational-prereg.tar.gz"
     _write_test_sdist(
         missing_prereg,
-        omitted="docs/experiments/2026-07-17-benchmark-v2-prereg.json",
+        omitted="docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json",
     )
-    with pytest.raises(ValueError, match="benchmark-v2-prereg"):
+    with pytest.raises(ValueError, match="operational-prereg"):
         _audit_sdist(missing_prereg)
 
     missing_pilot = tmp_path / "missing-task8-pilot.tar.gz"
@@ -192,10 +191,7 @@ def test_sdist_audit_requires_task7_task8_and_task9_evidence_and_exact_sources(
         ),
         (
             "formal-billing-envelope",
-            (
-                "docs/experiments/"
-                "2026-07-18-gpt-5.6-sol-formal-billing-envelope.json"
-            ),
+            ("docs/experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json"),
         ),
     ):
         missing_price = tmp_path / f"missing-task8-{label}.tar.gz"
@@ -218,6 +214,14 @@ def test_sdist_audit_requires_task7_task8_and_task9_evidence_and_exact_sources(
     )
     with pytest.raises(ValueError, match="build_benchmark_precall"):
         _audit_sdist(missing_pre_call_builder)
+
+    missing_operational_stub_gate = tmp_path / "missing-task9-operational-stub-gate.tar.gz"
+    _write_test_sdist(
+        missing_operational_stub_gate,
+        omitted="scripts/task9_operational_stub_gate.py",
+    )
+    with pytest.raises(ValueError, match="task9_operational_stub_gate"):
+        _audit_sdist(missing_operational_stub_gate)
 
     source_name = next(iter(_licensed_source_files()))
     missing_source = tmp_path / "missing-source.tar.gz"
@@ -244,9 +248,7 @@ def test_sdist_audit_requires_task7_task8_and_task9_evidence_and_exact_sources(
         "blobs.jsonl",
     ),
 )
-def test_sdist_audit_rejects_private_or_formal_run_artifacts(
-    tmp_path: Path, filename: str
-) -> None:
+def test_sdist_audit_rejects_private_or_formal_run_artifacts(tmp_path: Path, filename: str) -> None:
     sdist = tmp_path / f"forbidden-{filename}.tar.gz"
     _write_test_sdist(sdist, extra_name=f"published-run/{filename}")
 

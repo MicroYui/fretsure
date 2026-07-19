@@ -9,8 +9,10 @@ import pytest
 
 import fretsure.bench.report as report_module
 import fretsure.bench.runner as runner_module
+from fretsure.agent.arranger import ArrangeGoal
 from fretsure.bench.artifacts import manifest_to_dict
 from fretsure.bench.contracts import canonical_json_bytes
+from fretsure.bench.experiment import CompletedExperimentUnit, ExperimentPlan, ObservationLedger
 from fretsure.bench.precall import (
     BenchmarkPreCallConfig,
     PreCallConfigError,
@@ -18,7 +20,7 @@ from fretsure.bench.precall import (
     current_runtime_identity,
 )
 from fretsure.bench.preregistration import preregistration_from_bytes
-from fretsure.bench.report import ReplayMode
+from fretsure.bench.report import ArtifactRowBundle, ReplayMode
 from fretsure.bench.runner import (
     MAX_BENCHMARK_BARS,
     MAX_BENCHMARK_ITEMS,
@@ -34,7 +36,7 @@ from fretsure.bench.runner import (
 from fretsure.llm.client import ConstantLLM
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION
-from fretsure.oracle.profiles import MEDIAN_HAND
+from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 
 
 class _ClosableConstant(ConstantLLM):
@@ -674,6 +676,48 @@ def test_v2_stub_collection_is_byte_identical_and_full_replay_matches(
     assert (replay / "canonical" / "report.md").read_bytes() == (
         first / "canonical" / "report.md"
     ).read_bytes()
+
+
+def test_v2_serial_incremental_commits_receive_only_new_ledger_suffix(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original = runner_module.completed_unit_to_row_bundle
+    next_call_index = 0
+    seen_units = 0
+
+    def suffix_only(
+        plan: ExperimentPlan,
+        goal: ArrangeGoal,
+        profile: Profile,
+        completed: CompletedExperimentUnit,
+        ledger: ObservationLedger,
+    ) -> ArtifactRowBundle:
+        nonlocal next_call_index, seen_units
+        indices = tuple(value.call_index for value in ledger.intents)
+        assert indices
+        assert indices == tuple(range(next_call_index, indices[-1] + 1))
+        assert tuple(value.call_index for value in ledger.results) == indices
+        assert {value.call_index for value in ledger.attempt_intents} <= set(indices)
+        assert tuple(value.call_index for value in ledger.attempt_intents) == tuple(
+            value.call_index for value in ledger.attempt_results
+        )
+        result = original(plan, goal, profile, completed, ledger)
+        next_call_index = indices[-1] + 1
+        seen_units += 1
+        return result
+
+    def forbid_full_store_snapshot(_store: object) -> ObservationLedger:
+        raise AssertionError("serial unit commits must not snapshot the full store ledger")
+
+    monkeypatch.setattr(runner_module, "_store_ledger", forbid_full_store_snapshot)
+    monkeypatch.setattr(runner_module, "completed_unit_to_row_bundle", suffix_only)
+    config = _v2_config()
+    context = runner_module.build_benchmark_v2_context(config)
+    collect_benchmark_v2(config=config, output_dir=tmp_path / "suffix-only")
+
+    assert seen_units == len(context.plan.collection_schedule)
+    assert next_call_index > seen_units
 
 
 def test_v2_resume_from_committed_unit_matches_one_shot(

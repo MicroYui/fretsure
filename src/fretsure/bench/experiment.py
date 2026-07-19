@@ -568,7 +568,7 @@ def preflight_experiment(
 
 @dataclass(frozen=True, slots=True)
 class ObservationLedger:
-    """Detached complete observation records used for exact joins and costs."""
+    """Detached complete contiguous observations, optionally a global-index suffix."""
 
     intents: tuple[CallIntent, ...]
     results: tuple[CallResult, ...]
@@ -802,12 +802,17 @@ def _joined_observations(ledger: ObservationLedger) -> tuple[_JoinedCall, ...]:
         key = (attempt_result.call_index, attempt_result.logical_call_id)
         attempt_results_by_call.setdefault(key, []).append(attempt_result)
 
+    first_call_index = 0 if not ledger.intents else ledger.intents[0].call_index
+    if type(first_call_index) is not int or first_call_index < 0:
+        raise ExperimentInputError(
+            "observations.intents", "first call index must be a non-negative exact integer"
+        )
     joined: list[_JoinedCall] = []
     seen_logical: set[tuple[int, str]] = set()
     seen_attempt_ids: set[str] = set()
     for position, call_intent in enumerate(ledger.intents):
         key = (call_intent.call_index, call_intent.logical_call_id)
-        if key in seen_logical or call_intent.call_index != position:
+        if key in seen_logical or call_intent.call_index != first_call_index + position:
             raise ExperimentInputError(
                 "observations.intents", "call indices or logical ids are duplicate/noncanonical"
             )
@@ -866,6 +871,7 @@ class _ObservationIndex:
     actual_call_keys: frozenset[_LogicalCallKey]
     requested_model_ids: frozenset[str]
     semantic_by_call_key: dict[_LogicalCallKey, _SemanticCallKey]
+    request_digests_by_item_stage: dict[tuple[str, CallStage], frozenset[str]]
 
 
 def _index_observations(plan: ExperimentPlan, ledger: ObservationLedger) -> _ObservationIndex:
@@ -878,6 +884,7 @@ def _index_observations(plan: ExperimentPlan, ledger: ObservationLedger) -> _Obs
     actual_call_keys: set[_LogicalCallKey] = set()
     requested_model_ids: set[str] = set()
     semantic_by_call_key: dict[_LogicalCallKey, _SemanticCallKey] = {}
+    request_digests_by_item_stage: dict[tuple[str, CallStage], set[str]] = {}
     for call in joined:
         intent = call.intent
         if intent.run_id != plan.run_id:
@@ -898,6 +905,10 @@ def _index_observations(plan: ExperimentPlan, ledger: ObservationLedger) -> _Obs
             raise ExperimentInputError("observations", "contains duplicate logical call keys")
         actual_call_keys.add(call_key)
         semantic_by_call_key[call_key] = key
+        if intent.stage in {CallStage.PROPOSAL, CallStage.RAW}:
+            request_digests_by_item_stage.setdefault((intent.item_id, intent.stage), set()).add(
+                intent.request_sha256
+            )
         budget = budget_by_item.get(intent.item_id)
         planned_item = planned_items.get(intent.item_id)
         if budget is None or planned_item is None:
@@ -932,6 +943,10 @@ def _index_observations(plan: ExperimentPlan, ledger: ObservationLedger) -> _Obs
         frozenset(actual_call_keys),
         frozenset(requested_model_ids),
         semantic_by_call_key,
+        {
+            key: frozenset(digests)
+            for key, digests in request_digests_by_item_stage.items()
+        },
     )
 
 
@@ -1050,11 +1065,9 @@ def _validate_collection_observation_coverage(collection: ExperimentCollection) 
         )
     for item in collection.items:
         for stage in (CallStage.PROPOSAL, CallStage.RAW):
-            digests = {
-                call.intent.request_sha256
-                for call in joined
-                if call.intent.item_id == item.item.item_id and call.intent.stage is stage
-            }
+            digests = indexed.request_digests_by_item_stage.get(
+                (item.item.item_id, stage), frozenset()
+            )
             if len(digests) != 1:
                 raise ExperimentInputError(
                     "observations.request_sha256",
@@ -1099,6 +1112,7 @@ def _validate_resume_state(
             "resume_state.pure_solver_outcomes",
             "must contain one optional slot for every planned item",
         )
+    source_contexts = tuple(arrangement_source_context_sha256(item.ir) for item in plan.items)
     saw_missing_pure = False
     for index, completed_pure in enumerate(state.pure_solver_outcomes):
         if completed_pure is None:
@@ -1113,7 +1127,7 @@ def _validate_resume_state(
         if (
             completed_pure.item_id != item.item_id
             or completed_pure.source_context_sha256
-            != arrangement_source_context_sha256(item.ir)
+            != source_contexts[index]
         ):
             raise ExperimentInputError(
                 "resume_state.pure_solver_outcomes",
@@ -1159,7 +1173,7 @@ def _validate_resume_state(
         unit = completed.unit
         item = plan.items[unit.item_position]
         pair_id = sample_pair_id(item.item_id, unit.candidate_index)
-        if completed.source_context_sha256 != arrangement_source_context_sha256(item.ir):
+        if completed.source_context_sha256 != source_contexts[unit.item_position]:
             raise ExperimentInputError(
                 "resume_state.completed_units",
                 "completed unit does not bind the planned item source facts",
@@ -1262,11 +1276,9 @@ def _validate_resume_state(
         )
     for item in plan.items:
         for stage in (CallStage.PROPOSAL, CallStage.RAW):
-            digests = {
-                call.intent.request_sha256
-                for call in indexed.joined
-                if call.intent.item_id == item.item_id and call.intent.stage is stage
-            }
+            digests = indexed.request_digests_by_item_stage.get(
+                (item.item_id, stage), frozenset()
+            )
             if len(digests) > 1:
                 raise ExperimentInputError(
                     "resume_state.observations",
@@ -1284,6 +1296,223 @@ def _validate_resume_state(
 
 def _goal_at_source_tempo(goal: ArrangeGoal, item: CorpusItem) -> ArrangeGoal:
     return replace(goal, tempo_bpm=item.ir.meta.tempo_bpm, extras=dict(goal.extras))
+
+
+def execute_scheduled_unit(
+    plan: ExperimentPlan,
+    goal: ArrangeGoal,
+    profile: Profile,
+    unit: ScheduledUnit,
+    agent_llm: LLMClient,
+    raw_llm: LLMClient,
+    call_sequence: CallSequence,
+    *,
+    raw_request: RawBaselineRequest | None = None,
+) -> CompletedExperimentUnit:
+    """Execute one frozen collection unit without owning clients or observations.
+
+    ``agent_llm`` and ``raw_llm`` are expected to be observation-aware wrappers
+    owned by the caller. Keeping ownership and persistence outside this boundary
+    lets a scheduler execute units with lane-local call sequences that are rebased
+    before one canonical ledger is assembled; the serial runner supplies its
+    existing run-wide sequence unchanged.
+    """
+
+    if type(plan) is not ExperimentPlan:
+        raise ExperimentInputError("plan", "must be an exact ExperimentPlan")
+    if type(goal) is not ArrangeGoal:
+        raise ExperimentInputError("goal", "must be an exact ArrangeGoal")
+    if type(profile) is not Profile:
+        raise ExperimentInputError("profile", "must be an exact Profile")
+    if type(unit) is not ScheduledUnit:
+        raise ExperimentInputError("scheduled_unit", "must be an exact ScheduledUnit")
+    if type(call_sequence) is not CallSequence:
+        raise ExperimentInputError("call_sequence", "must be an exact CallSequence")
+    if type(unit.item_position) is not int or not 0 <= unit.item_position < len(plan.items):
+        raise ExperimentInputError("scheduled_unit", "item position is outside the plan")
+    if (
+        type(unit.round_index) is not int
+        or not 0 <= unit.round_index < EXPERIMENT_N_SAMPLES
+        or type(unit.item_id) is not str
+        or type(unit.arm) is not CollectionArm
+        or type(unit.candidate_index) is not int
+        or not 0 <= unit.candidate_index < EXPERIMENT_N_SAMPLES
+    ):
+        raise ExperimentInputError(
+            "scheduled_unit", "does not belong to the frozen collection schedule"
+        )
+
+    item = plan.items[unit.item_position]
+    item_schedule = plan.item_schedules[unit.item_position]
+    if (
+        unit.item_id != item.item_id
+        or item_schedule.item_id != item.item_id
+        or unit.candidate_index != item_schedule.candidate_permutation[unit.round_index]
+    ):
+        raise ExperimentInputError(
+            "scheduled_unit", "does not belong to the frozen collection schedule"
+        )
+    family_id = item.family_id
+    cluster_id = item.cluster_id
+    if family_id is None or cluster_id is None:
+        raise ExperimentInputError("plan.items", "corpus identities were not snapshotted")
+
+    scopes = call_sequence.bind_candidate(
+        item_id=item.item_id,
+        family_id=family_id,
+        cluster_id=cluster_id,
+        pair_id=sample_pair_id(item.item_id, unit.candidate_index),
+    )
+    source_context_sha256 = arrangement_source_context_sha256(item.ir)
+    item_goal = _goal_at_source_tempo(goal, item)
+    if unit.arm is CollectionArm.AGENT:
+        trajectory = build_candidate_trajectory(
+            item.ir,
+            item_goal,
+            agent_llm,
+            profile=profile,
+            candidate_index=unit.candidate_index,
+            max_iters=plan.max_repair_iters,
+            use_critic=True,
+            temperature=plan.temperature,
+            call_scope_factory=scopes,
+        )
+        return CompletedExperimentUnit(
+            unit,
+            source_context_sha256,
+            trajectory=trajectory,
+        )
+
+    expected_request = build_raw_baseline_request(item.ir, item_goal, profile)
+    request = expected_request if raw_request is None else raw_request
+    if type(request) is not RawBaselineRequest:
+        raise ExperimentInputError("raw_request", "must be an exact RawBaselineRequest")
+    if request != expected_request or (
+        request.source_context_sha256 != source_context_sha256
+        or request.max_tokens != plan.matched_budgets[unit.item_position].proposal_tokens
+    ):
+        raise ExperimentInputError(
+            "raw_request", "does not match the scheduled item and request policy"
+        )
+    raw_outcome = collect_raw_llm_baseline(
+        request,
+        raw_llm,
+        profile,
+        sample_index=unit.candidate_index,
+        call_scope_factory=scopes,
+    )
+    return CompletedExperimentUnit(
+        unit,
+        source_context_sha256,
+        raw_outcome=raw_outcome,
+    )
+
+
+def assemble_experiment_collection(
+    plan: ExperimentPlan,
+    goal: ArrangeGoal,
+    profile: Profile,
+    pure_solver_outcomes: tuple[CompletedPureSolver, ...],
+    completed_units: tuple[CompletedExperimentUnit, ...],
+    observations: ObservationLedger,
+) -> ExperimentCollection:
+    """Assemble complete outcomes in frozen item/candidate order.
+
+    Unit completion order is deliberately irrelevant.  Exact schedule membership,
+    item/source bindings, and coverage are checked before outcomes are sorted into
+    the canonical per-item candidate slots consumed by the benchmark derivations.
+    """
+
+    if type(plan) is not ExperimentPlan:
+        raise ExperimentInputError("plan", "must be an exact ExperimentPlan")
+    if type(goal) is not ArrangeGoal:
+        raise ExperimentInputError("goal", "must be an exact ArrangeGoal")
+    if type(profile) is not Profile:
+        raise ExperimentInputError("profile", "must be an exact Profile")
+    if type(pure_solver_outcomes) is not tuple or any(
+        type(value) is not CompletedPureSolver for value in pure_solver_outcomes
+    ):
+        raise ExperimentInputError(
+            "pure_solver_outcomes", "must contain exact CompletedPureSolver values"
+        )
+    if type(completed_units) is not tuple or any(
+        type(value) is not CompletedExperimentUnit for value in completed_units
+    ):
+        raise ExperimentInputError(
+            "completed_units", "must contain exact CompletedExperimentUnit values"
+        )
+    if type(observations) is not ObservationLedger:
+        raise ExperimentInputError("observations", "must be an exact ObservationLedger")
+
+    planned_items = {item.item_id: item for item in plan.items}
+    source_contexts = {
+        item.item_id: arrangement_source_context_sha256(item.ir) for item in plan.items
+    }
+    pure_by_item: dict[str, PureSolverOutcome] = {}
+    for completed_pure in pure_solver_outcomes:
+        item = planned_items.get(completed_pure.item_id)
+        if item is None or completed_pure.item_id in pure_by_item:
+            raise ExperimentInputError(
+                "pure_solver_outcomes", "contain an unknown or duplicate item"
+            )
+        if completed_pure.source_context_sha256 != source_contexts[item.item_id]:
+            raise ExperimentInputError(
+                "pure_solver_outcomes", "do not bind the planned item source facts"
+            )
+        pure_by_item[completed_pure.item_id] = completed_pure.outcome
+    if set(pure_by_item) != set(planned_items):
+        raise ExperimentInputError(
+            "pure_solver_outcomes", "must cover every planned item exactly once"
+        )
+
+    scheduled_units = set(plan.collection_schedule)
+    completed_by_unit: dict[ScheduledUnit, CompletedExperimentUnit] = {}
+    for completed in completed_units:
+        unit = completed.unit
+        if unit not in scheduled_units or unit in completed_by_unit:
+            raise ExperimentInputError(
+                "completed_units", "contain an unknown or duplicate scheduled unit"
+            )
+        item = plan.items[unit.item_position]
+        if completed.source_context_sha256 != source_contexts[item.item_id]:
+            raise ExperimentInputError(
+                "completed_units", "do not bind the planned item source facts"
+            )
+        completed_by_unit[unit] = completed
+    if set(completed_by_unit) != scheduled_units:
+        raise ExperimentInputError(
+            "completed_units", "must cover the frozen collection schedule exactly once"
+        )
+
+    trajectories_by_item: list[list[CandidateTrajectory]] = [[] for _item in plan.items]
+    raw_by_item: list[list[RawLLMOutcome]] = [[] for _item in plan.items]
+    for unit in plan.collection_schedule:
+        completed = completed_by_unit[unit]
+        if unit.arm is CollectionArm.AGENT:
+            trajectory = completed.trajectory
+            assert trajectory is not None
+            trajectories_by_item[unit.item_position].append(trajectory)
+        else:
+            raw_outcome = completed.raw_outcome
+            assert raw_outcome is not None
+            raw_by_item[unit.item_position].append(raw_outcome)
+
+    items = tuple(
+        ItemCollection(
+            item=item,
+            trajectories=tuple(sorted(trajectories_by_item[index], key=lambda value: value.index)),
+            raw_outcomes=tuple(sorted(raw_by_item[index], key=lambda value: value.sample_index)),
+            pure_solver=pure_by_item[item.item_id],
+        )
+        for index, item in enumerate(plan.items)
+    )
+    return ExperimentCollection(
+        plan=plan,
+        goal=replace(goal, extras=dict(goal.extras)),
+        profile=profile,
+        items=items,
+        observations=observations,
+    )
 
 
 def run_experiment(
@@ -1349,7 +1578,14 @@ def run_experiment(
     completed_prefix: tuple[CompletedExperimentUnit, ...] = ()
     pure_slots: list[PureSolverOutcome | None] = [None] * len(plan.items)
     if resume_state is None:
-        if sink.intents or sink.results or sink.attempt_intents or sink.attempt_results:
+        if any(
+            (
+                sink.intent_count,
+                sink.result_count,
+                sink.attempt_intent_count,
+                sink.attempt_result_count,
+            )
+        ):
             raise ExperimentInputError("observation_sink", "must be fresh for one run")
         if sink.has_open_intent or sink.has_open_attempt:
             raise ExperimentInputError("observation_sink", "fresh sink has an open intent")
@@ -1399,7 +1635,7 @@ def run_experiment(
                 "restored observations use a different requested model",
             )
 
-        sequence = CallSequence(plan.run_id, start_call_index=len(sink.intents))
+        sequence = CallSequence(plan.run_id, start_call_index=sink.intent_count)
         for index, item in enumerate(plan.items):
             if pure_slots[index] is not None:
                 continue
@@ -1408,88 +1644,32 @@ def run_experiment(
             if on_pure_solver_complete is not None:
                 on_pure_solver_complete(item, outcome)
 
-        trajectories_by_item: list[list[CandidateTrajectory]] = [[] for _item in plan.items]
-        raw_by_item: list[list[RawLLMOutcome]] = [[] for _item in plan.items]
-        for completed in completed_prefix:
-            unit = completed.unit
-            if unit.arm is CollectionArm.AGENT:
-                trajectory = completed.trajectory
-                assert trajectory is not None
-                trajectories_by_item[unit.item_position].append(trajectory)
-            else:
-                raw_outcome = completed.raw_outcome
-                assert raw_outcome is not None
-                raw_by_item[unit.item_position].append(raw_outcome)
-
+        completed_units = list(completed_prefix)
         for unit in plan.collection_schedule[len(completed_prefix) :]:
-            item = plan.items[unit.item_position]
-            family_id = item.family_id
-            cluster_id = item.cluster_id
-            if family_id is None or cluster_id is None:
-                raise ExperimentInputError("plan.items", "corpus identities were not snapshotted")
-            if unit.arm is CollectionArm.AGENT:
-                scopes = sequence.bind_candidate(
-                    item_id=item.item_id,
-                    family_id=family_id,
-                    cluster_id=cluster_id,
-                    pair_id=sample_pair_id(item.item_id, unit.candidate_index),
-                )
-                trajectory = build_candidate_trajectory(
-                    item.ir,
-                    goals[unit.item_position],
-                    observed_agent,
-                    profile=exact_profile,
-                    candidate_index=unit.candidate_index,
-                    max_iters=plan.max_repair_iters,
-                    use_critic=True,
-                    temperature=plan.temperature,
-                    call_scope_factory=scopes,
-                )
-                trajectories_by_item[unit.item_position].append(trajectory)
-                completed = CompletedExperimentUnit(
-                    unit,
-                    arrangement_source_context_sha256(item.ir),
-                    trajectory=trajectory,
-                )
-            else:
-                scopes = sequence.bind_candidate(
-                    item_id=item.item_id,
-                    family_id=family_id,
-                    cluster_id=cluster_id,
-                    pair_id=sample_pair_id(item.item_id, unit.candidate_index),
-                )
-                raw_outcome = collect_raw_llm_baseline(
-                    raw_requests[unit.item_position],
-                    observed_raw,
-                    exact_profile,
-                    sample_index=unit.candidate_index,
-                    call_scope_factory=scopes,
-                )
-                raw_by_item[unit.item_position].append(raw_outcome)
-                completed = CompletedExperimentUnit(
-                    unit,
-                    arrangement_source_context_sha256(item.ir),
-                    raw_outcome=raw_outcome,
-                )
+            completed = execute_scheduled_unit(
+                plan,
+                goal,
+                exact_profile,
+                unit,
+                observed_agent,
+                observed_raw,
+                sequence,
+                raw_request=raw_requests[unit.item_position],
+            )
+            completed_units.append(completed)
             if on_unit_complete is not None:
                 on_unit_complete(completed)
 
         if any(outcome is None for outcome in pure_slots):  # pragma: no cover - invariant
             raise AssertionError("every pure-solver control must be available at finalization")
-        pure = tuple(outcome for outcome in pure_slots if outcome is not None)
-
-        item_collections = tuple(
-            ItemCollection(
-                item=plan.items[index],
-                trajectories=tuple(
-                    sorted(trajectories_by_item[index], key=lambda value: value.index)
-                ),
-                raw_outcomes=tuple(
-                    sorted(raw_by_item[index], key=lambda value: value.sample_index)
-                ),
-                pure_solver=pure[index],
+        completed_pure = tuple(
+            CompletedPureSolver(
+                item.item_id,
+                arrangement_source_context_sha256(item.ir),
+                outcome,
             )
-            for index in range(len(plan.items))
+            for item, outcome in zip(plan.items, pure_slots, strict=True)
+            if outcome is not None
         )
         ledger = ObservationLedger(
             sink.intents,
@@ -1497,12 +1677,13 @@ def run_experiment(
             sink.attempt_intents,
             sink.attempt_results,
         )
-        return ExperimentCollection(
-            plan=plan,
-            goal=replace(goal, extras=dict(goal.extras)),
-            profile=exact_profile,
-            items=item_collections,
-            observations=ledger,
+        return assemble_experiment_collection(
+            plan,
+            goal,
+            exact_profile,
+            completed_pure,
+            tuple(completed_units),
+            ledger,
         )
 
 
@@ -1954,10 +2135,8 @@ def _cost_summary(calls: Iterable[_JoinedCall]) -> CostSummary:
 
 def _cost_views(
     item: ItemCollection,
-    joined: tuple[_JoinedCall, ...],
+    item_calls: tuple[_JoinedCall, ...],
 ) -> ItemCostViews:
-    item_calls = tuple(call for call in joined if call.intent.item_id == item.item.item_id)
-
     def agent_prefix(k: int, *, critic: bool) -> CostSummary:
         return _cost_summary(
             call
@@ -2003,6 +2182,12 @@ def derive_shared_views(collection: ExperimentCollection) -> SharedExperimentVie
         raise ExperimentInputError("collection", "must be an exact ExperimentCollection")
     _validate_collection_observation_coverage(collection)
     joined = _joined_observations(collection.observations)
+    calls_by_item_lists: dict[str, list[_JoinedCall]] = {}
+    for call in joined:
+        calls_by_item_lists.setdefault(call.intent.item_id, []).append(call)
+    calls_by_item = {
+        item_id: tuple(item_calls) for item_id, item_calls in calls_by_item_lists.items()
+    }
     budget_by_item = {value.item_id: value for value in collection.plan.matched_budgets}
     views: list[ItemSharedViews] = []
     for item in collection.items:
@@ -2071,7 +2256,7 @@ def derive_shared_views(collection: ExperimentCollection) -> SharedExperimentVie
                 reliability=_reliability_points(repairs, raw_scores),
                 raw_scores=raw_scores,
                 pure_solver_score=pure_score,
-                costs=_cost_views(item, joined),
+                costs=_cost_views(item, calls_by_item.get(item_id, ())),
                 matched_budget=budget_by_item[item_id],
             )
         )
@@ -2114,7 +2299,9 @@ __all__ = [
     "SearchSelectionPair",
     "SelectionOutcome",
     "SharedExperimentViews",
+    "assemble_experiment_collection",
     "derive_shared_views",
+    "execute_scheduled_unit",
     "item_pair_id",
     "match_budget_prefix",
     "preflight_experiment",

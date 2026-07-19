@@ -166,9 +166,12 @@ def test_success_records_only_domain_separated_digests_and_deterministic_time() 
         "cluster-1",
         "pair-1",
     )
-    assert intent.system_sha256 == hashlib.sha256(
-        b"fretsure:benchmark-call-system@0.1.0\0" + system_secret.encode()
-    ).hexdigest()
+    assert (
+        intent.system_sha256
+        == hashlib.sha256(
+            b"fretsure:benchmark-call-system@0.1.0\0" + system_secret.encode()
+        ).hexdigest()
+    )
     assert intent.user_sha256 == visible_text_sha256(
         "user", user_secret, max_bytes=len(user_secret)
     )
@@ -188,6 +191,63 @@ def test_success_records_only_domain_separated_digests_and_deterministic_time() 
     assert user_secret not in rendered
     assert reply_secret not in rendered
     assert visible_text_sha256("system", "same") != visible_text_sha256("reply", "same")
+
+
+def test_observation_sink_exposes_constant_time_counts_and_bounded_suffixes() -> None:
+    sink = InMemoryObservationSink()
+    observed = ObservingLLM(
+        _Delegate("ok"),
+        sink,
+        clock_ns=_Clock(0, 1_000, 2_000, 3_000),
+    )
+
+    assert (
+        sink.intent_count
+        == sink.result_count
+        == sink.attempt_intent_count
+        == sink.attempt_result_count
+        == 0
+    )
+    assert sink.intents_since(0) == ()
+    assert sink.results_since(0) == ()
+    assert sink.attempt_intents_since(0) == ()
+    assert sink.attempt_results_since(0) == ()
+    with call_scope(_context("call-0", 0)):
+        assert observed.complete(system="s0", user="u0") == "ok"
+    with call_scope(
+        _context(
+            "call-1",
+            1,
+            stage=CallStage.REPAIR,
+            stage_ordinal=0,
+        )
+    ):
+        assert observed.complete(system="s1", user="u1") == "ok"
+
+    assert (
+        sink.intent_count
+        == sink.result_count
+        == sink.attempt_intent_count
+        == sink.attempt_result_count
+        == 2
+    )
+    assert sink.intents_since(1) == (sink.intents[1],)
+    assert sink.results_since(1) == (sink.results[1],)
+    assert sink.attempt_intents_since(1) == (sink.attempt_intents[1],)
+    assert sink.attempt_results_since(1) == (sink.attempt_results[1],)
+    assert sink.intents_since(2) == ()
+    assert sink.results_since(2) == ()
+    assert sink.attempt_intents_since(2) == ()
+    assert sink.attempt_results_since(2) == ()
+    for invalid in (-1, 3, True, 1.0):
+        for suffix in (
+            sink.intents_since,
+            sink.results_since,
+            sink.attempt_intents_since,
+            sink.attempt_results_since,
+        ):
+            with pytest.raises(ObservationInputError, match="start_index"):
+                suffix(invalid)  # type: ignore[arg-type]
 
 
 def test_intent_is_written_before_delegate_invocation() -> None:

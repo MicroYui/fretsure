@@ -75,7 +75,12 @@ _WAL_DOMAIN = b"fretsure:benchmark-wal@0.1.0\0"
 _ROW_TABLE_DOMAIN = b"fretsure:benchmark-row-table@0.1.0\0"
 _BLOB_TABLE_DOMAIN = b"fretsure:benchmark-blob-table@0.1.0\0"
 _BLOB_DOMAIN = b"fretsure:benchmark-blob@0.1.0\0"
-_FORMAL_PRE_CALL_CONFIG_VERSION: Final = "benchmark-pre-call-config@0.3.0"
+_FORMAL_PRE_CALL_CONFIG_VERSIONS: Final = frozenset(
+    {
+        "benchmark-pre-call-config@0.3.0",
+        "benchmark-pre-call-config@0.4.0",
+    }
+)
 _PROVIDER_USAGE_FIELDS: Final = (
     "input_tokens",
     "output_tokens",
@@ -2905,9 +2910,10 @@ class DurableObservationSink(InMemoryObservationSink):
             minimum=1,
             maximum=MAX_ARTIFACT_BUDGET,
         )
-        if complete_unit_reservation is not None and type(
-            complete_unit_reservation
-        ) is not CompleteUnitReservation:
+        if (
+            complete_unit_reservation is not None
+            and type(complete_unit_reservation) is not CompleteUnitReservation
+        ):
             raise _error(
                 ArtifactCode.INVALID_INPUT,
                 "complete_unit_reservation",
@@ -2967,7 +2973,7 @@ class DurableObservationSink(InMemoryObservationSink):
                         self._account_intent(event, require_complete_reservation=False)
                         super().write_intent(event)
                     elif type(event) is AttemptIntent:
-                        if len(self.attempt_intents) >= self._max_attempts:
+                        if self.attempt_intent_count >= self._max_attempts:
                             raise _error(
                                 ArtifactCode.LIMIT_EXCEEDED,
                                 "journal.attempts",
@@ -3049,10 +3055,10 @@ class DurableObservationSink(InMemoryObservationSink):
         if reservation is None or not self._reservation_required:
             return
         remaining = (
-            ("logical_calls", self._max_calls - len(self.intents), reservation.logical_calls),
+            ("logical_calls", self._max_calls - self.intent_count, reservation.logical_calls),
             (
                 "attempts",
-                self._max_attempts - len(self.attempt_intents),
+                self._max_attempts - self.attempt_intent_count,
                 reservation.attempts,
             ),
             (
@@ -3062,8 +3068,7 @@ class DurableObservationSink(InMemoryObservationSink):
             ),
             (
                 "attempt_reserved_output_tokens",
-                self._max_attempt_reserved_output_tokens
-                - self._attempt_reserved_output_tokens,
+                self._max_attempt_reserved_output_tokens - self._attempt_reserved_output_tokens,
                 reservation.attempt_reserved_output_tokens,
             ),
             (
@@ -3200,18 +3205,14 @@ class DurableObservationSink(InMemoryObservationSink):
         """Require the supplied scheduled-unit reservation before the next intent."""
 
         self._require_writable()
-        if next_reservation is not None and type(
-            next_reservation
-        ) is not CompleteUnitReservation:
+        if next_reservation is not None and type(next_reservation) is not CompleteUnitReservation:
             raise _error(
                 ArtifactCode.INVALID_INPUT,
                 "next_reservation",
                 "must be null or an exact CompleteUnitReservation",
             )
         self._next_unit_reservation = (
-            self._complete_unit_reservation
-            if next_reservation is None
-            else next_reservation
+            self._complete_unit_reservation if next_reservation is None else next_reservation
         )
         self._reservation_required = True
 
@@ -3249,7 +3250,7 @@ class DurableObservationSink(InMemoryObservationSink):
 
     def write_attempt_intent(self, intent: AttemptIntent) -> None:
         self._require_writable()
-        if len(self.attempt_intents) >= self._max_attempts:
+        if self.attempt_intent_count >= self._max_attempts:
             raise _error(
                 ArtifactCode.LIMIT_EXCEEDED,
                 "journal.attempts",
@@ -3283,9 +3284,7 @@ class DurableObservationSink(InMemoryObservationSink):
         )
         exceeded_usage_field = self._provider_usage_ceiling_exceeded(exact.provider)
         provider_integrity_failure = (
-            model_mismatch
-            or missing_live_provider_evidence
-            or exceeded_usage_field is not None
+            model_mismatch or missing_live_provider_evidence or exceeded_usage_field is not None
         )
         if provider_integrity_failure:
             exact = CallResult(
@@ -3518,9 +3517,7 @@ def _manifest_allowed_returned_model_id(manifest: BenchmarkManifest) -> str | No
     if type(model) is not dict:
         return None
     raw = cast(dict[str, object], model).get("allowed_returned_model_id")
-    return _model_id(
-        raw, "manifest.parameters.model.allowed_returned_model_id", optional=True
-    )
+    return _model_id(raw, "manifest.parameters.model.allowed_returned_model_id", optional=True)
 
 
 def _manifest_billable_token_ceilings(
@@ -3540,7 +3537,7 @@ def _manifest_billable_token_ceilings(
             "must be an exact object or null",
         )
     pre_call_obj = cast(dict[str, object], pre_call)
-    if pre_call_obj.get("schema") != _FORMAL_PRE_CALL_CONFIG_VERSION:
+    if pre_call_obj.get("schema") not in _FORMAL_PRE_CALL_CONFIG_VERSIONS:
         return None
     billing = pre_call_obj.get("billing_envelope")
     if type(billing) is not dict:
@@ -3558,10 +3555,7 @@ def _manifest_billable_token_ceilings(
         )
     return _provider_usage_ceilings(
         cast(dict[str, object], wire).get("billable_token_ceiling_per_attempt"),
-        (
-            "manifest.parameters.pre_call.billing_envelope.wire."
-            "billable_token_ceiling_per_attempt"
-        ),
+        ("manifest.parameters.pre_call.billing_envelope.wire.billable_token_ceiling_per_attempt"),
     )
 
 
@@ -3573,8 +3567,7 @@ def _manifest_requires_successful_provider_evidence(
     pre_call = manifest.parameters.get("pre_call")
     return (
         type(pre_call) is dict
-        and cast(dict[str, object], pre_call).get("schema")
-        == _FORMAL_PRE_CALL_CONFIG_VERSION
+        and cast(dict[str, object], pre_call).get("schema") in _FORMAL_PRE_CALL_CONFIG_VERSIONS
     )
 
 
@@ -3588,12 +3581,31 @@ class ArtifactStore:
         lock_descriptor: int,
         sink: DurableObservationSink,
         units: list[CompletedUnit],
+        *,
+        abort_only: bool = False,
+        ownership: tuple[
+            frozenset[RowKey],
+            set[RowKey],
+            set[ObservationKey],
+        ]
+        | None = None,
     ) -> None:
         self._root = root
         self._manifest = manifest
         self._lock_descriptor: int | None = lock_descriptor
         self._sink = sink
         self._units = units
+        if ownership is None:
+            expected_row_keys = frozenset(manifest.expected_rows)
+            committed_row_keys = {unit.row.key for unit in units}
+            committed_call_keys = {key for unit in units for key in unit.row.observation_keys}
+        else:
+            expected_row_keys, committed_row_keys, committed_call_keys = ownership
+        self._expected_row_keys = expected_row_keys
+        self._committed_row_keys = committed_row_keys
+        self._committed_call_keys = committed_call_keys
+        self._committed_call_count = len(committed_call_keys)
+        self._abort_only = abort_only
         self._closed = False
         self._finalized = (root / "canonical").exists()
         self._aborted = (root / "abort-receipt.json").exists()
@@ -3638,9 +3650,7 @@ class ArtifactStore:
                 require_successful_provider_evidence=(
                     _manifest_requires_successful_provider_evidence(manifest)
                 ),
-                billable_token_ceiling_per_attempt=(
-                    _manifest_billable_token_ceilings(manifest)
-                ),
+                billable_token_ceiling_per_attempt=(_manifest_billable_token_ceilings(manifest)),
             )
         except BaseException:
             fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
@@ -3685,15 +3695,90 @@ class ArtifactStore:
                 require_successful_provider_evidence=(
                     _manifest_requires_successful_provider_evidence(manifest)
                 ),
-                billable_token_ceiling_per_attempt=(
-                    _manifest_billable_token_ceilings(manifest)
-                ),
+                billable_token_ceiling_per_attempt=(_manifest_billable_token_ceilings(manifest)),
                 resume=True,
             )
             units = cls._read_units(output_dir, manifest)
-            cls._validate_resume_state(manifest, sink, units)
+            ownership = cls._validate_resume_state(manifest, sink, units)
             sink.mark_unit_committed()
-            return cls(output_dir, manifest, lock_descriptor, sink, units)
+            return cls(
+                output_dir,
+                manifest,
+                lock_descriptor,
+                sink,
+                units,
+                ownership=ownership,
+            )
+        except BaseException:
+            if sink is not None:
+                sink.close()
+            fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
+            os.close(lock_descriptor)
+            raise
+
+    @classmethod
+    def resume_for_abort(
+        cls,
+        output_dir: Path,
+        manifest: BenchmarkManifest,
+    ) -> ArtifactStore:
+        """Open an incomplete matching store only so its terminal receipt can be written.
+
+        Unlike normal resume, this path deliberately does not require staged rows to
+        own every journal call.  It remains config/hash/lock validated and is used by
+        the concurrent runner after a strict resume failure; callers must abort it
+        without collecting or committing more work.
+        """
+
+        if not isinstance(output_dir, Path) or type(manifest) is not BenchmarkManifest:
+            raise _error(
+                ArtifactCode.INVALID_INPUT,
+                "resume_for_abort",
+                "requires Path and BenchmarkManifest",
+            )
+        _require_directory(output_dir, "output_dir")
+        if (output_dir / "canonical").exists():
+            raise _error(ArtifactCode.ALREADY_EXISTS, "canonical", "run is finalized")
+        if (output_dir / "abort-receipt.json").exists():
+            raise _error(ArtifactCode.INCOMPLETE, "receipt", "run is already aborted")
+        lock_descriptor = _acquire_lock(output_dir / ".writer.lock")
+        sink: DurableObservationSink | None = None
+        try:
+            wire = read_canonical_json(
+                output_dir / "config.json",
+                max_bytes=manifest.limits.max_json_bytes,
+            )
+            stored = manifest_from_dict(wire)
+            if manifest_sha256(stored) != manifest_sha256(manifest):
+                raise _error(ArtifactCode.HASH_MISMATCH, "manifest", "resume config differs")
+            sink = DurableObservationSink(
+                output_dir / "journal.jsonl",
+                max_calls=manifest.limits.max_calls,
+                max_attempts=manifest.limits.max_attempts,
+                max_requested_output_tokens=manifest.limits.max_requested_output_tokens,
+                max_attempt_reserved_output_tokens=(
+                    manifest.limits.max_attempt_reserved_output_tokens
+                ),
+                max_response_text_bytes=manifest.limits.max_response_text_bytes,
+                max_transport_response_bytes=manifest.limits.max_transport_response_bytes,
+                max_wall_microseconds=manifest.limits.max_wall_microseconds,
+                complete_unit_reservation=manifest.limits.complete_unit_reservation,
+                allowed_returned_model_id=_manifest_allowed_returned_model_id(manifest),
+                require_successful_provider_evidence=(
+                    _manifest_requires_successful_provider_evidence(manifest)
+                ),
+                billable_token_ceiling_per_attempt=(_manifest_billable_token_ceilings(manifest)),
+                resume=True,
+            )
+            units = cls._read_units(output_dir, manifest)
+            return cls(
+                output_dir,
+                manifest,
+                lock_descriptor,
+                sink,
+                units,
+                abort_only=True,
+            )
         except BaseException:
             if sink is not None:
                 sink.close()
@@ -3729,13 +3814,14 @@ class ArtifactStore:
         manifest: BenchmarkManifest,
         sink: DurableObservationSink,
         units: list[CompletedUnit],
-    ) -> None:
+    ) -> tuple[frozenset[RowKey], set[RowKey], set[ObservationKey]]:
         if sink.has_open_intent or sink.has_open_attempt:
             raise _error(ArtifactCode.INCOMPLETE, "journal", "contains an orphan intent")
+        expected_row_keys = frozenset(manifest.expected_rows)
         row_keys: set[RowKey] = set()
         owned_calls: set[ObservationKey] = set()
         for unit in units:
-            if unit.row.run_id != manifest.run_id or unit.row.key not in manifest.expected_rows:
+            if unit.row.run_id != manifest.run_id or unit.row.key not in expected_row_keys:
                 raise _error(ArtifactCode.CORRUPT_UNIT, "unit.row", "does not match manifest")
             if unit.row.key in row_keys:
                 raise _error(ArtifactCode.CORRUPT_UNIT, "unit.row", "row key is duplicated")
@@ -3745,7 +3831,8 @@ class ArtifactStore:
                     raise _error(ArtifactCode.CORRUPT_UNIT, "unit.calls", "call is duplicated")
                 owned_calls.add(call)
         journal_calls = {
-            ObservationKey(intent.logical_call_id, intent.call_index) for intent in sink.intents
+            ObservationKey(intent.logical_call_id, intent.call_index)
+            for intent in sink.intents_since(0)
         }
         if owned_calls != journal_calls:
             raise _error(
@@ -3753,6 +3840,7 @@ class ArtifactStore:
                 "units",
                 "terminal calls are not covered by complete staged units",
             )
+        return expected_row_keys, row_keys, owned_calls
 
     def __enter__(self) -> Self:
         if self._closed:
@@ -3784,7 +3872,18 @@ class ArtifactStore:
     @property
     def sink(self) -> DurableObservationSink:
         self._require_open()
+        if self._abort_only:
+            raise _error(
+                ArtifactCode.INCOMPLETE,
+                "store",
+                "abort-only recovery cannot expose a writable sink",
+            )
         return self._sink
+
+    @property
+    def journal_sha256(self) -> str:
+        self._require_open()
+        return self._sink.journal_sha256
 
     @property
     def manifest_sha256(self) -> str:
@@ -3793,6 +3892,12 @@ class ArtifactStore:
     @property
     def completed_unit_indices(self) -> tuple[int, ...]:
         return tuple(unit.schedule_index for unit in self._units)
+
+    @property
+    def completed_unit_count(self) -> int:
+        """Return the durable staged-unit count without snapshotting unit history."""
+
+        return len(self._units)
 
     @property
     def completed_units(self) -> tuple[CompletedUnit, ...]:
@@ -3810,6 +3915,12 @@ class ArtifactStore:
         """Install the executable schedule's exact next-unit reservation."""
 
         self._require_open()
+        if self._abort_only:
+            raise _error(
+                ArtifactCode.INCOMPLETE,
+                "store",
+                "abort-only recovery cannot reserve collection work",
+            )
         if type(reservation) is not CompleteUnitReservation:
             raise _error(
                 ArtifactCode.INVALID_INPUT,
@@ -3847,6 +3958,12 @@ class ArtifactStore:
         blobs: tuple[BlobRecord, ...],
     ) -> None:
         self._require_open()
+        if self._abort_only:
+            raise _error(
+                ArtifactCode.INCOMPLETE,
+                "store",
+                "abort-only recovery cannot commit collection work",
+            )
         if self._finalized:
             raise _error(ArtifactCode.ALREADY_EXISTS, "canonical", "run is finalized")
         if self._sink.has_open_intent or self._sink.has_open_attempt:
@@ -3855,18 +3972,15 @@ class ArtifactStore:
             raise _error(ArtifactCode.COVERAGE_MISMATCH, "schedule_index", "must be the next unit")
         if type(row) is not BenchmarkRow or row.run_id != self._manifest.run_id:
             raise _error(ArtifactCode.INVALID_INPUT, "row", "does not match the run")
-        if row.key not in self._manifest.expected_rows or any(
-            unit.row.key == row.key for unit in self._units
-        ):
+        if row.key not in self._expected_row_keys or row.key in self._committed_row_keys:
             raise _error(ArtifactCode.COVERAGE_MISMATCH, "row.key", "is unexpected or duplicated")
         unit = CompletedUnit(schedule_index, row, blobs)
-        already_owned = {key for staged in self._units for key in staged.row.observation_keys}
-        all_calls = {
+        current_call_count = self._sink.intent_count
+        new_calls = {
             ObservationKey(intent.logical_call_id, intent.call_index)
-            for intent in self._sink.intents
+            for intent in self._sink.intents_since(self._committed_call_count)
         }
-        new_calls = all_calls - already_owned
-        if set(row.observation_keys) != new_calls:
+        if new_calls & self._committed_call_keys or set(row.observation_keys) != new_calls:
             raise _error(
                 ArtifactCode.COVERAGE_MISMATCH,
                 "row.observation_keys",
@@ -3878,6 +3992,9 @@ class ArtifactStore:
             raise _error(ArtifactCode.LIMIT_EXCEEDED, "unit", "exceeds manifest max_json_bytes")
         _atomic_create(path, encoded)
         self._units.append(unit)
+        self._committed_row_keys.add(row.key)
+        self._committed_call_keys.update(new_calls)
+        self._committed_call_count = current_call_count
         self._sink.mark_unit_committed()
 
     def _complete_receipt(
@@ -3909,7 +4026,7 @@ class ArtifactStore:
             len(self._manifest.expected_rows),
             len(self._units),
             self._manifest.limits.max_calls,
-            len(self._sink.intents),
+            self._sink.intent_count,
             CompletionStatus.COMPLETE,
             None,
         )
@@ -3920,6 +4037,12 @@ class ArtifactStore:
         report_callback: Callable[[FinalizationInputs], FinalizedReport] | None = None,
     ) -> BenchmarkReceipt:
         self._require_open()
+        if self._abort_only:
+            raise _error(
+                ArtifactCode.INCOMPLETE,
+                "store",
+                "abort-only recovery cannot finalize a collection",
+            )
         if report_callback is not None and not callable(report_callback):
             raise _error(
                 ArtifactCode.INVALID_INPUT,
@@ -4049,7 +4172,7 @@ class ArtifactStore:
             len(self._manifest.expected_rows),
             len(self._units),
             self._manifest.limits.max_calls,
-            len(self._sink.intents),
+            self._sink.intent_count,
             CompletionStatus.INCOMPLETE,
             reason,
         )

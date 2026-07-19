@@ -7,6 +7,7 @@ from typing import cast
 
 import pytest
 
+import fretsure.bench.precall as precall_module
 from fretsure.agent.critic import CRITIC_MAX_TOKENS
 from fretsure.agent.repair import REPAIR_MAX_TOKENS
 from fretsure.bench.contracts import canonical_json_bytes
@@ -41,6 +42,14 @@ def preregistration() -> BenchmarkPreregistration:
     )
 
 
+@pytest.fixture(scope="module")
+def operational_preregistration() -> BenchmarkPreregistration:
+    root = Path(__file__).resolve().parents[2]
+    return preregistration_from_bytes(
+        (root / "docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json").read_bytes()
+    )
+
+
 def _config(
     preregistration: BenchmarkPreregistration,
     *,
@@ -63,9 +72,7 @@ def _config(
             "includes_non_visible_tokens": True,
             "maximum_tokens": 128_000,
             "model_id": "gpt-5.6-sol",
-            "source_model_ref": (
-                "https://developers.openai.com/api/docs/models/gpt-5.6-sol"
-            ),
+            "source_model_ref": ("https://developers.openai.com/api/docs/models/gpt-5.6-sol"),
             "source_token_counting_ref": (
                 "https://developers.openai.com/api/docs/guides/token-counting"
                 "#understand-output-token-counts"
@@ -91,9 +98,7 @@ def _config(
         currency=None if cost_status != "available" else "USD",
         maximum_spend_microunits=None if cost_status != "available" else 1_000_000,
         pricing_contract_sha256=None if cost_status != "available" else "4" * 64,
-        formal_budget_gate_raw_sha256=(
-            None if cost_status != "available" else "5" * 64
-        ),
+        formal_budget_gate_raw_sha256=(None if cost_status != "available" else "5" * 64),
     )
 
 
@@ -108,9 +113,7 @@ def test_pre_call_round_trip_binds_runtime_model_contracts_and_budget(
     maximum, reservation = pre_call_artifact_budget(config)
     assert maximum["max_logical_calls"] == 55_330
     assert maximum["max_attempts"] == 165_990
-    assert maximum["max_recorded_provider_call_elapsed_microseconds"] == (
-        5_184_000_000_000
-    )
+    assert maximum["max_recorded_provider_call_elapsed_microseconds"] == (5_184_000_000_000)
     assert reservation["logical_calls"] == 10
     assert reservation["attempts"] == 30
     assert reservation["requested_output_tokens"] == 24_672
@@ -120,6 +123,10 @@ def test_pre_call_round_trip_binds_runtime_model_contracts_and_budget(
     assert config.collection_attempt == 1
     assert config.run_id == "benchmark-v2-formal-20260717-attempt-001"
     assert config.to_dict()["schema"] == "benchmark-pre-call-config@0.3.0"
+    assert config.collection_execution_contract is None
+    assert config.request_timeout_seconds == 30.0
+    assert config.recorded_attempt_elapsed_overhead_seconds == 0.0
+    assert config.max_in_flight_units == 1
     assert config.to_dict()["budget"]["ceiling_scope"] == (  # type: ignore[index]
         "single_collection_attempt_nontransferable"
     )
@@ -128,9 +135,118 @@ def test_pre_call_round_trip_binds_runtime_model_contracts_and_budget(
     assert config.maximum_spend_microunits == 1_000_000
     assert config.formal_budget_gate_raw_sha256 == "5" * 64
     envelope = cast(dict[str, object], config.to_dict()["billing_envelope"])
-    assert envelope["raw_sha256"] == hashlib.sha256(
-        canonical_json_bytes(envelope["wire"])
-    ).hexdigest()
+    assert (
+        envelope["raw_sha256"] == hashlib.sha256(canonical_json_bytes(envelope["wire"])).hexdigest()
+    )
+
+
+def test_operational_preregistration_expands_timeout_and_elapsed_pre_call_budgets(
+    operational_preregistration: BenchmarkPreregistration,
+) -> None:
+    config = _config(operational_preregistration)
+    maximum, reservation = pre_call_artifact_budget(config)
+
+    assert pre_call_config_from_bytes(config.wire_json) == config
+    assert config.to_dict()["schema"] == "benchmark-pre-call-config@0.4.0"
+    prereg_wire = operational_preregistration.to_dict()
+    assert config.collection_execution_contract == prereg_wire["collection_execution"]
+    assert config.request_timeout_seconds == 300.0
+    assert config.recorded_attempt_elapsed_overhead_seconds == 10.0
+    collection_execution = cast(dict[str, object], prereg_wire["collection_execution"])
+    assert config.max_in_flight_units == collection_execution["max_in_flight_units"]
+    assert maximum["max_logical_calls"] == 55_330
+    assert maximum["max_attempts"] == 165_990
+    assert maximum["max_requested_output_tokens"] == 92_904_960
+    assert maximum["max_recorded_provider_call_elapsed_microseconds"] == (51_840_000_000_000)
+    assert reservation["logical_calls"] == 10
+    assert reservation["attempts"] == 30
+    assert reservation["requested_output_tokens"] == 24_672
+    assert reservation["recorded_provider_call_elapsed_microseconds"] == 9_315_000_000
+
+
+def test_scalar_runtime_bindings_do_not_reparse_large_wire_json(
+    operational_preregistration: BenchmarkPreregistration,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(operational_preregistration)
+    parse = precall_module.parse_canonical_json_bytes
+    calls = 0
+
+    def counted(data: bytes) -> object:
+        nonlocal calls
+        calls += 1
+        return parse(data)
+
+    monkeypatch.setattr(precall_module, "parse_canonical_json_bytes", counted)
+
+    assert config.requested_model_id == "gpt-5.6-sol"
+    assert config.analysis_code_sha256 == "3" * 64
+    assert config.collection_attempt == 1
+    assert config.request_timeout_seconds == 300.0
+    assert config.recorded_attempt_elapsed_overhead_seconds == 10.0
+    assert config.max_in_flight_units == 4
+    assert config.formal_input_token_ceiling == 271_998
+    assert config.formal_output_token_ceiling == 128_000
+    assert calls == 0
+
+    detached = config.to_dict()
+    assert calls == 1
+    detached["run_id"] = "mutated"
+    assert config.run_id == "benchmark-v2-formal-20260717-attempt-001"
+
+
+def test_operational_pre_call_rejects_contract_timeout_overhead_and_schema_drift(
+    preregistration: BenchmarkPreregistration,
+    operational_preregistration: BenchmarkPreregistration,
+) -> None:
+    operational = _config(operational_preregistration).to_dict()
+
+    bad_contract = copy.deepcopy(operational)
+    bad_contract["collection_execution"]["contract"][  # type: ignore[index]
+        "max_in_flight_units"
+    ] = 8
+    with pytest.raises(PreCallConfigError) as contract_error:
+        pre_call_config_from_dict(bad_contract)
+    assert contract_error.value.field == "collection_execution.contract"
+
+    for bad_value in (30.0, 300):
+        bad_timeout = copy.deepcopy(operational)
+        bad_timeout["collection_execution"][  # type: ignore[index]
+            "request_timeout_seconds"
+        ] = bad_value
+        with pytest.raises(PreCallConfigError) as timeout_error:
+            pre_call_config_from_dict(bad_timeout)
+        assert timeout_error.value.field == "collection_execution.request_timeout_seconds"
+
+    for bad_value in (9.0, 10):
+        bad_overhead = copy.deepcopy(operational)
+        bad_overhead["preregistration"]["budgets"]["provider_policy"][  # type: ignore[index]
+            "recorded_attempt_elapsed_overhead_seconds"
+        ] = bad_value
+        with pytest.raises(ValueError):
+            pre_call_config_from_dict(bad_overhead)
+
+    bad_reservation = copy.deepcopy(operational)
+    bad_reservation["budget"]["scheduled_unit_reservation"][  # type: ignore[index]
+        "recorded_provider_call_elapsed_microseconds"
+    ] -= 1
+    with pytest.raises(PreCallConfigError) as reservation_error:
+        pre_call_config_from_dict(bad_reservation)
+    assert reservation_error.value.field == "budget.scheduled_unit_reservation"
+
+    operational_as_legacy = copy.deepcopy(operational)
+    operational_as_legacy["schema"] = "benchmark-pre-call-config@0.3.0"
+    del operational_as_legacy["collection_execution"]
+    with pytest.raises(PreCallConfigError) as operational_schema_error:
+        pre_call_config_from_dict(operational_as_legacy)
+    assert operational_schema_error.value.field == "preregistration.schema"
+
+    legacy_as_operational = _config(preregistration).to_dict()
+    legacy_as_operational["schema"] = "benchmark-pre-call-config@0.4.0"
+    legacy_as_operational["collection_execution"] = operational["collection_execution"]
+    with pytest.raises(PreCallConfigError) as legacy_schema_error:
+        pre_call_config_from_dict(legacy_as_operational)
+    assert legacy_schema_error.value.field == "preregistration.schema"
 
 
 def test_pre_call_rejects_binding_budget_and_model_drift(
@@ -195,10 +311,7 @@ def test_pre_call_rejects_binding_budget_and_model_drift(
     ]["input_tokens"] = 272_001
     mutations.append(
         (
-            (
-                "billing_envelope.wire.billable_token_ceiling_per_attempt."
-                "input_tokens"
-            ),
+            ("billing_envelope.wire.billable_token_ceiling_per_attempt.input_tokens"),
             bad_input_ceiling,
         )
     )
@@ -237,8 +350,7 @@ def test_pair_envelopes_and_scheduled_units_reconcile_to_full_budget(
     schedule = cast(dict[str, object], wire["schedule"])
     units = cast(list[dict[str, object]], schedule["collection_schedule"])
     proposal_tokens = {
-        cast(str, item["item_id"]): cast(int, item["proposal_raw_max_tokens"])
-        for item in per_item
+        cast(str, item["item_id"]): cast(int, item["proposal_raw_max_tokens"]) for item in per_item
     }
 
     for item in per_item:
@@ -255,9 +367,7 @@ def test_pair_envelopes_and_scheduled_units_reconcile_to_full_budget(
         if unit["arm"] == "agent":
             unit_calls = 1 + EXPERIMENT_MAX_REPAIR_ITERS + 1
             unit_tokens = (
-                proposal
-                + EXPERIMENT_MAX_REPAIR_ITERS * REPAIR_MAX_TOKENS
-                + CRITIC_MAX_TOKENS
+                proposal + EXPERIMENT_MAX_REPAIR_ITERS * REPAIR_MAX_TOKENS + CRITIC_MAX_TOKENS
             )
             maximum_agent_tokens = max(maximum_agent_tokens, unit_tokens)
         else:
@@ -273,9 +383,7 @@ def test_pair_envelopes_and_scheduled_units_reconcile_to_full_budget(
     assert tokens == full["requested_output_tokens_total"]
     assert tokens * 3 == full["attempt_reserved_output_tokens"]
     assert tokens * MAX_PROXY_TEXT_BYTES_PER_TOKEN == full["response_text_bytes"]
-    assert attempts * MAX_PROXY_TRANSPORT_RESPONSE_BYTES == full[
-        "transport_response_bytes"
-    ]
+    assert attempts * MAX_PROXY_TRANSPORT_RESPONSE_BYTES == full["transport_response_bytes"]
     assert budgets["reserve_before_next_scheduled_unit"] == {
         "attempts": 30,
         "logical_calls": 10,

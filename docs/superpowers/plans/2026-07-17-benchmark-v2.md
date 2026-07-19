@@ -7,7 +7,7 @@
 > record and its numerical tables are not a current baseline.
 >
 > **Implementation progress (2026-07-18): Tasks 1–8 complete; Task 9 formal runner
-> implemented; attempts 001–002 terminal `INCOMPLETE`; fresh attempt-003 pending.** Strict
+> implemented; attempts 001–003 terminal `INCOMPLETE`; fresh attempt-004 pending.** Strict
 > corpus/generator contracts, observable trajectories, the shared ten-sample pool,
 > baselines, registered statistics, durable artifacts, deterministic reports, and
 > full/fast CLI replay have passed their directed and independent gates. The licensed
@@ -50,8 +50,14 @@
 > canonical artifacts. The narrow fix
 > maps post-edit pitch bounds / onset-pitch collisions to existing
 > `MODEL_EDIT_INVALID` → `RECHECK` without changing prompt, model, corpus, schedule, or
-> trace schema. The next collection must use fresh attempt-003 after that fix is accepted
-> and pushed.
+> trace schema. That fix was accepted and pushed, then fresh attempt-003 used pre-call
+> SHA-256 `fc3091ba8684b8d08304a3752f0662c9c82e951ee62db40131ed772b1ee65bad`
+> bound to execution commit `4dd7be9880dcccf2744d05e3617d6411d60ab4de`. After 503
+> pure-solver rows, the live segment exposed a systemic 30-second request timeout. It was
+> stopped at `523/10,563` rows, 78 logical calls / 113 provider attempts and is terminal
+> `INCOMPLETE`; known/tight cost is `$0.955113 / $359.791113`. Attempts 001–003 total
+> `$2.130022 / $804.234022`, and adding one complete formal attempt gives the cumulative
+> audit maximum `$1,168,709.874022`. The next collection must be fresh attempt-004.
 >
 > **Runtime provenance correction (2026-07-17, before any model outcome):** per the
 > user-approved simplicity boundary, runtime collection/replay must not spawn Git or
@@ -714,8 +720,9 @@ handoff operation rather than runtime behavior.
 
 ## 12. Task 8 — Operational proxy pilot and explicit budget gate
 
-**Status (2026-07-18): OPERATIONAL PILOT COMPLETE / BILLING CONTRACT CORRECTED /
-TASK 9 ATTEMPTS 001–002 TERMINAL INCOMPLETE.** The canonical
+**Historical status (2026-07-18; superseded by Task 9 status below): OPERATIONAL PILOT
+COMPLETE / BILLING CONTRACT CORRECTED / TASK 9 ATTEMPTS 001–002 TERMINAL INCOMPLETE.**
+The canonical
 [pilot specification](../../experiments/2026-07-18-benchmark-v2-pilot-spec.json),
 scripts-only collector, exact pricing/budget gate, clean-resume tests, and explicit
 spend-confirmation boundary are complete. See the
@@ -775,8 +782,8 @@ pre-consumption hard gate. The old envelope (`5bcd2458…`) and gates (`a421e1c3
 
 ## 13. Task 9 — Current-model collection and deterministic analysis
 
-**Status (2026-07-18): FORMAL RUNNER IMPLEMENTED / ATTEMPTS 001–002 TERMINAL
-INCOMPLETE / CORRECTED ATTEMPT-003 PENDING.** The historical external-ceiling gate SHA-256 is
+**Status (2026-07-18): FORMAL RUNNER IMPLEMENTED / ATTEMPTS 001–003 TERMINAL
+INCOMPLETE / OPERATIONALLY AMENDED ATTEMPT-004 PENDING.** The historical external-ceiling gate SHA-256 is
 `931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9`; its
 `$538,865.486400` value and the attempt-001 pre-call remain immutable audit evidence,
 but neither is valid for another provider call. The corrected official-contract
@@ -785,8 +792,10 @@ user's separate project-wide model-billing authorization does. The runtime guard
 caller spend confirmation, provider-evidence abort boundary, raw-only live finalization,
 and independent double-replay workflow are implemented. The corrected
 `benchmark-formal-budget-gate@0.3.0` has SHA-256
-`9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6`; fresh
-attempt-003 will use `benchmark-pre-call-config@0.3.0`.
+`9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6`; it remains
+historical evidence and is not a gate for attempt-004. Attempt-004 requires a new pre-call
+and formal budget gate bound to the operational preregistration and its eventual pushed
+execution SHA.
 
 Attempt-001 completed 503 pure-solver units and the first agent unit. On logical call 13,
 a critic request with visible limit `512` returned exact model `gpt-5.6-sol` and `704`
@@ -808,13 +817,33 @@ boundary. No private prompt or response was inspected or admitted to documentati
 canonical artifacts. Its known/tight cost
 is `$0.986494` / `$416.110494`; it must never be resumed or overwritten.
 
-Attempts 001 and 002 have a cumulative tight upper bound of `$444.442909`. Adding one
-complete formal attempt's `$1,167,905.640000` mechanical maximum yields a cumulative
-upper bound of `$1,168,350.082909`. Neither amount is a claim that the local proxy has a
-pre-consumption hard gate. The narrow correction maps post-edit pitch-bound violations
-and onset/pitch collisions to existing `MODEL_EDIT_INVALID` → `RECHECK`; it changes no
-prompt, model, corpus, schedule, or trace schema. Continue only with fresh attempt-003
-after that correction passes the release gate and is pushed.
+Attempt-003 pre-call SHA-256
+`fc3091ba8684b8d08304a3752f0662c9c82e951ee62db40131ed772b1ee65bad` binds execution
+commit `4dd7be9880dcccf2744d05e3617d6411d60ab4de`. After all 503 pure-solver rows, its live
+segment showed a systemic 30-second request timeout: long raw/proposal generations
+repeatedly ended after three 30-second attempts plus frozen backoff. The run was stopped at
+`523/10,563` rows, 78 logical calls / 113 provider attempts and durably terminated as
+`INCOMPLETE` with reason `interrupted_with_unowned_observation`. Its known/tight cost is
+`$0.955113 / $359.791113`; it must never be resumed or overwritten.
+
+Attempts 001–003 have cumulative known/tight cost `$2.130022 / $804.234022`. Adding one
+complete formal attempt's `$1,167,905.640000` mechanical maximum yields cumulative audit
+maximum `$1,168,709.874022`. Neither amount is a claim that the local proxy has a
+pre-consumption hard gate. Fresh attempt-004 may start only after the 300-second timeout,
+default four-lane runner, operational preregistration/budget bindings, crash/resume tests,
+analysis-excluded throughput pilot, and full release gates are pushed. The pilot advances
+`2 → 4 → 8`; selecting `8` requires at least eight complete blocks at both `4` and `8`
+(64 units at each level) plus independent confirmation, otherwise the formal level remains
+`4`. Formal collection runs detached, resumes only at verified durable-unit boundaries, and
+emits canonical progress JSONL only to the append-only operator log. Runtime does not invoke
+Git or subprocesses.
+
+As of 2026-07-19, the amended ordinary and four-lane provider-free A/B recovery gates and
+the complete provider-free release suite are closed. The release evidence is `2599 passed,
+8 deselected`, an empty-provider integration boundary of `8 skipped, 2599 deselected`, a
+116-wheel/331-sdist content audit, and seven passing isolated clean-install smoke groups.
+The remaining order is commit/push, the analysis-excluded live throughput pilot, then fresh
+attempt-004 bindings and detached collection.
 
 - Before any Task 9 provider call, the formal runner must enforce the billing envelope's
   input ceiling as UTF-8 prompt bytes plus the fixed 256-token framing allowance before
@@ -900,21 +929,34 @@ shapes are:
 uv run fretsure-bench ... --stub --output-dir <fresh-a>
 uv run fretsure-bench ... --stub --output-dir <fresh-b>
 diff -rq <fresh-a>/canonical <fresh-b>/canonical
+screen -dmS operational-a /bin/zsh -c \
+  'echo $$ > <operational-a.pid>; exec <repo>/.venv/bin/python \
+  scripts/task9_operational_stub_gate.py \
+  --prereg docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json \
+  --output-dir <fresh-operational-a> >> <operational-a.log> 2>&1'
+# At 160..300 durable scheduled units, send exactly one SIGINT, wait for that
+# direct PID/screen to exit, then restart the same wrapper with `--resume` and
+# the same output directory. Do not signal it a second time.
+<repo>/.venv/bin/python scripts/task9_operational_stub_gate.py \
+  --prereg docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json \
+  --output-dir <fresh-operational-b>
+diff -rq <fresh-operational-a>/canonical <fresh-operational-b>/canonical
 uv run python scripts/build_benchmark_precall.py \
-  --prereg docs/experiments/2026-07-17-benchmark-v2-prereg.json \
+  --prereg docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json \
   --pricing-contract docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract-v2.json \
   --expected-pricing-sha256 7b5ae715a08bb4e1cc7cca32e77db6ffc7e5f000133150194cf70a4b8f62c9b2 \
   --formal-billing-envelope docs/experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json \
   --expected-formal-billing-envelope-sha256 a1969546babcdcbcbf281c682260c38551b2fd12ef382014eb34a79e85df5544 \
-  --formal-budget-gate outputs/private/benchmark-v2-task9/formal-budget-gate-v3-authorized.json \
-  --expected-formal-budget-gate-sha256 9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6 \
-  --collection-attempt 3 --execution-git-sha <pushed-post-edit-validation-fix-sha> \
+  --formal-budget-gate <fresh-attempt-004-formal-budget-gate.json> \
+  --expected-formal-budget-gate-sha256 <fresh-attempt-004-gate-sha256> \
+  --collection-attempt 4 --execution-git-sha <pushed-operational-amendment-sha> \
   --uv-lock-sha256 <uv.lock-sha256> \
   --analysis-binding-kind analysis_module_sha256 \
-  --analysis-code-sha256 <report.py-sha256> --output <pre-call.json>
-uv run fretsure-bench --live --pre-call-config <pre-call.json> \
+  --analysis-code-sha256 <report.py-sha256> --output <fresh-attempt-004-pre-call.json>
+<repo>/.venv/bin/fretsure-bench --live \
+  --pre-call-config <fresh-attempt-004-pre-call.json> \
   --authorized-maximum-spend-microunits 1167905640000 \
-  --output-dir <fresh-attempt-003>
+  --output-dir <fresh-attempt-004>
 uv run fretsure-bench --replay-config <config> --replay-receipt <receipt> \
   --replay-rows <rows> --replay-blobs <blobs> \
   --replay-observations <sanitized-observations> --output-dir <fresh-replay-a>
@@ -931,6 +973,8 @@ uv run mypy --strict src
 uv run mypy --strict scripts/build_benchmark_corpus.py
 uv run mypy --strict scripts/build_benchmark_prereg.py
 uv run mypy --strict scripts/build_benchmark_precall.py
+uv run mypy --strict scripts/task9_operational_stub_gate.py
+uv run mypy --strict scripts/task9_throughput_pilot.py
 uv lock --check
 uv run python scripts/build_benchmark_prereg.py --check
 uv run python scripts/check_markdown_links.py
@@ -942,8 +986,16 @@ uv run python scripts/smoke_distributions.py
 git status --short
 git rev-parse HEAD
 git rev-parse '@{u}'
-git ls-remote origin refs/heads/main
+git ls-remote origin refs/heads/codex/benchmark-v2-task9
 ```
+
+The formal live command above is launched by the documented detached `screen` wrapper
+with a PID file and append-only operator log beside, not inside, the fresh output directory.
+The wrapper must directly `exec` the `.venv/bin/fretsure-bench` entry point; `uv run` keeps a
+supervisor PID on this host and does not reliably forward the operator's `SIGINT` to the runner.
+Formal and pilot launches must use a numeric loopback proxy host (`127.0.0.1` or `::1`),
+not `localhost`, so name resolution cannot escape the hard whole-attempt deadline. Both
+entry points reject a nonnumeric proxy host before constructing clients.
 
 ## 18. Plan-freeze review receipt
 

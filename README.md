@@ -119,8 +119,8 @@ lead sheet / MIDI / IR
 ## 状态
 
 **Plan 1–5、Oracle 0.2 软件信任门、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR、
-strict MIDI input 与 benchmark v2 Task 1–8 均已闭门；Task 9 formal attempt-001 / 002 均已
-terminal `INCOMPLETE`，修正 post-edit 本地校验边界后将从 fresh attempt-003 继续。**
+strict MIDI input 与 benchmark v2 Task 1–8 均已闭门；Task 9 formal attempts 001–003 均已
+terminal `INCOMPLETE`，下一次正式采集只能是 fresh attempt-004。**
 当前 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、
 faithfulness=`fidelity@0.3.0`，trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、
 API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=
@@ -156,11 +156,55 @@ usage 缺失，19 个 logical calls 以 `DELEGATE_FAILED` 结束。一个合法 
 onset/pitch，target checkpoint 的本地校验异常逸出，collector 因
 `unexpected_unowned_observation` 将 run durable 终止为 `INCOMPLETE`。未检查私有
 prompt/response，也未将其写入文档或 canonical 工件。attempt-002 的已知 / tight upper 为
-`$0.986494` / `$416.110494`，不得恢复
-或覆盖；attempt-001 + 002 的累计 tight upper 为 `$444.442909`，再加一次完整 formal attempt
-机械上限后的累计上界为 `$1,168,350.082909`。修复只把 post-edit pitch 越界 / onset-pitch
+`$0.986494` / `$416.110494`，不得恢复或覆盖。修复只把 post-edit pitch 越界 / onset-pitch
 碰撞映射到既有 `MODEL_EDIT_INVALID` → `RECHECK` 路径，不改 prompt、model、corpus、schedule
-或 trace schema。后续只允许在该修复通过验收并推送后创建 fresh attempt-003 pre-call。
+或 trace schema。
+
+formal attempt-003 使用 pre-call SHA-256
+`fc3091ba8684b8d08304a3752f0662c9c82e951ee62db40131ed772b1ee65bad`，绑定 execution commit
+`4dd7be9880dcccf2744d05e3617d6411d60ab4de`。完成 503 个 pure-solver rows 后，live 段暴露
+系统性的 30 秒 request timeout：raw/proposal 长生成反复以三次 30 秒 attempts 加固定 backoff
+失败。该 run 在 `523/10,563` rows、78 logical calls / 113 provider attempts 处终止，已知 / tight
+upper 为 `$0.955113` / `$359.791113`，现为不可恢复、不可覆盖的 terminal `INCOMPLETE`。
+Attempts 001–003 累计已知 / tight upper 为 `$2.130022` / `$804.234022`；再加一个完整 formal
+attempt 的机械最大值后，累计审计上界为 `$1,168,709.874022`。
+
+attempt-004 只能在 amended runner、预注册、预算绑定、crash/resume 测试、吞吐 pilot 与完整
+release gates 推送后从新目录开始。正式候选默认 `4` 个 in-flight units、request timeout 为
+`300` 秒；这是覆盖 pool/connect/TLS/write/read 与慢分块响应的整次 attempt 硬 deadline，另为
+WAL 与 timeout delivery 预留 `10` 秒记录开销。analysis-excluded pilot 按 `2 → 4 → 8` 运行。
+`8` 只能在 `4` 与 `8` 各至少八个完整
+block（各 64 units）并经独立确认后选择，否则保持 `4` 并重新绑定 attempt-004 工件。正式进程
+须脱离交互会话运行；durable unit 可恢复，进度只写 append-only operator log，不进入分析工件。
+运行时不调用 Git 或子进程。
+正式启动由外部 supervisor（不是 collector runtime）使用；当前 Codex host 已验证用
+`export ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL/localhost/127.0.0.1}"` 后运行
+`screen -dmS fretsure-task9-attempt004 /bin/zsh -c 'echo $$ > <attempt-004.pid>; exec <repo>/.venv/bin/fretsure-bench --live --pre-call-config <attempt-004-pre-call.json> --authorized-maximum-spend-microunits 1167905640000 --output-dir <fresh-attempt-004> >> <attempt-004.operator.log> 2>&1'`。
+PID 与 log 放在 fresh output directory 的同级目录；detached 命令必须直接 `exec`
+`.venv/bin/fretsure-bench`，不能套 `uv run`，否则记录的是不可靠转发 `SIGINT` 的监督进程 PID。
+正式与 pilot 启动前还须把代理地址写成数值 loopback（`127.0.0.1` 或 `::1`），不能使用
+`localhost`，避免名称解析落在整次 attempt deadline 之外；formal runner 与 pilot 也会在建
+客户端前机械拒绝非数值 loopback。
+优雅停止用 `kill -INT "$(cat <attempt-004.pid>)"`。`SIGINT` 会停止新 admission 并等待最多 4 个
+已启动 unit 完整落盘，因此可能不是立即退出；必须等该 PID/`screen` 会话结束。若 canonical 已
+发布且 receipt 为 `COMPLETE`，该 attempt 已完成，不应 resume；否则才以同一 output directory 和
+`--resume` 重新 detached 启动。不要重复发 `SIGINT` 或改发
+`SIGKILL`，除非明确要让本次 attempt 以 fail-closed 方式终止。
+P1 wall-reservation amendment 之前的普通 full stub 验收覆盖全部 `10,563` rows：A 在
+167 个 durable units 时收到一次
+`SIGINT`、排空到 212 后同目录 resume，30:05 完成；B 连续运行 27:00 完成。两次均为
+`COMPLETE`，且 7 个 canonical 文件逐字节相同。finalize 从旧路径的 22 分钟以上降到约
+4–5 分钟。该命令走 legacy sequential stub 路径，因此只证明 full-rescore、普通 stub resume 与
+最终字节确定性，不证明 formal 4-lane coordinator。后者由 provider-free
+`scripts/task9_operational_stub_gate.py` 以同一 10,563-row schedule 单独执行中断/恢复 A/B；该
+脚本保持 `stub=True`，不能构造代理客户端或产生费用。
+最终 amended gates 已通过。普通 full stub 两次均经一次干净中断/恢复后成为 `COMPLETE`，总
+wall time 为 28:22 / 35:59，7 个 canonical 文件逐字节相同。真正的 4-lane gate 中，A 在
+admitted 284 时收到唯一一次 `SIGINT`，1 个 in-flight 在 1 秒内排空，随后同目录 resume；A / B
+分别在 30:12 / 27:24 后 `COMPLETE`，均为 10,563 rows / 15,090 calls，5 个 canonical 文件
+逐字节相同。共同 SHA-256 为 blobs `8f245bec…`、config `2cdb96b1…`、observations
+`8dbcf25e…`、receipt `223c9f07…`、rows `cff6de86…`；普通 gate 的 report JSON / Markdown
+另为 `8c9e55ae…` / `0787de06…`。
 本阶段没有前端改动；若涉及前端设计，仍须先确认统一审美。详见
 [`2026-07-17-benchmark-v2.md`](docs/superpowers/plans/2026-07-17-benchmark-v2.md)。完整 Plan 6 的音频、
 AlphaTab、真实琴颈动画、导出、live A/B/榜单与真人 money moment 仍 open。
@@ -219,7 +263,7 @@ attempt-local pre-call 门，并显式重复该 attempt 的精确金额：
 ```bash
 uv run fretsure-bench --live --pre-call-config <pre-call.json> \
   --authorized-maximum-spend-microunits 1167905640000 \
-  --output-dir <fresh-attempt-003>
+  --output-dir <fresh-attempt-004>
 ```
 
 默认 model id 为 `gpt-5.6-sol`，服务端网络 engine 另须 `--allow-proxy`。

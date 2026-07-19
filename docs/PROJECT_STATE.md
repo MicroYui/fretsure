@@ -1,9 +1,51 @@
 # Fretsure — 项目状态 / 恢复文档
 
-> 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-18。
+> 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-19。
 
-## 0. 现状一句话
+## 0. 当前恢复真源
+
+Task 9 formal attempts 001–003 均已 terminal `INCOMPLETE`，不得 resume、覆盖或复用其编号；
+attempt-003 使用 pre-call SHA-256
+`fc3091ba8684b8d08304a3752f0662c9c82e951ee62db40131ed772b1ee65bad`，绑定 execution commit
+`4dd7be9880dcccf2744d05e3617d6411d60ab4de`。它在 503 个 pure-solver rows 后暴露系统性的
+30 秒 request timeout，并以 `523/10,563` rows、78 logical calls / 113 provider attempts、
+`$0.955113 / $359.791113` known/tight cost 终止。Attempts 001–003 累计 known/tight cost 为
+`$2.130022 / $804.234022`；再加一个完整 formal attempt 的机械最大值，累计审计上界为
+`$1,168,709.874022`。
+
+下一次正式采集只能是 fresh attempt-004：每次 attempt 具有覆盖 pool/connect/TLS/write/read
+及慢分块响应的 300 秒整段硬 deadline，并另预留 10 秒 WAL/timeout-delivery 记录开销；当前正式候选保持最多
+`4` 个 in-flight units。正式门前的 analysis-excluded pilot 按 `2 → 4 → 8` 运行；`8` 只有在
+`4` 与 `8` 各至少八个完整 block（各 64 units）并经独立确认后才能冻结，否则保持 `4`。
+amended runner、预注册/预算绑定、crash/resume 测试、pilot 和完整 release gates 必须先推送。
+正式进程须脱离交互会话运行，按 durable completed-unit 边界恢复；canonical progress JSONL 只进
+append-only operator log，不进分析工件。运行时不调用 Git 或子进程。历史工件与金额均保持原样。
+
+P1 wall-reservation amendment 前的完整普通 stub A/B 已覆盖全部 `10,563` rows。A 在
+167 个 durable units 时只发送一次
+`SIGINT`，排空到 212 后以同一 output directory `--resume`，总耗时 30:05；B 不间断运行
+27:00。两者均为 `COMPLETE`（15,090 calls），7 个 canonical 文件逐字节相同。full-rescore /
+finalize 已降到约 4–5 分钟；缓存按 item 释放，不随全表累计 parsed tabs。detached wrapper
+必须直接 `exec .venv/bin/fretsure-bench`，不得套 `uv run`；否则 PID 不可靠转发 `SIGINT`。
+该命令实际走 legacy sequential stub 路径，只证明报告复杂度、普通 stub resume 与最终字节
+确定性。formal 4-lane WAL/READY/admission-drain 另由 provider-free
+`scripts/task9_operational_stub_gate.py` 对完整 schedule 做中断/恢复 A/B；其 context 保持 stub，
+不能建代理客户端。两类最终 amended A/B 均已通过：普通 gate 的 7 个 canonical 文件一致；
+4-lane gate A 在 admitted 284 时唯一一次 `SIGINT`，1 个 in-flight 在 1 秒内排空并同目录
+resume，最终与不间断 B 的 5 个 canonical 文件一致。两者均为 `COMPLETE`、10,563 rows / 15,090
+calls；A / B 总 wall time 30:12 / 27:24。完整 provider-free release gates 已通过：离线全套
+`2599 passed, 8 deselected`，integration 边界 `8 skipped, 2599 deselected`，Ruff、strict mypy、
+lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。当前剩余门为
+commit/push、analysis-excluded live pilot，再生成 fresh attempt-004 绑定。正式与 pilot 在建客户端前
+机械要求数值 loopback，拒绝 `localhost`。
+
+## 0a. 其余现状
+
+> 下一段是 2026-07-18 post-edit 修复后的历史快照，已被第 0 节取代，不得据此启动
+> attempt-003。段后的完成项与长期边界仍有效。
 设计已锁定；**Plan 1–5、Pre-Plan 6 MusicXML-first、Oracle 0.2、安全 `.mxl`、Plan 6A、producer-driven MusicXML/IR、strict MIDI input 与 benchmark v2 Task 1–8 均已闭门；Task 9 formal attempt-001 / 002 均已 terminal `INCOMPLETE`，修正 post-edit 本地校验边界后从 fresh attempt-003 继续**。MIDI 的 local/tracking/remote receipt 一致指向 `46ff8ac070e97422b4aecf5c0f2a22b588a5fda4`。benchmark v2 已冻结 500 个 procedural families + 3 个许可 public controls、十槽共享候选池、raw/pure baselines、ITT/统计、WAL、版本化 artifact/report、机器预注册、attempt-local pre-call 与离线 replay；Task 8 另冻结了 2×2 operational pilot、精确 pricing/budget 算术、clean resume 与显式 spend confirmation，见 [`BENCHMARK_V2_TASK8_READINESS.md`](BENCHMARK_V2_TASK8_READINESS.md)。当前 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`、profile=`median@0.1` 保持不变，runtime 精确锁定 `music21==10.5.0`。Task 8 attempt-002 已 COMPLETE 8/8；两次 pilot 合计已知 / corrected tight upper 为 `$0.513140` / `$27.730036`，失败 attempts 的缺失 usage 仍为 unavailable；官方 `128,000` output-token 契约下的单次 pilot 机械最大值是 `$513.232896`。formal 官方契约冻结每个 input/cache bucket `272,000`、billable output `128,000`（包括不可见 tokens），机械最大值为 `1,167,905,640,000` micro-USD（`$1,167,905.640000`）。这是官方契约下的审计上限，不是本地代理的预消费硬闸。用户已统一授权本项目模型计费；历史 Task 9 external-ceiling gate SHA-256=`931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9` 及其 `$538,865.486400` 数值保留作审计记录，不得改写或复用于新调用。Task 9 attempt-001 在 503 个 pure-solver units 和第一个 agent unit 后，因 critic visible limit `512` 与 provider billable output usage `704` 被旧 validator 误当同一上限而终止；已知 / tight upper 为 `$0.188415` / `$28.332415`。attempt-002 pre-call SHA-256=`48796200a05af2cbc9ae83d80f06a89ff437841810241954a8b7fe3f794be6eb`，绑定 execution commit `1feeef622d96a95b187c473a40e273852cdf6a45`；它提交 `524/10,563` rows，执行 91 logical calls / 131 attempts，其中 72 次成功且 usage 完整、59 次 usage 缺失，19 个 logical calls 以 `DELEGATE_FAILED` 结束。合法 edit 应用后产生重复 onset/pitch，target checkpoint 的本地校验异常导致 terminal `INCOMPLETE` / `unexpected_unowned_observation`；未检查或记录私有 prompt/response。attempt-002 已知 / tight upper 为 `$0.986494` / `$416.110494`，不得 resume 或覆盖。attempt-001 + 002 累计 tight upper 为 `$444.442909`；再计一个完整 formal attempt 的累计机械上界为 `$1,168,350.082909`。修复只把 post-edit pitch 越界 / onset-pitch 碰撞映射到既有 `MODEL_EDIT_INVALID` → `RECHECK`，不改 prompt、model、corpus、schedule 或 trace schema。formal runtime 仍在 observation/WAL/retry/network 前执行 UTF-8 bytes + 256 guard，要求 live CLI 重复精确金额，成功调用返回精确模型证据，live 只发布五个 raw canonical 工件并由两个独立 full replay 生成报告。新 `benchmark-formal-budget-gate@0.3.0` SHA-256=`9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6` 已生成且回检通过，pre-call schema 为 `benchmark-pre-call-config@0.3.0`。运行时不调用 Git/子进程。本阶段没有前端改动；涉及前端设计时仍需先确认统一审美。
+> 历史快照结束；以下完成项与长期边界仍有效。
+
 - **Plan 1**（`plan-1-core-oracle`）：可弹性 oracle + 自验证台。终审 Ready。
 - **Plan 2**（`plan-2-solver-m0`）：beam 求解器（永不返回 RED）+ M0。复核 Ready。
 - **Plan 3**（`plan-3-agent-loop`）：oracle 当环境、LLM 当策略——修复脊柱 + 提议器 + critic + best-of-N。真 LLM 端到端。Ready-with-minor（已修）。
@@ -77,7 +119,7 @@
 - **诚实记分卡**：历史 repair 强正信号；best-of-N 薄利；**critic 未挣得（观察/待砍）**。这些旧数来自 legacy/unversioned harmony metric，不是当前 `fidelity@0.3.0` benchmark 基线。
 - **Plan 6A 闭门质量门（历史快照）**：收集 `1500` 项；离线 `1494 passed, 6 deselected`，真实本地 `gpt-5.6-sol` integration `6 passed, 1494 deselected`。ruff、strict mypy、`uv lock --check`、Markdown local-link 与 `git diff --check` 全绿；前端 `20 passed`、typecheck/build、`npm audit` 0 vulnerabilities，真实浏览器 desktop/mobile 的 landing/result/trace 与 focus/retry/CSP/MIME/cache 路径通过。`fretsure_oracle-0.3.0` wheel/sdist 经过路径 allowlist、字体 OFL、静态资源审计；clean core、`[musicxml]`、`[service,musicxml,agent]`、`[mcp]` 四组合安装 smoke 全绿。FastAPI 0.139 TestClient 仍发出上游 httpx2 迁移 warning，运行时代码无对应 warning。producer 阶段的新门不从这组历史数字推断，以 `docs/PRODUCER_MUSICXML_ACCEPTANCE.md` 为准。
 - **分支**：plan-1→2→3→4→5→`consolidation` 已**全部 ff 并入 `master`（trunk）**（trunk 原只有 spec 脚手架；现含完整后端）。
-- **下一步已冻结**：Task 8 attempt-002 已 COMPLETE 8/8；不得用失败 attempts 的缺失 usage 冒充零，也不得拿 pilot outcome 调参。Task 9 attempt-001 / 002 均已 terminal `INCOMPLETE`，不得 resume 或覆盖；保留各自 pre-call、WAL 和 abort receipt。attempt-002 的结构性原因是合法 edit 产生重复 onset/pitch 后，target checkpoint 本地校验异常逸出；只将 post-edit 越界 / 碰撞映射到既有 `MODEL_EDIT_INVALID` → `RECHECK`，不改冻结实验。验收并推送该修复后，在新 clean pushed SHA 上生成 fresh attempt-003 pre-call，再运行正式采集和两次独立 full replay。运行时不调用 Git/子进程。完整 Plan 6B 仍后置；新的前端/音频审美、真人演奏或 calibration gate 需先请求用户确认。
+- **下一步已冻结**：Task 8 attempt-002 已 COMPLETE 8/8；不得用失败 attempts 的缺失 usage 冒充零，也不得拿 pilot outcome 调参。Task 9 attempts 001–003 均已 terminal `INCOMPLETE`，不得 resume、覆盖或复用编号；保留各自 pre-call、WAL、config 和 abort receipt。attempt-003 在 503 个 pure-solver rows 后暴露系统性的 30 秒 timeout，并以 `523/10,563` rows、78 calls / 113 attempts 终止。下一次只允许 fresh attempt-004：先推送 300 秒 timeout、默认 4-lane 的 amended runner 与预注册/预算绑定，再完成 analysis-excluded `2 → 4 → 8` pilot、crash/resume 和 release gates；只有 `4` 与 `8` 各至少 64 units 且独立确认通过才可改为 `8`，否则保持 `4`。正式进程须 detached，按 durable-unit 边界恢复并把 progress 仅写 operator log；运行时不调用 Git/子进程。完整 Plan 6B 仍后置；新的前端/音频审美、真人演奏或 calibration gate 需先请求用户确认。
 - **已知点**：solve_fingering 是资源有界、非完备搜索；tier/忠实度/难度参数占位待 design partner 校准；leave-one-out 各臂对随机 LLM **非配对**（大效应 repair 不受影响；best-of-N/critic 已另有**配对**测量，见 RESULTS）。
 
 ## 1. 这是什么
@@ -117,7 +159,7 @@
     collision gate；checker-vs-judge 仅有 `SOFTWARE_FIXTURE_ONLY` 证据，真人标签与跨供应商比较仍
     unavailable。Task 7 已冻结 runner-ready 预注册、预算、混合语料执行、attempt/orphan、release 与
     clean-install 合同；程序生成层扛主结果，旧 Claude/旧 fidelity 数不同比。Task 8 operational pilot
-    已 COMPLETE；Task 9 runtime input guard、externally declared ceiling gate 和 raw-only collection/replay 边界已实现。formal attempt-001 / 002 均已 terminal `INCOMPLETE`；修正 post-edit 本地校验边界后从 fresh attempt-003 继续。该修复不改 prompt、model、corpus、schedule 或 trace schema。
+    已 COMPLETE；Task 9 runtime input guard、externally declared ceiling gate 和 raw-only collection/replay 边界已实现。formal attempts 001–003 均已 terminal `INCOMPLETE`；下一次只允许在 operational amendment 与 gates 推送后从 fresh attempt-004 继续。该 amendment 不改 prompt、model、corpus、schedule、pricing 或统计 estimands。
     CLI/JSON/JSONL/文档阶段不改前端；若增加 dashboard、图表页面或 live leaderboard，须先与用户
     确认统一视觉。
 
@@ -149,5 +191,5 @@
 - 不重做 Plan 1–5 或 MusicXML-first 纵切。
 - Oracle 0.2 软件信任门已经完成；不要重做。
 - 安全 `.mxl` container reader 已完成；不要重做。
-- Benchmark v2 Task 7 已闭环，Task 8 attempt-002 也已 COMPLETE 8/8；不要检查私密 prompt/response，也不要把失败 attempts 的缺失 usage 写成零。Task 9 已获统一计费授权；历史 `$538,865.486400` gate 与 attempt-001 / 002 的 pre-call、WAL、abort receipt 均保留且不复用。官方 128k output-usage 契约下单次机械最大值是 `$1,167,905.640000`；attempt-001 + 002 累计 tight upper 是 `$444.442909`，再计一个完整 attempt 的累计机械上界是 `$1,168,350.082909`，这些不是本地代理预消费硬闸。继续时先验收并推送 post-edit 校验修复，再从新 clean pushed SHA 生成 fresh attempt-003 pre-call，正式采集和双 full replay。新的前端/音频审美、真人听感或 calibration gate 仍需用户确认。
+- Benchmark v2 Task 7 已闭环，Task 8 attempt-002 也已 COMPLETE 8/8；不要检查私密 prompt/response，也不要把失败 attempts 的缺失 usage 写成零。Task 9 已获统一计费授权；历史 `$538,865.486400` gate 与 attempts 001–003 的 pre-call、WAL、config、abort receipt 均保留且不复用。官方 128k output-usage 契约下单次机械最大值是 `$1,167,905.640000`；attempts 001–003 累计 known/tight 是 `$2.130022 / $804.234022`，再计一个完整 attempt 的累计机械上界是 `$1,168,709.874022`，这些不是本地代理预消费硬闸。继续时遵循本文件顶部当前恢复真源，只从 fresh attempt-004 开始；正式采集与双 full replay 之前完成 operational pilot 和全部 gates。新的前端/音频审美、真人听感或 calibration gate 仍需用户确认。
 - 真人 gold/calibration 可并行，不阻塞上述软件实现；它仍阻塞现实世界 GREEN 误接受率、profile/tier 校准与“真实琴手一定能弹”的强主张。

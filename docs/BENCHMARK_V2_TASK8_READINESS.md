@@ -1,16 +1,16 @@
 # Benchmark v2 Task 8 — operational pilot software readiness
 
 > **Status (2026-07-18): TASK 8 PILOT COMPLETE; BILLING CONTRACT CORRECTED; TASK 9
-> ATTEMPTS 001–002 TERMINAL INCOMPLETE.** Task 8 attempt 001 remains an immutable incomplete
-> run. After the trace fix and a separate explicit historical `$10.960896`
+> ATTEMPTS 001–003 TERMINAL INCOMPLETE; FRESH ATTEMPT-004 NEXT.** Task 8 attempt 001
+> remains an immutable incomplete run. After the trace fix and a separate explicit historical `$10.960896`
 > authorization, fresh Task 8 attempt 002 completed all `8/8` scheduled rows. Subsequent
 > live evidence showed that provider `output_tokens` includes non-visible tokens and can
 > exceed a request's visible-output limit. The official 128,000-token model contract now
 > supplies the billable ceiling: the corrected Task 8 combined known/tight interval is
 > `$0.513140..$27.730036`, and the official-contract pilot mechanical maximum is
-> `$513.232896`. Task 9 attempts 001 and 002 are preserved as terminal `INCOMPLETE`;
-> after the narrow post-edit validation correction, the next live run must be a fresh
-> attempt-003.
+> `$513.232896`. Task 9 attempts 001, 002, and 003 are preserved as terminal `INCOMPLETE`;
+> the next live run may only be a fresh attempt-004 after the operational amendment,
+> throughput pilot, and release gates are pushed.
 
 ## Frozen operational pilot
 
@@ -279,22 +279,73 @@ Attempt-002's known cost is `$0.986494`; applying
 the official per-attempt ceiling to usage-missing attempts gives a tight upper bound of
 `$416.110494`. Attempt-002 must never be resumed or overwritten.
 
-The combined tight upper bound for Task 9 attempts 001 and 002 is `$444.442909`. Adding
-one complete fresh formal attempt's `$1,167,905.640000` mechanical maximum gives a
-cumulative upper bound of `$1,168,350.082909`. These are audit bounds, not claims of a
-local proxy pre-consumption hard gate.
+At this historical checkpoint, the combined tight upper bound for Task 9 attempts 001 and
+002 was `$444.442909`. Adding one complete fresh formal attempt's `$1,167,905.640000`
+mechanical maximum gave a cumulative upper bound of `$1,168,350.082909`. These remain
+historical audit bounds, not claims of a local proxy pre-consumption hard gate.
 
 The narrow correction maps post-edit pitch-bound violations and onset/pitch collisions
 to the existing `MODEL_EDIT_INVALID` → `RECHECK` path. It does not change the prompt,
-model, corpus, schedule, or trace schema. After that correction passes its release gate
-and is pushed, collection may continue only as fresh attempt-003 with a new pre-call and
-fresh output directory.
+model, corpus, schedule, or trace schema. This was the gate for the subsequently executed
+attempt-003 and is no longer the current next-step instruction.
+
+## Task 9 attempt-003 terminal state and operational amendment
+
+Fresh attempt-003 used pre-call SHA-256
+`fc3091ba8684b8d08304a3752f0662c9c82e951ee62db40131ed772b1ee65bad`, bound to execution
+commit `4dd7be9880dcccf2744d05e3617d6411d60ab4de`. After all 503 local pure-solver rows, the
+live segment exposed a systemic 30-second request timeout: long raw/proposal generations
+repeatedly exhausted three 30-second attempts plus the fixed retry backoffs. The run was
+stopped at `523/10,563` rows, 78 logical calls / 113 provider attempts and is terminal
+`INCOMPLETE` with reason `interrupted_with_unowned_observation`. Its known/tight cost is
+`$0.955113 / $359.791113`; it must never be resumed or overwritten.
+
+Attempts 001–003 now total `$2.130022 / $804.234022` known/tight cost. Adding one complete
+formal attempt's unchanged `$1,167,905.640000` maximum gives cumulative audit maximum
+`$1,168,709.874022`. The next collection must be fresh attempt-004 with a new pre-call,
+formal budget gate, and output directory. The amended request timeout is 300 seconds and
+the current formal candidate remains four in-flight units. The 300-second value is now a
+whole-attempt deadline across pool/connect/TLS/write/read and slow chunking, with a separate
+10-second recorded-overhead reservation per attempt. An analysis-excluded pilot runs
+`2 → 4 → 8`; selecting `8` requires at least eight complete blocks at both `4` and `8`
+(64 units per level) plus independent confirmation, otherwise `4` remains frozen. Formal
+collection runs detached, resumes only at verified durable-unit boundaries, emits progress
+JSONL only to the append-only operator log, and invokes neither Git nor subprocesses at runtime.
 
 ## Offline evidence
 
+- The final amended gates split report determinism from operational recovery. The ordinary
+  full-stub pair both completed 10,563 rows / 15,090 calls after one clean interruption and
+  resume, and all seven canonical files were byte-identical. In the production-coordinator
+  gate, run A received its only `SIGINT` at 284 admitted scheduled units; one apparent
+  in-flight unit drained in under one second, the clean 284-unit prefix resumed in place,
+  and A completed in 30:12. Uninterrupted B completed in 27:24. Both receipts are `COMPLETE`,
+  all 10,060 lane artifacts are READY, and the five canonical files are byte-identical.
+  Their SHA-256 values are blobs `8f245bec0b8af39d7b6c87e64de07a457d0f2054270f28c5cc03c095f98e5610`,
+  config `2cdb96b17eff0f41673dc3189427c4d2b6be4b47264d847e704bb42012f4078d`,
+  observations `8dbcf25e87b6745cb397d1e6db69aadd9ef8cfbc9a374d330aa1641ba583c14e`,
+  receipt `223c9f07593a75f15a5df1b1d457cb20ff7bae1624ec6a76b3c8c9fb6658a39e`,
+  and rows `cff6de86e2acfe5dfdfa196ced2b2e4e14cae2233babee1c2611a361852f658f`.
+- Before the final wall-reservation preregistration amendment, the ordinary full-scale
+  stub gate completed all `10,563` rows twice. Run A received
+  one `SIGINT` at 167 durable units, drained to 212, resumed in the same output directory,
+  and completed in 30:05. Uninterrupted run B completed in 27:00. Both receipts were
+  `COMPLETE` with 15,090 observed calls, and `diff -rq` found no difference across all
+  seven canonical files. The last durable unit to canonical publication took 4:35 in A
+  and 4:20 in B after the full-rescore memoization change. This command used the legacy
+  sequential stub path, so it is report-performance, ordinary-resume, and byte-determinism
+  evidence rather than a four-lane coordinator gate. The provider-free
+  `task9_operational_stub_gate.py` separately drives the production coordinator over the
+  complete schedule while remaining unable to construct a proxy client.
+- The final 2026-07-19 provider-free operational-amendment release gate passed
+  `2599` offline tests with `8` integration tests deselected. With the proxy URL and token
+  removed, the integration boundary skipped all `8` selected tests without a provider call.
+  The rebuilt distributions passed the 116-wheel/331-sdist content audit and all seven
+  isolated clean-install smoke groups.
 - The directed Task 8 suites passed 39 tests: 15 pilot tests and 24 pricing/budget
   tests. Ruff and strict mypy passed both scripts.
-- The full offline suite passed 2,456 tests with 8 integration tests deselected. The
+- At the Task 8 closeout, the full offline suite passed 2,456 tests with 8 integration
+  tests deselected. The
   empty-provider integration boundary skipped all 8 integration tests without making
   a call. The rebuilt distribution audit passed with 114 wheel and 316 sdist entries;
   the clean install matrix passed for core replay, benchmark, MusicXML, MIDI, score,
@@ -375,15 +426,17 @@ uv run python scripts/task8_budget_gate.py \
   --output outputs/private/benchmark-v2-task9/formal-budget-gate-v3-authorized.json
 ```
 
-## Subsequent Task 9 authorization
+## Subsequent Task 9 authorization history
 
 Task 8 is complete; its attempt 002 must not be rerun. The Task 9 collector now enforces
 the formal envelope's `UTF-8 bytes + 256` input bound before observation, retry, or
 network I/O. On 2026-07-18 the user independently authorized all project model billing.
 The corrected official-contract mechanical maximum is `$1,167,905.640000`; this is not
-a local proxy pre-consumption hard gate. Task 9 attempts 001 and 002 are terminal
-`INCOMPLETE` and must remain untouched. Continue only with fresh attempt-003 and exact
-CLI confirmation `--authorized-maximum-spend-microunits 1167905640000` after the narrow
-post-edit validation correction is verified and pushed. The corrected gate SHA-256 is
+a local proxy pre-consumption hard gate. This paragraph records the authorization state
+before attempt-003: at that time attempts 001 and 002 were terminal `INCOMPLETE`, and the
+next permitted run was fresh attempt-003 with exact CLI confirmation
+`--authorized-maximum-spend-microunits 1167905640000`. Attempt-003 has since become
+terminal; the current next-step is fresh attempt-004 under the operational amendment above.
+The historical corrected gate SHA-256 is
 `9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6`; the gate itself
-still grants no authorization.
+still grants no authorization and must not be reused for attempt-004.

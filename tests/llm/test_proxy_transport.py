@@ -294,6 +294,33 @@ def test_built_client_disables_environment_and_redirects(
         client.close()
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("timeout_seconds", True),
+        ("timeout_seconds", "30"),
+        ("timeout_seconds", 0),
+        ("timeout_seconds", -1),
+        ("timeout_seconds", float("nan")),
+        ("timeout_seconds", float("inf")),
+        ("connect_timeout_seconds", True),
+        ("connect_timeout_seconds", 0),
+    ],
+)
+def test_built_client_rejects_nonexact_or_unbounded_timeouts(
+    field: str,
+    value: object,
+) -> None:
+    kwargs: dict[str, object] = {
+        "timeout_seconds": 30.0,
+        "connect_timeout_seconds": 5.0,
+        "max_response_bytes": 1024,
+    }
+    kwargs[field] = value
+    with pytest.raises(ValueError, match=rf"{field} must be a positive finite number"):
+        build_proxy_http_client(**kwargs)  # type: ignore[arg-type]
+
+
 def test_built_client_ignores_poisoned_ambient_proxy_route(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

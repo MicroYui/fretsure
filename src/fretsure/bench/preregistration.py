@@ -83,11 +83,18 @@ from fretsure.solver.score import (
     SCORE_SOLVER_VERSION,
 )
 
-BENCHMARK_PREREGISTRATION_VERSION: Final = "benchmark-preregistration@0.1.0"
+BENCHMARK_PREREGISTRATION_LEGACY_VERSION: Final = "benchmark-preregistration@0.1.0"
+BENCHMARK_PREREGISTRATION_VERSION: Final = "benchmark-preregistration@0.2.0"
 BENCHMARK_PROMPT_CONTRACT_VERSION: Final = "benchmark-prompt-contract@0.1.0"
 BENCHMARK_SCHEDULE_VERSION: Final = "benchmark-experiment-schedule@0.1.0"
 BENCHMARK_POWER_VERSION: Final = "benchmark-power@0.1.0"
+BENCHMARK_COLLECTION_EXECUTION_VERSION: Final = "benchmark-collection-execution@0.1.0"
 PUBLIC_COMPACT_PROPOSAL_VERSION: Final = arranger_module.PROPOSAL_COMPACT_PROTOCOL_VERSION
+
+FORMAL_OPERATIONAL_REQUEST_TIMEOUT_SECONDS: Final = 300.0
+FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS: Final = 10.0
+FORMAL_OPERATIONAL_RECORDED_ELAPSED_CEILING_SECONDS: Final = 51_840_000
+FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS: Final = 4
 
 FORMAL_RUN_ID: Final = "benchmark-v2-formal-20260717"
 PLAN_GIT_SHA: Final = "44927517958ecd3b9868bafb7bfe6133be25cc8e"
@@ -102,15 +109,11 @@ POWER_REPETITIONS: Final = 100_000
 
 PRIMARY_FAMILY_COUNT: Final = 500
 FULL_CORPUS_COUNT: Final = 503
-TASK5_CORPUS_SHA256: Final = (
-    "b4e2a1ed05eb07d82bdea18b9105cdd92b564cf864d8acedaa3c37d820848e8b"
-)
+TASK5_CORPUS_SHA256: Final = "b4e2a1ed05eb07d82bdea18b9105cdd92b564cf864d8acedaa3c37d820848e8b"
 TASK5_SOURCE_CENSUS_SHA256: Final = (
     "aa10f8d60b35d1c687806c0426bf50a2d30488d84b1f23317f72fc7dcceee372"
 )
-TASK5_CORPUS_FILE_SHA256: Final = (
-    "be32ceaf3abd0ad027667eb2dc78f08511f4f63bd78ac0e40f9d718dfead1f4c"
-)
+TASK5_CORPUS_FILE_SHA256: Final = "be32ceaf3abd0ad027667eb2dc78f08511f4f63bd78ac0e40f9d718dfead1f4c"
 TASK5_DATASHEET_FILE_SHA256: Final = (
     "88a3863c6c382b3348adbfc08bf23a9a8678e2be5a1a4584d021a4cd36990be8"
 )
@@ -264,15 +267,11 @@ def _per_item_budget(items: tuple[CorpusItem, ...]) -> tuple[list[dict[str, obje
         )
         complete_response_bytes = (
             2 * proposal_tokens * MAX_PROXY_TEXT_BYTES_PER_TOKEN
-            + EXPERIMENT_MAX_REPAIR_ITERS
-            * REPAIR_MAX_TOKENS
-            * MAX_PROXY_TEXT_BYTES_PER_TOKEN
+            + EXPERIMENT_MAX_REPAIR_ITERS * REPAIR_MAX_TOKENS * MAX_PROXY_TEXT_BYTES_PER_TOKEN
             + CRITIC_MAX_TOKENS * MAX_PROXY_TEXT_BYTES_PER_TOKEN
         )
         agent_tokens = (
-            proposal_tokens
-            + EXPERIMENT_MAX_REPAIR_ITERS * REPAIR_MAX_TOKENS
-            + CRITIC_MAX_TOKENS
+            proposal_tokens + EXPERIMENT_MAX_REPAIR_ITERS * REPAIR_MAX_TOKENS + CRITIC_MAX_TOKENS
         )
         agent_response_bytes = agent_tokens * MAX_PROXY_TEXT_BYTES_PER_TOKEN
         agent_envelope = {
@@ -322,7 +321,13 @@ def _per_item_budget(items: tuple[CorpusItem, ...]) -> tuple[list[dict[str, obje
     return result, proposal_sum
 
 
-def _budget_wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
+def _budget_wire(
+    items: tuple[CorpusItem, ...],
+    *,
+    request_timeout_seconds: float,
+    recorded_attempt_overhead_seconds: float | None,
+    recorded_provider_elapsed_ceiling_seconds: int,
+) -> dict[str, object]:
     per_item, proposal_sum = _per_item_budget(items)
     item_count = len(items)
     primary_items = tuple(item for item in items if item.layer == "procedural")
@@ -347,8 +352,7 @@ def _budget_wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
         attempts = total_calls * 3
         retry_backoff_milliseconds = total_calls * 1_500
         provider_timeout_milliseconds = int(
-            attempts * PROXY_REQUEST_TIMEOUT_SECONDS * 1_000
-            + retry_backoff_milliseconds
+            attempts * request_timeout_seconds * 1_000 + retry_backoff_milliseconds
         )
         return {
             "attempt_reserved_output_tokens": total_tokens * 3,
@@ -379,6 +383,18 @@ def _budget_wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
         ),
         key=lambda value: cast(int, value["requested_output_tokens"]),
     )
+    provider_policy: dict[str, object] = {
+        "connect_timeout_seconds": PROXY_CONNECT_TIMEOUT_SECONDS,
+        "maximum_attempts_per_logical_call": 3,
+        "maximum_response_bytes": MAX_PROXY_RESPONSE_BYTES,
+        "maximum_transport_response_bytes": MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
+        "request_timeout_seconds": request_timeout_seconds,
+        "retry_backoff_seconds": [0.5, 1.0],
+    }
+    if recorded_attempt_overhead_seconds is not None:
+        provider_policy["recorded_attempt_elapsed_overhead_seconds"] = (
+            recorded_attempt_overhead_seconds
+        )
     return {
         "ceiling_scope": "single_collection_attempt_nontransferable",
         "cost_contract": {
@@ -387,20 +403,15 @@ def _budget_wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
             "status": "cost_contract_unavailable",
         },
         "full_corpus": full_totals,
-        "recorded_provider_call_elapsed_ceiling_seconds": 5_184_000,
+        "recorded_provider_call_elapsed_ceiling_seconds": (
+            recorded_provider_elapsed_ceiling_seconds
+        ),
         "matched_control_prefix_counts": dict(
             sorted(prefix_counts.items(), key=lambda x: int(x[0]))
         ),
         "per_item": per_item,
         "primary_procedural": primary_totals,
-        "provider_policy": {
-            "connect_timeout_seconds": PROXY_CONNECT_TIMEOUT_SECONDS,
-            "maximum_attempts_per_logical_call": 3,
-            "maximum_response_bytes": MAX_PROXY_RESPONSE_BYTES,
-            "maximum_transport_response_bytes": MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
-            "request_timeout_seconds": PROXY_REQUEST_TIMEOUT_SECONDS,
-            "retry_backoff_seconds": [0.5, 1.0],
-        },
+        "provider_policy": provider_policy,
         "reserve_before_next_scheduled_unit": maximum_reservation,
         "storage": {
             "max_blobs": item_count * 83,
@@ -425,9 +436,7 @@ def _search_power_exact(
         conditional = (
             0.0
             if critical is None
-            else float(
-                binom.sf(critical - 1, discordant, improved_given_discordance)
-            )
+            else float(binom.sf(critical - 1, discordant, improved_given_discordance))
         )
         power += float(binom.pmf(discordant, family_count, discordance)) * conditional
     return power
@@ -441,16 +450,20 @@ def _repair_power_simulation(*, icc: float) -> dict[str, object]:
     rejected = 0
     digest = hashlib.sha256()
     digest.update(_POWER_SIMULATION_DOMAIN)
-    digest.update(canonical_json_bytes({
-        "alpha": 0.025,
-        "batch_size": batch_size,
-        "candidates_per_family": EXPERIMENT_N_SAMPLES,
-        "family_count": PRIMARY_FAMILY_COUNT,
-        "icc": icc,
-        "p_positive": 0.55,
-        "repetitions": POWER_REPETITIONS,
-        "seed": POWER_SEED,
-    }))
+    digest.update(
+        canonical_json_bytes(
+            {
+                "alpha": 0.025,
+                "batch_size": batch_size,
+                "candidates_per_family": EXPERIMENT_N_SAMPLES,
+                "family_count": PRIMARY_FAMILY_COUNT,
+                "icc": icc,
+                "p_positive": 0.55,
+                "repetitions": POWER_REPETITIONS,
+                "seed": POWER_SEED,
+            }
+        )
+    )
     log_alpha = math.log(0.025)
     completed = 0
     while completed < POWER_REPETITIONS:
@@ -474,9 +487,9 @@ def _repair_power_simulation(*, icc: float) -> dict[str, object]:
         # therefore a conservative lower bound on the power of that same test.
         eligible = (observed > 0) & (squared > 0)
         log_bound = np.zeros(current, dtype=np.float64)
-        log_bound[eligible] = -(
-            observed[eligible].astype(np.float64) ** 2
-        ) / (2.0 * squared[eligible])
+        log_bound[eligible] = -(observed[eligible].astype(np.float64) ** 2) / (
+            2.0 * squared[eligible]
+        )
         certified = eligible & (log_bound < log_alpha)
         rejected += int(np.count_nonzero(certified))
         digest.update(family_sums.tobytes(order="C"))
@@ -554,9 +567,7 @@ def _power_wire() -> dict[str, object]:
         }
         for discordance in (0.10, 0.15, 0.20)
     ]
-    repair_sensitivity = [
-        _repair_power_simulation(icc=icc) for icc in (0.10, 0.25, 0.40)
-    ]
+    repair_sensitivity = [_repair_power_simulation(icc=icc) for icc in (0.10, 0.25, 0.40)]
     search_contract = {
         "alpha": 0.025,
         "delta": 0.05,
@@ -772,7 +783,17 @@ def _arms_wire() -> list[dict[str, object]]:
     ]
 
 
-def _wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
+def _wire(
+    items: tuple[CorpusItem, ...],
+    *,
+    version: str,
+) -> dict[str, object]:
+    if version not in {
+        BENCHMARK_PREREGISTRATION_LEGACY_VERSION,
+        BENCHMARK_PREREGISTRATION_VERSION,
+    }:
+        _fail("schema", "has the wrong version")
+    operational = version == BENCHMARK_PREREGISTRATION_VERSION
     corpus_wire = cast(dict[str, object], corpus_to_dict(items))
     corpus_file_sha = _sha256_bytes(canonical_json_bytes(corpus_wire))
     datasheet_file_sha = _sha256_bytes(canonical_json_bytes(datasheet(items)))
@@ -785,9 +806,27 @@ def _wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
     primary = tuple(item for item in items if item.layer == "procedural")
     if len(primary) != PRIMARY_FAMILY_COUNT or len({item.family_id for item in primary}) != 500:
         _fail("corpus.primary", "must contain 500 independent procedural families")
-    return {
+    preregistration_path = (
+        "docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json"
+        if operational
+        else "docs/experiments/2026-07-17-benchmark-v2-prereg.json"
+    )
+    wire: dict[str, object] = {
         "arms": _arms_wire(),
-        "budgets": _budget_wire(items),
+        "budgets": _budget_wire(
+            items,
+            request_timeout_seconds=(
+                FORMAL_OPERATIONAL_REQUEST_TIMEOUT_SECONDS
+                if operational
+                else PROXY_REQUEST_TIMEOUT_SECONDS
+            ),
+            recorded_attempt_overhead_seconds=(
+                FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS if operational else None
+            ),
+            recorded_provider_elapsed_ceiling_seconds=(
+                FORMAL_OPERATIONAL_RECORDED_ELAPSED_CEILING_SECONDS if operational else 5_184_000
+            ),
+        ),
         "corpus": {
             "artifact_sha256": {
                 "contamination.json": TASK5_CONTAMINATION_FILE_SHA256,
@@ -819,8 +858,7 @@ def _wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
             "cheap_remedy_guards": {
                 "alternative": "positive",
                 "decision": (
-                    "point>=0.05_and_holm_p<0.05_and_lower97.5>0_"
-                    "else_not_kept_or_inconclusive"
+                    "point>=0.05_and_holm_p<0.05_and_lower97.5>0_else_not_kept_or_inconclusive"
                 ),
                 "holm_family": ["no_repair", "raw_llm"],
                 "sesoi": 0.05,
@@ -832,8 +870,7 @@ def _wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
             "repair": {
                 "alternative": "positive",
                 "decision": (
-                    "point>=0.10_and_confirmatory_holm_p<0.05_and_lower97.5>0_"
-                    "and_both_guards_pass"
+                    "point>=0.10_and_confirmatory_holm_p<0.05_and_lower97.5>0_and_both_guards_pass"
                 ),
                 "sesoi": 0.10,
             },
@@ -851,18 +888,31 @@ def _wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
         "gate_commands": {
             "assumed_runner_flags_requiring_alignment": ["--prereg", "--pre-call-config"],
             "full_replay": [
-                "uv", "run", "fretsure-bench",
-                "--replay-config", "<config>",
-                "--replay-receipt", "<receipt>",
-                "--replay-rows", "<rows>",
-                "--replay-blobs", "<blobs>",
-                "--replay-observations", "<sanitized-observations>",
-                "--output-dir", "<fresh-replay>",
+                "uv",
+                "run",
+                "fretsure-bench",
+                "--replay-config",
+                "<config>",
+                "--replay-receipt",
+                "<receipt>",
+                "--replay-rows",
+                "<rows>",
+                "--replay-blobs",
+                "<blobs>",
+                "--replay-observations",
+                "<sanitized-observations>",
+                "--output-dir",
+                "<fresh-replay>",
             ],
             "live": [
-                "uv", "run", "fretsure-bench", "--live",
-                "--pre-call-config", "<pre-call-config>",
-                "--output-dir", "<fresh-live>",
+                "uv",
+                "run",
+                "fretsure-bench",
+                "--live",
+                "--pre-call-config",
+                "<pre-call-config>",
+                "--output-dir",
+                "<fresh-live>",
             ],
             "offline_gates": [
                 "uv run pytest -q -m 'not integration'",
@@ -879,14 +929,24 @@ def _wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
                 "uv run python scripts/smoke_distributions.py",
             ],
             "stub_a": [
-                "uv", "run", "fretsure-bench", "--stub",
-                "--prereg", "docs/experiments/2026-07-17-benchmark-v2-prereg.json",
-                "--output-dir", "<fresh-a>",
+                "uv",
+                "run",
+                "fretsure-bench",
+                "--stub",
+                "--prereg",
+                preregistration_path,
+                "--output-dir",
+                "<fresh-a>",
             ],
             "stub_b": [
-                "uv", "run", "fretsure-bench", "--stub",
-                "--prereg", "docs/experiments/2026-07-17-benchmark-v2-prereg.json",
-                "--output-dir", "<fresh-b>",
+                "uv",
+                "run",
+                "fretsure-bench",
+                "--stub",
+                "--prereg",
+                preregistration_path,
+                "--output-dir",
+                "<fresh-b>",
             ],
         },
         "inference": {
@@ -972,7 +1032,7 @@ def _wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
             "selection_full": "repaired_best_of_4_critic_enabled",
         },
         "schedule": _schedule_wire(items),
-        "schema": BENCHMARK_PREREGISTRATION_VERSION,
+        "schema": version,
         "unit_contract": {
             "candidate_index": "ordered_index_within_one_preregistered_ten_proposal_pool",
             "independent_unit": "family_id_cluster_id",
@@ -995,9 +1055,7 @@ def _wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
             },
         },
         "versions": {
-            "arrangement_unison_coalescer": (
-                arranger_module.ARRANGEMENT_UNISON_COALESCER_VERSION
-            ),
+            "arrangement_unison_coalescer": (arranger_module.ARRANGEMENT_UNISON_COALESCER_VERSION),
             "corpus": BENCHMARK_CORPUS_VERSION,
             "fidelity": FIDELITY_CHECKER_VERSION,
             "manifest": BENCHMARK_MANIFEST_VERSION,
@@ -1021,6 +1079,20 @@ def _wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
             "trace": TRACE_SCHEMA_VERSION,
         },
     }
+    if operational:
+        wire["collection_execution"] = {
+            "admission_order": "collection_schedule_index_ascending",
+            "canonical_merge_order": ("collection_schedule_index_ascending_then_local_call_index"),
+            "client_ownership": "one_agent_and_one_raw_client_per_worker",
+            "completion_order": "not_semantic",
+            "durability": "unit_intent_and_attempt_fsync_before_provider_request",
+            "max_in_flight_units": FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS,
+            "protocol": BENCHMARK_COLLECTION_EXECUTION_VERSION,
+            "resume_boundary": "completed_durable_unit",
+        }
+        versions = cast(dict[str, object], wire["versions"])
+        versions["collection_execution"] = BENCHMARK_COLLECTION_EXECUTION_VERSION
+    return wire
 
 
 @dataclass(frozen=True, slots=True)
@@ -1045,26 +1117,90 @@ class BenchmarkPreregistration:
 
 def build_preregistration(items: object) -> BenchmarkPreregistration:
     snapshots = snapshot_corpus(items)
-    return BenchmarkPreregistration(canonical_json_bytes(_wire(snapshots)))
+    return BenchmarkPreregistration(
+        canonical_json_bytes(_wire(snapshots, version=BENCHMARK_PREREGISTRATION_VERSION))
+    )
+
+
+def build_legacy_preregistration(items: object) -> BenchmarkPreregistration:
+    """Reproduce the immutable pre-amendment Task 7 preregistration."""
+
+    snapshots = snapshot_corpus(items)
+    return BenchmarkPreregistration(
+        canonical_json_bytes(_wire(snapshots, version=BENCHMARK_PREREGISTRATION_LEGACY_VERSION))
+    )
 
 
 def preregistration_from_dict(value: object) -> BenchmarkPreregistration:
     if type(value) is not dict:
         _fail("$", "must be an exact object")
     obj = cast(dict[str, object], value)
+    version = obj.get("schema")
+    if version not in {
+        BENCHMARK_PREREGISTRATION_LEGACY_VERSION,
+        BENCHMARK_PREREGISTRATION_VERSION,
+    }:
+        _fail("schema", "has the wrong version")
     expected_top = frozenset(
         {
-            "arms", "budgets", "corpus", "decisions", "evidence_status",
-            "gate_commands", "inference", "itt_missingness", "model_and_prompts",
-            "package_target_version", "plan_receipt_git_sha", "power",
-            "pre_call_manifest_requirements", "run_id", "sampling", "schedule",
-            "schema", "unit_contract", "versions",
+            "arms",
+            "budgets",
+            "corpus",
+            "decisions",
+            "evidence_status",
+            "gate_commands",
+            "inference",
+            "itt_missingness",
+            "model_and_prompts",
+            "package_target_version",
+            "plan_receipt_git_sha",
+            "power",
+            "pre_call_manifest_requirements",
+            "run_id",
+            "sampling",
+            "schedule",
+            "schema",
+            "unit_contract",
+            "versions",
         }
     )
+    if version == BENCHMARK_PREREGISTRATION_VERSION:
+        expected_top |= {"collection_execution"}
     if frozenset(obj) != expected_top:
         _fail("$", "must contain the exact frozen top-level keys")
-    if obj.get("schema") != BENCHMARK_PREREGISTRATION_VERSION:
-        _fail("schema", "has the wrong version")
+    if version == BENCHMARK_PREREGISTRATION_VERSION:
+        budgets = obj.get("budgets")
+        provider = (
+            None
+            if type(budgets) is not dict
+            else cast(dict[str, object], budgets).get("provider_policy")
+        )
+        overhead = (
+            None
+            if type(provider) is not dict
+            else cast(dict[str, object], provider).get("recorded_attempt_elapsed_overhead_seconds")
+        )
+        request_timeout = (
+            None
+            if type(provider) is not dict
+            else cast(dict[str, object], provider).get("request_timeout_seconds")
+        )
+        if (
+            type(request_timeout) is not float
+            or request_timeout != FORMAL_OPERATIONAL_REQUEST_TIMEOUT_SECONDS
+        ):
+            _fail(
+                "budgets.provider_policy.request_timeout_seconds",
+                "must equal the exact operational float",
+            )
+        if (
+            type(overhead) is not float
+            or overhead != FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS
+        ):
+            _fail(
+                "budgets.provider_policy.recorded_attempt_elapsed_overhead_seconds",
+                "must equal the exact operational float",
+            )
     corpus = obj.get("corpus")
     if type(corpus) is not dict:
         _fail("corpus", "must be an exact object")
@@ -1073,7 +1209,7 @@ def preregistration_from_dict(value: object) -> BenchmarkPreregistration:
         items = corpus_from_dict(snapshot)
     except ValueError as error:
         raise PreregistrationError("corpus.snapshot", "is not a strict corpus") from error
-    expected = _wire(items)
+    expected = _wire(items, version=version)
     if obj != expected:
         _fail("$", "content differs from the frozen deterministic preregistration")
     return BenchmarkPreregistration(canonical_json_bytes(obj))
@@ -1093,6 +1229,7 @@ def budget_markdown(preregistration: BenchmarkPreregistration) -> str:
     if type(preregistration) is not BenchmarkPreregistration:
         _fail("preregistration", "must be an exact BenchmarkPreregistration")
     wire = preregistration.to_dict()
+    operational = wire["schema"] == BENCHMARK_PREREGISTRATION_VERSION
     budget = cast(dict[str, object], wire["budgets"])
     primary = cast(dict[str, object], budget["primary_procedural"])
     full = cast(dict[str, object], budget["full_corpus"])
@@ -1120,6 +1257,9 @@ def budget_markdown(preregistration: BenchmarkPreregistration) -> str:
     full_response = cast(int, full["response_text_bytes"])
     full_transport = cast(int, full["transport_response_bytes"])
     full_timeout = cast(int, full["provider_timeout_envelope_milliseconds"])
+    full_elapsed_reservation = full_timeout + full_attempts * int(
+        FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS * 1_000
+    )
     provider_elapsed = cast(
         int,
         budget["recorded_provider_call_elapsed_ceiling_seconds"],
@@ -1152,9 +1292,7 @@ def budget_markdown(preregistration: BenchmarkPreregistration) -> str:
         "|---|---:|---:|",
     ]
     for stage in ("proposal", "repair", "critic", "raw"):
-        lines.append(
-            f"| {stage} | {primary_calls[stage]:,} | {primary_tokens[stage]:,} |"
-        )
+        lines.append(f"| {stage} | {primary_calls[stage]:,} | {primary_tokens[stage]:,} |")
     lines.extend(
         [
             f"| **Total** | **{primary_call_total:,}** | **{primary_token_total:,}** |",
@@ -1170,6 +1308,33 @@ def budget_markdown(preregistration: BenchmarkPreregistration) -> str:
             "|---|---:|---:|",
         ]
     )
+    if operational:
+        lines[2] = "Date: 2026-07-18<br>"
+        lines[3] = (
+            "Status: operational amendment before a fresh collection attempt; "
+            "estimands and schedule unchanged"
+        )
+        lines[9:9] = [
+            "## Operational collection amendment",
+            "",
+            (
+                f"- At most `{FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS}` scheduled units may "
+                "be in flight; admission and canonical merge"
+            ),
+            "  remain ordered by the frozen collection schedule.",
+            "- Each formal proxy attempt has a hard `300`-second whole-attempt deadline;",
+            "  pool/connect/TLS/write/read operations are capped by the remaining wall time.",
+            "  Connect inactivity also retains its separate `5`-second cap.",
+            "- Each logical call still permits three attempts with `0.5` / `1.0` second",
+            "  retry backoffs.",
+            "- Each attempt also reserves `10` seconds of recorded elapsed overhead for",
+            "  durable attempt-intent/result fsync and timeout-delivery scheduling.",
+            "- The durable recorded provider-call elapsed ceiling is `51,840,000` seconds,",
+            "  which covers the `51,539,895`-second timeout/overhead full-run envelope.",
+            "- Model, prompts, corpus, schedule, statistical decisions, output-token limits,",
+            "  and pricing contracts are unchanged by this operational amendment.",
+            "",
+        ]
     for stage in ("proposal", "repair", "critic", "raw"):
         lines.append(f"| {stage} | {full_calls[stage]:,} | {full_tokens[stage]:,} |")
     lines.extend(
@@ -1181,10 +1346,17 @@ def budget_markdown(preregistration: BenchmarkPreregistration) -> str:
             f"- Bounded response text: `{full_response:,}` bytes.",
             f"- Raw transport envelope: `{full_transport:,}` bytes.",
             f"- Timeout-derived provider envelope: `{full_timeout:,}` ms.",
-            (
-                "- Recorded provider-call elapsed ceiling: "
-                f"`{provider_elapsed:,}` seconds."
+            *(
+                [
+                    (
+                        "- Timeout plus recorded attempt-overhead reservation: "
+                        f"`{full_elapsed_reservation:,}` ms."
+                    )
+                ]
+                if operational
+                else []
             ),
+            (f"- Recorded provider-call elapsed ceiling: `{provider_elapsed:,}` seconds."),
             "  This sums durable call-result elapsed time; it is not host wall time and",
             "  excludes local solver, serialization, replay, and report CPU time.",
             "",
@@ -1235,20 +1407,81 @@ def budget_markdown(preregistration: BenchmarkPreregistration) -> str:
         ]
     )
     lines.extend(f"- `m={prefix}`: {count} items" for prefix, count in prefixes.items())
-    lines.extend(
-        [
+    if operational:
+        billing_correction = [
+            "### Billing-contract and terminal-attempt boundary",
             "",
-            "## External cost gate",
+            "The historical 16,384-output contract and attempt-001 gate remain immutable",
+            "audit evidence. Pricing contract v2 and formal envelope v0.2 retain the official",
+            "128,000-token billable-output maximum and the unchanged one-attempt formal",
+            "mechanical maximum of `1,167,905,640,000` micro-USD",
+            "(`$1,167,905.640000`). Attempts 001, 002, and 003 are terminal `INCOMPLETE`",
+            "and must not be resumed or overwritten. Their cumulative known/tight cost is",
+            "`$2.130022 / $804.234022`; adding one complete future formal attempt gives a",
+            "cumulative audit maximum of `$1,168,709.874022`. A fresh attempt-004 requires",
+            "a new pre-call and formal budget gate that bind this operational",
+            "preregistration's raw SHA-256.",
             "",
-            "`cost_contract_unavailable`: maximum spend is null until a verifiable price contract",
-            "and explicit user authorization exist. This preregistration authorizes no provider",
-            "call. Later pilot and formal configs may lower these ceilings but may not raise",
-            "them without a new preregistration.",
-            "All ceilings apply to one numbered collection attempt and are non-transferable.",
-            "After an orphan, a higher attempt needs a fresh pre-call config and cost",
-            "authorization that accounts for prior consumed spend; partial outcomes cannot",
-            "be inspected to choose whether to restart.",
+            "## Excluded throughput pilot and ETA reporting",
             "",
+            "Before formal collection, an analysis-excluded throughput pilot advances through",
+            "`2 → 4 → 8` in-flight units. Each step records success rate, retry rate,",
+            "provider-latency P50/P95, and completed-unit/call throughput. One eight-unit block",
+            "per level is smoke evidence that may reject but never approve eight-way execution.",
+            "Only complete live blocks with identical execution, analysis, lock, pricing, model,",
+            "timeout, and corpus bindings may enter the comparison; stub blocks never qualify.",
+            "Freezing `8` requires at least eight complete blocks (64 units) at both `4` and `8`,",
+            "an independent confirmation, 8/4 unit throughput at least 1.35, call throughput",
+            "at least 1.25, success degradation at most two percentage points, bounded retry and",
+            "P50/P95 degradation, and no new timeout or integrity failure. Missing or boundary",
+            "evidence freezes `4`. Selecting `8` requires regenerating and rebinding this",
+            "operational preregistration before attempt-004.",
+            "",
+            "Before the formal call gate opens, the pilot's observed rates must produce",
+            "optimistic, median, and conservative completion-time estimates. During collection,",
+            "the estimate is updated from actual durable completions after 30 minutes, near each",
+            "additional 5% of scheduled units, and whenever throughput changes materially.",
+            "Canonical `benchmark-progress@0.1.0` JSON lines are appended to the operator log;",
+            "they report the durable row count out of 10,563, current-process and recent",
+            "throughput, stalled state, and all three ETA estimates without entering analysis",
+            "artifacts.",
+            "",
+            "## Durable checkpoint and interruption boundary",
+            "",
+            "Each completed scheduled unit is durably checkpointed with its lane WAL before it",
+            "becomes resumable. A graceful interruption stops new admissions, drains already",
+            "started units, persists their completed-unit checkpoints, and resumes later from the",
+            "next schedule unit after the verified durable prefix. Resume never changes frozen",
+            "schedule order or treats network completion order as semantic.",
+            "The formal invocation runs detached from the interactive Codex session, so a UI or",
+            "client connection loss does not terminate collection. The detached process writes",
+            "its PID and append-only operator log beside the attempt artifacts.",
+            "The wrapper directly `exec`s the repository's `.venv/bin/fretsure-bench` entry",
+            "point; it does not interpose `uv run`, whose supervisor PID does not reliably",
+            "forward `SIGINT` on this host.",
+            "Formal and pilot proxy URLs use numeric loopback (`127.0.0.1` or `::1`), not",
+            "`localhost`, so name resolution cannot sit outside the attempt deadline.",
+            "",
+            "This contract does not promise recovery of a provider request interrupted halfway.",
+            "An admitted unit without a verified durable completion, or a WAL with an",
+            "open attempt, fails closed for operator audit instead of guessing whether the",
+            "provider completed it.",
+            "A terminal concurrent abort writes a canonical sidecar that binds the coordinator",
+            "and every admitted lane WAL; the abort receipt reason embeds that sidecar's raw",
+            "SHA-256 so usage from out-of-order or incomplete lanes remains auditable.",
+            "",
+            "## Runner alignment note",
+            "",
+            "Formal live collection must derive its 300-second request timeout and frozen",
+            "admission limit from the preregistration embedded in the pre-call declaration.",
+            "The declaration and gate must be regenerated after the implementation commit;",
+            "neither artifact generation nor this preregistration grants billing authorization.",
+            "Formal hot paths must remain linear in units and provider observations; the pilot",
+            "must not run against a prefix-dependent implementation whose later units get slower.",
+            "",
+        ]
+    else:
+        billing_correction = [
             "### 2026-07-18 billing-contract correction",
             "",
             "The historical 16,384-output formal envelope and `$538,865.486400` gate",
@@ -1270,16 +1503,37 @@ def budget_markdown(preregistration: BenchmarkPreregistration) -> str:
             "flags before either gate is claimed.",
             "",
         ]
+    lines.extend(
+        [
+            "",
+            "## External cost gate",
+            "",
+            "`cost_contract_unavailable`: maximum spend is null until a verifiable price contract",
+            "and explicit user authorization exist. This preregistration authorizes no provider",
+            "call. Later pilot and formal configs may lower these ceilings but may not raise",
+            "them without a new preregistration.",
+            "All ceilings apply to one numbered collection attempt and are non-transferable.",
+            "After an orphan, a higher attempt needs a fresh pre-call config and cost",
+            "authorization that accounts for prior consumed spend; partial outcomes cannot",
+            "be inspected to choose whether to restart.",
+            "",
+            *billing_correction,
+        ]
     )
     return "\n".join(lines)
 
 
 __all__ = [
+    "BENCHMARK_COLLECTION_EXECUTION_VERSION",
+    "BENCHMARK_PREREGISTRATION_LEGACY_VERSION",
     "BENCHMARK_PREREGISTRATION_VERSION",
+    "FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS",
+    "FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS",
     "BenchmarkPreregistration",
     "PreregistrationError",
     "PUBLIC_COMPACT_PROPOSAL_VERSION",
     "budget_markdown",
+    "build_legacy_preregistration",
     "build_preregistration",
     "preregistration_from_bytes",
     "preregistration_from_dict",

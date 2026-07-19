@@ -35,20 +35,34 @@ from fretsure.bench.preregistration import (
     TASK5_DATASHEET_FILE_SHA256,
     TASK5_SOURCE_CENSUS_FILE_SHA256,
     TASK5_SOURCE_CENSUS_SHA256,
+    BenchmarkPreregistration,
     budget_markdown,
+    build_legacy_preregistration,
     build_preregistration,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PREREG = ROOT / "docs" / "experiments" / "2026-07-17-benchmark-v2-prereg.json"
 DEFAULT_BUDGET = ROOT / "docs" / "experiments" / "2026-07-17-benchmark-v2-budget.md"
+DEFAULT_OPERATIONAL_PREREG = (
+    ROOT / "docs" / "experiments" / "2026-07-18-benchmark-v2-operational-prereg.json"
+)
+DEFAULT_OPERATIONAL_BUDGET = (
+    ROOT / "docs" / "experiments" / "2026-07-18-benchmark-v2-operational-budget.md"
+)
+def _operational_budget_markdown(preregistration: BenchmarkPreregistration) -> str:
+    """Render the operational budget from its single library source of truth."""
+    return budget_markdown(preregistration)
 
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _artifacts(census_path: Path, source_cache: Path) -> tuple[bytes, bytes]:
+def _artifacts(
+    census_path: Path,
+    source_cache: Path,
+) -> tuple[bytes, bytes, bytes, bytes]:
     census = _read_census(census_path)
     if source_census_sha256(census) != TASK5_SOURCE_CENSUS_SHA256:
         raise ValueError("source census domain digest differs from the Task 5 receipt")
@@ -72,8 +86,14 @@ def _artifacts(census_path: Path, source_cache: Path) -> tuple[bytes, bytes]:
         raise ValueError("canonical corpus bytes differ from the Task 5 receipt")
     if _sha256(canonical_json_bytes(datasheet(items))) != TASK5_DATASHEET_FILE_SHA256:
         raise ValueError("canonical datasheet bytes differ from the Task 5 receipt")
-    preregistration = build_preregistration(items)
-    return preregistration.wire_json, budget_markdown(preregistration).encode("utf-8")
+    legacy = build_legacy_preregistration(items)
+    operational = build_preregistration(items)
+    return (
+        legacy.wire_json,
+        budget_markdown(legacy).encode("utf-8"),
+        operational.wire_json,
+        _operational_budget_markdown(operational).encode("utf-8"),
+    )
 
 
 def _check(path: Path, expected: bytes) -> None:
@@ -97,25 +117,45 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-cache", type=Path, default=DEFAULT_SOURCE_CACHE)
     parser.add_argument("--output-prereg", type=Path, default=DEFAULT_PREREG)
     parser.add_argument("--output-budget", type=Path, default=DEFAULT_BUDGET)
+    parser.add_argument(
+        "--output-operational-prereg",
+        type=Path,
+        default=DEFAULT_OPERATIONAL_PREREG,
+    )
+    parser.add_argument(
+        "--output-operational-budget",
+        type=Path,
+        default=DEFAULT_OPERATIONAL_BUDGET,
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
-        preregistration, budget = _artifacts(args.census, args.source_cache)
+        legacy_preregistration, legacy_budget, preregistration, budget = _artifacts(
+            args.census,
+            args.source_cache,
+        )
         if args.check:
-            _check(args.output_prereg, preregistration)
-            _check(args.output_budget, budget)
+            _check(args.output_prereg, legacy_preregistration)
+            _check(args.output_budget, legacy_budget)
+            _check(args.output_operational_prereg, preregistration)
+            _check(args.output_operational_budget, budget)
         else:
-            _write(args.output_prereg, preregistration)
-            _write(args.output_budget, budget)
+            _write(args.output_prereg, legacy_preregistration)
+            _write(args.output_budget, legacy_budget)
+            _write(args.output_operational_prereg, preregistration)
+            _write(args.output_operational_budget, budget)
     except (OSError, ValueError) as error:
         print(str(error), file=sys.stderr)
         return 1
     print(
-        f"benchmark preregistration OK "
-        f"(json_sha256={_sha256(preregistration)}, budget_sha256={_sha256(budget)})"
+        "benchmark preregistration OK "
+        f"(legacy_json_sha256={_sha256(legacy_preregistration)}, "
+        f"legacy_budget_sha256={_sha256(legacy_budget)}, "
+        f"operational_json_sha256={_sha256(preregistration)}, "
+        f"operational_budget_sha256={_sha256(budget)})"
     )
     return 0
 

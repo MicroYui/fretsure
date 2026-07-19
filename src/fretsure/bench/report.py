@@ -14,6 +14,7 @@ import math
 import re
 from collections import defaultdict
 from dataclasses import dataclass, fields, replace
+from dataclasses import field as dataclass_field
 from enum import Enum, StrEnum
 from fractions import Fraction
 from typing import Any, Final, Literal, NoReturn, cast
@@ -381,6 +382,86 @@ class ReportPublicationBindings:
             _fail("publication_bindings.calls", "observed calls exceed the maximum")
 
 
+_SourceIdentity = tuple[str, str, float, tuple[int, int]]
+_GoalIdentity = tuple[str, str, tuple[int, ...], int, float, tuple[tuple[str, str], ...]]
+
+
+@dataclass(frozen=True, slots=True)
+class _SolveCacheKey:
+    source: _SourceIdentity
+    target: BlobRef
+    goal: _GoalIdentity
+    profile_fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class _ScoreCacheKey:
+    source: _SourceIdentity
+    tab: BlobRef | None
+    profile_fingerprint: str
+    fallback_assisted: bool
+    llm_generated: bool
+
+
+@dataclass(frozen=True, slots=True)
+class _SnapshotCacheKey:
+    source: _SourceIdentity
+    target: BlobRef
+    tab: BlobRef | None
+    goal: _GoalIdentity
+    profile_fingerprint: str
+    fallback_assisted: bool
+    llm_generated: bool
+
+
+@dataclass(frozen=True, slots=True)
+class _OracleCacheKey:
+    tab: BlobRef
+    profile_fingerprint: str
+    tempo_bpm: float
+    beats_per_bar: int
+
+
+@dataclass(frozen=True, slots=True)
+class _SolvedTarget:
+    outcome: Tab | Infeasible
+    median_oracle: OracleResult | None
+    diagnostic_codes: tuple[str, ...]
+    verdict: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class _SnapshotRescore:
+    solved: _SolvedTarget
+    score: CheckpointScore
+    ranking: Fidelity | None
+
+
+@dataclass(slots=True)
+class _RescoreCache:
+    """One-call replay memoization; never retained across runs or reports."""
+
+    source_identities: dict[int, _SourceIdentity] = dataclass_field(default_factory=dict)
+    source_metadata: dict[tuple[_SourceIdentity, BlobRef], dict[str, object]] = dataclass_field(
+        default_factory=dict
+    )
+    targets: dict[BlobRef, tuple[Note, ...]] = dataclass_field(default_factory=dict)
+    tabs: dict[tuple[_SourceIdentity, BlobRef, str], Tab] = dataclass_field(default_factory=dict)
+    raw_source_contexts: dict[tuple[_SourceIdentity, _GoalIdentity, str], str] = dataclass_field(
+        default_factory=dict
+    )
+    pure_targets: dict[tuple[_SourceIdentity, _GoalIdentity, str], tuple[Note, ...]] = (
+        dataclass_field(default_factory=dict)
+    )
+    solved_targets: dict[_SolveCacheKey, Tab | Infeasible] = dataclass_field(default_factory=dict)
+    oracles: dict[_OracleCacheKey, OracleResult] = dataclass_field(default_factory=dict)
+    scores: dict[_ScoreCacheKey, CheckpointScore] = dataclass_field(default_factory=dict)
+    rankings: dict[tuple[_SourceIdentity, BlobRef], Fidelity] = dataclass_field(
+        default_factory=dict
+    )
+    snapshots: dict[_SnapshotCacheKey, _SnapshotRescore] = dataclass_field(default_factory=dict)
+
+
 def publication_bindings_from_artifacts(
     manifest: BenchmarkManifest,
     receipt: BenchmarkReceipt,
@@ -497,6 +578,87 @@ def _parse_tab(value: object, item: CorpusItem, profile: Profile, field: str) ->
         raise ReportInputError(field, "tab blob is invalid") from error
 
 
+def _source_identity(cache: _RescoreCache, item: CorpusItem) -> _SourceIdentity:
+    object_identity = id(item)
+    existing = cache.source_identities.get(object_identity)
+    if existing is not None:
+        return existing
+    identity = (
+        item.item_id,
+        notegraph_sha256(item.ir),
+        item.ir.meta.tempo_bpm,
+        item.ir.meta.time_sig,
+    )
+    cache.source_identities[object_identity] = identity
+    return identity
+
+
+def _goal_identity(goal: ArrangeGoal) -> _GoalIdentity:
+    return (
+        goal.style,
+        goal.tier,
+        goal.tuning,
+        goal.capo,
+        goal.tempo_bpm,
+        tuple(sorted(goal.extras.items())),
+    )
+
+
+def _cached_target(
+    cache: _RescoreCache,
+    record: BlobRecord,
+    field: str,
+) -> tuple[Note, ...]:
+    try:
+        return cache.targets[record.ref]
+    except KeyError:
+        target = _parse_target(record.content, field)
+        cache.targets[record.ref] = target
+        return target
+
+
+def _cached_tab(
+    cache: _RescoreCache,
+    record: BlobRecord,
+    item: CorpusItem,
+    profile: Profile,
+    field: str,
+) -> Tab:
+    key = (_source_identity(cache, item), record.ref, profile.fingerprint)
+    try:
+        return cache.tabs[key]
+    except KeyError:
+        tab = _parse_tab(record.content, item, profile, field)
+        cache.tabs[key] = tab
+        return tab
+
+
+def _cached_oracle(
+    cache: _RescoreCache,
+    record: BlobRecord,
+    tab: Tab,
+    item: CorpusItem,
+    profile: Profile,
+) -> OracleResult:
+    key = _OracleCacheKey(
+        record.ref,
+        profile.fingerprint,
+        item.ir.meta.tempo_bpm,
+        item.ir.meta.time_sig[0],
+    )
+    try:
+        return cache.oracles[key]
+    except KeyError:
+        oracle = check_playability(
+            tab,
+            profile,
+            tempo_bpm=item.ir.meta.tempo_bpm,
+            beats_per_bar=item.ir.meta.time_sig[0],
+        )
+        cache.oracles[key] = oracle
+        return oracle
+
+
 def _trace_content(trajectory: CandidateTrajectory) -> list[dict[str, object]]:
     return [
         {
@@ -543,23 +705,39 @@ def _parse_trace(value: object, field: str) -> tuple[TraceStepSnapshot, ...]:
 
 
 def _profile_verdicts(
-    tab: Tab | None, item: CorpusItem, median: Profile
+    tab: Tab | None,
+    item: CorpusItem,
+    median: Profile,
+    median_oracle: OracleResult | None,
+    *,
+    cache: _RescoreCache | None = None,
+    tab_record: BlobRecord | None = None,
 ) -> tuple[ProfileVerdict, ...]:
     profiles = (SMALL_HAND, median, LARGE_HAND)
     if len({value.fingerprint for value in profiles}) != 3:
         _fail("profile", "small/median/large fingerprints must be distinct")
+
+    def verdict(value: Profile) -> str | None:
+        if tab is None:
+            return None
+        if value.fingerprint == median.fingerprint:
+            if median_oracle is None:  # pragma: no cover - internal invariant
+                raise AssertionError("median tab score requires its oracle result")
+            return median_oracle.verdict
+        if cache is not None and tab_record is not None:
+            return _cached_oracle(cache, tab_record, tab, item, value).verdict
+        return check_playability(
+            tab,
+            value,
+            tempo_bpm=item.ir.meta.tempo_bpm,
+            beats_per_bar=item.ir.meta.time_sig[0],
+        ).verdict
+
     return tuple(
         ProfileVerdict(
             value.version,
             value.fingerprint,
-            None
-            if tab is None
-            else check_playability(
-                tab,
-                value,
-                tempo_bpm=item.ir.meta.tempo_bpm,
-                beats_per_bar=item.ir.meta.time_sig[0],
-            ).verdict,
+            verdict(value),
         )
         for value in profiles
     )
@@ -572,6 +750,9 @@ def _checkpoint_score(
     fallback_assisted: bool,
     llm_generated: bool,
     profile: Profile,
+    median_oracle: OracleResult | None = None,
+    cache: _RescoreCache | None = None,
+    tab_record: BlobRecord | None = None,
 ) -> CheckpointScore:
     evaluated = faithfulness_dimensions(item.ir)
     unavailable = tuple(value for value in FAITHFULNESS_DIMENSIONS if value not in evaluated)
@@ -579,6 +760,10 @@ def _checkpoint_score(
     oracle = (
         None
         if tab is None
+        else median_oracle
+        if median_oracle is not None
+        else _cached_oracle(cache, tab_record, tab, item, profile)
+        if cache is not None and tab_record is not None
         else check_playability(
             tab,
             profile,
@@ -603,7 +788,14 @@ def _checkpoint_score(
         fallback_assisted,
         llm_generated,
         joint and llm_generated,
-        _profile_verdicts(tab, item, profile),
+        _profile_verdicts(
+            tab,
+            item,
+            profile,
+            oracle,
+            cache=cache,
+            tab_record=tab_record,
+        ),
     )
 
 
@@ -794,6 +986,7 @@ def _snapshot_payload(
     llm_generated: bool,
     ranking: Fidelity | None,
     profile: Profile,
+    cache: _RescoreCache | None = None,
 ) -> tuple[dict[str, object], tuple[BlobRecord, ...]]:
     target_blob = build_blob_record(BlobKind.TARGET, _target_content(snapshot.target))
     blobs = [target_blob]
@@ -801,20 +994,31 @@ def _snapshot_payload(
     if snapshot.tab is not None:
         tab_blob = build_blob_record(BlobKind.TAB, _tab_content(snapshot.tab))
         blobs.append(tab_blob)
+    score = (
+        _checkpoint_score(
+            item,
+            snapshot.tab,
+            fallback_assisted=fallback_assisted,
+            llm_generated=llm_generated,
+            profile=profile,
+        )
+        if cache is None
+        else _cached_checkpoint_score(
+            cache,
+            item,
+            tab_blob,
+            snapshot.tab,
+            profile,
+            fallback_assisted=fallback_assisted,
+            llm_generated=llm_generated,
+        )
+    )
     return (
         {
             "diagnostic_codes": _diagnostic_codes(snapshot),
             "iteration": snapshot.iteration,
             "ranking_fidelity": _fidelity_to_dict(ranking),
-            "score": _score_to_dict(
-                _checkpoint_score(
-                    item,
-                    snapshot.tab,
-                    fallback_assisted=fallback_assisted,
-                    llm_generated=llm_generated,
-                    profile=profile,
-                )
-            ),
+            "score": _score_to_dict(score),
             "solver": _solver_to_dict(snapshot),
             "tab_blob_sha256": None if tab_blob is None else tab_blob.ref.sha256,
             "target_blob_sha256": target_blob.ref.sha256,
@@ -832,6 +1036,9 @@ class _JoinedCall:
     attempt_reserved_output_tokens: int
 
 
+_JoinedCallGroupKey = tuple[str, int, CollectionArm]
+
+
 def _joined_calls(ledger: ObservationLedger) -> tuple[_JoinedCall, ...]:
     results = {(value.call_index, value.logical_call_id): value for value in ledger.results}
     attempts: dict[tuple[int, str], list[int]] = defaultdict(list)
@@ -846,6 +1053,17 @@ def _joined_calls(ledger: ObservationLedger) -> tuple[_JoinedCall, ...]:
             _fail("observations", "contains an unjoined call")
         joined.append(_JoinedCall(intent, result, len(reservations), sum(reservations)))
     return tuple(joined)
+
+
+def _index_joined_calls(
+    joined: tuple[_JoinedCall, ...],
+) -> dict[_JoinedCallGroupKey, tuple[_JoinedCall, ...]]:
+    grouped: dict[_JoinedCallGroupKey, list[_JoinedCall]] = {}
+    for value in joined:
+        arm = CollectionArm.RAW if value.intent.stage is CallStage.RAW else CollectionArm.AGENT
+        key = (value.intent.item_id, value.intent.candidate_index, arm)
+        grouped.setdefault(key, []).append(value)
+    return {key: tuple(values) for key, values in grouped.items()}
 
 
 def _call_to_dict(value: _JoinedCall) -> dict[str, object]:
@@ -877,18 +1095,6 @@ def _call_to_dict(value: _JoinedCall) -> dict[str, object]:
     }
 
 
-def _candidate_calls(
-    joined: tuple[_JoinedCall, ...], item_id: str, candidate_index: int
-) -> tuple[_JoinedCall, ...]:
-    return tuple(
-        value
-        for value in joined
-        if value.intent.item_id == item_id
-        and value.intent.candidate_index == candidate_index
-        and value.intent.stage in {CallStage.PROPOSAL, CallStage.REPAIR, CallStage.CRITIC}
-    )
-
-
 def _edit_counts(trajectory: CandidateTrajectory) -> dict[str, int]:
     steps = trajectory.trace_steps
     return {
@@ -913,17 +1119,17 @@ def _deduplicate_blobs(values: list[BlobRecord]) -> tuple[BlobRecord, ...]:
     return tuple(sorted(by_ref.values(), key=lambda value: value.ref.sort_key))
 
 
-def _candidate_row_bundle(
+def _candidate_row_bundle_from_calls(
     run_id: str,
     item: CorpusItem,
     trajectory: CandidateTrajectory,
-    joined: tuple[_JoinedCall, ...],
+    calls: tuple[_JoinedCall, ...],
     profile: Profile,
+    cache: _RescoreCache | None = None,
 ) -> tuple[BenchmarkRow, tuple[BlobRecord, ...]]:
     if item.family_id is None or item.cluster_id is None:
         _fail("item", "planned family and cluster identities are required")
     source_blob = _source_blob(item)
-    calls = _candidate_calls(joined, item.item_id, trajectory.index)
     if len(calls) != trajectory.work.total_llm_calls:
         _fail("candidate.work", "logical call count does not match observations")
     fallback = trajectory.proposal.fallback_assisted
@@ -939,6 +1145,7 @@ def _candidate_row_bundle(
             else fidelity(item.ir, trajectory.iteration_zero.tab)
         ),
         profile=profile,
+        cache=cache,
     )
     terminal, terminal_blobs = _snapshot_payload(
         item,
@@ -947,6 +1154,7 @@ def _candidate_row_bundle(
         llm_generated=llm_generated,
         ranking=trajectory.fidelity,
         profile=profile,
+        cache=cache,
     )
     trace_blob = build_blob_record(BlobKind.TRACE, _trace_content(trajectory))
     critic = (
@@ -1008,23 +1216,17 @@ def _candidate_row_bundle(
     return row, all_blobs
 
 
-def _raw_row_bundle(
+def _raw_row_bundle_from_calls(
     run_id: str,
     item: CorpusItem,
     outcome: RawLLMOutcome,
-    joined: tuple[_JoinedCall, ...],
+    calls: tuple[_JoinedCall, ...],
     profile: Profile,
+    cache: _RescoreCache | None = None,
 ) -> tuple[BenchmarkRow, tuple[BlobRecord, ...]]:
     if item.family_id is None or item.cluster_id is None:
         _fail("item", "planned family and cluster identities are required")
     source_blob = _source_blob(item)
-    calls = tuple(
-        value
-        for value in joined
-        if value.intent.item_id == item.item_id
-        and value.intent.candidate_index == outcome.sample_index
-        and value.intent.stage is CallStage.RAW
-    )
     if len(calls) != 1:
         _fail("raw.work", "requires exactly one observation")
     blobs = [source_blob]
@@ -1032,12 +1234,24 @@ def _raw_row_bundle(
     if outcome.tab is not None:
         tab_blob = build_blob_record(BlobKind.TAB, _tab_content(outcome.tab))
         blobs.append(tab_blob)
-    score = _checkpoint_score(
-        item,
-        outcome.tab,
-        fallback_assisted=False,
-        llm_generated=outcome.status is RawStatus.VALID_TAB,
-        profile=profile,
+    score = (
+        _checkpoint_score(
+            item,
+            outcome.tab,
+            fallback_assisted=False,
+            llm_generated=outcome.status is RawStatus.VALID_TAB,
+            profile=profile,
+        )
+        if cache is None
+        else _cached_checkpoint_score(
+            cache,
+            item,
+            tab_blob,
+            outcome.tab,
+            profile,
+            fallback_assisted=False,
+            llm_generated=outcome.status is RawStatus.VALID_TAB,
+        )
     )
     payload: dict[str, object] = {
         "outcome": {
@@ -1074,8 +1288,254 @@ def _raw_row_bundle(
     return row, exact_blobs
 
 
+def _candidate_row_bundle(
+    run_id: str,
+    item: CorpusItem,
+    trajectory: CandidateTrajectory,
+    joined: tuple[_JoinedCall, ...],
+    profile: Profile,
+) -> tuple[BenchmarkRow, tuple[BlobRecord, ...]]:
+    """Compatibility wrapper for the excluded historical pilot helper."""
+
+    calls = tuple(
+        value
+        for value in joined
+        if value.intent.item_id == item.item_id
+        and value.intent.candidate_index == trajectory.index
+        and value.intent.stage in {CallStage.PROPOSAL, CallStage.REPAIR, CallStage.CRITIC}
+    )
+    return _candidate_row_bundle_from_calls(
+        run_id,
+        item,
+        trajectory,
+        calls,
+        profile,
+    )
+
+
+def _raw_row_bundle(
+    run_id: str,
+    item: CorpusItem,
+    outcome: RawLLMOutcome,
+    joined: tuple[_JoinedCall, ...],
+    profile: Profile,
+) -> tuple[BenchmarkRow, tuple[BlobRecord, ...]]:
+    """Compatibility wrapper for the excluded historical pilot helper."""
+
+    calls = tuple(
+        value
+        for value in joined
+        if value.intent.item_id == item.item_id
+        and value.intent.candidate_index == outcome.sample_index
+        and value.intent.stage is CallStage.RAW
+    )
+    return _raw_row_bundle_from_calls(run_id, item, outcome, calls, profile)
+
+
 def _goal_at_source_tempo(goal: ArrangeGoal, item: CorpusItem) -> ArrangeGoal:
     return replace(goal, tempo_bpm=item.ir.meta.tempo_bpm, extras=dict(goal.extras))
+
+
+def _cached_solved_target(
+    cache: _RescoreCache,
+    item: CorpusItem,
+    target_record: BlobRecord,
+    target: tuple[Note, ...],
+    exact_goal: ArrangeGoal,
+    profile: Profile,
+) -> Tab | Infeasible:
+    key = _SolveCacheKey(
+        _source_identity(cache, item),
+        target_record.ref,
+        _goal_identity(exact_goal),
+        profile.fingerprint,
+    )
+    try:
+        return cache.solved_targets[key]
+    except KeyError:
+        solved = solve_fingering(
+            target,
+            exact_goal.tuning,
+            exact_goal.capo,
+            profile,
+            tempo_bpm=exact_goal.tempo_bpm,
+            beats_per_bar=item.ir.meta.time_sig[0],
+        )
+        cache.solved_targets[key] = solved
+        return solved
+
+
+def _cached_checkpoint_score(
+    cache: _RescoreCache,
+    item: CorpusItem,
+    tab_record: BlobRecord | None,
+    tab: Tab | None,
+    profile: Profile,
+    *,
+    fallback_assisted: bool,
+    llm_generated: bool,
+    median_oracle: OracleResult | None = None,
+) -> CheckpointScore:
+    key = _ScoreCacheKey(
+        _source_identity(cache, item),
+        None if tab_record is None else tab_record.ref,
+        profile.fingerprint,
+        fallback_assisted,
+        llm_generated,
+    )
+    try:
+        return cache.scores[key]
+    except KeyError:
+        score = _checkpoint_score(
+            item,
+            tab,
+            fallback_assisted=fallback_assisted,
+            llm_generated=llm_generated,
+            profile=profile,
+            median_oracle=median_oracle,
+            cache=cache,
+            tab_record=tab_record,
+        )
+        cache.scores[key] = score
+        return score
+
+
+def _cached_ranking(
+    cache: _RescoreCache,
+    item: CorpusItem,
+    tab_record: BlobRecord | None,
+    tab: Tab | None,
+) -> Fidelity | None:
+    if tab_record is None or tab is None:
+        return None
+    key = (_source_identity(cache, item), tab_record.ref)
+    try:
+        return cache.rankings[key]
+    except KeyError:
+        ranking = fidelity(item.ir, tab)
+        cache.rankings[key] = ranking
+        return ranking
+
+
+def _cached_snapshot_rescore(
+    cache: _RescoreCache,
+    item: CorpusItem,
+    target_record: BlobRecord,
+    target: tuple[Note, ...],
+    tab_record: BlobRecord | None,
+    tab: Tab | None,
+    stored_infeasible: Infeasible | None,
+    exact_goal: ArrangeGoal,
+    profile: Profile,
+    *,
+    fallback_assisted: bool,
+    llm_generated: bool,
+    field: str,
+) -> _SnapshotRescore:
+    key = _SnapshotCacheKey(
+        _source_identity(cache, item),
+        target_record.ref,
+        None if tab_record is None else tab_record.ref,
+        _goal_identity(exact_goal),
+        profile.fingerprint,
+        fallback_assisted,
+        llm_generated,
+    )
+    existing = cache.snapshots.get(key)
+    if existing is not None:
+        solved = existing.solved.outcome
+        if isinstance(solved, Tab):
+            if tab != solved or stored_infeasible is not None:
+                _fail(f"{field}.solver", "stored solver result drifted")
+        elif tab is not None or stored_infeasible != solved:
+            _fail(f"{field}.solver", "stored solver result drifted")
+        return existing
+
+    solved = _cached_solved_target(
+        cache,
+        item,
+        target_record,
+        target,
+        exact_goal,
+        profile,
+    )
+    if isinstance(solved, Tab):
+        if tab != solved or stored_infeasible is not None:
+            _fail(f"{field}.solver", "stored solver result drifted")
+        if tab_record is None:  # pragma: no cover - ownership parser invariant
+            raise AssertionError("a solved tab requires its owned blob")
+        oracle = _cached_oracle(cache, tab_record, tab, item, profile)
+        solved_result = _SolvedTarget(
+            solved,
+            oracle,
+            tuple(value.violation_type for value in oracle.diagnostics),
+            oracle.verdict,
+        )
+    elif tab is not None or stored_infeasible != solved:
+        _fail(f"{field}.solver", "stored solver result drifted")
+    else:
+        solved_result = _SolvedTarget(solved, None, (solved.code.value,), None)
+    score = _cached_checkpoint_score(
+        cache,
+        item,
+        tab_record,
+        tab,
+        profile,
+        fallback_assisted=fallback_assisted,
+        llm_generated=llm_generated,
+        median_oracle=solved_result.median_oracle,
+    )
+    result = _SnapshotRescore(
+        solved_result,
+        score,
+        _cached_ranking(cache, item, tab_record, tab),
+    )
+    cache.snapshots[key] = result
+    return result
+
+
+def _cached_raw_source_context(
+    cache: _RescoreCache,
+    item: CorpusItem,
+    exact_goal: ArrangeGoal,
+    profile: Profile,
+) -> str:
+    key = (
+        _source_identity(cache, item),
+        _goal_identity(exact_goal),
+        profile.fingerprint,
+    )
+    try:
+        return cache.raw_source_contexts[key]
+    except KeyError:
+        context = build_raw_baseline_request(item.ir, exact_goal, profile).source_context_sha256
+        cache.raw_source_contexts[key] = context
+        return context
+
+
+def _cached_pure_target(
+    cache: _RescoreCache,
+    item: CorpusItem,
+    exact_goal: ArrangeGoal,
+    profile: Profile,
+) -> tuple[Note, ...]:
+    key = (
+        _source_identity(cache, item),
+        _goal_identity(exact_goal),
+        profile.fingerprint,
+    )
+    try:
+        return cache.pure_targets[key]
+    except KeyError:
+        target = propose_fingerstyle(
+            arrangement_solver_ir(item.ir),
+            exact_goal.tuning,
+            exact_goal.capo,
+            profile=profile,
+            tempo_bpm=exact_goal.tempo_bpm,
+        )
+        cache.pure_targets[key] = target
+        return target
 
 
 def _pure_row_bundle(
@@ -1084,18 +1544,22 @@ def _pure_row_bundle(
     outcome: PureSolverOutcome,
     goal: ArrangeGoal,
     profile: Profile,
+    cache: _RescoreCache | None = None,
 ) -> tuple[BenchmarkRow, tuple[BlobRecord, ...]]:
     if item.family_id is None or item.cluster_id is None:
         _fail("item", "planned family and cluster identities are required")
     source_blob = _source_blob(item)
     exact_goal = _goal_at_source_tempo(goal, item)
-    solver_ir = arrangement_solver_ir(item.ir)
-    target = propose_fingerstyle(
-        solver_ir,
-        exact_goal.tuning,
-        exact_goal.capo,
-        profile=profile,
-        tempo_bpm=exact_goal.tempo_bpm,
+    target = (
+        propose_fingerstyle(
+            arrangement_solver_ir(item.ir),
+            exact_goal.tuning,
+            exact_goal.capo,
+            profile=profile,
+            tempo_bpm=exact_goal.tempo_bpm,
+        )
+        if cache is None
+        else _cached_pure_target(cache, item, exact_goal, profile)
     )
     target_blob = build_blob_record(BlobKind.TARGET, _target_content(target))
     blobs = [source_blob, target_blob]
@@ -1103,6 +1567,25 @@ def _pure_row_bundle(
     if outcome.tab is not None:
         tab_blob = build_blob_record(BlobKind.TAB, _tab_content(outcome.tab))
         blobs.append(tab_blob)
+    score = (
+        _checkpoint_score(
+            item,
+            outcome.tab,
+            fallback_assisted=False,
+            llm_generated=False,
+            profile=profile,
+        )
+        if cache is None
+        else _cached_checkpoint_score(
+            cache,
+            item,
+            tab_blob,
+            outcome.tab,
+            profile,
+            fallback_assisted=False,
+            llm_generated=False,
+        )
+    )
     payload: dict[str, object] = {
         "baseline": {"baseline_id": "B2", "llm_calls": 0, "solver_calls": 1},
         "outcome": {
@@ -1111,15 +1594,7 @@ def _pure_row_bundle(
             "tab_blob_sha256": None if tab_blob is None else tab_blob.ref.sha256,
             "target_blob_sha256": target_blob.ref.sha256,
         },
-        "score": _score_to_dict(
-            _checkpoint_score(
-                item,
-                outcome.tab,
-                fallback_assisted=False,
-                llm_generated=False,
-                profile=profile,
-            )
-        ),
+        "score": _score_to_dict(score),
         "source": _source_to_dict(item, source_blob),
     }
     exact_blobs = _deduplicate_blobs(blobs)
@@ -1147,35 +1622,40 @@ def collection_to_row_bundle(collection: ExperimentCollection) -> ArtifactRowBun
     if type(collection) is not ExperimentCollection:
         _fail("collection", "must be an exact ExperimentCollection")
     joined = _joined_calls(collection.observations)
+    calls_by_unit = _index_joined_calls(joined)
     rows: list[BenchmarkRow] = []
     blobs: list[BlobRecord] = []
     for item in collection.items:
+        cache = _RescoreCache()
         pure_row, pure_blobs = _pure_row_bundle(
             collection.plan.run_id,
             item.item,
             item.pure_solver,
             collection.goal,
             collection.profile,
+            cache,
         )
         rows.append(pure_row)
         blobs.extend(pure_blobs)
         for trajectory in item.trajectories:
-            row, values = _candidate_row_bundle(
+            row, values = _candidate_row_bundle_from_calls(
                 collection.plan.run_id,
                 item.item,
                 trajectory,
-                joined,
+                calls_by_unit.get((item.item.item_id, trajectory.index, CollectionArm.AGENT), ()),
                 collection.profile,
+                cache,
             )
             rows.append(row)
             blobs.extend(values)
         for outcome in item.raw_outcomes:
-            row, values = _raw_row_bundle(
+            row, values = _raw_row_bundle_from_calls(
                 collection.plan.run_id,
                 item.item,
                 outcome,
-                joined,
+                calls_by_unit.get((item.item.item_id, outcome.sample_index, CollectionArm.RAW), ()),
                 collection.profile,
+                cache,
             )
             rows.append(row)
             blobs.extend(values)
@@ -1196,8 +1676,12 @@ def pure_outcome_to_row_bundle(
 
     if type(plan) is not ExperimentPlan or type(item) is not CorpusItem:
         _fail("pure_callback", "requires exact plan and item values")
-    planned = next((value for value in plan.items if value.item_id == item.item_id), None)
-    if planned is None or planned != item:
+    position = item.position
+    if (
+        type(position) is not int
+        or not 0 <= position < len(plan.items)
+        or plan.items[position] != item
+    ):
         _fail("pure_callback.item", "does not match the planned source snapshot")
     exact_profile = ensure_profile(profile)
     row, blobs = _pure_row_bundle(plan.run_id, item, outcome, goal, exact_profile)
@@ -1231,9 +1715,10 @@ def completed_unit_to_row_bundle(
 ) -> ArtifactRowBundle:
     """Build exactly one row from the just-completed schedule unit.
 
-    The unit's logical calls must be the complete contiguous suffix of the current
-    ledger.  This makes the callback safe for immediate unit commits without any
-    dependence on a later complete collection.
+    ``current_ledger`` may be the complete run ledger or an immutable suffix retaining
+    global call indices.  In either form, the unit's logical calls must be the complete
+    contiguous tail of the supplied ledger.  This makes the callback safe for immediate
+    unit commits without copying or joining earlier calls.
     """
 
     if type(plan) is not ExperimentPlan or type(completed) is not CompletedExperimentUnit:
@@ -1251,40 +1736,40 @@ def completed_unit_to_row_bundle(
         _fail("unit_callback.source_context_sha256", "does not bind the planned source")
     exact_profile = ensure_profile(profile)
     joined = _joined_calls(current_ledger)
+    calls_by_unit = _index_joined_calls(joined)
+    selected = calls_by_unit.get((unit.item_id, unit.candidate_index, unit.arm), ())
+    indices = tuple(value.intent.call_index for value in selected)
+    if not selected:
+        _fail(
+            "unit_callback.observations",
+            "unit calls must be the complete contiguous ledger suffix",
+        )
+    ledger_end = joined[-1].intent.call_index + 1
+    expected = tuple(range(ledger_end - len(selected), ledger_end))
+    if indices != expected:
+        _fail(
+            "unit_callback.observations",
+            "unit calls must be the complete contiguous ledger suffix",
+        )
     if unit.arm is CollectionArm.AGENT:
         if completed.trajectory is None:
             _fail("unit_callback.trajectory", "is missing")
-        selected = _candidate_calls(joined, unit.item_id, unit.candidate_index)
-        row, blobs = _candidate_row_bundle(
+        row, blobs = _candidate_row_bundle_from_calls(
             plan.run_id,
             item,
             completed.trajectory,
-            joined,
+            selected,
             exact_profile,
         )
     else:
         if completed.raw_outcome is None:
             _fail("unit_callback.raw_outcome", "is missing")
-        selected = tuple(
-            value
-            for value in joined
-            if value.intent.item_id == unit.item_id
-            and value.intent.candidate_index == unit.candidate_index
-            and value.intent.stage is CallStage.RAW
-        )
-        row, blobs = _raw_row_bundle(
+        row, blobs = _raw_row_bundle_from_calls(
             plan.run_id,
             item,
             completed.raw_outcome,
-            joined,
+            selected,
             exact_profile,
-        )
-    indices = tuple(value.intent.call_index for value in selected)
-    expected = tuple(range(len(joined) - len(selected), len(joined)))
-    if not selected or indices != expected:
-        _fail(
-            "unit_callback.observations",
-            "unit calls must be the complete contiguous ledger suffix",
         )
     return ArtifactRowBundle((row,), blobs)
 
@@ -1360,6 +1845,7 @@ def _parse_source(
     row: BenchmarkRow,
     item: CorpusItem,
     blobs: dict[tuple[BlobKind, str], BlobRecord],
+    cache: _RescoreCache,
     field: str,
 ) -> None:
     obj = _exact_dict(
@@ -1386,20 +1872,25 @@ def _parse_source(
         obj["notegraph_blob_sha256"],
         f"{field}.notegraph_blob_sha256",
     )
-    if notegraph_to_ir(record.content) != item.ir:
-        _fail(field, "notegraph blob does not match the planned source")
-    evidence = item.evidence.signature if item.evidence is not None else None
-    expected = {
-        "position": item.position,
-        "layer": item.layer,
-        "genre": item.genre,
-        "synthetic_complexity": item.synthetic_complexity,
-        "polyphony": item.polyphony,
-        "evidence_signature": evidence,
-        "notegraph_sha256": notegraph_sha256(item.ir),
-        "notegraph_blob_sha256": record.ref.sha256,
-        "tempo_bpm": item.ir.meta.tempo_bpm,
-    }
+    source = _source_identity(cache, item)
+    key = (source, record.ref)
+    expected = cache.source_metadata.get(key)
+    if expected is None:
+        if notegraph_to_ir(record.content) != item.ir:
+            _fail(field, "notegraph blob does not match the planned source")
+        evidence = item.evidence.signature if item.evidence is not None else None
+        expected = {
+            "position": item.position,
+            "layer": item.layer,
+            "genre": item.genre,
+            "synthetic_complexity": item.synthetic_complexity,
+            "polyphony": item.polyphony,
+            "evidence_signature": evidence,
+            "notegraph_sha256": source[1],
+            "notegraph_blob_sha256": record.ref.sha256,
+            "tempo_bpm": item.ir.meta.tempo_bpm,
+        }
+        cache.source_metadata[key] = expected
     if obj != expected:
         _fail(field, "metadata does not match the planned source")
 
@@ -1500,6 +1991,7 @@ def _snapshot_from_payload(
     goal: ArrangeGoal,
     profile: Profile,
     blobs: dict[tuple[BlobKind, str], BlobRecord],
+    cache: _RescoreCache,
     fallback_assisted: bool,
     llm_generated: bool,
     full: bool,
@@ -1528,9 +2020,10 @@ def _snapshot_from_payload(
         obj["target_blob_sha256"],
         f"{field}.target_blob_sha256",
     )
-    target = _parse_target(target_record.content, f"{field}.target")
+    target = _cached_target(cache, target_record, f"{field}.target")
     solver_kind, stored_infeasible = _parse_solver(obj["solver"], f"{field}.solver")
     tab: Tab | None = None
+    tab_record: BlobRecord | None = None
     if solver_kind == "tab":
         tab_record = _owned_blob(
             row,
@@ -1539,7 +2032,7 @@ def _snapshot_from_payload(
             obj["tab_blob_sha256"],
             f"{field}.tab_blob_sha256",
         )
-        tab = _parse_tab(tab_record.content, item, profile, f"{field}.tab")
+        tab = _cached_tab(cache, tab_record, item, profile, f"{field}.tab")
     elif obj["tab_blob_sha256"] is not None:
         _fail(f"{field}.tab_blob_sha256", "must be null for an infeasible solve")
     stored_score = _score_from_dict(obj["score"], f"{field}.score")
@@ -1560,47 +2053,28 @@ def _snapshot_from_payload(
         _fail(f"{field}.verdict", "is unsupported")
     if full:
         exact_goal = _goal_at_source_tempo(goal, item)
-        solved = solve_fingering(
-            target,
-            exact_goal.tuning,
-            exact_goal.capo,
-            profile,
-            tempo_bpm=exact_goal.tempo_bpm,
-            beats_per_bar=item.ir.meta.time_sig[0],
-        )
-        if isinstance(solved, Tab):
-            if tab != solved or stored_infeasible is not None:
-                _fail(f"{field}.solver", "stored solver result drifted")
-            oracle = check_playability(
-                solved,
-                profile,
-                tempo_bpm=item.ir.meta.tempo_bpm,
-                beats_per_bar=item.ir.meta.time_sig[0],
-            )
-            infeasible = None
-        else:
-            if tab is not None or solved != stored_infeasible:
-                _fail(f"{field}.solver", "stored solver result drifted")
-            oracle = None
-            infeasible = solved
-        actual_codes = (
-            [infeasible.code.value]
-            if infeasible is not None
-            else [value.violation_type for value in cast(OracleResult, oracle).diagnostics]
-        )
-        if diagnostics != actual_codes or verdict != (None if oracle is None else oracle.verdict):
-            _fail(field, "stored oracle values drifted")
-        actual_score = _checkpoint_score(
+        rescored = _cached_snapshot_rescore(
+            cache,
             item,
+            target_record,
+            target,
+            tab_record,
             tab,
+            stored_infeasible,
+            exact_goal,
+            profile,
             fallback_assisted=fallback_assisted,
             llm_generated=llm_generated,
-            profile=profile,
+            field=field,
         )
-        if stored_score != actual_score:
+        solved = rescored.solved
+        oracle = solved.median_oracle
+        infeasible = solved.outcome if isinstance(solved.outcome, Infeasible) else None
+        if diagnostics != list(solved.diagnostic_codes) or verdict != solved.verdict:
+            _fail(field, "stored oracle values drifted")
+        if stored_score != rescored.score:
             _fail(f"{field}.score", "stored score drifted")
-        actual_ranking = None if tab is None else fidelity(item.ir, tab)
-        if ranking != actual_ranking:
+        if ranking != rescored.ranking:
             _fail(f"{field}.ranking_fidelity", "stored ranking fidelity drifted")
     else:
         oracle = _stored_oracle(stored_score, profile, verdict)
@@ -1784,6 +2258,8 @@ def _candidate_from_row(
     row: BenchmarkRow,
     item: CorpusItem,
     blobs: dict[tuple[BlobKind, str], BlobRecord],
+    cache: _RescoreCache,
+    expected_proposal_tokens: int,
     *,
     full: bool,
 ) -> RescoredRow:
@@ -1792,7 +2268,7 @@ def _candidate_from_row(
         "candidate",
         frozenset({"source", "proposal", "initial", "terminal", "critic", "work"}),
     )
-    _parse_source(payload["source"], row, item, blobs, "candidate.source")
+    _parse_source(payload["source"], row, item, blobs, cache, "candidate.source")
     proposal_obj = _exact_dict(
         payload["proposal"],
         "candidate.proposal",
@@ -1822,6 +2298,7 @@ def _candidate_from_row(
         goal=goal,
         profile=profile,
         blobs=blobs,
+        cache=cache,
         fallback_assisted=fallback,
         llm_generated=llm_generated,
         full=full,
@@ -1834,6 +2311,7 @@ def _candidate_from_row(
         goal=goal,
         profile=profile,
         blobs=blobs,
+        cache=cache,
         fallback_assisted=fallback,
         llm_generated=llm_generated,
         full=full,
@@ -1883,12 +2361,11 @@ def _candidate_from_row(
             critic_status,
             _integer(critic_obj["llm_calls"], "candidate.critic.llm_calls", minimum=1),
         )
-    budget = next(value for value in plan.matched_budgets if value.item_id == item.item_id)
     work = _parse_work(
         payload["work"],
         row,
         "candidate.work",
-        expected_proposal_tokens=budget.proposal_tokens,
+        expected_proposal_tokens=expected_proposal_tokens,
     )
     trace_refs = [value for value in row.blob_refs if value.kind is BlobKind.TRACE]
     if len(trace_refs) != 1:
@@ -1969,12 +2446,13 @@ def _candidate_from_row(
 
 
 def _raw_from_row(
-    plan: ExperimentPlan,
     goal: ArrangeGoal,
     profile: Profile,
     row: BenchmarkRow,
     item: CorpusItem,
     blobs: dict[tuple[BlobKind, str], BlobRecord],
+    cache: _RescoreCache,
+    expected_proposal_tokens: int,
     *,
     full: bool,
 ) -> RescoredRow:
@@ -1983,7 +2461,7 @@ def _raw_from_row(
         "raw",
         frozenset({"source", "outcome", "score"}),
     )
-    _parse_source(payload["source"], row, item, blobs, "raw.source")
+    _parse_source(payload["source"], row, item, blobs, cache, "raw.source")
     obj = _exact_dict(
         payload["outcome"],
         "raw.outcome",
@@ -2018,11 +2496,8 @@ def _raw_from_row(
             )
         except ValueError:
             _fail("raw.outcome.call_failure_code", "is unsupported")
-    expected_source_context = build_raw_baseline_request(
-        item.ir,
-        _goal_at_source_tempo(goal, item),
-        profile,
-    ).source_context_sha256
+    exact_goal = _goal_at_source_tempo(goal, item)
+    expected_source_context = _cached_raw_source_context(cache, item, exact_goal, profile)
     stored_source_context = _sha(obj["source_context_sha256"], "raw.outcome.source_context_sha256")
     if stored_source_context != expected_source_context:
         _fail(
@@ -2030,15 +2505,16 @@ def _raw_from_row(
             "does not bind the frozen source-tempo raw request",
         )
     tab: Tab | None = None
+    tab_record: BlobRecord | None = None
     if obj["tab_blob_sha256"] is not None:
-        record = _owned_blob(
+        tab_record = _owned_blob(
             row,
             blobs,
             BlobKind.TAB,
             obj["tab_blob_sha256"],
             "raw.outcome.tab_blob_sha256",
         )
-        tab = _parse_tab(record.content, item, profile, "raw.tab")
+        tab = _cached_tab(cache, tab_record, item, profile, "raw.tab")
     stored_score = _score_from_dict(payload["score"], "raw.score")
     _validate_stored_score_contract(
         stored_score,
@@ -2049,12 +2525,14 @@ def _raw_from_row(
         llm_generated=status is RawStatus.VALID_TAB,
     )
     if full:
-        actual = _checkpoint_score(
+        actual = _cached_checkpoint_score(
+            cache,
             item,
+            tab_record,
             tab,
+            profile,
             fallback_assisted=False,
             llm_generated=status is RawStatus.VALID_TAB,
-            profile=profile,
         )
         if stored_score != actual:
             _fail("raw.score", "stored score drifted")
@@ -2102,14 +2580,13 @@ def _raw_from_row(
         or _integer(call["stage_ordinal"], "raw.outcome.call.stage_ordinal") != 0
     ):
         _fail("raw.outcome.call", "must identify the raw stage at ordinal zero")
-    budget = next(value for value in plan.matched_budgets if value.item_id == item.item_id)
     if (
         _integer(
             call["requested_output_tokens"],
             "raw.outcome.call.requested_output_tokens",
             minimum=1,
         )
-        != budget.proposal_tokens
+        != expected_proposal_tokens
     ):
         _fail("raw.outcome.call.requested_output_tokens", "does not match the frozen policy")
     _integer(
@@ -2177,6 +2654,7 @@ def _pure_from_row(
     row: BenchmarkRow,
     item: CorpusItem,
     blobs: dict[tuple[BlobKind, str], BlobRecord],
+    cache: _RescoreCache,
     *,
     full: bool,
 ) -> RescoredRow:
@@ -2185,7 +2663,7 @@ def _pure_from_row(
         "pure_solver",
         frozenset({"source", "outcome", "score", "baseline"}),
     )
-    _parse_source(payload["source"], row, item, blobs, "pure_solver.source")
+    _parse_source(payload["source"], row, item, blobs, cache, "pure_solver.source")
     baseline = _exact_dict(
         payload["baseline"],
         "pure_solver.baseline",
@@ -2205,17 +2683,18 @@ def _pure_from_row(
         obj["target_blob_sha256"],
         "pure_solver.outcome.target_blob_sha256",
     )
-    target = _parse_target(target_record.content, "pure_solver.target")
+    target = _cached_target(cache, target_record, "pure_solver.target")
     tab: Tab | None = None
+    tab_record: BlobRecord | None = None
     if obj["tab_blob_sha256"] is not None:
-        record = _owned_blob(
+        tab_record = _owned_blob(
             row,
             blobs,
             BlobKind.TAB,
             obj["tab_blob_sha256"],
             "pure_solver.outcome.tab_blob_sha256",
         )
-        tab = _parse_tab(record.content, item, profile, "pure_solver.tab")
+        tab = _cached_tab(cache, tab_record, item, profile, "pure_solver.tab")
     infeasible = _parse_infeasible(
         obj["infeasible"], "pure_solver.outcome.infeasible", nullable=True
     )
@@ -2235,35 +2714,36 @@ def _pure_from_row(
     )
     if full:
         exact_goal = _goal_at_source_tempo(goal, item)
-        solver_ir = arrangement_solver_ir(item.ir)
-        expected_target = propose_fingerstyle(
-            solver_ir,
-            exact_goal.tuning,
-            exact_goal.capo,
-            profile=profile,
-            tempo_bpm=exact_goal.tempo_bpm,
-        )
+        expected_target = _cached_pure_target(cache, item, exact_goal, profile)
         if target != expected_target:
             _fail("pure_solver.target", "stored deterministic target drifted")
-        solved = solve_fingering(
+        solved = _cached_solved_target(
+            cache,
+            item,
+            target_record,
             expected_target,
-            exact_goal.tuning,
-            exact_goal.capo,
+            exact_goal,
             profile,
-            tempo_bpm=exact_goal.tempo_bpm,
-            beats_per_bar=item.ir.meta.time_sig[0],
         )
         if isinstance(solved, Tab):
             if tab != solved or infeasible is not None:
                 _fail("pure_solver.outcome", "stored solver result drifted")
+            if tab_record is None:  # pragma: no cover - ownership parser invariant
+                raise AssertionError("a solved tab requires its owned blob")
+            median_oracle = _cached_oracle(cache, tab_record, tab, item, profile)
         elif tab is not None or infeasible != solved:
             _fail("pure_solver.outcome", "stored solver result drifted")
-        actual = _checkpoint_score(
+        else:
+            median_oracle = None
+        actual = _cached_checkpoint_score(
+            cache,
             item,
+            tab_record,
             tab,
+            profile,
             fallback_assisted=False,
             llm_generated=False,
-            profile=profile,
+            median_oracle=median_oracle,
         )
         if stored_score != actual:
             _fail("pure_solver.score", "stored score drifted")
@@ -2291,25 +2771,67 @@ def rescore_row_bundle(
         _fail("mode", "must be an exact ReplayMode")
     ordered_rows, ordered_blobs = _normalized_inputs(plan, rows, blobs)
     items = _item_index(plan)
+    proposal_tokens_by_item = {
+        value.item_id: value.proposal_tokens for value in plan.matched_budgets
+    }
     index = _blob_index(ordered_blobs)
     rescored: list[RescoredRow] = []
     full = mode is ReplayMode.FULL_RESCORE
+    current_item_id: str | None = None
+    cache = _RescoreCache()
     for row in ordered_rows:
+        if row.key.item_id != current_item_id:
+            current_item_id = row.key.item_id
+            cache = _RescoreCache()
         item = items.get(row.key.item_id)
         if item is None:
             _fail("row.key.item_id", "is not present in the plan")
+        expected_proposal_tokens = proposal_tokens_by_item.get(row.key.item_id)
+        if expected_proposal_tokens is None:
+            _fail("row.key.item_id", "has no frozen matched budget")
         _validate_row_identity(row, item)
         for ref in row.blob_refs:
             if (ref.kind, ref.sha256) not in index:
                 _fail("row.blob_refs", "contains an unavailable blob")
         if row.key.row_type is RowType.CANDIDATE:
             rescored.append(
-                _candidate_from_row(plan, goal, exact_profile, row, item, index, full=full)
+                _candidate_from_row(
+                    plan,
+                    goal,
+                    exact_profile,
+                    row,
+                    item,
+                    index,
+                    cache,
+                    expected_proposal_tokens,
+                    full=full,
+                )
             )
         elif row.key.row_type is RowType.RAW:
-            rescored.append(_raw_from_row(plan, goal, exact_profile, row, item, index, full=full))
+            rescored.append(
+                _raw_from_row(
+                    goal,
+                    exact_profile,
+                    row,
+                    item,
+                    index,
+                    cache,
+                    expected_proposal_tokens,
+                    full=full,
+                )
+            )
         else:
-            rescored.append(_pure_from_row(goal, exact_profile, row, item, index, full=full))
+            rescored.append(
+                _pure_from_row(
+                    goal,
+                    exact_profile,
+                    row,
+                    item,
+                    index,
+                    cache,
+                    full=full,
+                )
+            )
     observation_keys = tuple(key for row in ordered_rows for key in row.observation_keys)
     if len(set(observation_keys)) != len(observation_keys):
         _fail("rows.observation_keys", "one logical call is owned by multiple rows")
@@ -2355,6 +2877,9 @@ def resume_state_from_rows(
         (value.row.key.row_type, value.row.key.item_id, value.row.key.candidate_index): value
         for value in rescored.rows
     }
+    source_contexts = {
+        item.item_id: arrangement_source_context_sha256(item.ir) for item in plan.items
+    }
     pure_slots: list[CompletedPureSolver | None] = []
     pure_gap = False
     for item in plan.items:
@@ -2371,7 +2896,7 @@ def resume_state_from_rows(
         pure_slots.append(
             CompletedPureSolver(
                 item.item_id,
-                arrangement_source_context_sha256(item.ir),
+                source_contexts[item.item_id],
                 pure_outcome,
             )
         )
@@ -2408,7 +2933,7 @@ def resume_state_from_rows(
         completed.append(
             CompletedExperimentUnit(
                 unit,
-                arrangement_source_context_sha256(plan.items[unit.item_position].ir),
+                source_contexts[unit.item_id],
                 trajectory=value.trajectory,
                 raw_outcome=value.raw_outcome,
             )
@@ -3056,10 +3581,9 @@ def _cost_summary_wire(
         if any(value is None for value in elapsed_values)
         else divided(sum(cast(int, value) for value in elapsed_values))
     )
-    complete_usage = (
-        all(cast(int, calls[key]["provider_attempts"]) == 1 for key in selected)
-        and not any(value is None for value in provider_usage.values())
-    )
+    complete_usage = all(
+        cast(int, calls[key]["provider_attempts"]) == 1 for key in selected
+    ) and not any(value is None for value in provider_usage.values())
     complete_provider_tokens = (
         None
         if not complete_usage

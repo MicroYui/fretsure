@@ -558,3 +558,243 @@ distributions retained the 114-wheel / 320-sdist content audit and passed all se
 clean-install groups. These gates changed no frozen experimental input or schema and
 made no model call. Attempt-003 must bind the subsequent clean pushed execution commit,
 not either terminal predecessor.
+
+## 2026-07-18 — Task 9 attempt 003 throughput stop and operational amendment
+
+Fresh attempt-003 used pre-call SHA-256
+`fc3091ba8684b8d08304a3752f0662c9c82e951ee62db40131ed772b1ee65bad`, bound to clean
+pushed execution commit `4dd7be9880dcccf2744d05e3617d6411d60ab4de`. After 503 local
+pure-solver rows, the live model segment showed an operational defect: the client used
+a hard 30-second request timeout, while long raw/proposal generations regularly needed
+more time. A non-content WAL snapshot showed every fully failed call taking about 91.5
+seconds, exactly matching three 30-second attempts plus the frozen 0.5/1.0-second
+backoff. Repair calls were 48/48 successful in that snapshot, while raw calls were 0/8;
+continuing would both take roughly 13 days at the observed rate and confound model
+outcomes with infrastructure timeout failures.
+
+The run was therefore deliberately interrupted rather than allowed to spend days
+collecting systematically timed-out rows. It is terminal `INCOMPLETE` with reason
+`interrupted_with_unowned_observation`, `523/10,563` committed rows, 78 logical calls,
+and 113 provider attempts. Sixty-two calls succeeded with complete usage and exact
+returned model `gpt-5.6-sol`; 16 calls ended `DELEGATE_FAILED`. The 113 attempts comprise
+62 successes and 51 failures with unavailable usage. Reported usage is 33,068 input,
+21,062 output, 25,085 cache-creation, and 2,263 cache-read tokens. Known cost is
+`$0.955113`; charging every usage-missing attempt at the formal `$7.036000` ceiling gives
+a tight upper bound of `$359.791113`.
+
+Attempts 001–003 now have cumulative known/tight cost
+`$2.130022 / $804.234022`. Adding one further complete formal attempt's unchanged
+`$1,167,905.640000` price maximum gives a cumulative audit upper bound of
+`$1,168,709.874022`. The amount remains an audit bound, not a proxy pre-consumption
+gate.
+
+Attempt-003's abort receipt, raw WAL, receipt-bound WAL, and config SHA-256 values are,
+respectively:
+
+- `fee645785388b9455b30c5ac8b3c84d560bca230a9933cd8d7e47239cebc2799`;
+- `ac370c1bc9539ff82d372cd32fa0e4ff9566c6ba5af1c4ad9a97c395c7292535`;
+- `fb94d3e00d886dd52b41fa8b76ad3f78b28ef6510510f7e0c4602071af311c71`;
+- `b01f16850154eacd0a96db326a710df63cc0a36b2cd36282a8eb6efc97bee4d7`.
+
+All 382 WAL events passed canonical encoding, sequence, hash-chain, call pairing, and
+attempt pairing checks, with no open intent or attempt. No canonical directory or
+private-observations artifact exists. No prompt, response, note, or staging content was
+inspected or admitted to documentation. Attempt-003 must never be resumed or
+overwritten.
+
+The corrective path preserves all 10,563 rows, ten samples per arm, prompts, model,
+`xhigh` reasoning quality, repair/critic behavior, schedule, seeds, pricing, and
+statistical estimands. A versioned operational amendment instead raises the formal
+request timeout to 300 seconds. An analysis-excluded throughput pilot advances through
+`2 → 4 → 8` in-flight units and records success rate, retry rate, provider-latency
+P50/P95, and completed-unit/call throughput. One eight-unit block per level is smoke
+evidence that may reject but never approve eight-way execution. Freezing `8` requires at
+least eight complete blocks (64 units) at both `4` and `8`, an independent confirmation,
+8/4 unit throughput at least 1.35, call throughput at least 1.25, tightly bounded
+reliability/tail-latency degradation, and no new timeout or integrity failure; missing or
+boundary evidence freezes `4`. The current four-unit preregistration must be regenerated
+and rebound if the confirmation selects eight.
+
+The separate `task9_throughput_pilot.py` runner uses the same per-lane durable WAL and
+completed-unit boundary, a 300-second timeout, and one distinct agent/raw client pair per
+worker. Stub summaries and summaries with different execution Git, analysis, lock,
+pricing, model, timeout, or corpus bindings cannot enter a comparison; every successful
+live call must carry exact provider/model evidence. A graceful SIGINT during setup or
+active work leaves a clean resumable root, while a hard kill with an in-flight request is
+explicitly fail-closed. Each live block still requires the exact `513,232,896`
+micro-USD mechanical spend confirmation; this is an audit ceiling, not expected spend.
+
+Before the formal gate opens, observed pilot rates will yield optimistic, median, and
+conservative completion-time estimates. During collection, the estimate will be updated
+from actual durable completions after 30 minutes, near each additional 5% of scheduled
+units, and whenever throughput changes materially.
+The append-only operator log uses canonical `benchmark-progress@0.1.0` JSON lines and
+reports the durable row count out of 10,563, current-process/recent throughput, stalled
+state, and all three ETA estimates; these records never enter analysis artifacts.
+
+Each unit retains a sequential proposal→repair→critic path and its own durable pre-call
+WAL; admission and canonical merge remain in frozen schedule order, while network
+completion order is explicitly non-semantic. A completed unit is durably checkpointed
+before it becomes resumable. Graceful interruption stops new admissions, drains already
+started units, persists their checkpoints, and resumes from the next unit after the
+verified durable prefix. No recovery is promised for a provider request interrupted
+halfway: an admitted unit without durable completion, or a WAL with an open attempt,
+fails closed for operator audit rather than guessing whether the request completed.
+The formal invocation runs detached from the interactive Codex session and writes its
+PID plus append-only operator log beside the attempt artifacts, so a UI or client
+connection loss does not terminate collection.
+On terminal concurrent abort, a canonical sidecar binds the coordinator plus every
+admitted lane WAL; its raw SHA-256 is embedded in the abort receipt reason so usage from
+out-of-order or incomplete lanes remains auditable.
+
+Before the throughput pilot, four prefix-dependent hot paths were linearized: WAL count
+checks no longer copy the full history, unit commits validate only the new call suffix,
+scheduled-unit membership is constant-time, and final row materialization indexes calls
+once. Operational pre-call scalar bindings are parsed once rather than repeatedly
+decoding the approximately 4 MB declaration. A local 1,000-append measurement averaged
+about 0.022 ms per `fsync`, so the remaining linear duplicate-WAL sync cost is small
+relative to provider latency and was not replaced with a more complex batching protocol.
+Offline shared-view cost accounting also groups calls by item once instead of rescanning
+the full ledger for every item, removing the last observed `O(items × calls)` report path.
+
+The historical 30-second Task 8 and Task 9 artifacts remain byte-immutable. All
+timeout/concurrency pilot rows are excluded from formal analysis. Attempts 001–003 are
+terminal and must never be resumed or overwritten; the next collection is fresh
+attempt-004. Only after the amended runner, preregistration, budget bindings,
+crash/resume tests, throughput pilot, and full release gates are pushed may it start.
+
+## 2026-07-19 — Full-rescore linearization and detached recovery gate
+
+Profiling the original full-rescore path on 16 representative items took 206.43 seconds
+and showed 336 solver calls and 336 NoteGraph parses: 21 repeated executions per item for
+the same stub target. The final report implementation memoizes only pure deterministic
+computations within one item: source/target/tab parsing, solver results, all three profile
+oracles, checkpoint scores, fidelity, raw request bindings, and pure targets. Every row
+still independently validates blob ownership plus stored solver, infeasible, diagnostics,
+verdict, score, and ranking fields. The cache resets when the canonical row order advances
+to the next item, so peak parsed-tab retention is bounded by one item's rows rather than
+the full 10,563-row run. FAST_REAGGREGATE is regression-locked against solver, proposal,
+oracle, faithfulness, and fidelity execution. Report fixture wire bytes remain unchanged.
+
+The ordinary full-scale stub gate then ran twice through an external detached `screen`
+supervisor using the direct `.venv/bin/fretsure-bench` entry point. Run A received one
+`SIGINT` at 167 durable scheduled units, stopped admission, drained to 212, exited, and
+resumed from the same output directory. It completed all 10,563 rows in 30:05 including
+the interruption and resume. Run B ran continuously and completed in 27:00. Exact file
+timestamps put collection/finalization at 25:30 / 4:35 for A and 22:40 / 4:20 for B.
+Both receipts are `COMPLETE` with 15,090 observed calls. `diff -rq` reported no difference
+across the seven canonical files; their SHA-256 values are:
+
+- blobs: `8f245bec0b8af39d7b6c87e64de07a457d0f2054270f28c5cc03c095f98e5610`;
+- config: `0c4ff35269e73aa9f79ab948f05fb0c869e06283d077685b9e685d04622f5414`;
+- observations: `8dbcf25e87b6745cb397d1e6db69aadd9ef8cfbc9a374d330aa1641ba583c14e`;
+- receipt: `598ee4d364b718081a8c8cae1b7c71acc76a40927d4aa0c64ca675af0a2464ac`;
+- report JSON: `98553b148528095ee75dbba7bd7fd5179ea86dd653fa85992faf531967048716`;
+- report Markdown: `412d744f1454da567fb81d371279891b7002ce8045a023e92eca70039894501c`;
+- rows: `cff6de86e2acfe5dfdfa196ced2b2e4e14cae2233babee1c2611a361852f658f`.
+
+The operator command now explicitly records the PID of the direct benchmark process.
+An `exec uv run ...` smoke proved unsuitable on this host because the recorded `uv`
+supervisor PID did not forward `SIGINT` to its benchmark child. Recovery-related suites
+passed 24/24, the legacy resume test 1/1, and execution-provenance tests 10/10. No runtime
+Git or subprocess call exists. The full stub gate made no provider call, inspected no
+private prompt/response or staging payload, and changed no frontend surface.
+
+### Subsequent wall-reservation and hard-deadline amendment
+
+Final review found that the original unit reservation equalled only three timeout values
+plus retry backoff. Recorded call elapsed time also contains durable WAL and timeout-delivery
+overhead, so a three-timeout result could exceed its lane ceiling after its terminal record.
+The operational preregistration now binds `10.0` seconds of recorded overhead per attempt.
+Its timeout-only full envelope remains `49,879,995,000` milliseconds; the combined
+reservation is `51,539,895` seconds, below the unchanged `51,840,000`-second global ceiling.
+Legacy preregistration and budget bytes remain unchanged.
+
+HTTPX inactivity timeouts were also not a whole-request bound: a response could keep each
+read alive while trickling beyond 300 seconds. The loopback transport now carries one
+absolute deadline across pool wait, connect, TLS, write, read, and response streaming. A
+daemon watchdog closes only the active expired socket; three retries and attempt WAL hooks
+remain unchanged, and the same client can open a healthy connection afterward. Offline
+loopback tests covered slow chunks, slow writes, pool waiting, stalled TLS, healthy HTTPS,
+and 200 deadline timers without thread leakage. The direct `httpcore` dependency is pinned
+to `>=1.0.9,<1.1`. Formal/pilot launch uses numeric loopback rather than `localhost` so
+name resolution cannot sit outside the bound.
+
+These changes produced operational preregistration SHA-256
+`df7eeee61155c35e5344a61f896e1646ef38afa992cf1d3a2734a843c57cc40a` and operational
+budget SHA-256 `0892feb6d4a4b6ed24b916f9bc140867f81f3de34cb4207a3dac4d7643852fd5`.
+They do not change model, prompt, corpus, schedule, statistical estimands, or spend. A later
+gate audit also established that the preceding `fretsure-bench --stub --prereg` command uses
+the legacy sequential stub path. Its hashes remain full-rescore, ordinary-resume,
+performance, and byte-determinism evidence, but not evidence for the four-lane coordinator.
+The new provider-free `task9_operational_stub_gate.py` keeps the context in stub mode while
+driving the production coordinator across the complete schedule; it cannot construct a proxy
+client. Final acceptance therefore has two explicit A/B gates: ordinary full-stub report
+determinism and operational WAL/READY/admission-drain recovery.
+
+The first operational-gate dry run then exposed one more gate-only nondeterminism: concurrent
+stub observations inherited the live monotonic clock, so elapsed microseconds could perturb
+the canonical receipt. Operational workers now use the existing zero clock only when the
+context remains `stub=True`; formal live observations continue to record real elapsed time.
+A two-run coordinator regression locks byte-identical canonical artifacts, and the new gate
+script is an exact required sdist entry with an omission regression.
+
+The same audit found a late-SIGINT edge: a signal arriving after schedule completion could
+allow canonical publication and then turn the successful CLI exit into status 130. Normal
+completion now remains authoritative once terminal publication finishes; signals observed
+during setup or collection are still consumed at the existing durable boundaries. Operator
+instructions check for a terminal `COMPLETE` receipt before deciding to resume. Formal and
+pilot default client creation also mechanically rejects `localhost`; only numeric loopback
+can enter the whole-attempt deadline path.
+
+### Final amended ordinary and operational gates
+
+The final ordinary full-stub pair used the amended preregistration and each survived one
+clean interruption plus in-place resume. A completed in 28:22 wall time and B in 35:59,
+including B's longer operator pause. Both receipts are `COMPLETE` with 10,563 rows and
+15,090 observed calls. All seven canonical files are byte-identical; the internal report
+SHA-256 is `9fccefa8f62403f23f1518c1bc316af332bacac682a00afd69b351a99044c5fd`.
+
+The final provider-free operational pair then exercised the production four-lane
+coordinator over all 10,060 scheduled units. Run A received its only `SIGINT` at 284
+admitted units with one apparent in-flight unit. Admission stopped, the unit drained in
+under one second, and the boundary stabilized at 284 lane artifacts, 284 READY units, 568
+coordinator records, no temporary artifact, and no open handle. The same directory resumed
+25 seconds later and finished in 30:12 total wall time. Uninterrupted B finished in 27:24.
+Both are `COMPLETE` with 10,563 rows, 15,090 calls, 10,060 READY lane artifacts, 20,120
+coordinator records, no reason code, and byte-identical five-file canonical directories.
+
+The final shared SHA-256 values are:
+
+- blobs: `8f245bec0b8af39d7b6c87e64de07a457d0f2054270f28c5cc03c095f98e5610`;
+- config: `2cdb96b17eff0f41673dc3189427c4d2b6be4b47264d847e704bb42012f4078d`;
+- observations: `8dbcf25e87b6745cb397d1e6db69aadd9ef8cfbc9a374d330aa1641ba583c14e`;
+- receipt: `223c9f07593a75f15a5df1b1d457cb20ff7bae1624ec6a76b3c8c9fb6658a39e`;
+- rows: `cff6de86e2acfe5dfdfa196ced2b2e4e14cae2233babee1c2611a361852f658f`.
+
+The ordinary report-only additions are report JSON
+`8c9e55ae829f84a603a733d2b92347d281ffab5ab22316dfbb38e9af18a4eee8` and report
+Markdown `0787de0645789a2ba72d36e7a21adb6dfd8034b400fffb389af55e3f5db6566f`.
+No provider call was possible, no private payload or staging content was inspected, and no
+frontend surface changed.
+
+The first post-gate strict-mypy pass caught that a compact conditional expression would pass
+`None` as the live observation clock even though only the stub branch had been exercised by
+the full-scale gate. The final implementation branches explicitly: operational stub workers
+pass the zero clock, while live workers omit the argument and retain `ObservingLLM`'s original
+monotonic default. Strict mypy and a live-like out-of-order coordinator regression pass; the
+stub behavior and therefore the completed gate bytes are unchanged.
+
+### Final provider-free release gates
+
+The final offline suite passed `2599` tests with `8` integration tests deselected and the
+existing Starlette/httpx2 migration warning in 1393.94 seconds. A separate environment with
+the proxy URL and token removed selected the integration boundary: all `8` tests skipped as
+designed, with `2599` deselected and no provider call. Ruff, strict mypy over all 96 source
+files and the five release scripts, lock/preregistration generation checks, all 37 Markdown
+link targets, and whitespace integrity passed.
+
+The rebuilt 0.6.0 wheel and sdist passed the exact content audit with `116` wheel entries and
+`331` sdist entries. The isolated clean-wheel matrix passed core replay, benchmark,
+MusicXML, MIDI, score, service, and MCP groups. These gates made no provider call, inspected
+no private prompt/response or staging payload, and changed no frontend surface.

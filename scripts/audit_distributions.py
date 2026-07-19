@@ -19,11 +19,12 @@ DIST = ROOT / "dist"
 PACKAGE_INIT = ROOT / "src" / "fretsure" / "__init__.py"
 SOURCE_CENSUS = ROOT / "data" / "benchmark" / "source-census.json"
 SOURCE_CACHE = ROOT / "data" / "benchmark" / "sources"
-PREREGISTRATION = ROOT / "docs" / "experiments" / "2026-07-17-benchmark-v2-prereg.json"
-BUDGET = ROOT / "docs" / "experiments" / "2026-07-17-benchmark-v2-budget.md"
+PREREGISTRATION = ROOT / "docs" / "experiments" / "2026-07-18-benchmark-v2-operational-prereg.json"
+BUDGET = ROOT / "docs" / "experiments" / "2026-07-18-benchmark-v2-operational-budget.md"
 
 BENCHMARK_REQUIREMENTS = (
     "anthropic>=0.40",
+    "httpcore>=1.0.9,<1.1",
     "httpx>=0.28,<0.29",
     "defusedxml>=0.7.1,<1",
     "music21==10.5.0",
@@ -32,6 +33,7 @@ BENCHMARK_WHEEL_REQUIREMENTS = frozenset(
     {
         "anthropic>=0.40; extra == 'benchmark'",
         "defusedxml<1,>=0.7.1; extra == 'benchmark'",
+        "httpcore<1.1,>=1.0.9; extra == 'benchmark'",
         "httpx<0.29,>=0.28; extra == 'benchmark'",
         "music21==10.5.0; extra == 'benchmark'",
     }
@@ -95,6 +97,8 @@ SDIST_EXACT_FILES = (
     "data/benchmark/source-census.json",
     "docs/experiments/2026-07-17-benchmark-v2-prereg.json",
     "docs/experiments/2026-07-17-benchmark-v2-budget.md",
+    "docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json",
+    "docs/experiments/2026-07-18-benchmark-v2-operational-budget.md",
     "docs/experiments/2026-07-18-benchmark-v2-pilot-spec.json",
     "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-source.json",
     "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract.json",
@@ -106,6 +110,8 @@ SDIST_EXACT_FILES = (
     "scripts/build_benchmark_precall.py",
     "scripts/task8_budget_gate.py",
     "scripts/task8_pilot.py",
+    "scripts/task9_operational_stub_gate.py",
+    "scripts/task9_throughput_pilot.py",
     "scripts/audit_distributions.py",
     "scripts/smoke_distributions.py",
     "docs/superpowers/plans/2026-07-17-midi-input.md",
@@ -144,7 +150,7 @@ def _validate_project_metadata(metadata: object) -> str:
     if type(version) is not str or version != _package_version():
         raise ValueError("pyproject and fretsure.__version__ are inconsistent")
     if benchmark != list(BENCHMARK_REQUIREMENTS):
-        raise ValueError("pyproject benchmark extra is not the frozen four-dependency set")
+        raise ValueError("pyproject benchmark extra is not the frozen five-dependency set")
     return version
 
 
@@ -266,9 +272,7 @@ def _audit_wheel(path: Path, *, expected_version: str) -> int:
         names = {info.filename for info in infos}
         _assert_safe(names, artifact=path.name)
         runtime_infos = [
-            info
-            for info in infos
-            if not info.is_dir() and info.filename.startswith("fretsure/")
+            info for info in infos if not info.is_dir() and info.filename.startswith("fretsure/")
         ]
         wheel_runtime = {info.filename: info for info in runtime_infos}
         workspace_runtime = _workspace_runtime_files()
@@ -305,16 +309,13 @@ def _audit_wheel(path: Path, *, expected_version: str) -> int:
         _require_suffix(names, suffix, artifact=path.name)
     for extension in (".js", ".css", ".woff2"):
         if not any(
-            "fretsure/web_static/assets/" in name and name.endswith(extension)
-            for name in names
+            "fretsure/web_static/assets/" in name and name.endswith(extension) for name in names
         ):
             raise ValueError(f"{path.name}: built web asset {extension} is missing")
     return len(names)
 
 
-def _matching_members(
-    members: list[tarfile.TarInfo], relative: str
-) -> list[tarfile.TarInfo]:
+def _matching_members(members: list[tarfile.TarInfo], relative: str) -> list[tarfile.TarInfo]:
     return [
         member
         for member in members

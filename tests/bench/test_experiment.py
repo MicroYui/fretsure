@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import replace
 from fractions import Fraction as F
+from typing import cast
 
 import pytest
 
@@ -15,7 +16,10 @@ from fretsure.agent.arranger import (
     arrangement_source_context_sha256,
 )
 from fretsure.agent.critic import CriticStatus
-from fretsure.bench.baselines import OPTIONAL_BASELINE_AVAILABILITY
+from fretsure.bench.baselines import (
+    OPTIONAL_BASELINE_AVAILABILITY,
+    build_raw_baseline_request,
+)
 from fretsure.bench.corpus import (
     CorpusItem,
     CorpusProvenance,
@@ -39,14 +43,23 @@ from fretsure.bench.experiment import (
     ExperimentPlan,
     ExperimentResumeState,
     ObservationLedger,
+    ScheduledUnit,
+    assemble_experiment_collection,
     derive_shared_views,
+    execute_scheduled_unit,
     item_pair_id,
     match_budget_prefix,
     preflight_experiment,
     run_experiment,
     sample_pair_id,
 )
-from fretsure.bench.observe import CallStage, InMemoryObservationSink
+from fretsure.bench.observe import (
+    CallIntent,
+    CallSequence,
+    CallStage,
+    InMemoryObservationSink,
+    ObservingLLM,
+)
 from fretsure.ir import Meta, MusicIR, Note
 from fretsure.llm.client import FAKE_LLM_MODEL_ID, FakeLLM, ProxyCallMetadata
 from fretsure.metrics.fidelity import FaithfulnessGate
@@ -510,6 +523,330 @@ def test_collection_follows_schedule_and_uses_one_pool_and_one_pure_solve(
             )
 
 
+@pytest.mark.parametrize("arm", [CollectionArm.AGENT, CollectionArm.RAW])
+def test_execute_scheduled_unit_collects_exactly_one_arm(arm: CollectionArm) -> None:
+    plan = preflight_experiment(
+        (_melody_item(position=0),),
+        run_id=f"single-{arm.value}-unit",
+        schedule_seed=13,
+    )
+    unit = next(value for value in plan.collection_schedule if value.arm is arm)
+    sink = InMemoryObservationSink()
+    agent = _MetadataFake([_PROPOSAL, _CRITIC] if arm is CollectionArm.AGENT else [])
+    raw = _MetadataFake([_RAW_TAB] if arm is CollectionArm.RAW else [])
+    completed = execute_scheduled_unit(
+        plan,
+        ArrangeGoal(),
+        MEDIAN_HAND,
+        unit,
+        ObservingLLM(agent, sink, clock_ns=lambda: 7),
+        ObservingLLM(raw, sink, clock_ns=lambda: 7),
+        CallSequence(plan.run_id),
+    )
+
+    assert completed.unit == unit
+    assert completed.source_context_sha256 == arrangement_source_context_sha256(
+        plan.items[unit.item_position].ir
+    )
+    if arm is CollectionArm.AGENT:
+        assert completed.trajectory is not None
+        assert completed.trajectory.index == unit.candidate_index
+        assert completed.raw_outcome is None
+        assert tuple(value.stage for value in sink.intents) == (
+            CallStage.PROPOSAL,
+            CallStage.CRITIC,
+        )
+    else:
+        assert completed.trajectory is None
+        assert completed.raw_outcome is not None
+        assert completed.raw_outcome.sample_index == unit.candidate_index
+        assert tuple(value.stage for value in sink.intents) == (CallStage.RAW,)
+
+
+@pytest.mark.parametrize("arm", [CollectionArm.AGENT, CollectionArm.RAW])
+def test_execute_scheduled_unit_rejects_a_unit_outside_the_frozen_schedule_before_calls(
+    arm: CollectionArm,
+) -> None:
+    plan = preflight_experiment(
+        (_melody_item(position=0),),
+        run_id=f"forged-{arm.value}-unit",
+        schedule_seed=13,
+    )
+    scheduled = next(value for value in plan.collection_schedule if value.arm is arm)
+    forged = ScheduledUnit(
+        scheduled.round_index,
+        scheduled.item_position,
+        scheduled.item_id,
+        scheduled.arm,
+        (scheduled.candidate_index + 1) % EXPERIMENT_N_SAMPLES,
+    )
+    assert forged not in plan.collection_schedule
+    sink = InMemoryObservationSink()
+    agent = _MetadataFake([_PROPOSAL, _CRITIC])
+    raw = _MetadataFake([_RAW_TAB])
+
+    with pytest.raises(ExperimentInputError, match="frozen collection schedule"):
+        execute_scheduled_unit(
+            plan,
+            ArrangeGoal(),
+            MEDIAN_HAND,
+            forged,
+            ObservingLLM(agent, sink, clock_ns=lambda: 7),
+            ObservingLLM(raw, sink, clock_ns=lambda: 7),
+            CallSequence(plan.run_id),
+        )
+
+    assert agent.calls == raw.calls == []
+    assert sink.intents == ()
+
+
+def test_execute_scheduled_unit_validates_membership_without_scanning_schedule() -> None:
+    plan = preflight_experiment(
+        (_melody_item(position=0),),
+        run_id="constant-time-unit-membership",
+        schedule_seed=13,
+    )
+    scheduled = next(
+        value for value in plan.collection_schedule if value.arm is CollectionArm.AGENT
+    )
+
+    class _GuardedSchedule(tuple[ScheduledUnit, ...]):
+        contains_calls = 0
+        iteration_calls = 0
+
+        def __contains__(self, value: object) -> bool:
+            self.contains_calls += 1
+            return super().__contains__(value)
+
+        def __iter__(self) -> Iterator[ScheduledUnit]:
+            self.iteration_calls += 1
+            return super().__iter__()
+
+    guarded = _GuardedSchedule(plan.collection_schedule)
+    object.__setattr__(plan, "collection_schedule", guarded)
+    mutations: tuple[tuple[str, object], ...] = (
+        ("round_index", (scheduled.round_index + 1) % EXPERIMENT_N_SAMPLES),
+        ("item_position", len(plan.items)),
+        ("item_id", "forged-item"),
+        ("arm", scheduled.arm.value),
+        ("candidate_index", (scheduled.candidate_index + 1) % EXPERIMENT_N_SAMPLES),
+    )
+    for field, value in mutations:
+        forged = replace(scheduled)
+        object.__setattr__(forged, field, value)
+        sink = InMemoryObservationSink()
+        agent = _MetadataFake([_PROPOSAL, _CRITIC])
+        raw = _MetadataFake([_RAW_TAB])
+
+        with pytest.raises(ExperimentInputError):
+            execute_scheduled_unit(
+                plan,
+                ArrangeGoal(),
+                MEDIAN_HAND,
+                forged,
+                ObservingLLM(agent, sink, clock_ns=lambda: 7),
+                ObservingLLM(raw, sink, clock_ns=lambda: 7),
+                CallSequence(plan.run_id),
+            )
+
+        assert agent.calls == raw.calls == []
+        assert sink.intents == ()
+
+    assert guarded.contains_calls == 0
+    assert guarded.iteration_calls == 0
+
+
+@pytest.mark.parametrize("field", ["system", "user"])
+def test_execute_scheduled_unit_rejects_a_tampered_raw_request_before_calls(
+    field: str,
+) -> None:
+    plan = preflight_experiment(
+        (_melody_item(position=0),),
+        run_id=f"tampered-raw-{field}",
+        schedule_seed=13,
+    )
+    unit = next(value for value in plan.collection_schedule if value.arm is CollectionArm.RAW)
+    goal = ArrangeGoal()
+    item_goal = replace(
+        goal,
+        tempo_bpm=plan.items[unit.item_position].ir.meta.tempo_bpm,
+        extras=dict(goal.extras),
+    )
+    request = build_raw_baseline_request(
+        plan.items[unit.item_position].ir,
+        item_goal,
+        MEDIAN_HAND,
+    )
+    tampered = (
+        replace(request, system=f"{request.system} tampered")
+        if field == "system"
+        else replace(request, user=f"{request.user} tampered")
+    )
+    sink = InMemoryObservationSink()
+    agent = _MetadataFake([_PROPOSAL, _CRITIC])
+    raw = _MetadataFake([_RAW_TAB])
+
+    with pytest.raises(ExperimentInputError, match="raw_request"):
+        execute_scheduled_unit(
+            plan,
+            goal,
+            MEDIAN_HAND,
+            unit,
+            ObservingLLM(agent, sink, clock_ns=lambda: 7),
+            ObservingLLM(raw, sink, clock_ns=lambda: 7),
+            CallSequence(plan.run_id),
+            raw_request=tampered,
+        )
+
+    assert agent.calls == raw.calls == []
+    assert sink.intents == ()
+
+
+def test_collection_observation_coverage_reads_joined_calls_only_once_per_schedule_check(
+    collected: tuple[ExperimentCollection, _MetadataFake, _MetadataFake],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collection, _agent, _raw = collected
+    original_index = experiment_module._index_observations
+    intent_reads = 0
+    joined_count = 0
+
+    class _TrackedCall:
+        def __init__(self, value: experiment_module._JoinedCall) -> None:
+            self._value = value
+
+        @property
+        def intent(self) -> CallIntent:
+            nonlocal intent_reads
+            intent_reads += 1
+            return self._value.intent
+
+    def tracked_index(
+        plan: ExperimentPlan, ledger: ObservationLedger
+    ) -> experiment_module._ObservationIndex:
+        nonlocal joined_count
+        indexed = original_index(plan, ledger)
+        joined_count = len(indexed.joined)
+        return replace(
+            indexed,
+            joined=cast(
+                tuple[experiment_module._JoinedCall, ...],
+                tuple(_TrackedCall(value) for value in indexed.joined),
+            ),
+        )
+
+    monkeypatch.setattr(experiment_module, "_index_observations", tracked_index)
+    experiment_module._validate_collection_observation_coverage(collection)
+
+    assert joined_count > 0
+    assert intent_reads <= joined_count * 4
+
+
+def test_assembly_is_independent_of_unit_completion_order(
+    collected: tuple[ExperimentCollection, _MetadataFake, _MetadataFake],
+) -> None:
+    expected, _agent, _raw = collected
+
+    assembled = assemble_experiment_collection(
+        expected.plan,
+        expected.goal,
+        expected.profile,
+        tuple(reversed(_completed_pure_controls(expected))),
+        tuple(reversed(_completed_collection_units(expected))),
+        expected.observations,
+    )
+
+    assert assembled == expected
+    assert all(
+        tuple(value.index for value in item.trajectories) == tuple(range(10))
+        and tuple(value.sample_index for value in item.raw_outcomes) == tuple(range(10))
+        for item in assembled.items
+    )
+
+
+def test_assembly_hashes_each_source_context_once(
+    collected: tuple[ExperimentCollection, _MetadataFake, _MetadataFake],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    expected, _agent, _raw = collected
+    pure = _completed_pure_controls(expected)
+    completed = _completed_collection_units(expected)
+    original = experiment_module.arrangement_source_context_sha256
+    calls = 0
+
+    def counted(*args: object, **kwargs: object) -> str:
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(experiment_module, "arrangement_source_context_sha256", counted)
+    assembled = assemble_experiment_collection(
+        expected.plan,
+        expected.goal,
+        expected.profile,
+        pure,
+        completed,
+        expected.observations,
+    )
+
+    assert assembled == expected
+    assert calls == len(expected.plan.items)
+
+
+def test_assembly_rejects_missing_or_duplicate_scheduled_units(
+    collected: tuple[ExperimentCollection, _MetadataFake, _MetadataFake],
+) -> None:
+    expected, _agent, _raw = collected
+    pure = _completed_pure_controls(expected)
+    completed = _completed_collection_units(expected)
+
+    with pytest.raises(ExperimentInputError, match="cover the frozen collection schedule"):
+        assemble_experiment_collection(
+            expected.plan,
+            expected.goal,
+            expected.profile,
+            pure,
+            completed[:-1],
+            expected.observations,
+        )
+    with pytest.raises(ExperimentInputError, match="unknown or duplicate scheduled unit"):
+        assemble_experiment_collection(
+            expected.plan,
+            expected.goal,
+            expected.profile,
+            pure,
+            (*completed, completed[0]),
+            expected.observations,
+        )
+
+
+def test_assembly_rejects_missing_or_duplicate_pure_controls(
+    collected: tuple[ExperimentCollection, _MetadataFake, _MetadataFake],
+) -> None:
+    expected, _agent, _raw = collected
+    pure = _completed_pure_controls(expected)
+    completed = _completed_collection_units(expected)
+
+    with pytest.raises(ExperimentInputError, match="cover every planned item"):
+        assemble_experiment_collection(
+            expected.plan,
+            expected.goal,
+            expected.profile,
+            pure[:-1],
+            completed,
+            expected.observations,
+        )
+    with pytest.raises(ExperimentInputError, match="unknown or duplicate item"):
+        assemble_experiment_collection(
+            expected.plan,
+            expected.goal,
+            expected.profile,
+            (*pure, pure[0]),
+            completed,
+            expected.observations,
+        )
+
+
 def test_shared_derivation_makes_no_calls_and_keeps_evidence_strata_separate(
     collected: tuple[ExperimentCollection, _MetadataFake, _MetadataFake],
 ) -> None:
@@ -544,6 +881,36 @@ def test_shared_derivation_makes_no_calls_and_keeps_evidence_strata_separate(
         pair.with_critic.critic_status is CriticStatus.LLM_SUCCESS
         for pair in melody.search_and_critic
     )
+
+
+def test_shared_derivation_passes_each_cost_call_to_exactly_one_item_slice(
+    collected: tuple[ExperimentCollection, _MetadataFake, _MetadataFake],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    collection, _agent, _raw = collected
+    original_cost_views = experiment_module._cost_views
+    seen_call_keys: list[tuple[str, int]] = []
+
+    def tracked_cost_views(
+        item: experiment_module.ItemCollection,
+        item_calls: tuple[experiment_module._JoinedCall, ...],
+    ) -> experiment_module.ItemCostViews:
+        item_id = item.item.item_id
+        assert item_calls
+        assert {call.intent.item_id for call in item_calls} == {item_id}
+        seen_call_keys.extend(
+            (call.intent.logical_call_id, call.intent.call_index) for call in item_calls
+        )
+        return original_cost_views(item, item_calls)
+
+    monkeypatch.setattr(experiment_module, "_cost_views", tracked_cost_views)
+    derive_shared_views(collection)
+
+    expected_call_keys = {
+        (intent.logical_call_id, intent.call_index) for intent in collection.observations.intents
+    }
+    assert len(seen_call_keys) == len(expected_call_keys)
+    assert set(seen_call_keys) == expected_call_keys
 
 
 def test_costs_use_prefix_only_preserve_partial_usage_and_equalize_causal_pool(

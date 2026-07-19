@@ -1,8 +1,13 @@
 import gc
 import hashlib
 import os
+import socketserver
 import sys
+import threading
+import time
 import traceback
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from types import SimpleNamespace
 from typing import Literal, cast
 
@@ -18,6 +23,7 @@ from fretsure.llm.client import (
     MAX_PROXY_REQUEST_FIELD_BYTES,
     MAX_PROXY_RESPONSE_ID_CHARS,
     MAX_PROXY_TEXT_BYTES_PER_TOKEN,
+    PROXY_CONNECT_TIMEOUT_SECONDS,
     PROXY_REQUEST_TIMEOUT_SECONDS,
     FakeLLM,
     LLMClientCloseError,
@@ -32,7 +38,80 @@ from fretsure.llm.client import (
     managed_llm_client,
     observe_proxy_attempts,
     proxy_environment_configured,
+    require_numeric_loopback_proxy_environment,
 )
+
+
+@contextmanager
+def _slow_then_healthy_proxy() -> Iterator[tuple[str, Callable[[], int]]]:
+    """Serve three slow chunked replies followed by one valid message."""
+
+    request_count = 0
+    count_lock = threading.Lock()
+    chunk_delay = threading.Event()
+    healthy_body = (
+        b'{"id":"msg_healthy","type":"message","role":"assistant",'
+        b'"model":"gpt-5.6-sol","content":[{"type":"text","text":"ok"}],'
+        b'"stop_reason":"end_turn","stop_sequence":null,'
+        b'"usage":{"input_tokens":1,"output_tokens":1}}'
+    )
+
+    class Handler(socketserver.BaseRequestHandler):
+        def handle(self) -> None:
+            nonlocal request_count
+            self.request.settimeout(1.0)
+            received = bytearray()
+            try:
+                while b"\r\n\r\n" not in received and len(received) <= 64 * 1024:
+                    chunk = self.request.recv(4096)
+                    if not chunk:
+                        return
+                    received.extend(chunk)
+            except OSError:
+                return
+            with count_lock:
+                request_count += 1
+                current_request = request_count
+            try:
+                if current_request <= 3:
+                    self.request.sendall(
+                        b"HTTP/1.1 200 OK\r\n"
+                        b"Content-Type: application/json\r\n"
+                        b"Transfer-Encoding: chunked\r\n"
+                        b"Connection: close\r\n\r\n"
+                    )
+                    # Every chunk arrives inside the ordinary HTTPX read timeout;
+                    # only the whole-attempt wall clock can stop this response.
+                    for _ in range(50):
+                        self.request.sendall(b"6\r\nSECRET\r\n")
+                        chunk_delay.wait(0.04)
+                    self.request.sendall(b"0\r\n\r\n")
+                    return
+                self.request.sendall(
+                    b"HTTP/1.1 200 OK\r\n"
+                    + f"Content-Length: {len(healthy_body)}\r\n".encode("ascii")
+                    + b"Content-Type: application/json\r\n"
+                    + b"Connection: close\r\n\r\n"
+                    + healthy_body
+                )
+            except OSError:
+                pass
+
+    class Server(socketserver.ThreadingTCPServer):
+        allow_reuse_address = True
+        daemon_threads = True
+
+    server = Server(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    host = cast(str, server.server_address[0])
+    port = server.server_address[1]
+    try:
+        yield f"http://{host}:{port}/v1", lambda: request_count
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2.0)
 
 
 def test_fake_llm_returns_scripted_in_order() -> None:
@@ -55,7 +134,7 @@ def test_extract_json_plain() -> None:
 
 
 def test_extract_json_fenced() -> None:
-    assert extract_json("here:\n```json\n{\"a\": 2}\n```\ndone") == {"a": 2}
+    assert extract_json('here:\n```json\n{"a": 2}\n```\ndone') == {"a": 2}
 
 
 def test_extract_json_with_prefix_and_suffix() -> None:
@@ -71,8 +150,10 @@ def test_extract_json_bad_raises() -> None:
         extract_json("no json here")
 
 
+@pytest.mark.parametrize("request_timeout_seconds", [None, 300.0])
 def test_proxy_llm_forwards_canonical_gpt_5_6_sol_default(
     monkeypatch: pytest.MonkeyPatch,
+    request_timeout_seconds: float | None,
 ) -> None:
     request: dict[str, object] = {}
 
@@ -97,7 +178,11 @@ def test_proxy_llm_forwards_canonical_gpt_5_6_sol_default(
     monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://127.0.0.1:8317/v1")
     monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "test-token")
     monkeypatch.setattr("anthropic.Anthropic", FakeAnthropic)
-    llm = ProxyLLM()
+    llm = (
+        ProxyLLM()
+        if request_timeout_seconds is None
+        else ProxyLLM(request_timeout_seconds=request_timeout_seconds)
+    )
 
     assert llm.model_id == DEFAULT_PROXY_MODEL == "gpt-5.6-sol"
     assert llm.complete(system="s", user="u", max_tokens=20) == "MODEL_OK"
@@ -107,7 +192,14 @@ def test_proxy_llm_forwards_canonical_gpt_5_6_sol_default(
     assert http_client.follow_redirects is False
     assert http_client._trust_env is False
     assert http_client.headers["accept-encoding"] == "identity"
-    assert http_client.timeout.read == PROXY_REQUEST_TIMEOUT_SECONDS
+    assert PROXY_REQUEST_TIMEOUT_SECONDS == 30.0
+    assert PROXY_CONNECT_TIMEOUT_SECONDS == 5.0
+    assert http_client.timeout.read == (
+        PROXY_REQUEST_TIMEOUT_SECONDS
+        if request_timeout_seconds is None
+        else request_timeout_seconds
+    )
+    assert http_client.timeout.connect == PROXY_CONNECT_TIMEOUT_SECONDS
     assert constructor == {
         "base_url": "http://127.0.0.1:8317/v1",
         "auth_token": "test-token",
@@ -125,6 +217,24 @@ def test_proxy_llm_forwards_canonical_gpt_5_6_sol_default(
         cache_read_input_tokens=None,
     )
     llm.close()
+
+
+@pytest.mark.parametrize(
+    "request_timeout_seconds",
+    [True, "300", 0, -1, float("nan"), float("inf")],
+)
+def test_proxy_llm_rejects_invalid_explicit_request_timeout_before_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    request_timeout_seconds: object,
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+
+    with pytest.raises(
+        LLMProxyConfigurationError,
+        match="request_timeout_seconds must be a positive finite number",
+    ):
+        ProxyLLM(request_timeout_seconds=request_timeout_seconds)  # type: ignore[arg-type]
 
 
 def test_proxy_llm_snapshots_bounded_provider_metadata(
@@ -172,8 +282,7 @@ def test_proxy_llm_snapshots_bounded_provider_metadata(
     "message",
     [
         SimpleNamespace(
-            content=[SimpleNamespace(type="text", text="x")]
-            * (MAX_PROXY_CONTENT_BLOCKS + 1)
+            content=[SimpleNamespace(type="text", text="x")] * (MAX_PROXY_CONTENT_BLOCKS + 1)
         ),
         SimpleNamespace(
             content=[
@@ -397,6 +506,25 @@ def test_proxy_llm_rejects_missing_or_nonlocal_configuration_before_sdk_init(
     assert called is False
 
 
+def test_numeric_loopback_requirement_rejects_localhost_without_constructing_sdk(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "test-token")
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://localhost:8317/v1")
+
+    assert proxy_environment_configured() is True
+    with pytest.raises(
+        LLMProxyConfigurationError,
+        match="must use numeric loopback",
+    ):
+        require_numeric_loopback_proxy_environment()
+
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://127.0.0.1:8317/v1")
+    require_numeric_loopback_proxy_environment()
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://[::1]:8317/v1")
+    require_numeric_loopback_proxy_environment()
+
+
 def test_proxy_llm_redacts_sdk_constructor_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -542,6 +670,76 @@ def test_proxy_llm_retries_connection_failures_then_redacts_exhaustion(
         )
     )
     assert "SECRET transport" not in rendered
+
+
+def test_proxy_llm_hard_deadline_bounds_slow_chunks_and_keeps_client_usable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempt_events: list[tuple[object, ...]] = []
+
+    class AttemptObserver:
+        def before_attempt(self, attempt_index: int) -> None:
+            attempt_events.append(("before", attempt_index))
+
+        def after_attempt(
+            self,
+            attempt_index: int,
+            *,
+            status: Literal["succeeded", "failed"],
+            retryable: bool,
+        ) -> None:
+            attempt_events.append(("after", attempt_index, status, retryable))
+
+    with _slow_then_healthy_proxy() as (base_url, request_count):
+        monkeypatch.setenv("ANTHROPIC_BASE_URL", base_url)
+        monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "test-token")
+        monkeypatch.setattr("fretsure.llm.client.time.sleep", lambda _seconds: None)
+        llm = ProxyLLM(request_timeout_seconds=0.12)
+
+        started = time.monotonic()
+        with (
+            observe_proxy_attempts(AttemptObserver()),
+            pytest.raises(
+                RuntimeError,
+                match="^LLM call failed after bounded retries$",
+            ) as caught,
+        ):
+            llm.complete(system="s", user="u", max_tokens=20)
+        elapsed = time.monotonic() - started
+
+        # The server would keep each response active for two seconds while every
+        # individual chunk stays below 120 ms. Three attempts must instead finish
+        # near their three whole-attempt reservations, with generous CI headroom.
+        assert elapsed < 1.2
+        assert request_count() == 3
+        assert attempt_events == [
+            ("before", 0),
+            ("after", 0, "failed", True),
+            ("before", 1),
+            ("after", 1, "failed", True),
+            ("before", 2),
+            ("after", 2, "failed", True),
+        ]
+        assert llm.last_call_metadata == ProxyCallMetadata(
+            "failed", 3, None, None, None, None, None, None
+        )
+        rendered = "".join(
+            traceback.format_exception(
+                type(caught.value),
+                caught.value,
+                caught.value.__traceback__,
+            )
+        )
+        assert "SECRET" not in rendered
+
+        # A deadline abort poisons only the timed-out connection. The owned client
+        # remains usable and opens a clean connection for the next call.
+        assert llm.complete(system="s", user="u", max_tokens=20) == "ok"
+        assert request_count() == 4
+        assert llm.last_call_metadata is not None
+        assert llm.last_call_metadata.status == "succeeded"
+        assert llm.last_call_metadata.attempts == 1
+        llm.close()
 
 
 def test_proxy_llm_does_not_retry_generic_sdk_retryable_marker(

@@ -8,16 +8,20 @@ searches import paths, or reads ambient repository files.
 from __future__ import annotations
 
 import hashlib
+import math
 import platform
 import re
 import sys
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from typing import Final, NoReturn, cast
 
 import fretsure
 from fretsure.bench.artifacts import parse_canonical_json_bytes
 from fretsure.bench.contracts import canonical_json_bytes
 from fretsure.bench.preregistration import (
+    BENCHMARK_PREREGISTRATION_LEGACY_VERSION,
+    BENCHMARK_PREREGISTRATION_VERSION,
     BenchmarkPreregistration,
     preregistration_from_dict,
 )
@@ -27,10 +31,9 @@ from fretsure.llm.client import (
     validate_llm_model_id,
 )
 
-BENCHMARK_PRE_CALL_CONFIG_VERSION: Final = "benchmark-pre-call-config@0.3.0"
-FORMAL_BILLING_ENVELOPE_VERSION: Final = (
-    "benchmark-formal-billing-envelope@0.2.0"
-)
+BENCHMARK_PRE_CALL_CONFIG_LEGACY_VERSION: Final = "benchmark-pre-call-config@0.3.0"
+BENCHMARK_PRE_CALL_CONFIG_VERSION: Final = "benchmark-pre-call-config@0.4.0"
+FORMAL_BILLING_ENVELOPE_VERSION: Final = "benchmark-formal-billing-envelope@0.2.0"
 FORMAL_BILLING_ENVELOPE_SCOPE: Final = "formal_collection"
 FORMAL_INPUT_UPPER_BOUND_METHOD: Final = "utf8_bytes_plus_256"
 FORMAL_ENFORCEMENT_POINT: Final = "before_observation_retry_network"
@@ -79,12 +82,7 @@ def _object(value: object, field: str, keys: frozenset[str]) -> dict[str, object
 
 
 def _text(value: object, field: str, *, maximum: int = 128) -> str:
-    if (
-        type(value) is not str
-        or not value
-        or len(value) > maximum
-        or not value.isprintable()
-    ):
+    if type(value) is not str or not value or len(value) > maximum or not value.isprintable():
         _fail(field, "must be one bounded printable string")
     return value
 
@@ -112,6 +110,24 @@ def _collection_attempt(value: object, field: str = "collection_attempt") -> int
     if attempt > MAX_COLLECTION_ATTEMPT:
         _fail(field, f"must not exceed {MAX_COLLECTION_ATTEMPT}")
     return attempt
+
+
+def _positive_finite_number(value: object, field: str) -> float:
+    if type(value) not in (int, float):
+        _fail(field, "must be one positive finite number")
+    exact = float(cast(int | float, value))
+    if not math.isfinite(exact) or exact <= 0:
+        _fail(field, "must be one positive finite number")
+    return exact
+
+
+def _nonnegative_finite_number(value: object, field: str) -> float:
+    if type(value) not in (int, float):
+        _fail(field, "must be one nonnegative finite number")
+    exact = float(cast(int | float, value))
+    if not math.isfinite(exact) or exact < 0:
+        _fail(field, "must be one nonnegative finite number")
+    return exact
 
 
 def _attempt_run_id(formal_experiment_id: object, attempt: int) -> str:
@@ -145,7 +161,9 @@ def current_runtime_identity() -> dict[str, str]:
     return dict(_runtime_wire())
 
 
-def _prereg_components(preregistration: BenchmarkPreregistration) -> tuple[
+def _prereg_components(
+    preregistration: BenchmarkPreregistration,
+) -> tuple[
     dict[str, object],
     dict[str, object],
     dict[str, object],
@@ -167,6 +185,98 @@ def _prereg_components(preregistration: BenchmarkPreregistration) -> tuple[
     if type(full) is not dict:
         _fail("preregistration.budgets.full_corpus", "must be an exact object")
     return wire, model, versions, budgets
+
+
+def _operational_contract_from_prereg(
+    prereg_wire: dict[str, object],
+    budgets: dict[str, object],
+) -> tuple[dict[str, object] | None, float, int]:
+    provider = cast(dict[str, object], budgets.get("provider_policy"))
+    if type(provider) is not dict:
+        _fail("preregistration.budgets.provider_policy", "must be an exact object")
+    timeout = _positive_finite_number(
+        provider.get("request_timeout_seconds"),
+        "preregistration.budgets.provider_policy.request_timeout_seconds",
+    )
+    if prereg_wire.get("schema") == BENCHMARK_PREREGISTRATION_LEGACY_VERSION:
+        return None, timeout, 1
+
+    contract = _collection_execution_contract(
+        prereg_wire.get("collection_execution"),
+        "preregistration.collection_execution",
+    )
+    return dict(contract), timeout, cast(int, contract["max_in_flight_units"])
+
+
+def _collection_execution_contract(
+    value: object,
+    field: str,
+) -> dict[str, object]:
+    contract = _object(
+        value,
+        field,
+        frozenset(
+            {
+                "admission_order",
+                "canonical_merge_order",
+                "client_ownership",
+                "completion_order",
+                "durability",
+                "max_in_flight_units",
+                "protocol",
+                "resume_boundary",
+            }
+        ),
+    )
+    maximum = _integer(
+        contract["max_in_flight_units"],
+        f"{field}.max_in_flight_units",
+        minimum=1,
+    )
+    exact: dict[str, object] = {"max_in_flight_units": maximum}
+    for name in (
+        "admission_order",
+        "canonical_merge_order",
+        "client_ownership",
+        "completion_order",
+        "durability",
+        "protocol",
+        "resume_boundary",
+    ):
+        exact[name] = _text(contract[name], f"{field}.{name}")
+    return exact
+
+
+def _validate_operational_binding(
+    value: object,
+    *,
+    prereg_contract: dict[str, object],
+    prereg_timeout: float,
+) -> None:
+    binding = _object(
+        value,
+        "collection_execution",
+        frozenset({"contract", "request_timeout_seconds"}),
+    )
+    contract = _collection_execution_contract(
+        binding["contract"],
+        "collection_execution.contract",
+    )
+    if canonical_json_bytes(contract) != canonical_json_bytes(prereg_contract):
+        _fail(
+            "collection_execution.contract",
+            "differs from the embedded preregistration",
+        )
+    timeout_value = binding["request_timeout_seconds"]
+    timeout = _positive_finite_number(
+        timeout_value,
+        "collection_execution.request_timeout_seconds",
+    )
+    if type(timeout_value) is not float or timeout != prereg_timeout:
+        _fail(
+            "collection_execution.request_timeout_seconds",
+            "differs from the embedded preregistration",
+        )
 
 
 def _prompt_bindings(model: dict[str, object]) -> dict[str, object]:
@@ -209,6 +319,10 @@ def _reservation_from_prereg(
         _fail("preregistration.provider_policy.request_timeout_seconds", "must be positive")
     if exact_request_timeout <= 0:
         _fail("preregistration.provider_policy.request_timeout_seconds", "must be positive")
+    attempt_elapsed_overhead = _nonnegative_finite_number(
+        provider.get("recorded_attempt_elapsed_overhead_seconds", 0.0),
+        ("preregistration.provider_policy.recorded_attempt_elapsed_overhead_seconds"),
+    )
     if type(retry_backoff) is not list or any(
         type(value) not in (int, float) for value in retry_backoff
     ):
@@ -216,9 +330,9 @@ def _reservation_from_prereg(
     logical_calls = _integer(
         raw.get("logical_calls"), "preregistration.reservation.logical_calls", minimum=1
     )
-    wall_seconds = attempts * exact_request_timeout + logical_calls * sum(
-        float(value) for value in retry_backoff
-    )
+    wall_seconds = attempts * (
+        exact_request_timeout + attempt_elapsed_overhead
+    ) + logical_calls * sum(float(value) for value in retry_backoff)
     return {
         "attempt_reserved_output_tokens": _integer(
             raw.get("requested_output_tokens"),
@@ -510,6 +624,7 @@ class BenchmarkPreCallConfig:
     """One canonical live pre-call config, including its preregistration."""
 
     wire_json: bytes
+    _wire: dict[str, object] = dataclass_field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if type(self.wire_json) is not bytes:
@@ -517,113 +632,180 @@ class BenchmarkPreCallConfig:
         parsed = parse_canonical_json_bytes(self.wire_json)
         if type(parsed) is not dict:
             _fail("wire_json", "must encode one canonical object")
+        object.__setattr__(self, "_wire", cast(dict[str, object], parsed))
 
     def to_dict(self) -> dict[str, object]:
         return cast(dict[str, object], parse_canonical_json_bytes(self.wire_json))
 
     @property
     def preregistration(self) -> BenchmarkPreregistration:
-        return preregistration_from_dict(self.to_dict()["preregistration"])
+        return preregistration_from_dict(self._wire["preregistration"])
 
     @property
     def analysis_code_sha256(self) -> str:
-        execution = cast(dict[str, object], self.to_dict()["execution"])
+        execution = cast(dict[str, object], self._wire["execution"])
         binding = cast(dict[str, object], execution["analysis_binding"])
         return cast(str, binding["sha256"])
 
     @property
     def requested_model_id(self) -> str:
-        model = cast(dict[str, object], self.to_dict()["model"])
+        model = cast(dict[str, object], self._wire["model"])
         return cast(str, model["requested_model_id"])
 
     @property
     def collection_attempt(self) -> int:
-        return cast(int, self.to_dict()["collection_attempt"])
+        return cast(int, self._wire["collection_attempt"])
 
     @property
     def run_id(self) -> str:
-        return cast(str, self.to_dict()["run_id"])
+        return cast(str, self._wire["run_id"])
 
     @property
     def allowed_returned_model_id(self) -> str:
-        model = cast(dict[str, object], self.to_dict()["model"])
+        model = cast(dict[str, object], self._wire["model"])
         return cast(str, model["allowed_returned_model_id"])
 
     @property
     def has_priced_attempt_ceiling(self) -> bool:
-        budget = cast(dict[str, object], self.to_dict()["budget"])
+        budget = cast(dict[str, object], self._wire["budget"])
         cost = cast(dict[str, object], budget["cost"])
         return cost["status"] == "available"
 
     @property
     def formal_input_token_ceiling(self) -> int:
-        envelope = cast(dict[str, object], self.to_dict()["billing_envelope"])
+        envelope = cast(dict[str, object], self._wire["billing_envelope"])
         wire = cast(dict[str, object], envelope["wire"])
-        ceilings = cast(
-            dict[str, int], wire["billable_token_ceiling_per_attempt"]
-        )
+        ceilings = cast(dict[str, int], wire["billable_token_ceiling_per_attempt"])
         return min(ceilings[field] for field in _FORMAL_INPUT_TOKEN_FIELDS)
 
     @property
     def formal_output_token_ceiling(self) -> int:
-        envelope = cast(dict[str, object], self.to_dict()["billing_envelope"])
+        envelope = cast(dict[str, object], self._wire["billing_envelope"])
         wire = cast(dict[str, object], envelope["wire"])
-        ceilings = cast(
-            dict[str, int], wire["billable_token_ceiling_per_attempt"]
-        )
+        ceilings = cast(dict[str, int], wire["billable_token_ceiling_per_attempt"])
         return ceilings["output_tokens"]
 
     @property
     def maximum_spend_microunits(self) -> int | None:
-        budget = cast(dict[str, object], self.to_dict()["budget"])
+        budget = cast(dict[str, object], self._wire["budget"])
         cost = cast(dict[str, object], budget["cost"])
         return cast(int | None, cost["maximum_spend_microunits"])
 
     @property
     def formal_budget_gate_raw_sha256(self) -> str | None:
-        budget = cast(dict[str, object], self.to_dict()["budget"])
+        budget = cast(dict[str, object], self._wire["budget"])
         cost = cast(dict[str, object], budget["cost"])
         return cast(str | None, cost["formal_budget_gate_raw_sha256"])
 
+    @property
+    def collection_execution_contract(self) -> dict[str, object] | None:
+        wire = self._wire
+        if wire["schema"] == BENCHMARK_PRE_CALL_CONFIG_LEGACY_VERSION:
+            return None
+        binding = cast(dict[str, object], wire["collection_execution"])
+        return dict(cast(dict[str, object], binding["contract"]))
+
+    @property
+    def request_timeout_seconds(self) -> float:
+        wire = self._wire
+        if wire["schema"] == BENCHMARK_PRE_CALL_CONFIG_VERSION:
+            binding = cast(dict[str, object], wire["collection_execution"])
+            return cast(float, binding["request_timeout_seconds"])
+        preregistration = cast(dict[str, object], wire["preregistration"])
+        budgets = cast(dict[str, object], preregistration["budgets"])
+        provider = cast(dict[str, object], budgets["provider_policy"])
+        return cast(float, provider["request_timeout_seconds"])
+
+    @property
+    def recorded_attempt_elapsed_overhead_seconds(self) -> float:
+        wire = self._wire
+        if wire["schema"] == BENCHMARK_PRE_CALL_CONFIG_LEGACY_VERSION:
+            return 0.0
+        preregistration = cast(dict[str, object], wire["preregistration"])
+        budgets = cast(dict[str, object], preregistration["budgets"])
+        provider = cast(dict[str, object], budgets["provider_policy"])
+        return cast(float, provider["recorded_attempt_elapsed_overhead_seconds"])
+
+    @property
+    def max_in_flight_units(self) -> int:
+        contract = self.collection_execution_contract
+        if contract is None:
+            return 1
+        return cast(int, contract["max_in_flight_units"])
+
 
 def _validate_wire(value: object) -> BenchmarkPreCallConfig:
+    if type(value) is not dict:
+        _fail("$", "must contain the exact keys")
+    raw = cast(dict[str, object], value)
+    schema = raw.get("schema")
+    if schema not in {
+        BENCHMARK_PRE_CALL_CONFIG_LEGACY_VERSION,
+        BENCHMARK_PRE_CALL_CONFIG_VERSION,
+    }:
+        _fail("schema", "has the wrong version")
+    expected_keys = frozenset(
+        {
+            "budget",
+            "billing_envelope",
+            "collection_attempt",
+            "contract_bindings",
+            "execution",
+            "mode",
+            "model",
+            "preregistration",
+            "preregistration_raw_sha256",
+            "run_id",
+            "schema",
+        }
+    )
+    if schema == BENCHMARK_PRE_CALL_CONFIG_VERSION:
+        expected_keys |= {"collection_execution"}
     obj = _object(
         value,
         "$",
-        frozenset(
-            {
-                "budget",
-                "billing_envelope",
-                "collection_attempt",
-                "contract_bindings",
-                "execution",
-                "mode",
-                "model",
-                "preregistration",
-                "preregistration_raw_sha256",
-                "run_id",
-                "schema",
-            }
-        ),
+        expected_keys,
     )
-    if obj["schema"] != BENCHMARK_PRE_CALL_CONFIG_VERSION:
-        _fail("schema", "has the wrong version")
     if obj["mode"] != "live_collection":
         _fail("mode", "must equal live_collection")
     billing_envelope = _validate_billing_envelope(obj["billing_envelope"])
     envelope_wire = cast(dict[str, object], billing_envelope["wire"])
-    envelope_pricing_sha256 = cast(
-        str, envelope_wire["pricing_contract_raw_sha256"]
-    )
+    envelope_pricing_sha256 = cast(str, envelope_wire["pricing_contract_raw_sha256"])
     preregistration = preregistration_from_dict(obj["preregistration"])
     prereg_wire, prereg_model, versions, prereg_budgets = _prereg_components(preregistration)
+    prereg_schema = prereg_wire.get("schema")
+    if (
+        schema == BENCHMARK_PRE_CALL_CONFIG_LEGACY_VERSION
+        and prereg_schema != BENCHMARK_PREREGISTRATION_LEGACY_VERSION
+    ):
+        _fail(
+            "preregistration.schema",
+            "legacy pre-call configs require the legacy preregistration",
+        )
+    if (
+        schema == BENCHMARK_PRE_CALL_CONFIG_VERSION
+        and prereg_schema != BENCHMARK_PREREGISTRATION_VERSION
+    ):
+        _fail(
+            "preregistration.schema",
+            "operational pre-call configs require the operational preregistration",
+        )
+    prereg_contract, prereg_timeout, _maximum_in_flight = _operational_contract_from_prereg(
+        prereg_wire, prereg_budgets
+    )
+    if schema == BENCHMARK_PRE_CALL_CONFIG_VERSION:
+        if prereg_contract is None:  # pragma: no cover - version gate above
+            raise AssertionError("operational preregistration must have a contract")
+        _validate_operational_binding(
+            obj["collection_execution"],
+            prereg_contract=prereg_contract,
+            prereg_timeout=prereg_timeout,
+        )
     prereg_sha = hashlib.sha256(preregistration.wire_json).hexdigest()
     if _sha(obj["preregistration_raw_sha256"], "preregistration_raw_sha256") != prereg_sha:
         _fail("preregistration_raw_sha256", "does not bind the embedded preregistration")
     collection_attempt = _collection_attempt(obj["collection_attempt"])
-    if obj["run_id"] != _attempt_run_id(
-        prereg_wire.get("run_id"), collection_attempt
-    ):
+    if obj["run_id"] != _attempt_run_id(prereg_wire.get("run_id"), collection_attempt):
         _fail("run_id", "does not equal the artifact id derived from collection_attempt")
 
     execution = _object(
@@ -671,9 +853,7 @@ def _validate_wire(value: object) -> BenchmarkPreCallConfig:
         or rule != {"operator": "exact_equal", "value": requested}
     ):
         _fail("model", "does not match the preregistered exact model rule")
-    output_usage_contract = cast(
-        dict[str, object], envelope_wire["output_usage_contract"]
-    )
+    output_usage_contract = cast(dict[str, object], envelope_wire["output_usage_contract"])
     if output_usage_contract["model_id"] != requested:
         _fail(
             "billing_envelope.wire.output_usage_contract.model_id",
@@ -760,6 +940,14 @@ def build_pre_call_config(
     if type(preregistration) is not BenchmarkPreregistration:
         _fail("preregistration", "must be an exact BenchmarkPreregistration")
     prereg, model, versions, budgets = _prereg_components(preregistration)
+    prereg_contract, prereg_timeout, _maximum_in_flight = _operational_contract_from_prereg(
+        prereg, budgets
+    )
+    pre_call_schema = (
+        BENCHMARK_PRE_CALL_CONFIG_LEGACY_VERSION
+        if prereg["schema"] == BENCHMARK_PREREGISTRATION_LEGACY_VERSION
+        else BENCHMARK_PRE_CALL_CONFIG_VERSION
+    )
     exact_attempt = _collection_attempt(collection_attempt)
     runtime = _object(
         runtime_identity,
@@ -814,8 +1002,13 @@ def build_pre_call_config(
         "preregistration": prereg,
         "preregistration_raw_sha256": hashlib.sha256(preregistration.wire_json).hexdigest(),
         "run_id": _attempt_run_id(prereg["run_id"], exact_attempt),
-        "schema": BENCHMARK_PRE_CALL_CONFIG_VERSION,
+        "schema": pre_call_schema,
     }
+    if prereg_contract is not None:
+        wire["collection_execution"] = {
+            "contract": prereg_contract,
+            "request_timeout_seconds": prereg_timeout,
+        }
     return _validate_wire(wire)
 
 
@@ -900,9 +1093,7 @@ def preregistered_artifact_budget(
     if type(preregistration) is not BenchmarkPreregistration:
         _fail("preregistration", "must be an exact BenchmarkPreregistration")
     _wire, _model, _versions, budgets = _prereg_components(preregistration)
-    return dict(_maximum_budget_from_prereg(budgets)), dict(
-        _reservation_from_prereg(budgets)
-    )
+    return dict(_maximum_budget_from_prereg(budgets)), dict(_reservation_from_prereg(budgets))
 
 
 def pre_call_artifact_budget(
@@ -929,6 +1120,7 @@ def pre_call_artifact_budget(
 
 
 __all__ = [
+    "BENCHMARK_PRE_CALL_CONFIG_LEGACY_VERSION",
     "BENCHMARK_PRE_CALL_CONFIG_VERSION",
     "FORMAL_BILLING_ENVELOPE_SCOPE",
     "FORMAL_BILLING_ENVELOPE_VERSION",
