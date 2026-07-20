@@ -1172,6 +1172,19 @@ def test_packaged_web_build_serves_real_assets_examples_fonts_and_licenses() -> 
     assert "SIL OPEN FONT LICENSE Version 1.1" in license_text.text
 
 
+def test_packaged_musicxml_media_type_does_not_depend_on_platform_mimetypes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("starlette.responses.guess_type", lambda _path: (None, None))
+    with TestClient(
+        create_app(), base_url=TEST_BASE_URL, raise_server_exceptions=False
+    ) as local:
+        example = local.get("/examples/fretsure-etude.musicxml")
+
+    assert example.status_code == 200
+    assert example.headers["content-type"].startswith(XML_MEDIA_TYPE)
+
+
 def test_missing_web_build_is_typed(tmp_path: Path) -> None:
     app = create_app(static_root=tmp_path / "absent")
     with TestClient(app, base_url=TEST_BASE_URL, raise_server_exceptions=False) as local:

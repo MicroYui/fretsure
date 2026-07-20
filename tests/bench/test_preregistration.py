@@ -141,14 +141,22 @@ def test_preregistration_power_gate_is_pre_outcome_and_powered(
     simulation = cast(dict[str, object], repair["frozen_simulation"])
 
     assert gate == {
-        "minimum_power": pytest.approx(0.8024095994885648),
+        "minimum_power": 0.8024095994885648,
         "per_test_alpha": 0.025,
         "required_tests": ["repair_joint", "search_best4_joint"],
         "selected_family_count": 500,
         "status": "pass",
         "target_power": 0.8,
     }
-    assert search["power"] == pytest.approx(0.8024095994885648)
+    assert search["power"] == 0.8024095994885648
+    assert search["calculation_sha256"] == (
+        "a74fcb5b7afebdeab6706ee40b6627cdd1ab01fb2beb6d4aa221daeb84e65ba1"
+    )
+    assert search["sensitivity"] == [
+        {"discordance": 0.10, "power": 0.9412598472387863},
+        {"discordance": 0.15, "power": 0.8024095994885648},
+        {"discordance": 0.20, "power": 0.6763653639604847},
+    ]
     assert search["improved_probability"] == 0.10
     assert search["worsened_probability"] == 0.05
     assert search["discordance"] == 0.15
@@ -161,7 +169,6 @@ def test_preregistration_power_gate_is_pre_outcome_and_powered(
         "68cac29d4197a723ffddf73429ff248f043f48ae219dc7b2ee13f3b214ab7a52"
     )
     assert len(cast(list[object], repair["sensitivity"])) == 3
-    assert len(cast(list[object], search["sensitivity"])) == 3
 
 
 def test_budget_uses_existing_primary_totals_and_lossless_public_compact_tokens(

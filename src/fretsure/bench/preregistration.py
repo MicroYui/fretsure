@@ -140,6 +140,14 @@ _SCHEDULE_DIGEST_DOMAIN = b"fretsure:benchmark-preregistered-schedule@0.1.0\0"
 _PROMPT_DIGEST_DOMAIN = f"fretsure:{BENCHMARK_PROMPT_CONTRACT_VERSION}\0".encode("ascii")
 _POWER_SIMULATION_DOMAIN = b"fretsure:benchmark-repair-power-simulation@0.1.0\0"
 _SEARCH_POWER_DOMAIN = b"fretsure:benchmark-search-power@0.1.0\0"
+# SciPy binomial tails can vary by a few ULPs across platform wheels.  Keep the
+# preregistered bytes stable while still rejecting any material calculation drift.
+_FROZEN_SEARCH_POWER: Final[dict[tuple[int, float, float, float], float]] = {
+    (PRIMARY_FAMILY_COUNT, 0.10, 0.05, 0.025): 0.9412598472387863,
+    (PRIMARY_FAMILY_COUNT, 0.15, 0.05, 0.025): 0.8024095994885648,
+    (PRIMARY_FAMILY_COUNT, 0.20, 0.05, 0.025): 0.6763653639604847,
+}
+_FROZEN_SEARCH_POWER_ABS_TOLERANCE: Final = 2e-15
 
 
 class PreregistrationError(ValueError):
@@ -439,7 +447,17 @@ def _search_power_exact(
             else float(binom.sf(critical - 1, discordant, improved_given_discordance))
         )
         power += float(binom.pmf(discordant, family_count, discordance)) * conditional
-    return power
+    frozen = _FROZEN_SEARCH_POWER.get((family_count, discordance, delta, alpha))
+    if frozen is None:
+        return power
+    if not math.isclose(
+        power,
+        frozen,
+        rel_tol=0.0,
+        abs_tol=_FROZEN_SEARCH_POWER_ABS_TOLERANCE,
+    ):
+        _fail("power.search", "calculation differs from the frozen canonical value")
+    return frozen
 
 
 def _repair_power_simulation(*, icc: float) -> dict[str, object]:

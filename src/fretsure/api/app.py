@@ -76,6 +76,7 @@ _XML_MEDIA_TYPES = frozenset(
 _MXL_MEDIA_TYPES = frozenset({"application/vnd.recordare.musicxml"})
 _MIDI_MEDIA_TYPES = frozenset({"audio/midi"})
 _JSON_MEDIA_TYPES = frozenset({"application/json"})
+_STATIC_MUSICXML_MEDIA_TYPE = "application/vnd.recordare.musicxml+xml"
 _DECIMAL = re.compile(r"0|[1-9][0-9]*\Z")
 _POSITIVE_DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?\Z")
 _HASHED_ASSET_PATH = re.compile(r"/assets/[^/]+-[A-Za-z0-9_-]{8}\.[A-Za-z0-9]+\Z")
@@ -1153,7 +1154,12 @@ def create_app(
             if not candidate.is_relative_to(root):
                 raise not_found_problem()
             if candidate.is_file():
-                return FileResponse(candidate)
+                media_type = (
+                    _STATIC_MUSICXML_MEDIA_TYPE
+                    if candidate.suffix.lower() == ".musicxml"
+                    else None
+                )
+                return FileResponse(candidate, media_type=media_type)
             if first == "assets" or any("." in part for part in path.split("/")):
                 raise not_found_problem()
             index = (root / "index.html").resolve(strict=False)
