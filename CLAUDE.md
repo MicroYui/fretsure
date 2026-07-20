@@ -4,7 +4,7 @@
 
 **产品目标一句话**：一个 agent，把一首歌（符号谱 / MIDI / lead sheet；mp3 作 best-effort 前端）编配成**人手可证明弹得出来**的吉他谱（HERO = 指弹独奏；也做伴奏、难度简化）。核心 = "LLM 提议 → 确定性可弹性 oracle 逐音把关并修复 → checker 打分 benchmark"。
 
-**当前恢复真源（2026-07-19）**：Task 9 formal attempts 001–003 均已 terminal
+**当前恢复真源（2026-07-20）**：Task 9 formal attempts 001–003 均已 terminal
 `INCOMPLETE`，不得 resume、覆盖或复用编号；下一次正式采集只能是 fresh attempt-004。
 attempt-003 在 503 个 pure-solver rows 后暴露系统性的 30 秒 request timeout，并以
 `523/10,563` rows、78 logical calls / 113 provider attempts、`$0.955113 / $359.791113`
@@ -35,8 +35,9 @@ prefix，仍为 4 lanes、无 abort，automation=`ACTIVE`。隔离的 9 attempts
 unknown）须进最终 cost addendum，不能记零。网络改善后的 4-vs-8 pilot 已在 formal 干净暂停
 期间一次性完成：comparison=`1fcfb8a3…`，8/4 unit/call ratios=`1.008834716058 /
 1.070286574518`，两级均 0 retries，但仍未过 `1.35 / 1.25` 门槛，因此 formal 保持 4 lanes。
-batch 已自动从 3,789-unit prefix 同目录 resume，最新只读快照为 3,798 READY / 3,802 admitted、
-4,301 rows / 14,267 calls（37.75%），无 abort。复测不得重复；完成前不启动 Task 10。现有
+batch 已自动从 3,789-unit prefix 同目录 resume，并通过精确 40% checkpoint；最新只读快照为
+4,035 READY / 4,039 admitted、4,538 rows / 15,496 calls（40.11%），extra attempts=439，
+PID/screen 正常且无 terminal/abort/canonical。复测不得重复；完成前不启动 Task 10。现有
 pre-call、WAL、config、历史 receipt 与金额均须保留。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。

@@ -1055,3 +1055,22 @@ snapshot had 3,802 admitted / 3,798 READY, 4,301 rows, and 14,267 completed call
 with no abort marker. The retest terminal comparison is a one-time sentinel and must not be
 repeated. Only aggregate throughput, latency, retry, usage/cost, progress, and event-type
 metadata were inspected; no private payload or frontend was read or changed.
+
+### Attempt-004 live 40% checkpoint after the network retest
+
+Canonical post-retest operator sequence 8 recorded exactly 40% after 7,397.262962 active
+segment seconds: 4,024/10,060 network units, 4,527/10,563 total rows, and 15,430 completed
+calls. The 3,789-unit resume prefix means this segment had durably added 235 units and 1,198
+calls. Overall/recent-15-minute segment throughput was 114.366625/112.0 units/hour and
+583.026455/532.0 calls/hour. The record was not stalled and reported 190,000
+optimistic/median and 194,015 conservative seconds remaining, approximately 2 days 4 hours
+47 minutes through 2 days 5 hours 54 minutes. Its exact canonical line SHA-256 is
+`76f21402594c0acc73affb078e5cd04767df76652074a2837ac152b651cabe69`.
+
+The subsequent read-only snapshot had 4,039 `UNIT_ADMITTED` and 4,035 `UNIT_READY` events,
+corresponding to 4,538 rows and 15,496 completed calls (40.11%). Lane event types were
+15,939/15,935 attempt intent/result and 15,500/15,496 call intent/result; the content-free
+extra-attempt count therefore remained 439, with four currently active boundaries. PID and
+detached `screen` were healthy, and no terminal, abort, or canonical marker existed. Only
+progress metadata and aggregate event types were inspected; the execution binding, private
+payloads, and frontend remained untouched.
