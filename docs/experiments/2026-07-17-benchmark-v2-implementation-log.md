@@ -999,3 +999,15 @@ intent/result. The content-free extra-attempt count was 426. PID and detached `s
 remained healthy, and no terminal or abort marker existed. Only progress metadata and
 aggregate event types were inspected; the execution binding, private payloads, and frontend
 remained untouched.
+
+### Attempt-004 operator-requested clean pause after 35%
+
+Before leaving, the operator requested an explicit pause until further instruction. Exactly
+one `SIGINT` was sent. New admission stopped, the final in-flight unit drained normally, and
+the collector plus detached `screen` exited without an abort or canonical marker. The clean
+pause state has 3,705 `UNIT_ADMITTED` = 3,705 `UNIT_READY`, corresponding to 4,208 total rows
+and 13,840 completed calls (36.83%). Lane event-type totals are 14,279/14,279 attempt
+intent/result and 13,840/13,840 call intent/result, so the content-free extra-attempt count is
+439 and every active boundary is closed. The hourly automation was set to `PAUSED`; no
+same-directory resume is permitted until the user explicitly requests it. No private payload
+or frontend was inspected or changed.
