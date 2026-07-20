@@ -1,6 +1,6 @@
 # Fretsure — 项目状态 / 恢复文档
 
-> 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-20。
+> 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-21。
 
 ## 0. 当前恢复真源
 
@@ -140,6 +140,14 @@ PID/screen 正常，仍无 terminal/abort/canonical。
 5,042 READY / 5,046 admitted、5,545 rows / 20,488 calls（50.12%），extra attempts=444；
 PID/screen 正常，仍无 terminal/abort/canonical。
 
+复测后的 operator sequence 84 已记录精确 55% checkpoint：segment elapsed
+`57,861.903058` 秒，5,533 units / 6,036 rows / 22,768 calls，overall/recent 吞吐为
+108.506628 / 108.0 units/hour、531.085194 / 460.0 calls/hour，`stalled=false`，剩余 ETA
+150,196–150,900 秒（约 1天17小时43分–1天17小时55分）。该行 SHA-256=
+`4b7407d61c355647350ffb90254b6de0ccfbd004b6184f560382227fd5c8c202`。随后只读快照为
+5,547 READY / 5,551 admitted、6,050 rows / 22,850 calls（55.14%），extra attempts=449；
+PID/screen 正常，仍无 terminal/abort/canonical。
+
 P1 wall-reservation amendment 前的完整普通 stub A/B 已覆盖全部 `10,563` rows。A 在
 167 个 durable units 时只发送一次
 `SIGINT`，排空到 212 后以同一 output directory `--resume`，总耗时 30:05；B 不间断运行
@@ -155,13 +163,13 @@ resume，最终与不间断 B 的 5 个 canonical 文件一致。两者均为 `C
 calls；A / B 总 wall time 30:12 / 27:24。完整 provider-free release gates 已通过：离线全套
 `2599 passed, 8 deselected`，integration 边界 `8 skipped, 2599 deselected`，Ruff、strict mypy、
 lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。attempt-004
-已按上述绑定启动并越过 5%、10%、15%、20%、25%、30%、35%、40%、45%、50% durable checkpoints。recovery plan `bf662a67…`
+已按上述绑定启动并越过 5%、10%、15%、20%、25%、30%、35%、40%、45%、50%、55% durable checkpoints。recovery plan `bf662a67…`
 已应用并由 receipt `c53c1d8a…` 回检；原 runtime 从 2,622 durable units 接受同目录 resume，4 个
 重跑 units 均已越过。用户主动暂停后又明确要求继续；当前 runner 已接受 3,705 READY、4,208
 rows / 13,840 completed calls（36.83%）的完整 resume prefix，PID/screen 正常、无 abort，
 automation=`ACTIVE`。一次性 4-vs-8 网络复测已经完成且不得重复；8 路仅提升 0.88% unit 与
 7.03% call throughput，未过门槛，formal 已自动同目录 resume 并保持 4 lanes；最新只读快照为
-5,042 READY / 5,046 admitted、5,545 rows / 20,488 calls（50.12%），extra attempts=444，
+5,547 READY / 5,551 admitted、6,050 rows / 22,850 calls（55.14%），extra attempts=449，
 PID/screen 正常且无 terminal/abort/canonical。后续仍约每 5%
 与 terminal 更新证据。正式与 pilot 在建客户端前机械要求数值 loopback，拒绝 `localhost`；
 完成前不启动 Task 10。
