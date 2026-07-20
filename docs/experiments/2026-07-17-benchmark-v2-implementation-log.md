@@ -1011,3 +1011,17 @@ intent/result and 13,840/13,840 call intent/result, so the content-free extra-at
 439 and every active boundary is closed. The hourly automation was set to `PAUSED`; no
 same-directory resume is permitted until the user explicitly requests it. No private payload
 or frontend was inspected or changed.
+
+### Attempt-004 explicit resume and deferred concurrency retest
+
+The user subsequently instructed the collector to continue. Same-directory `--resume`
+started under PID 38427 and detached `screen`; its new operator sequence 0 accepted the clean
+3,705-unit, 4,208-row, 13,840-call prefix without an abort. The immutable attempt continues
+with its bound four-lane execution contract.
+
+The user also reported that the network environment has improved and requested one new
+controlled four-versus-eight-lane pilot after this formal run completes. That retest will
+hold the model, proxy, pilot corpus, timeout, pricing, and measurement method constant and
+compare durable unit/call throughput, P50/P95 latency, retries, and cost. It will occur only
+after Task 9 COMPLETE acceptance and the two offline replays, will not rewrite attempt-004,
+and must finish before Task 10 begins.

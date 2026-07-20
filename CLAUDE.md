@@ -29,11 +29,12 @@ attempt-004 已绑定 execution `773c69de…` / pre-call `facafd05…` detached 
 INCOMPLETE checkpoint。用户批准的 post-hoc orphan-lane recovery 已由 pushed operator-only 工具
 按 plan `bf662a67…` 应用，receipt=`c53c1d8a…`；原 `773c69de…` runtime 已从 2,622 durable units
 同目录 resume。重跑的 4 units 已全部越过，并通过恢复后的精确 30% / 35% checkpoints；最新
-用户随后要求出门期间暂停；单次 `SIGINT` 已干净排空到 3,705 admitted = READY、4,208 rows /
-13,840 completed calls（36.83%），extra attempts=439，无 abort/canonical，PID/screen 均已退出，
-automation=`PAUSED`。只有收到用户明确指示后才能同目录 resume。隔离的 9 attempts（5 usage
-完整、4 unknown）须进最终 cost addendum，不能记零。完成前不得启动 Task 10；现有 pre-call、
-WAL、config、历史 receipt 与金额均须保留。
+用户出门前的单次 `SIGINT` 曾干净排空到 3,705 admitted = READY、4,208 rows / 13,840 calls
+（36.83%）；用户随后明确要求继续，PID 38427 / detached screen 的同目录 resume 已接受完整
+prefix，仍为 4 lanes、无 abort，automation=`ACTIVE`。隔离的 9 attempts（5 usage 完整、4
+unknown）须进最终 cost addendum，不能记零。COMPLETE 与 Task 9 双 replay 验收后，因用户说明
+网络环境已改善，须用相同绑定重新执行受控 4-vs-8 pilot；该复测不回写 attempt-004，完成前不
+启动 Task 10。现有 pre-call、WAL、config、历史 receipt 与金额均须保留。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。
 
