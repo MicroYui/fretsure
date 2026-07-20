@@ -1019,9 +1019,13 @@ started under PID 38427 and detached `screen`; its new operator sequence 0 accep
 3,705-unit, 4,208-row, 13,840-call prefix without an abort. The immutable attempt continues
 with its bound four-lane execution contract.
 
-The user also reported that the network environment has improved and requested one new
-controlled four-versus-eight-lane pilot after this formal run completes. That retest will
-hold the model, proxy, pilot corpus, timeout, pricing, and measurement method constant and
-compare durable unit/call throughput, P50/P95 latency, retries, and cost. It will occur only
-after Task 9 COMPLETE acceptance and the two offline replays, will not rewrite attempt-004,
-and must finish before Task 10 begins.
+The user also reported that the network environment has improved. The initial instruction
+was misunderstood as a post-COMPLETE action; the user clarified that the one-time controlled
+four-versus-eight-lane pilot should begin at the next hourly check. To avoid contaminating
+both measurements through shared proxy/network load, the operator will first send one
+`SIGINT` to drain attempt-004 cleanly, then run eight complete four-lane blocks and eight
+complete eight-lane blocks in alternating serial order under a fresh root. The retest holds
+the model, proxy, pilot corpus, timeout, pricing, and measurement method constant and compares
+durable unit/call throughput, P50/P95 latency, retries, and cost. Once its terminal comparison
+exists, attempt-004 resumes in the same directory. The pilot will not rewrite attempt-004 and
+must not be launched again after the terminal comparison exists.
