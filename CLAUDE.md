@@ -32,11 +32,12 @@ INCOMPLETE checkpoint。用户批准的 post-hoc orphan-lane recovery 已由 pus
 用户出门前的单次 `SIGINT` 曾干净排空到 3,705 admitted = READY、4,208 rows / 13,840 calls
 （36.83%）；用户随后明确要求继续，PID 38427 / detached screen 的同目录 resume 已接受完整
 prefix，仍为 4 lanes、无 abort，automation=`ACTIVE`。隔离的 9 attempts（5 usage 完整、4
-unknown）须进最终 cost addendum，不能记零。用户澄清网络改善后的 4-vs-8 pilot 不等 formal
-完成：下一次小时级检查先以单次 `SIGINT` 干净排空 attempt-004，再在独立 root 串行运行 4/8
-各 8 blocks；comparison 完成后立即同目录 resume formal。pilot 不得与 formal 并跑、不得回写
-attempt-004，终态存在后不得重复；完成前不启动 Task 10。现有 pre-call、WAL、config、历史
-receipt 与金额均须保留。
+unknown）须进最终 cost addendum，不能记零。网络改善后的 4-vs-8 pilot 已在 formal 干净暂停
+期间一次性完成：comparison=`1fcfb8a3…`，8/4 unit/call ratios=`1.008834716058 /
+1.070286574518`，两级均 0 retries，但仍未过 `1.35 / 1.25` 门槛，因此 formal 保持 4 lanes。
+batch 已自动从 3,789-unit prefix 同目录 resume，最新只读快照为 3,798 READY / 3,802 admitted、
+4,301 rows / 14,267 calls（37.75%），无 abort。复测不得重复；完成前不启动 Task 10。现有
+pre-call、WAL、config、历史 receipt 与金额均须保留。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。
 

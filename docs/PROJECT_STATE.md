@@ -106,12 +106,15 @@ intent/result，extra attempts=439。PID 已退出、screen 已消失，且无 t
 operator sequence 0 接受完整 3,705-unit / 13,840-call resume prefix，仍为 4 lanes 且无 abort，
 automation 已恢复为 `ACTIVE`。
 
-用户说明当前网络环境已经改善，并澄清不是等 formal 完成：下一次小时级检查即执行一次性受控
-4-vs-8 并发复测。为避免 pilot 与 formal 共享代理负载而污染两边数据，检查时先对 attempt-004
-发送一次 `SIGINT` 并干净排空，再在独立 root 串行交错执行 4/8 各 8 个完整 blocks；生成终态
-comparison 后立即同目录 resume attempt-004。复测保持相同模型、代理、pilot corpus、timeout、
-pricing 与度量口径，比较 durable unit/call throughput、P50/P95、retry 与 cost；不得回写或改变
-attempt-004 的 execution contract/结果，且终态存在后不得重复运行。
+用户说明当前网络环境已经改善，并澄清不是等 formal 完成。下一次小时级检查已先将 attempt-004
+干净排空到 3,789 units，再在独立 root 串行交错完成 4/8 各 8 个 blocks。comparison SHA-256=
+`1fcfb8a383c4f1f484f761093faba2f89b00dd6143a6adc697a853c0da2322d3`。4 路为
+226.126226 units/h、696.044790 calls/h、P50/P95 10.439/81.895 秒、0 retries；8 路为
+228.123987 units/h、744.967394 calls/h、P50/P95 8.453/80.586 秒、0 retries。8/4 unit/call
+比为 `1.008834716058 / 1.070286574518`，仍低于 `1.35 / 1.25` 门槛，因此结论仍为 4 lanes。
+两级 recorded known=tight cost 合计 `$11.298845`。batch 完成后已自动同目录 resume formal；
+新 sequence 0 接受 3,789-unit / 14,232-call prefix，随后只读快照为 3,798 READY /
+3,802 admitted、4,301 rows / 14,267 calls（37.75%），无 abort。
 
 P1 wall-reservation amendment 前的完整普通 stub A/B 已覆盖全部 `10,563` rows。A 在
 167 个 durable units 时只发送一次
@@ -132,9 +135,10 @@ lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-inst
 已应用并由 receipt `c53c1d8a…` 回检；原 runtime 从 2,622 durable units 接受同目录 resume，4 个
 重跑 units 均已越过。用户主动暂停后又明确要求继续；当前 runner 已接受 3,705 READY、4,208
 rows / 13,840 completed calls（36.83%）的完整 resume prefix，PID/screen 正常、无 abort，
-automation=`ACTIVE`。下一次小时级检查先干净暂停 formal、独立重跑 4-vs-8 pilot，再同目录
-resume；后续仍约每 5% 与 terminal 更新证据。正式与 pilot 在建客户端前机械要求数值 loopback，
-拒绝 `localhost`；完成前不启动 Task 10。
+automation=`ACTIVE`。一次性 4-vs-8 网络复测已经完成且不得重复；8 路仅提升 0.88% unit 与
+7.03% call throughput，未过门槛，formal 已自动同目录 resume 并保持 4 lanes。后续仍约每 5%
+与 terminal 更新证据。正式与 pilot 在建客户端前机械要求数值 loopback，拒绝 `localhost`；
+完成前不启动 Task 10。
 
 ## 0a. 其余现状
 

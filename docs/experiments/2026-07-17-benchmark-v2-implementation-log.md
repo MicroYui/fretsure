@@ -1029,3 +1029,29 @@ the model, proxy, pilot corpus, timeout, pricing, and measurement method constan
 durable unit/call throughput, P50/P95 latency, retries, and cost. Once its terminal comparison
 exists, attempt-004 resumes in the same directory. The pilot will not rewrite attempt-004 and
 must not be launched again after the terminal comparison exists.
+
+### Immediate network retest result
+
+At the next hourly check, attempt-004 received one `SIGINT` and drained cleanly at 3,789
+durable units and 14,232 completed calls. The independent retest then completed all sixteen
+blocks in alternating serial order without overlapping formal collection. Its terminal
+comparison SHA-256 is
+`1fcfb8a383c4f1f484f761093faba2f89b00dd6143a6adc697a853c0da2322d3`.
+
+The eight four-lane blocks completed 64 units and 197 calls at 226.126226 units/hour and
+696.044790 calls/hour, with zero retries and P50/P95 latency of 10.439/81.895 seconds. The
+eight eight-lane blocks completed 64 units and 209 calls at 228.123987 units/hour and
+744.967394 calls/hour, also with zero retries and P50/P95 latency of 8.453/80.586 seconds.
+The 8/4 unit/call throughput ratios were `1.008834716058` and `1.070286574518`; P95 ratio was
+`0.984021689103`, and success-rate delta was zero. The improved network eliminated the old
+eight-lane retries and improved latency, but unit throughput rose only 0.88% and call
+throughput 7.03%, still below the frozen `1.35 / 1.25` thresholds. The conclusion therefore
+remains four lanes. Recorded known and tight cost were equal: `$5.497270` at four lanes and
+`$5.801575` at eight, `$11.298845` total.
+
+The batch then automatically resumed attempt-004 in its original directory. New operator
+sequence 0 accepted the 3,789-unit, 4,292-row, 14,232-call prefix. The subsequent read-only
+snapshot had 3,802 admitted / 3,798 READY, 4,301 rows, and 14,267 completed calls (37.75%),
+with no abort marker. The retest terminal comparison is a one-time sentinel and must not be
+repeated. Only aggregate throughput, latency, retry, usage/cost, progress, and event-type
+metadata were inspected; no private payload or frontend was read or changed.
