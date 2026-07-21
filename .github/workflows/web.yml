@@ -1,0 +1,58 @@
+name: Web CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/web.yml"
+      - "src/fretsure/web_static/**"
+      - "web/**"
+  pull_request:
+    paths:
+      - ".github/workflows/web.yml"
+      - "src/fretsure/web_static/**"
+      - "web/**"
+
+concurrency:
+  group: web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Whitespace integrity
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: git diff --check "$BASE_SHA...$HEAD_SHA"
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Tests
+        working-directory: web
+        run: npm test
+
+      - name: Typecheck
+        working-directory: web
+        run: npm run typecheck
+
+      - name: Production build
+        working-directory: web
+        run: npm run build
+
+      - name: Verify generated assets
+        run: git diff --exit-code -- src/fretsure/web_static

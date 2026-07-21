@@ -2,14 +2,46 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
+    paths:
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/full-validation.yml"
+      - ".python-version"
+      - "data/**"
+      - "pyproject.toml"
+      - "scripts/**"
+      - "src/**"
+      - "tests/**"
+      - "uv.lock"
   pull_request:
+    paths:
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/full-validation.yml"
+      - ".python-version"
+      - "data/**"
+      - "pyproject.toml"
+      - "scripts/**"
+      - "src/**"
+      - "tests/**"
+      - "uv.lock"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Whitespace integrity
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: git diff --check "$BASE_SHA...$HEAD_SHA"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -31,62 +63,8 @@ jobs:
           uv run mypy --strict scripts/task8_budget_gate.py
           uv run mypy --strict scripts/task8_pilot.py
 
-      - name: Offline tests
-        run: uv run pytest -q -m 'not integration'
+      - name: Core tests
+        run: uv run pytest -q -m 'not integration' --ignore=tests/bench
 
-      - name: Integration boundary without provider configuration
-        env:
-          ANTHROPIC_AUTH_TOKEN: ""
-          ANTHROPIC_BASE_URL: ""
-        run: uv run pytest -q -m integration
-
-      - name: Minimum Anthropic compatibility
-        run: >-
-          uv run --isolated --extra agent --with "anthropic==0.40.0" --with "pytest>=8"
-          python -m pytest -q tests/llm/test_anthropic_compat.py
-
-      - name: Lockfile and Markdown links
-        run: |
-          uv lock --check
-          uv run python scripts/build_benchmark_prereg.py --check
-          uv run python scripts/task8_pilot.py --check-spec docs/experiments/2026-07-18-benchmark-v2-pilot-spec.json
-          uv run python scripts/check_markdown_links.py
-
-      - name: Whitespace integrity
-        run: git diff --check
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install frontend dependencies
-        working-directory: web
-        run: npm ci
-
-      - name: Frontend tests
-        working-directory: web
-        run: npm test
-
-      - name: Frontend typecheck
-        working-directory: web
-        run: npm run typecheck
-
-      - name: Frontend production build
-        working-directory: web
-        run: npm run build
-
-      - name: Verify generated frontend assets
-        run: git diff --exit-code -- src/fretsure/web_static
-
-      - name: Frontend dependency audit
-        working-directory: web
-        run: npm audit --audit-level=high
-
-      - name: Build and audit distributions
-        run: |
-          uv build
-          uv run python scripts/audit_distributions.py
-          uv run python scripts/smoke_distributions.py
+      - name: Lockfile
+        run: uv lock --check
