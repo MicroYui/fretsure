@@ -156,6 +156,14 @@ PID/screen 正常，仍无 terminal/abort/canonical。
 6,056 READY / 6,060 admitted、6,559 rows / 25,451 calls（60.20%），extra attempts=463；
 PID/screen 正常，仍无 terminal/abort/canonical。
 
+复测后的 operator sequence 132 已记录精确 65% checkpoint：segment elapsed
+`90,774.274008` 秒，6,539 units / 7,042 rows / 27,856 calls，overall/recent 吞吐为
+109.061737 / 104.0 units/hour、540.311675 / 456.0 calls/hour，`stalled=false`，剩余 ETA
+116,225–121,881 秒（约 1天8小时17分–1天9小时51分）。该行 SHA-256=
+`003eb7025bf3b44fc21cd2dd1cc2f72d9f7a93f822eb691f81900ffac2d734b5`。随后只读快照为
+6,553 READY / 6,554 admitted、7,056 rows / 27,910 calls（65.14%），extra attempts=466；
+PID/screen 正常，仍无 terminal/abort/canonical。
+
 P1 wall-reservation amendment 前的完整普通 stub A/B 已覆盖全部 `10,563` rows。A 在
 167 个 durable units 时只发送一次
 `SIGINT`，排空到 212 后以同一 output directory `--resume`，总耗时 30:05；B 不间断运行
@@ -171,13 +179,13 @@ resume，最终与不间断 B 的 5 个 canonical 文件一致。两者均为 `C
 calls；A / B 总 wall time 30:12 / 27:24。完整 provider-free release gates 已通过：离线全套
 `2599 passed, 8 deselected`，integration 边界 `8 skipped, 2599 deselected`，Ruff、strict mypy、
 lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-install smoke 全绿。attempt-004
-已按上述绑定启动并越过 5%、10%、15%、20%、25%、30%、35%、40%、45%、50%、55%、60% durable checkpoints。recovery plan `bf662a67…`
+已按上述绑定启动并越过 5%、10%、15%、20%、25%、30%、35%、40%、45%、50%、55%、60%、65% durable checkpoints。recovery plan `bf662a67…`
 已应用并由 receipt `c53c1d8a…` 回检；原 runtime 从 2,622 durable units 接受同目录 resume，4 个
 重跑 units 均已越过。用户主动暂停后又明确要求继续；当前 runner 已接受 3,705 READY、4,208
 rows / 13,840 completed calls（36.83%）的完整 resume prefix，PID/screen 正常、无 abort，
 automation=`ACTIVE`。一次性 4-vs-8 网络复测已经完成且不得重复；8 路仅提升 0.88% unit 与
 7.03% call throughput，未过门槛，formal 已自动同目录 resume 并保持 4 lanes；最新只读快照为
-6,056 READY / 6,060 admitted、6,559 rows / 25,451 calls（60.20%），extra attempts=463，
+6,553 READY / 6,554 admitted、7,056 rows / 27,910 calls（65.14%），extra attempts=466，
 PID/screen 正常且无 terminal/abort/canonical。后续仍约每 5%
 与 terminal 更新证据。正式与 pilot 在建客户端前机械要求数值 loopback，拒绝 `localhost`；
 完成前不启动 Task 10。

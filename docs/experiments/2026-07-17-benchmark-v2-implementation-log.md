@@ -1094,6 +1094,25 @@ extra-attempt count was 442, with four currently active boundaries. PID and deta
 metadata and aggregate event types were inspected; the execution binding, private payloads,
 and frontend remained untouched.
 
+### Attempt-004 live 65% checkpoint after the network retest
+
+Canonical post-retest operator sequence 132 recorded exactly 65% after 90,774.274008 active
+segment seconds: 6,539/10,060 network units, 7,042/10,563 total rows, and 27,856 completed
+calls. The 3,789-unit resume prefix means this segment had durably added 2,750 units and
+13,624 calls. Overall/recent-15-minute segment throughput was 109.061737/104.0 units/hour and
+540.311675/456.0 calls/hour. The record was not stalled and reported 116,225
+optimistic/median and 121,881 conservative seconds remaining, approximately 1 day 8 hours
+17 minutes through 1 day 9 hours 51 minutes. Its exact canonical line SHA-256 is
+`003eb7025bf3b44fc21cd2dd1cc2f72d9f7a93f822eb691f81900ffac2d734b5`.
+
+The subsequent read-only snapshot had 6,554 `UNIT_ADMITTED` and 6,553 `UNIT_READY` events,
+corresponding to 7,056 rows and 27,910 completed calls (65.14%). Lane event types were
+28,377/28,376 attempt intent/result and 27,911/27,910 call intent/result; the content-free
+extra-attempt count was 466, with one currently active boundary. PID and detached `screen`
+were healthy, and no terminal, abort, or canonical marker existed. Only progress metadata
+and aggregate event types were inspected; the execution binding, private payloads, and
+frontend remained untouched.
+
 ### Attempt-004 live 60% checkpoint after the network retest
 
 Canonical post-retest operator sequence 112 recorded exactly 60% after 76,103.297075 active
