@@ -35,8 +35,8 @@ prefix，仍为 4 lanes、无 abort，automation=`ACTIVE`。隔离的 9 attempts
 unknown）须进最终 cost addendum，不能记零。网络改善后的 4-vs-8 pilot 已在 formal 干净暂停
 期间一次性完成：comparison=`1fcfb8a3…`，8/4 unit/call ratios=`1.008834716058 /
 1.070286574518`，两级均 0 retries，但仍未过 `1.35 / 1.25` 门槛，因此 formal 保持 4 lanes。
-batch 已自动从 3,789-unit prefix 同目录 resume，并通过精确 40% / 45% / 50% / 55% / 60% / 65% / 70% / 75% / 80% / 85% checkpoints；最新只读快照为
-8,646 READY / 8,650 admitted、9,149 rows / 38,316 calls（85.94%），extra attempts=481，
+batch 已自动从 3,789-unit prefix 同目录 resume，并通过精确 40% / 45% / 50% / 55% / 60% / 65% / 70% / 75% / 80% / 85% / 90% checkpoints；最新只读快照为
+9,172 READY / 9,176 admitted、9,675 rows / 40,888 calls（91.17%），extra attempts=483，
 PID/screen 正常且无 terminal/abort/canonical。复测不得重复；完成前不启动 Task 10。现有
 pre-call、WAL、config、历史 receipt 与金额均须保留。
 
