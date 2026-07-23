@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Quarantine interrupted active lanes so a terminal Task 9 prefix can resume.
+"""Quarantine terminal Task 9 abort evidence so a verified prefix can resume.
 
 This is an operator-only, provider-free amendment.  It never edits the main journal,
 coordinator WAL, completed units, or READY lanes.  A plan is generated without mutation;
-``--apply`` then requires the exact plan SHA-256, archives every active lane and the prior
-abort evidence, creates empty replacement lane WALs, and emits a canonical receipt.
+``--apply`` then requires the exact plan SHA-256, archives active lanes when present and the
+prior abort evidence, creates any required empty replacement WALs, and emits a canonical
+receipt.  A zero-active-lane plan may then use ``--finalize`` with provider factories that
+fail immediately if the supposedly offline path tries to create a client.
 
 The archived attempts remain part of the billing audit.  They are not observations for the
 re-run units and their missing usage must never be treated as zero.
@@ -121,6 +123,40 @@ def _raw_sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _finalizer_source_bundle_sha256() -> str:
+    """Bind the exact benchmark sources used by provider-free finalization."""
+
+    repository = Path(__file__).resolve().parents[1]
+    source_root = repository / "src" / "fretsure" / "bench"
+    paths = tuple(sorted(source_root.rglob("*.py")))
+    if not paths:
+        _fail("finalizer_source_bundle", "contains no benchmark Python sources")
+    entries = [
+        {
+            "path": path.relative_to(repository).as_posix(),
+            "raw_sha256": _raw_sha256(
+                _regular_bytes(path, f"finalizer_source[{path.name}]")
+            ),
+        }
+        for path in paths
+    ]
+    return _raw_sha256(
+        canonical_json_bytes(
+            {
+                "files": entries,
+                "schema": "task9-finalizer-source-bundle@0.1.0",
+            }
+        )
+    )
+
+
+def _verify_plan_tool_binding(plan: dict[str, object]) -> None:
+    expected = _sha256(plan.get("tool_sha256"), "recovery_plan.tool_sha256")
+    actual = _raw_sha256(Path(__file__).resolve().read_bytes())
+    if actual != expected:
+        _fail("recovery_plan.tool_sha256", "does not bind the running recovery tool")
+
+
 def _regular_bytes(path: Path, field: str, *, allow_empty: bool = False) -> bytes:
     try:
         metadata = path.lstat()
@@ -196,8 +232,8 @@ def _coordinator_state(path: Path) -> tuple[str, tuple[int, ...], dict[str, int]
                 _fail(f"coordinator[{sequence}]", "READY does not match an active lane")
             active.remove(index)
         previous = _coordinator_sha(wire)
-    if not 1 <= len(active) <= MAX_ACTIVE_LANES:
-        _fail("coordinator.active_lanes", f"must contain 1..{MAX_ACTIVE_LANES} lanes")
+    if len(active) > MAX_ACTIVE_LANES:
+        _fail("coordinator.active_lanes", f"must contain 0..{MAX_ACTIVE_LANES} lanes")
     return _raw_sha256(data), tuple(sorted(active)), dict(sorted(counts.items()))
 
 
@@ -454,6 +490,7 @@ def build_recovery_plan(
     expected_active_lanes: int,
     recovery_id: str,
     authorization_id: str,
+    expected_finalizer_git_sha: str | None = None,
 ) -> dict[str, object]:
     """Return a deterministic, content-free recovery plan without mutation."""
 
@@ -471,9 +508,20 @@ def build_recovery_plan(
     active_limit = _integer(
         expected_active_lanes,
         "expected_active_lanes",
-        minimum=1,
+        minimum=0,
         maximum=MAX_ACTIVE_LANES,
     )
+    finalizer_git_sha: str | None = None
+    if active_limit == 0:
+        if expected_finalizer_git_sha is None:
+            _fail(
+                "expected_finalizer_git_sha",
+                "is required for a finalization-only recovery",
+            )
+        finalizer_git_sha = _git_sha(
+            expected_finalizer_git_sha,
+            "expected_finalizer_git_sha",
+        )
     if (output_dir / "canonical").exists():
         _fail("output_dir", "already contains canonical output")
     pre_call = _regular_bytes(pre_call_config, "pre_call_config")
@@ -519,6 +567,24 @@ def build_recovery_plan(
     observed_calls = _integer(abort.get("observed_calls"), "abort_receipt.observed_calls")
     if observed_rows < controls:
         _fail("abort_receipt.observed_rows", "is smaller than the control-row prefix")
+    if active_limit == 0:
+        expected_rows = _integer(
+            abort.get("expected_rows"),
+            "abort_receipt.expected_rows",
+        )
+        durable_units = observed_rows - controls
+        if observed_rows != expected_rows:
+            _fail(
+                "abort_receipt.observed_rows",
+                "must equal expected_rows for finalization-only recovery",
+            )
+        if coordinator_counts.get("UNIT_ADMITTED") != durable_units or coordinator_counts.get(
+            "UNIT_READY"
+        ) != durable_units:
+            _fail(
+                "coordinator",
+                "must contain one READY record for every durable network unit",
+            )
     config_path = output_dir / "config.json"
     journal_path = output_dir / "journal.jsonl"
     config = _regular_bytes(config_path, "config")
@@ -534,22 +600,30 @@ def build_recovery_plan(
             expected_formal_billing_envelope_sha256
         ),
     )
+    bindings = {
+        "execution_git_sha": exact_execution,
+        "formal_budget_gate_sha256": exact_gate_sha,
+        "formal_billing_envelope_sha256": _sha256(
+            expected_formal_billing_envelope_sha256,
+            "expected_formal_billing_envelope_sha256",
+        ),
+        "pre_call_sha256": exact_pre_call_sha,
+        "pricing_contract_sha256": _sha256(
+            expected_pricing_sha256,
+            "expected_pricing_sha256",
+        ),
+    }
+    if finalizer_git_sha is not None:
+        bindings["finalizer_git_sha"] = finalizer_git_sha
+        bindings["finalizer_source_bundle_sha256"] = _finalizer_source_bundle_sha256()
     return {
         "authorization_id": exact_authorization,
-        "bindings": {
-            "execution_git_sha": exact_execution,
-            "formal_budget_gate_sha256": exact_gate_sha,
-            "formal_billing_envelope_sha256": _sha256(
-                expected_formal_billing_envelope_sha256,
-                "expected_formal_billing_envelope_sha256",
-            ),
-            "pre_call_sha256": exact_pre_call_sha,
-            "pricing_contract_sha256": _sha256(
-                expected_pricing_sha256,
-                "expected_pricing_sha256",
-            ),
-        },
-        "policy": "quarantine_active_lane_and_retry_complete_unit",
+        "bindings": bindings,
+        "policy": (
+            "quarantine_terminal_finalize_abort"
+            if active_limit == 0
+            else "quarantine_active_lane_and_retry_complete_unit"
+        ),
         "protocol_deviation": True,
         "recovery_id": exact_recovery_id,
         "run_id": exact_run_id,
@@ -984,6 +1058,7 @@ def apply_recovery(
     plan_sha = _raw_sha256(plan_bytes)
     if plan_sha != _sha256(expected_plan_sha256, "expected_plan_sha256"):
         _fail("recovery_plan", "does not match the explicitly approved SHA-256")
+    _verify_plan_tool_binding(plan)
     recovery_id = _identifier(plan.get("recovery_id"), "recovery_plan.recovery_id")
     root = _recovery_root(output_dir, recovery_id)
     if (root / "receipt.json").exists():
@@ -1014,12 +1089,112 @@ def apply_recovery(
     )
 
 
+def finalize_recovered_run(
+    *,
+    output_dir: Path,
+    pre_call_config: Path,
+    expected_pre_call_sha256: str,
+    recovery_id: str,
+    expected_plan_sha256: str,
+    expected_finalizer_git_sha: str,
+    authorized_maximum_spend_microunits: int,
+) -> dict[str, object]:
+    """Finalize one fully READY recovery while mechanically forbidding provider clients."""
+
+    for name in ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"):
+        if os.environ.get(name):
+            _fail("environment", f"{name} must be unset for offline finalization")
+    exact_plan_sha = _sha256(expected_plan_sha256, "expected_plan_sha256")
+    exact_finalizer_sha = _git_sha(
+        expected_finalizer_git_sha,
+        "expected_finalizer_git_sha",
+    )
+    maximum_spend = _integer(
+        authorized_maximum_spend_microunits,
+        "authorized_maximum_spend_microunits",
+        minimum=1,
+        maximum=(1 << 63) - 1,
+    )
+    check_applied_recovery(
+        output_dir=output_dir,
+        recovery_id=recovery_id,
+        expected_plan_sha256=exact_plan_sha,
+    )
+    root = _recovery_root(output_dir, recovery_id)
+    _plan_bytes, plan = _load_plan(root / "plan.json")
+    if plan.get("policy") != "quarantine_terminal_finalize_abort":
+        _fail("recovery_plan.policy", "does not authorize finalization-only recovery")
+    _verify_plan_tool_binding(plan)
+    bindings = _object(plan.get("bindings"), "recovery_plan.bindings")
+    if bindings.get("finalizer_git_sha") != exact_finalizer_sha:
+        _fail("recovery_plan.bindings.finalizer_git_sha", "does not match the finalizer")
+    if bindings.get("finalizer_source_bundle_sha256") != _finalizer_source_bundle_sha256():
+        _fail(
+            "recovery_plan.bindings.finalizer_source_bundle_sha256",
+            "does not bind the running benchmark sources",
+        )
+    pre_call_bytes = _regular_bytes(pre_call_config, "pre_call_config")
+    if _raw_sha256(pre_call_bytes) != _sha256(
+        expected_pre_call_sha256,
+        "expected_pre_call_sha256",
+    ) or bindings.get("pre_call_sha256") != expected_pre_call_sha256:
+        _fail("pre_call_config", "does not match the recovery plan")
+    if (output_dir / "canonical").exists():
+        _fail("output_dir", "already contains canonical output")
+
+    from fretsure.bench.precall import pre_call_config_from_bytes
+    from fretsure.bench.runner import collect_benchmark_v2
+
+    provider_factory_calls = 0
+
+    def forbidden_provider_factory() -> NoReturn:
+        nonlocal provider_factory_calls
+        provider_factory_calls += 1
+        _fail("provider_factory", "offline finalization attempted to create a client")
+
+    result = collect_benchmark_v2(
+        pre_call_config=pre_call_config_from_bytes(pre_call_bytes),
+        output_dir=output_dir,
+        resume=True,
+        agent_llm_factory=forbidden_provider_factory,
+        raw_llm_factory=forbidden_provider_factory,
+        authorized_maximum_spend_microunits=maximum_spend,
+    )
+    if provider_factory_calls != 0:
+        _fail("provider_factory", "was called during offline finalization")
+    if result.receipt.status.value != "COMPLETE" or result.report is not None:
+        _fail("finalization", "did not produce one raw-only COMPLETE receipt")
+    expected_files = frozenset(
+        {"blobs.jsonl", "config.json", "observations.json", "receipt.json", "rows.jsonl"}
+    )
+    canonical = output_dir / "canonical"
+    actual_files = frozenset(
+        path.name for path in canonical.iterdir() if path.is_file()
+    )
+    if actual_files != expected_files or any(path.is_dir() for path in canonical.iterdir()):
+        _fail("canonical", "must contain exactly the five raw publication files")
+    check_applied_recovery(
+        output_dir=output_dir,
+        recovery_id=recovery_id,
+        expected_plan_sha256=exact_plan_sha,
+    )
+    return {
+        "canonical_file_count": len(actual_files),
+        "observed_calls": result.receipt.observed_calls,
+        "observed_rows": result.receipt.observed_rows,
+        "provider_factory_calls": provider_factory_calls,
+        "receipt_raw_sha256": _raw_sha256((canonical / "receipt.json").read_bytes()),
+        "status": result.receipt.status.value,
+    }
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="task9-recover-orphan-lanes")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--plan", action="store_true")
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--check", action="store_true")
+    mode.add_argument("--finalize", action="store_true")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--pre-call-config", type=Path, required=True)
     parser.add_argument("--expected-pre-call-sha256", required=True)
@@ -1031,68 +1206,93 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--expected-formal-billing-envelope-sha256", required=True)
     parser.add_argument("--expected-abort-receipt-sha256", required=True)
     parser.add_argument("--expected-execution-git-sha", required=True)
+    parser.add_argument("--expected-finalizer-git-sha")
     parser.add_argument("--expected-run-id", required=True)
     parser.add_argument("--expected-control-rows", type=int, default=503)
     parser.add_argument("--expected-active-lanes", type=int, default=4)
     parser.add_argument("--recovery-id", required=True)
     parser.add_argument("--authorization-id", required=True)
     parser.add_argument("--expected-plan-sha256")
+    parser.add_argument("--authorized-maximum-spend-microunits", type=int)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
-        with _writer_lock(args.output_dir):
-            if args.check:
-                if args.expected_plan_sha256 is None:
-                    _fail("expected_plan_sha256", "is required with --check")
-                result = check_applied_recovery(
-                    output_dir=args.output_dir,
-                    recovery_id=args.recovery_id,
-                    expected_plan_sha256=args.expected_plan_sha256,
+        if args.finalize:
+            if args.expected_plan_sha256 is None:
+                _fail("expected_plan_sha256", "is required with --finalize")
+            if args.expected_finalizer_git_sha is None:
+                _fail("expected_finalizer_git_sha", "is required with --finalize")
+            if args.authorized_maximum_spend_microunits is None:
+                _fail(
+                    "authorized_maximum_spend_microunits",
+                    "is required with --finalize",
                 )
-            else:
-                prepared_path = _recovery_root(
-                    args.output_dir,
-                    _identifier(args.recovery_id, "recovery_id"),
-                ) / "plan.json"
-                if args.apply and prepared_path.exists():
-                    _prepared_bytes, plan = _load_plan(prepared_path)
-                else:
-                    plan = build_recovery_plan(
-                        output_dir=args.output_dir,
-                        pre_call_config=args.pre_call_config,
-                        expected_pre_call_sha256=args.expected_pre_call_sha256,
-                        formal_budget_gate=args.formal_budget_gate,
-                        expected_formal_budget_gate_sha256=(
-                            args.expected_formal_budget_gate_sha256
-                        ),
-                        pricing_contract=args.pricing_contract,
-                        expected_pricing_sha256=args.expected_pricing_sha256,
-                        formal_billing_envelope=args.formal_billing_envelope,
-                        expected_formal_billing_envelope_sha256=(
-                            args.expected_formal_billing_envelope_sha256
-                        ),
-                        expected_abort_receipt_sha256=args.expected_abort_receipt_sha256,
-                        expected_execution_git_sha=args.expected_execution_git_sha,
-                        expected_run_id=args.expected_run_id,
-                        expected_control_rows=args.expected_control_rows,
-                        expected_active_lanes=args.expected_active_lanes,
-                        recovery_id=args.recovery_id,
-                        authorization_id=args.authorization_id,
-                    )
-                plan_sha = _raw_sha256(canonical_json_bytes(plan))
-                if args.plan:
-                    result = {"plan": plan, "plan_sha256": plan_sha}
-                else:
+            result = finalize_recovered_run(
+                output_dir=args.output_dir,
+                pre_call_config=args.pre_call_config,
+                expected_pre_call_sha256=args.expected_pre_call_sha256,
+                recovery_id=args.recovery_id,
+                expected_plan_sha256=args.expected_plan_sha256,
+                expected_finalizer_git_sha=args.expected_finalizer_git_sha,
+                authorized_maximum_spend_microunits=(
+                    args.authorized_maximum_spend_microunits
+                ),
+            )
+        else:
+            with _writer_lock(args.output_dir):
+                if args.check:
                     if args.expected_plan_sha256 is None:
-                        _fail("expected_plan_sha256", "is required with --apply")
-                    result = apply_recovery(
+                        _fail("expected_plan_sha256", "is required with --check")
+                    result = check_applied_recovery(
                         output_dir=args.output_dir,
-                        plan=plan,
+                        recovery_id=args.recovery_id,
                         expected_plan_sha256=args.expected_plan_sha256,
                     )
+                else:
+                    prepared_path = _recovery_root(
+                        args.output_dir,
+                        _identifier(args.recovery_id, "recovery_id"),
+                    ) / "plan.json"
+                    if args.apply and prepared_path.exists():
+                        _prepared_bytes, plan = _load_plan(prepared_path)
+                    else:
+                        plan = build_recovery_plan(
+                            output_dir=args.output_dir,
+                            pre_call_config=args.pre_call_config,
+                            expected_pre_call_sha256=args.expected_pre_call_sha256,
+                            formal_budget_gate=args.formal_budget_gate,
+                            expected_formal_budget_gate_sha256=(
+                                args.expected_formal_budget_gate_sha256
+                            ),
+                            pricing_contract=args.pricing_contract,
+                            expected_pricing_sha256=args.expected_pricing_sha256,
+                            formal_billing_envelope=args.formal_billing_envelope,
+                            expected_formal_billing_envelope_sha256=(
+                                args.expected_formal_billing_envelope_sha256
+                            ),
+                            expected_abort_receipt_sha256=args.expected_abort_receipt_sha256,
+                            expected_execution_git_sha=args.expected_execution_git_sha,
+                            expected_run_id=args.expected_run_id,
+                            expected_control_rows=args.expected_control_rows,
+                            expected_active_lanes=args.expected_active_lanes,
+                            recovery_id=args.recovery_id,
+                            authorization_id=args.authorization_id,
+                            expected_finalizer_git_sha=args.expected_finalizer_git_sha,
+                        )
+                    plan_sha = _raw_sha256(canonical_json_bytes(plan))
+                    if args.plan:
+                        result = {"plan": plan, "plan_sha256": plan_sha}
+                    else:
+                        if args.expected_plan_sha256 is None:
+                            _fail("expected_plan_sha256", "is required with --apply")
+                        result = apply_recovery(
+                            output_dir=args.output_dir,
+                            plan=plan,
+                            expected_plan_sha256=args.expected_plan_sha256,
+                        )
     except (OSError, RecoveryError, RuntimeError, ValueError) as error:
         print(str(error), file=sys.stderr)
         return 1

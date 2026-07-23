@@ -12,6 +12,7 @@ from typing import NoReturn
 import pytest
 
 import fretsure.bench.artifacts as artifacts
+import fretsure.bench.contracts as contracts
 from fretsure.bench.artifacts import (
     ArtifactCode,
     ArtifactError,
@@ -61,6 +62,7 @@ from fretsure.bench.contracts import (
     BENCHMARK_OBSERVATIONS_VERSION,
     BENCHMARK_REPORT_VERSION,
     BENCHMARK_ROW_VERSION,
+    BenchmarkContractError,
     canonical_json_bytes,
     canonical_sha256,
 )
@@ -996,6 +998,97 @@ def test_sanitized_observations_strict_parser_round_trips_and_rejects_nested_dri
     bad_usage["calls"][0]["usage"]["unknown"] = 0  # type: ignore[index]
     with pytest.raises(ArtifactError, match="exact keys"):
         sanitized_observations_from_dict(bad_usage)
+
+
+def test_observation_envelope_bypasses_only_the_aggregate_json_node_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    memory = InMemoryObservationSink(max_calls=4)
+    _make_call(memory, item_id="item-0")
+    _make_call(memory, item_id="item-1")
+    private, public = sanitize_observations("run-0", memory, stub=True)
+    expected_public = canonical_json_bytes(public.to_dict())
+    expected_private = canonical_json_bytes(private.to_dict())
+    expected_sha256 = canonical_sha256(BENCHMARK_OBSERVATIONS_VERSION, public.to_dict())
+
+    # Each canonical public call fits this budget, while their outer envelope does not.
+    # The specialized codec may concatenate those already validated call bytes, but the
+    # generic canonicalizer must retain its original whole-value protection.
+    monkeypatch.setattr(contracts, "MAX_BENCHMARK_JSON_NODES", 50)
+    with pytest.raises(BenchmarkContractError, match="value count"):
+        canonical_json_bytes(public.to_dict())
+
+    public_bytes = public.canonical_bytes(max_calls=4, max_bytes=1024 * 1024)
+    assert public_bytes == expected_public
+    assert public.canonical_bytes(max_calls=4, max_bytes=len(public_bytes)) == public_bytes
+    with pytest.raises(ArtifactError) as too_large:
+        public.canonical_bytes(max_calls=4, max_bytes=len(public_bytes) - 1)
+    assert too_large.value.code is ArtifactCode.LIMIT_EXCEEDED
+    with pytest.raises(ArtifactError) as invalid_limit:
+        public.canonical_bytes(
+            max_calls=4,
+            max_bytes=artifacts.MAX_BENCHMARK_JSON_BYTES + 1,
+        )
+    assert invalid_limit.value.code is ArtifactCode.INVALID_INPUT
+    assert public.sha256 == expected_sha256
+    assert private.canonical_bytes(max_calls=4, max_bytes=1024 * 1024) == expected_private
+    assert (
+        artifacts._parse_sanitized_observations_bytes(
+            public_bytes,
+            max_calls=4,
+            max_bytes=1024 * 1024,
+        )
+        == public
+    )
+    with pytest.raises(ArtifactError) as caught:
+        artifacts._parse_sanitized_observations_bytes(
+            public_bytes + b" ",
+            max_calls=4,
+            max_bytes=1024 * 1024,
+        )
+    assert caught.value.code is ArtifactCode.NON_CANONICAL
+
+
+def test_observation_envelope_finalizes_loads_and_republishes_above_node_limit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "large-observations"
+    manifest = _manifest()
+    blob = _blob()
+    with ArtifactStore.create(output, manifest) as store:
+        observation_keys = tuple(
+            _make_call(store.sink, item_id=f"item-{index}") for index in range(10)
+        )
+        store.commit_unit(
+            0,
+            _row(observations=observation_keys, blobs=(blob,)),
+            (blob,),
+        )
+        _private, public = sanitize_observations(manifest.run_id, store.sink, stub=True)
+        expected_observations = public.canonical_bytes(
+            max_calls=manifest.limits.max_calls,
+            max_bytes=manifest.limits.max_json_bytes,
+        )
+        monkeypatch.setattr(contracts, "MAX_BENCHMARK_JSON_NODES", 300)
+        with pytest.raises(BenchmarkContractError, match="value count"):
+            canonical_json_bytes(public.to_dict())
+        receipt = store.finalize()
+
+    source = output / "canonical"
+    assert (source / "observations.json").read_bytes() == expected_observations
+    assert receipt.observations_sha256 == public.sha256
+    bundle = _load_from_canonical(source)
+    replay = tmp_path / "large-observations-replay"
+    publish_replay_bundle(replay, bundle, _bound_report(bundle))
+    for name in (
+        "blobs.jsonl",
+        "config.json",
+        "observations.json",
+        "receipt.json",
+        "rows.jsonl",
+    ):
+        assert (replay / "canonical" / name).read_bytes() == (source / name).read_bytes()
 
 
 @pytest.mark.parametrize(

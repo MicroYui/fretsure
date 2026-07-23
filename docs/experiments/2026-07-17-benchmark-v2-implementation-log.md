@@ -1283,3 +1283,31 @@ extra-attempt count was 444, with four currently active boundaries. PID and deta
 `screen` were healthy, and no terminal, abort, or canonical marker existed. Only progress
 metadata and aggregate event types were inspected; the execution binding, private payloads,
 and frontend remained untouched.
+
+## 2026-07-23 — Attempt-004 collection complete and provider-free finalization amendment
+
+Attempt-004 durably completed all 10,060 network units and all 10,563 rows. The terminal
+aggregate state is 45,215 logical calls and 45,700 attempts (485 extra attempts), with
+10,060 coordinator admissions, 10,060 READY records, and zero active lanes. No prompt,
+response, lane payload, unit payload, or private observation was inspected.
+
+Publication then failed closed after collection. The old finalizer materialized the complete
+45,215-call observation envelope as one generic Python JSON value; its valid aggregate has
+more than the generic 1,000,000-node contract limit, so canonicalization raised
+`INPUT_LIMIT_EXCEEDED`. The resulting abort receipt reports all 10,563 expected rows and
+45,215 observed calls. This is a finalization-size defect, not incomplete provider work.
+
+The authorized amendment keeps the generic node limit unchanged. It encodes the observation
+envelope by concatenating call records that have already passed per-call canonical and typed
+validation, and supplies a strict specialized replay parser. Regression tests prove byte and
+hash identity with the old generic encoder below the limit, preserve non-canonical rejection,
+and demonstrate that a fully READY concurrent resume finalizes without creating provider
+clients.
+
+The zero-active-lane recovery transaction archives only the old abort receipt and its bound
+audit. It does not edit the coordinator, lane WALs, main journal, rows, blobs, or durable READY
+prefix. Before mutation and finalization it verifies the exact plan, recovery-tool raw SHA,
+all benchmark Python source hashes, original execution/pre-call/pricing/budget bindings, and
+the new finalizer commit. Both provider factories fail immediately if invoked. After raw-only
+COMPLETE publication, two fresh full offline replays remain mandatory before Task 9 closure;
+Task 10 remains unopened.

@@ -453,6 +453,45 @@ def test_operational_resume_recovers_ready_artifacts_before_main_store_commit(
     assert [client.closes for client in resumed_clients] == [1] * len(resumed_clients)
 
 
+def test_operational_fully_ready_resume_finalizes_without_creating_clients(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pre_call = _operational_pre_call()
+    context = _live_like_context(pre_call)
+    _install_live_like_context(monkeypatch, context)
+    interrupted = tmp_path / "interrupted-finalize"
+    expected = tmp_path / "expected-finalize"
+    original_finalize = runner_module.ArtifactStore.finalize
+
+    def disconnect_before_finalize(
+        _store: runner_module.ArtifactStore,
+    ) -> object:
+        raise _InjectedDisconnect("injected after every unit became READY")
+
+    monkeypatch.setattr(
+        runner_module.ArtifactStore,
+        "finalize",
+        disconnect_before_finalize,
+    )
+    first_clients: list[_FailingClient] = []
+    with pytest.raises(_InjectedDisconnect, match="every unit became READY"):
+        _collect(context, interrupted, first_clients)
+
+    assert not (interrupted / "abort-receipt.json").exists()
+    assert not (interrupted / "canonical").exists()
+    monkeypatch.setattr(runner_module.ArtifactStore, "finalize", original_finalize)
+
+    resumed_clients: list[_FailingClient] = []
+    _collect(context, interrupted, resumed_clients, resume=True)
+    expected_clients: list[_FailingClient] = []
+    _collect(context, expected, expected_clients)
+
+    assert resumed_clients == []
+    assert _canonical_bytes(interrupted) == _canonical_bytes(expected)
+    assert [client.closes for client in first_clients] == [1] * len(first_clients)
+
+
 def test_operational_sigint_during_main_merge_finishes_atomic_unit_then_resumes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

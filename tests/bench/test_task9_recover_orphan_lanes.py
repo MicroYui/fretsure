@@ -4,7 +4,9 @@ import hashlib
 import importlib.util
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
@@ -100,7 +102,7 @@ def _events() -> tuple[CallIntent | AttemptIntent | AttemptResult | CallResult, 
     return sink.journal_events
 
 
-def _fixture(tmp_path: Path) -> dict[str, object]:
+def _fixture(tmp_path: Path, *, complete: bool = False) -> dict[str, object]:
     output = tmp_path / "attempt"
     concurrent = output / "staging" / "concurrent"
     output.mkdir(parents=True)
@@ -157,18 +159,32 @@ def _fixture(tmp_path: Path) -> dict[str, object]:
     first = coordinator.admit_next()
     second = coordinator.admit_next()
     sample = _events()
-    first.sink.write_intent(cast(CallIntent, sample[0]))
-    first.sink.write_attempt_intent(cast(AttemptIntent, sample[1]))
-    for event in sample:
-        if type(event) is CallIntent:
-            second.sink.write_intent(event)
-        elif type(event) is AttemptIntent:
-            second.sink.write_attempt_intent(event)
-        elif type(event) is AttemptResult:
-            second.sink.write_attempt_result(event)
-        else:
-            assert type(event) is CallResult
-            second.sink.write_result(event)
+    if complete:
+        for permit in (first, second):
+            for event in sample:
+                if type(event) is CallIntent:
+                    permit.sink.write_intent(event)
+                elif type(event) is AttemptIntent:
+                    permit.sink.write_attempt_intent(event)
+                elif type(event) is AttemptResult:
+                    permit.sink.write_attempt_result(event)
+                else:
+                    assert type(event) is CallResult
+                    permit.sink.write_result(event)
+            coordinator.mark_ready(permit.schedule_index)
+    else:
+        first.sink.write_intent(cast(CallIntent, sample[0]))
+        first.sink.write_attempt_intent(cast(AttemptIntent, sample[1]))
+        for event in sample:
+            if type(event) is CallIntent:
+                second.sink.write_intent(event)
+            elif type(event) is AttemptIntent:
+                second.sink.write_attempt_intent(event)
+            elif type(event) is AttemptResult:
+                second.sink.write_attempt_result(event)
+            else:
+                assert type(event) is CallResult
+                second.sink.write_result(event)
     coordinator.close()
     (concurrent / "unit-artifacts").mkdir()
     artifact = concurrent / "unit-artifacts" / "00000001.json"
@@ -180,6 +196,7 @@ def _fixture(tmp_path: Path) -> dict[str, object]:
     (output / audit_name).write_bytes(audit_bytes)
     abort_bytes = canonical_json_bytes(
         {
+            "expected_rows": 3,
             "observed_calls": 7,
             "observed_rows": 3,
             "reason_code": f"concurrent_audit_{audit_sha}",
@@ -307,6 +324,195 @@ def test_recovery_receipt_counts_unknown_usage_without_payloads_and_is_idempoten
     assert b"private-system" not in receipt
     assert b"private-user" not in receipt
     assert b"private-reply" not in receipt
+
+
+def test_finalization_only_recovery_archives_abort_without_touching_ready_lanes(
+    tmp_path: Path,
+) -> None:
+    values = _fixture(tmp_path, complete=True)
+    output = cast(Path, values["output"])
+    concurrent = output / "staging" / "concurrent"
+    lane_before = {
+        index: (concurrent / "lanes" / f"{index:08d}.jsonl").read_bytes()
+        for index in (0, 1)
+    }
+    coordinator_before = (concurrent / "coordinator.jsonl").read_bytes()
+    plan = cast(
+        dict[str, object],
+        recovery.build_recovery_plan(
+            output_dir=output,
+            pre_call_config=values["pre_call"],
+            expected_pre_call_sha256=values["pre_call_sha"],
+            formal_budget_gate=values["gate"],
+            expected_formal_budget_gate_sha256=values["gate_sha"],
+            pricing_contract=values["pricing"],
+            expected_pricing_sha256=values["pricing_sha"],
+            formal_billing_envelope=values["envelope"],
+            expected_formal_billing_envelope_sha256=values["envelope_sha"],
+            expected_abort_receipt_sha256=values["abort_sha"],
+            expected_execution_git_sha=EXECUTION_SHA,
+            expected_run_id=RUN_ID,
+            expected_control_rows=1,
+            expected_active_lanes=0,
+            recovery_id="finalize-recovery-0001",
+            authorization_id="user-approved-offline-finalize",
+            expected_finalizer_git_sha="2" * 40,
+        ),
+    )
+    assert plan["policy"] == "quarantine_terminal_finalize_abort"
+    assert plan["active_lanes"] == []
+    plan_sha = hashlib.sha256(canonical_json_bytes(plan)).hexdigest()
+
+    drifted_plan = {**plan, "tool_sha256": "0" * 64}
+    drifted_sha = hashlib.sha256(canonical_json_bytes(drifted_plan)).hexdigest()
+    with pytest.raises(recovery.RecoveryError, match="tool_sha256"):
+        recovery.apply_recovery(
+            output_dir=output,
+            plan=drifted_plan,
+            expected_plan_sha256=drifted_sha,
+        )
+    assert (output / "abort-receipt.json").is_file()
+    assert next(output.glob("concurrent-abort-audit-*.json")).is_file()
+
+    result = recovery.apply_recovery(
+        output_dir=output,
+        plan=plan,
+        expected_plan_sha256=plan_sha,
+    )
+
+    assert result["status"] == "APPLIED"
+    assert not (output / "abort-receipt.json").exists()
+    assert (concurrent / "coordinator.jsonl").read_bytes() == coordinator_before
+    assert {
+        index: (concurrent / "lanes" / f"{index:08d}.jsonl").read_bytes()
+        for index in (0, 1)
+    } == lane_before
+    root = concurrent / "orphan-recoveries" / "finalize-recovery-0001"
+    assert (root / "abort-receipt.json").is_file()
+    assert next(root.glob("concurrent-abort-audit-*.json")).is_file()
+
+
+def test_finalization_only_wrapper_uses_no_provider_factory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    values = _fixture(tmp_path, complete=True)
+    output = cast(Path, values["output"])
+    recovery_id = "finalize-recovery-0002"
+    finalizer_sha = "2" * 40
+    plan = cast(
+        dict[str, object],
+        recovery.build_recovery_plan(
+            output_dir=output,
+            pre_call_config=values["pre_call"],
+            expected_pre_call_sha256=values["pre_call_sha"],
+            formal_budget_gate=values["gate"],
+            expected_formal_budget_gate_sha256=values["gate_sha"],
+            pricing_contract=values["pricing"],
+            expected_pricing_sha256=values["pricing_sha"],
+            formal_billing_envelope=values["envelope"],
+            expected_formal_billing_envelope_sha256=values["envelope_sha"],
+            expected_abort_receipt_sha256=values["abort_sha"],
+            expected_execution_git_sha=EXECUTION_SHA,
+            expected_run_id=RUN_ID,
+            expected_control_rows=1,
+            expected_active_lanes=0,
+            recovery_id=recovery_id,
+            authorization_id="user-approved-offline-finalize",
+            expected_finalizer_git_sha=finalizer_sha,
+        ),
+    )
+    plan_sha = hashlib.sha256(canonical_json_bytes(plan)).hexdigest()
+    recovery.apply_recovery(
+        output_dir=output,
+        plan=plan,
+        expected_plan_sha256=plan_sha,
+    )
+
+    import fretsure.bench.precall as precall
+    import fretsure.bench.runner as runner
+
+    parsed_pre_call = object()
+    monkeypatch.setattr(precall, "pre_call_config_from_bytes", lambda _data: parsed_pre_call)
+
+    invoke_factory = False
+
+    def fake_collect(**kwargs: object) -> object:
+        assert kwargs["pre_call_config"] is parsed_pre_call
+        assert kwargs["resume"] is True
+        assert callable(kwargs["agent_llm_factory"])
+        assert callable(kwargs["raw_llm_factory"])
+        if invoke_factory:
+            cast(Callable[[], object], kwargs["agent_llm_factory"])()
+        canonical = output / "canonical"
+        canonical.mkdir()
+        for name in (
+            "blobs.jsonl",
+            "config.json",
+            "observations.json",
+            "receipt.json",
+            "rows.jsonl",
+        ):
+            (canonical / name).write_bytes(b"{}")
+        return SimpleNamespace(
+            receipt=SimpleNamespace(
+                observed_calls=7,
+                observed_rows=3,
+                status=SimpleNamespace(value="COMPLETE"),
+            ),
+            report=None,
+        )
+
+    monkeypatch.setattr(runner, "collect_benchmark_v2", fake_collect)
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+
+    original_bundle_sha = recovery._finalizer_source_bundle_sha256
+    monkeypatch.setattr(recovery, "_finalizer_source_bundle_sha256", lambda: "3" * 64)
+    with pytest.raises(recovery.RecoveryError, match="source_bundle"):
+        recovery.finalize_recovered_run(
+            output_dir=output,
+            pre_call_config=cast(Path, values["pre_call"]),
+            expected_pre_call_sha256=cast(str, values["pre_call_sha"]),
+            recovery_id=recovery_id,
+            expected_plan_sha256=plan_sha,
+            expected_finalizer_git_sha=finalizer_sha,
+            authorized_maximum_spend_microunits=123,
+        )
+    assert not (output / "canonical").exists()
+    monkeypatch.setattr(
+        recovery,
+        "_finalizer_source_bundle_sha256",
+        original_bundle_sha,
+    )
+
+    invoke_factory = True
+    with pytest.raises(recovery.RecoveryError, match="provider_factory"):
+        recovery.finalize_recovered_run(
+            output_dir=output,
+            pre_call_config=cast(Path, values["pre_call"]),
+            expected_pre_call_sha256=cast(str, values["pre_call_sha"]),
+            recovery_id=recovery_id,
+            expected_plan_sha256=plan_sha,
+            expected_finalizer_git_sha=finalizer_sha,
+            authorized_maximum_spend_microunits=123,
+        )
+    assert not (output / "canonical").exists()
+    invoke_factory = False
+
+    result = recovery.finalize_recovered_run(
+        output_dir=output,
+        pre_call_config=cast(Path, values["pre_call"]),
+        expected_pre_call_sha256=cast(str, values["pre_call_sha"]),
+        recovery_id=recovery_id,
+        expected_plan_sha256=plan_sha,
+        expected_finalizer_git_sha=finalizer_sha,
+        authorized_maximum_spend_microunits=123,
+    )
+
+    assert result["status"] == "COMPLETE"
+    assert result["provider_factory_calls"] == 0
+    assert result["canonical_file_count"] == 5
 
 
 def test_supplement_cost_prices_partial_usage_and_fixed_fee_once(

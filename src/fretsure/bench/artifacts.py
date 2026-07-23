@@ -252,13 +252,11 @@ def _reject_constant(_token: str) -> object:
     raise _InvalidConstant
 
 
-def parse_canonical_json_bytes(
+def _parse_strict_json_bytes(
     data: object,
     *,
     max_bytes: int = MAX_BENCHMARK_JSON_BYTES,
 ) -> object:
-    """Parse one JSON value and require byte equality with canonical encoding."""
-
     if type(data) is not bytes:
         raise _error(ArtifactCode.INVALID_INPUT, "$", "input must be exact bytes")
     if type(max_bytes) is not int or not 1 <= max_bytes <= MAX_ARTIFACT_JSONL_BYTES:
@@ -290,6 +288,18 @@ def parse_canonical_json_bytes(
         raise _error(
             ArtifactCode.INVALID_INPUT, "$", "input is not one strict JSON value"
         ) from None
+    return value
+
+
+def parse_canonical_json_bytes(
+    data: object,
+    *,
+    max_bytes: int = MAX_BENCHMARK_JSON_BYTES,
+) -> object:
+    """Parse one JSON value and require byte equality with canonical encoding."""
+
+    exact = cast(bytes, data)
+    value = _parse_strict_json_bytes(data, max_bytes=max_bytes)
     try:
         canonical = canonical_json_bytes(value)
     except BenchmarkContractError as error:
@@ -1625,6 +1635,70 @@ class _ObservationSource(Protocol):
     def attempt_results(self) -> tuple[AttemptResult, ...]: ...
 
 
+def _observation_envelope_bytes(
+    *,
+    run_id: str,
+    schema: str,
+    calls_json: tuple[bytes, ...],
+    max_calls: int,
+    max_bytes: int,
+) -> bytes:
+    """Encode an already per-call-validated observation envelope without a second giant tree."""
+
+    if type(calls_json) is not tuple or any(type(value) is not bytes for value in calls_json):
+        raise _error(
+            ArtifactCode.INVALID_INPUT,
+            "observations.calls",
+            "must contain canonical bytes",
+        )
+    if type(max_calls) is not int or not 0 <= max_calls <= MAX_ARTIFACT_CALLS:
+        raise _error(ArtifactCode.INVALID_INPUT, "max_calls", "is outside the artifact limit")
+    if type(max_bytes) is not int or not 1 <= max_bytes <= MAX_BENCHMARK_JSON_BYTES:
+        raise _error(ArtifactCode.INVALID_INPUT, "max_bytes", "is outside the artifact limit")
+    if len(calls_json) > max_calls:
+        raise _error(
+            ArtifactCode.LIMIT_EXCEEDED,
+            "observations.calls",
+            f"call count exceeds {max_calls}",
+        )
+    prefix = b'{"calls":['
+    suffix = (
+        b'],"run_id":'
+        + canonical_json_bytes(run_id)
+        + b',"schema":'
+        + canonical_json_bytes(schema)
+        + b"}"
+    )
+    total = len(prefix) + len(suffix)
+    chunks: list[bytes] = [prefix]
+    for index, call in enumerate(calls_json):
+        separator = b"" if index == 0 else b","
+        addition = len(separator) + len(call)
+        if addition > max_bytes - total:
+            raise _error(
+                ArtifactCode.LIMIT_EXCEEDED,
+                "observations",
+                f"exceeds {max_bytes} bytes",
+            )
+        chunks.extend((separator, call))
+        total += addition
+    if len(suffix) > max_bytes - (total - len(suffix)):
+        raise _error(
+            ArtifactCode.LIMIT_EXCEEDED,
+            "observations",
+            f"exceeds {max_bytes} bytes",
+        )
+    chunks.append(suffix)
+    return b"".join(chunks)
+
+
+def _observation_envelope_sha256(schema: str, payload: bytes) -> str:
+    digest = hashlib.sha256()
+    digest.update(f"fretsure:{schema}\0".encode("ascii"))
+    digest.update(payload)
+    return digest.hexdigest()
+
+
 @dataclass(frozen=True, slots=True)
 class PrivateObservations:
     run_id: str
@@ -1655,6 +1729,15 @@ class PrivateObservations:
             "run_id": self.run_id,
             "schema": BENCHMARK_PRIVATE_OBSERVATIONS_VERSION,
         }
+
+    def canonical_bytes(self, *, max_calls: int, max_bytes: int) -> bytes:
+        return _observation_envelope_bytes(
+            run_id=self.run_id,
+            schema=BENCHMARK_PRIVATE_OBSERVATIONS_VERSION,
+            calls_json=self.calls_json,
+            max_calls=max_calls,
+            max_bytes=max_bytes,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1713,9 +1796,26 @@ class SanitizedObservations:
             "schema": BENCHMARK_OBSERVATIONS_VERSION,
         }
 
+    def canonical_bytes(
+        self,
+        *,
+        max_calls: int = MAX_ARTIFACT_CALLS,
+        max_bytes: int = MAX_BENCHMARK_JSON_BYTES,
+    ) -> bytes:
+        return _observation_envelope_bytes(
+            run_id=self.run_id,
+            schema=BENCHMARK_OBSERVATIONS_VERSION,
+            calls_json=self.calls_json,
+            max_calls=max_calls,
+            max_bytes=max_bytes,
+        )
+
     @property
     def sha256(self) -> str:
-        return canonical_sha256(BENCHMARK_OBSERVATIONS_VERSION, self.to_dict())
+        return _observation_envelope_sha256(
+            BENCHMARK_OBSERVATIONS_VERSION,
+            self.canonical_bytes(),
+        )
 
 
 def _sanitized_call_from_dict(value: object, index: int) -> dict[str, object]:
@@ -1888,8 +1988,15 @@ def _sanitized_call_from_dict(value: object, index: int) -> dict[str, object]:
     }
 
 
-def sanitized_observations_from_dict(value: object) -> SanitizedObservations:
+def sanitized_observations_from_dict(
+    value: object,
+    *,
+    max_calls: int = MAX_ARTIFACT_CALLS,
+) -> SanitizedObservations:
     """Parse the public observation artifact with exact fields and bounded values."""
+
+    if type(max_calls) is not int or not 0 <= max_calls <= MAX_ARTIFACT_CALLS:
+        raise _error(ArtifactCode.INVALID_INPUT, "max_calls", "is outside the artifact limit")
 
     obj = _require_exact_dict(
         value,
@@ -1905,7 +2012,7 @@ def sanitized_observations_from_dict(value: object) -> SanitizedObservations:
     raw_calls = _require_exact_list(
         obj["calls"],
         "observations.calls",
-        maximum=MAX_ARTIFACT_CALLS,
+        maximum=max_calls,
     )
     calls: list[bytes] = []
     logical_call_ids: set[str] = set()
@@ -1934,6 +2041,24 @@ def sanitized_observations_from_dict(value: object) -> SanitizedObservations:
         _identifier(obj["run_id"], "observations.run_id"),
         tuple(calls),
     )
+
+
+def _parse_sanitized_observations_bytes(
+    data: object,
+    *,
+    max_calls: int,
+    max_bytes: int,
+) -> SanitizedObservations:
+    exact = cast(bytes, data)
+    value = _parse_strict_json_bytes(data, max_bytes=max_bytes)
+    observations = sanitized_observations_from_dict(value, max_calls=max_calls)
+    if observations.canonical_bytes(max_calls=max_calls, max_bytes=max_bytes) != exact:
+        raise _error(
+            ArtifactCode.NON_CANONICAL,
+            "$",
+            "input bytes are not canonical JSON",
+        )
+    return observations
 
 
 @dataclass(frozen=True, slots=True)
@@ -2096,7 +2221,19 @@ def _validate_publication_components(
             "publication.blobs",
             "blob records must exactly cover row references",
         )
-    strict_observations = sanitized_observations_from_dict(observations.to_dict())
+    observation_max_bytes = min(
+        manifest.limits.max_json_bytes,
+        MAX_BENCHMARK_JSON_BYTES,
+    )
+    observations_bytes = observations.canonical_bytes(
+        max_calls=manifest.limits.max_calls,
+        max_bytes=observation_max_bytes,
+    )
+    strict_observations = _parse_sanitized_observations_bytes(
+        observations_bytes,
+        max_calls=manifest.limits.max_calls,
+        max_bytes=observation_max_bytes,
+    )
     if strict_observations != observations:
         raise _error(
             ArtifactCode.NON_CANONICAL,
@@ -2144,7 +2281,11 @@ def _validate_publication_components(
     if (
         receipt.rows_sha256 != canonical_table_sha256("rows", rows_bytes)
         or receipt.blobs_sha256 != canonical_table_sha256("blobs", blobs_bytes)
-        or receipt.observations_sha256 != observations.sha256
+        or receipt.observations_sha256
+        != _observation_envelope_sha256(
+            BENCHMARK_OBSERVATIONS_VERSION,
+            observations_bytes,
+        )
     ):
         raise _error(
             ArtifactCode.HASH_MISMATCH,
@@ -2302,16 +2443,21 @@ def load_replay_bundle(
         max_lines=manifest.limits.max_blobs,
         max_line_bytes=manifest.limits.max_jsonl_line_bytes,
     )
-    observations_value = parse_canonical_json_bytes(
-        _read_regular_bytes(observations, max_bytes=manifest.limits.max_json_bytes),
-        max_bytes=manifest.limits.max_json_bytes,
+    observation_max_bytes = min(
+        manifest.limits.max_json_bytes,
+        MAX_BENCHMARK_JSON_BYTES,
+    )
+    parsed_observations = _parse_sanitized_observations_bytes(
+        _read_regular_bytes(observations, max_bytes=observation_max_bytes),
+        max_calls=manifest.limits.max_calls,
+        max_bytes=observation_max_bytes,
     )
     bundle = ReplayBundle(
         manifest,
         complete_receipt,
         tuple(row_from_dict(value) for value in raw_rows),
         tuple(blob_record_from_dict(value) for value in raw_blobs),
-        sanitized_observations_from_dict(observations_value),
+        parsed_observations,
     )
     # Compare against the exact bytes supplied, rather than only their typed
     # round-trips, so the receipt remains the binding authority for replay.
@@ -4002,7 +4148,7 @@ class ArtifactStore:
         *,
         rows_sha256: str,
         blobs_sha256: str,
-        observations: SanitizedObservations,
+        observations_sha256: str,
     ) -> BenchmarkReceipt:
         returned = tuple(
             sorted(
@@ -4020,7 +4166,7 @@ class ArtifactStore:
             self._sink.journal_sha256,
             rows_sha256,
             blobs_sha256,
-            observations.sha256,
+            _sha256(observations_sha256, "observations_sha256"),
             returned,
             self._manifest.analysis_code_sha256,
             len(self._manifest.expected_rows),
@@ -4079,17 +4225,21 @@ class ArtifactStore:
             self._sink,
             stub=self._manifest.stub,
         )
-        observations_bytes = canonical_json_bytes(observations.to_dict())
-        if len(observations_bytes) > self._manifest.limits.max_json_bytes:
-            raise _error(
-                ArtifactCode.LIMIT_EXCEEDED,
-                "observations",
-                "exceeds manifest max_json_bytes",
-            )
+        observation_max_bytes = min(
+            self._manifest.limits.max_json_bytes,
+            MAX_BENCHMARK_JSON_BYTES,
+        )
+        observations_bytes = observations.canonical_bytes(
+            max_calls=self._manifest.limits.max_calls,
+            max_bytes=observation_max_bytes,
+        )
         receipt = self._complete_receipt(
             rows_sha256=canonical_table_sha256("rows", rows_bytes),
             blobs_sha256=canonical_table_sha256("blobs", blobs_bytes),
-            observations=observations,
+            observations_sha256=_observation_envelope_sha256(
+                BENCHMARK_OBSERVATIONS_VERSION,
+                observations_bytes,
+            ),
         )
         inputs = FinalizationInputs(
             self._manifest,
@@ -4117,7 +4267,10 @@ class ArtifactStore:
             )
         _atomic_create_or_verify_identical(
             self._root / "private-observations.json",
-            canonical_json_bytes(private.to_dict()),
+            private.canonical_bytes(
+                max_calls=self._manifest.limits.max_calls,
+                max_bytes=MAX_BENCHMARK_JSON_BYTES,
+            ),
         )
 
         staging_root = self._root / "staging"
@@ -4220,13 +4373,13 @@ def publish_replay_bundle(
         bundle.rows,
         bundle.blobs,
     )
-    observations_bytes = canonical_json_bytes(bundle.observations.to_dict())
-    if len(observations_bytes) > bundle.manifest.limits.max_json_bytes:
-        raise _error(
-            ArtifactCode.LIMIT_EXCEEDED,
-            "observations",
-            "exceeds manifest max_json_bytes",
-        )
+    observations_bytes = bundle.observations.canonical_bytes(
+        max_calls=bundle.manifest.limits.max_calls,
+        max_bytes=min(
+            bundle.manifest.limits.max_json_bytes,
+            MAX_BENCHMARK_JSON_BYTES,
+        ),
+    )
     files = (
         ("config.json", canonical_json_bytes(manifest_to_dict(bundle.manifest))),
         ("rows.jsonl", rows_bytes),
