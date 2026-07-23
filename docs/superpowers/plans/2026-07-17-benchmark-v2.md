@@ -1,6 +1,6 @@
 # Benchmark v2 — versioned evidence, paired ablations, and honest replay
 
-> **Status (2026-07-23): IMPLEMENTED; TASK 10 GIT CLOSURE IN PROGRESS.** The
+> **Status (2026-07-23): COMPLETE THROUGH TASK 10; OPEN EXTERNAL GATES REMAIN.** The
 > historical 2026-07-10 Plan 4 remains an implementation record and its numerical
 > tables are not the current baseline. Formal v2 results and acceptance are in
 > [`BENCHMARK_RESULTS.md`](../../BENCHMARK_RESULTS.md) and
@@ -9,7 +9,7 @@
 > `n=1, max_iters=0, use_critic=false`; search, repair, and critic remain explicit
 > research/compatibility opt-ins, while the frozen formal `full` arm is unchanged.
 >
-> **Implementation progress (2026-07-23): Tasks 1–9 complete; Task 10 validation/review complete, Git closure in progress.** Attempt-004
+> **Implementation progress (2026-07-23): Tasks 1–10 complete.** Attempt-004
 > completed 10,563 rows / 45,215 calls and passed byte-identical independent full replays. Strict
 > corpus/generator contracts, observable trajectories, the shared ten-sample pool,
 > baselines, registered statistics, durable artifacts, deterministic reports, and
@@ -789,7 +789,7 @@ pre-consumption hard gate. The old envelope (`5bcd2458…`) and gates (`a421e1c3
 **Status (2026-07-23): COMPLETE.** Attempts 001–003 remain terminal `INCOMPLETE` historical
 evidence. Attempt-004 completed all 10,563 rows / 45,215 calls, published raw-only canonical
 artifacts through the disclosed provider-free finalization amendment, and passed two
-byte-identical default FULL_RESCORE replays. Task 10 closure is in progress. The historical
+byte-identical default FULL_RESCORE replays. Task 10 closure is complete. The historical
 external-ceiling gate SHA-256 is
 `931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9`; its
 `$538,865.486400` value and the attempt-001 pre-call remain immutable audit evidence,
@@ -876,9 +876,9 @@ four lanes.
 
 ## 14. Task 10 — Documentation, acceptance, review, and closure
 
-**Status (2026-07-23): GIT CLOSURE IN PROGRESS.** Results, acceptance, artifact access
-policy, stale public claims, fresh validation, and zero-finding independent review are
-complete. Closure commit/push and `main` SHA equality remain.
+**Status (2026-07-23): COMPLETE.** Results, acceptance, artifact access policy, stale
+public claims, fresh validation, zero-finding independent review, closure commit/push,
+and `main` SHA equality are complete. Human/external gates in section 15 remain OPEN.
 
 **Files:**
 

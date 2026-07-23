@@ -1,7 +1,7 @@
 # Fretsure —— 可证明可弹的吉他谱智能体（设计文档 / Design Spec）
 
 > 产品名 **Fretsure**（fret + ensure，已定）。备选 PlayProof / Fretwright 仅存档。
-> 状态（2026-07-23）：设计已锁定；Plan 1–5、MusicXML/MXL/MIDI、Oracle 0.2、Plan 6A 与 benchmark v2 Task 1–9 已闭门，Task 10 的 fresh gates/review 已完成，正在做 Git closure。当前组合树为 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace/service/API/MCP/Web=`0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`，runtime 锁定 `music21==10.5.0`，正式模型为 `gpt-5.6-sol`。完整 Plan 6 的音频/琴颈/导出/live demo 仍 open。本文中的 target/预测数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+> 状态（2026-07-23）：设计已锁定；Plan 1–5、MusicXML/MXL/MIDI、Oracle 0.2、Plan 6A 与 benchmark v2 Task 1–10 已闭门，当前在真人、许可、cross-provider 等 OPEN gate 处暂停。当前组合树为 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace/service/API/MCP/Web=`0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`，runtime 锁定 `music21==10.5.0`，正式模型为 `gpt-5.6-sol`。完整 Plan 6 的音频/琴颈/导出/live demo 仍 open。本文中的 target/预测数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
 >
 > **当前证据修正**：本设计中的“repair 脊柱/头牌”是跑前假设，不是当前结论。正式 v2 得到 repair Δjoint `+0.0566`，低于预注册 `0.10` SESOI，裁决 `NOT_KEPT`；best-of-4 为 `PROBATION_COST_UNKNOWN`，critic 为 `HUMAN_BLOCKED_PROBATION`。产品缺省因此为 `n=1, max_iters=0, use_critic=false`；三个组件仅显式 opt in，repair 实现保留作研究/兼容控制。实测真源见 [`BENCHMARK_RESULTS.md`](../../BENCHMARK_RESULTS.md) 与 [`BENCHMARK_V2_ACCEPTANCE.md`](../../BENCHMARK_V2_ACCEPTANCE.md)。
 >

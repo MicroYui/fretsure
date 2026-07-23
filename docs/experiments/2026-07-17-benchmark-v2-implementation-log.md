@@ -1361,5 +1361,8 @@ compatibility tests; frozen lock/prereg/pilot checks; 43-file Markdown links; 30
 tests, typecheck, deterministic build, generated-asset guard, and zero-vulnerability
 audit; wheel/sdist audit (`116/342` files); and the seven-combination clean-install
 smoke matrix. Independent scope, privacy/security, statistics, artifact, product,
-version-boundary, and stale-claim reviews ended with zero unresolved findings. Git
-closure remains the only Task 10 software process gate.
+version-boundary, and stale-claim reviews ended with zero unresolved findings. The
+reviewable Task 10 content/validation commit is
+`d64cace8ac34d19a299c5b20fefdd7c4ad9bc985`; the containing closure commit and exact
+local/tracking/remote `main` equality are recorded in the final handoff because a commit
+cannot embed its own SHA.

@@ -10,7 +10,7 @@ calls / 45,700 attempts，并由 provider-free finalizer 发布 5 个 raw canoni
 FULL_RESCORE 的 7 文件目录逐字节一致，report digest=`79d1927…`。Attempts 001–003 保留为
 不可恢复的 `INCOMPLETE` 历史证据，不得覆盖或并入结果；小时监控已删除，attempt-004 不得重启。
 
-Task 10 的结果、fresh gates 与独立 review 已完成，正在做 Git closure。当前正式裁决：repair Δjoint=`+0.0566` 但低于 `0.10` SESOI，
+Benchmark v2 Task 10 已闭门并回到 `main`；不得自行开启下一计划，等待用户指令。当前正式裁决：repair Δjoint=`+0.0566` 但低于 `0.10` SESOI，
 `NOT_KEPT`；best-of-4 Δ=`+0.068`，但完整 provider token/cost 为 null，
 `PROBATION_COST_UNKNOWN`；critic joint=`-0.002` 且无真人证据，
 `HUMAN_BLOCKED_PROBATION`。`full` 是 74/500=`14.8%`，所有高复杂度格及 3 个 public controls
@@ -21,8 +21,7 @@ Task 10 因此把 CLI/demo/application/pipeline/API/Web 的产品基线统一为
 
 公开 Git 只纳入 aggregate report/receipt/index。完整 7-file replay 包留在版本化 owner-controlled
 locator；因项目数据许可条款和模型输出再分发依据尚未记录，不主张 public rescore 或 remote
-durability。Task 10 只剩 commit/push、fast-forward `main` 与 local/tracking/remote SHA equality。
-真人 gold、盲测、difficulty
+durability。真人 gold、盲测、difficulty
 校准、design partner、cross-provider 与完整数据公开保持 OPEN。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。

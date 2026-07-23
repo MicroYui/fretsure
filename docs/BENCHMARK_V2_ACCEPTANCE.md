@@ -1,7 +1,7 @@
 # Benchmark v2 acceptance
 
 Date: 2026-07-23
-Status: **VALIDATION AND REVIEW COMPLETE; GIT RECEIPT IN PROGRESS**
+Status: **TASK 10 COMPLETE; HUMAN AND PUBLIC-REDISTRIBUTION GATES OPEN**
 
 This receipt separates what the completed benchmark establishes from what remains
 external or human work. A closed software/statistical gate does not turn the oracle
@@ -239,7 +239,10 @@ lane/unit payloads.
 
 ## 9. Git closure receipt
 
-In progress. The reviewable content/validation commit is recorded in the follow-up
-closure commit. The final handoff records the containing closure SHA because a commit
-cannot embed its own hash. Task 10 is not complete until the review branch is pushed,
-fast-forwarded to `main`, and local `HEAD`, `origin/main`, and remote `main` are equal.
+The reviewable content/validation commit is
+`d64cace8ac34d19a299c5b20fefdd7c4ad9bc985`, based on Task 9/main closure
+`6683183e0d09eff3208be70e425db4ae6714ee3d`. The follow-up closure commit contains this
+receipt and is fast-forwarded through `codex/benchmark-v2-task10` to `main`. Its own SHA
+cannot be embedded in its content, so the final handoff records the containing SHA and
+the verified equality of local `HEAD`, local `main`, tracking `origin/main`, and remote
+`main`.

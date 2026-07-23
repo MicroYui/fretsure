@@ -5,8 +5,8 @@
 > **真源**：设计 spec `docs/superpowers/specs/2026-07-09-fretsure-design.md`（§0–§15）。本路线图**不新增设计决策**，只把 spec 落成可执行的里程碑序列与验收门；任何冲突以 spec 为准。
 
 > **当前执行位置（2026-07-23）**：Plan 1–5、MusicXML/MXL/MIDI、Oracle 0.2、Plan 6A 与
-> [`benchmark v2`](2026-07-17-benchmark-v2.md) Task 1–9 已闭门；Task 10 的 fresh
-> release gates 与独立 review 已完成，正在做 Git closure。正式 v2 的 repair=`NOT_KEPT`、
+> [`benchmark v2`](2026-07-17-benchmark-v2.md) Task 1–10 已闭门；当前在真人、许可、
+> cross-provider 等 OPEN gate 处暂停。正式 v2 的 repair=`NOT_KEPT`、
 > best-of-4=`PROBATION_COST_UNKNOWN`、critic=`HUMAN_BLOCKED_PROBATION`；旧 Plan 4 结论仅作
 > legacy。下面早期章节只保留为初始路线历史，不再控制当前顺序。真人 gold/calibration、完整
 > replay 包公开和 cross-provider 继续限制相应主张。当前版本树是 package `0.6.0`、
