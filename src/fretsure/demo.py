@@ -38,7 +38,7 @@ class DemoResult:
 
 
 def run_demo(
-    ir: MusicIR, llm: LLMClient, *, profile: Profile = MEDIAN_HAND, n: int = 4
+    ir: MusicIR, llm: LLMClient, *, profile: Profile = MEDIAN_HAND, n: int = 1
 ) -> DemoResult:
     pipeline = run_pipeline(ir, llm, options=PipelineOptions(profile=profile, n=n))
     return DemoResult(
@@ -150,7 +150,7 @@ def main() -> None:
     parser.add_argument("--llm", action="store_true", help="use the local LLM proxy")
     parser.add_argument("--seed", type=int, default=SAMPLE_SEED)
     parser.add_argument("--bars", type=int, default=4)
-    parser.add_argument("--n", type=int, default=4, help="best-of-N candidates")
+    parser.add_argument("--n", type=int, default=1, help="candidate count (default: 1)")
     args = parser.parse_args()
 
     ir = sample_ir(seed=args.seed, bars=args.bars)

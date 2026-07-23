@@ -1337,3 +1337,29 @@ provider-free offline suite and `8 skipped, 2612 deselected` at the empty-provid
 boundary. Ruff, strict mypy for all source modules and the recovery tool, Markdown links, and
 diff checks passed. The only warning is the third-party Starlette/httpx deprecation notice.
 The obsolete hourly automation `fretsure-task-9-formal-monitor` was deleted.
+
+## 2026-07-23 — Task 10 results, product decision, and fresh acceptance
+
+The canonical v2 report, COMPLETE receipt, payload-free artifact index/README, and
+honest public aggregate results are now checked into the review tree. The complete
+seven-file replay package remains owner-controlled because project data terms and
+provider-output redistribution rights are not recorded; no public rescore or remote
+durability claim is made. Human, upstream-license, design-partner, and cross-provider
+gates remain OPEN.
+
+The preregistered component decisions now control product defaults. Repair is
+`NOT_KEPT`, best-of-4 is `PROBATION_COST_UNKNOWN`, and critic is
+`HUMAN_BLOCKED_PROBATION`; CLI/demo/application/pipeline/API/OpenAPI/capabilities/Web
+therefore default to `n=1, max_iters=0, use_critic=false`. Explicit opt-in remains,
+including the `--no-critic` compatibility alias, and the frozen Task 9 formal arm and
+execution SHA are unchanged.
+
+Fresh acceptance passed: Ruff; strict mypy for 96 source files and all preregistration,
+Task 8, and Task 9 operator scripts; `2615 passed, 8 deselected` offline in 25:08;
+`8 skipped, 2615 deselected` at the empty-provider boundary; 9 minimum-Anthropic
+compatibility tests; frozen lock/prereg/pilot checks; 43-file Markdown links; 30 Web
+tests, typecheck, deterministic build, generated-asset guard, and zero-vulnerability
+audit; wheel/sdist audit (`116/342` files); and the seven-combination clean-install
+smoke matrix. Independent scope, privacy/security, statistics, artifact, product,
+version-boundary, and stale-claim reviews ended with zero unresolved findings. Git
+closure remains the only Task 10 software process gate.

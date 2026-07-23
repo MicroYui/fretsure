@@ -26,9 +26,11 @@ def test_source_tempo_is_the_default_effective_tempo(monkeypatch: pytest.MonkeyP
     ir = sample_ir(bars=1)
     ir = replace(ir, meta=replace(ir.meta, tempo_bpm=137.5))
     seen: list[ArrangeGoal] = []
+    seen_controls: list[tuple[object, object, object]] = []
 
     def fake_arrange(*args: object, **kwargs: object) -> ArrangeResult:
         seen.append(args[1])  # type: ignore[arg-type]
+        seen_controls.append((kwargs["n"], kwargs["max_iters"], kwargs["use_critic"]))
         return ArrangeResult(None, None, None, None, Trace(), 0)
 
     monkeypatch.setattr("fretsure.pipeline.arrange", fake_arrange)
@@ -36,6 +38,7 @@ def test_source_tempo_is_the_default_effective_tempo(monkeypatch: pytest.MonkeyP
     result = run_pipeline(ir, ConstantLLM(), options=PipelineOptions())
 
     assert seen[0].tempo_bpm == 137.5
+    assert seen_controls == [(1, 0, False)]
     assert result.source_tempo_bpm == 137.5
     assert result.effective_tempo_bpm == 137.5
 
@@ -327,7 +330,7 @@ def test_pipeline_offline_result_contains_tab_ascii_gate_and_trace() -> None:
     assert first_jsonl_row["data"]["input_schema_version"] == ORACLE_INPUT_SCHEMA_VERSION
     assert first_jsonl_row["data"]["fidelity_checker_version"] == FIDELITY_CHECKER_VERSION
     assert first_jsonl_row["data"]["candidates"] == 1
-    assert first_jsonl_row["data"]["max_repair_iterations"] == 8
+    assert first_jsonl_row["data"]["max_repair_iterations"] == 0
     assert first_jsonl_row["data"]["critic_enabled"] is False
 
 

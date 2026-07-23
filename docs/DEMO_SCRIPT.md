@@ -114,28 +114,23 @@ calibration, musicality evidence, and stronger human claims."
 
 ## Beat 4 — Benchmark evidence, with the metric boundary visible (2:00–2:45)
 
-**Do:** show the warning and legacy tables at the top of
-`docs/BENCHMARK_RESULTS.md`. Do not present them as current checker-pair numbers.
-The 2026-07-10/11 runs used `oracle@0.1.0` and the old, unversioned note-onset
-harmony metric; the consolidated historical snapshot is pinned at `bee8a1c`.
+**Do:** show the benchmark v2 section at the top of `docs/BENCHMARK_RESULTS.md`, then
+briefly scroll to the preserved legacy tables so the evidence boundary is visible.
 
-**Say:** "The historical two-seed snapshot gives useful directional evidence:
-repair had the largest association, paired best-of-N showed a modest positive joint
-delta, and the critic improved only its own score by about 0.01. But the fidelity
-definition has since changed, so these are legacy numbers, not today's headline.
-Benchmark v2 must rerun every arm under availability-aware `fidelity@0.3.0`, retain
-paired item rows, report availability counts, and run the appropriate paired tests.
-It starts only after the MIDI phase is committed, pushed, and has matching
-local/tracking/remote SHA."
+**Say:** "The formal v2 run used 500 independent procedural families and three
+separate public controls under `fidelity@0.3.0`. The controlled full policy reached
+74/500, or 14.8%, and every high-complexity stratum plus all three public controls was
+zero. Repair improved joint success by 5.66 points but missed the preregistered
+10-point keep threshold, so it is NOT_KEPT. Best-of-4 gained 6.8 points but remains
+cost-unknown probation because provider token totals are incomplete. The critic was
+slightly negative on joint and still needs blind human evidence. Those negatives are
+the point of preregistration: the benchmark decides the story, not the demo."
 
-If network behavior itself must be shown, pre-run or use:
-
-```bash
-uv run fretsure-bench --seed 1 --items 2 --paired
-```
-
-Explicitly label the result a stochastic smoke under the current metric, not a
-reproduction of the old tables and not a new headline estimate.
+**Do not make a new provider call during the demo.** If replay provenance is asked,
+show `docs/BENCHMARK_V2_ACCEPTANCE.md` and the public aggregate report/receipt. Explain
+that byte-identical replay is bound to the recorded Darwin/arm64 runtime, the full
+package is owner-controlled pending redistribution rights, and human empirical gates
+remain OPEN.
 
 ## Beat 5 — What it means (2:45–3:00)
 

@@ -87,6 +87,11 @@ def test_capabilities_freeze_service_target_and_profile_contracts() -> None:
     assert value.target_input_schema_version == "target-input@0.1.0"
     assert value.profiles == ("median",)
     assert value.render_formats == ("ascii",)
+    assert value.default_arrange_options == ArrangeOptions(
+        n=1,
+        max_iters=0,
+        use_critic=False,
+    )
     with pytest.raises(FrozenInstanceError):
         value.service_version = "mutated"  # type: ignore[misc]
     with pytest.raises(TypeError):

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+import fretsure.cli as cli_module
 from fretsure.agent.trace import TraceInputError
 from fretsure.cli import main
 from fretsure.demo import sample_ir
@@ -16,6 +17,21 @@ from fretsure.importers import (
     ImportSuccess,
 )
 from fretsure.ir import MusicIR, Note
+
+
+def test_cli_defaults_are_evidence_backed_and_optional_components_are_explicit() -> None:
+    defaults = cli_module._parser().parse_args(["song.musicxml"])
+    assert (defaults.n, defaults.max_iters, defaults.use_critic) == (1, 0, False)
+
+    opted_in = cli_module._parser().parse_args(
+        ["song.musicxml", "--n", "4", "--max-iters", "8", "--critic"]
+    )
+    assert (opted_in.n, opted_in.max_iters, opted_in.use_critic) == (4, 8, True)
+
+    compatibility_alias = cli_module._parser().parse_args(
+        ["song.musicxml", "--no-critic"]
+    )
+    assert compatibility_alias.use_critic is False
 
 
 def test_cli_success_prints_full_product_result_and_writes_trace(

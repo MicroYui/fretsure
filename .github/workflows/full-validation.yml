@@ -28,6 +28,9 @@ jobs:
           uv run mypy --strict scripts/build_benchmark_precall.py
           uv run mypy --strict scripts/task8_budget_gate.py
           uv run mypy --strict scripts/task8_pilot.py
+          uv run mypy --strict scripts/task9_operational_stub_gate.py
+          uv run mypy --strict scripts/task9_throughput_pilot.py
+          uv run mypy --strict scripts/task9_recover_orphan_lanes.py
 
       - name: Offline tests
         run: uv run pytest -q -m 'not integration'
@@ -77,7 +80,9 @@ jobs:
         run: npm run build
 
       - name: Verify generated frontend assets
-        run: git diff --exit-code -- src/fretsure/web_static
+        run: |
+          git diff --exit-code -- src/fretsure/web_static
+          test -z "$(git ls-files --others --exclude-standard -- src/fretsure/web_static)"
 
       - name: Frontend dependency audit
         working-directory: web

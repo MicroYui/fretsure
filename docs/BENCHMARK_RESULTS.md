@@ -1,13 +1,12 @@
-# Benchmark Results — Agent Ablation (Plan 4)
+# Benchmark Results — benchmark v2 and legacy agent ablations
 
-> **Current status (2026-07-17): the numerical tables in this document are a
-> LEGACY / UNVERSIONED FIDELITY SNAPSHOT.** They were recorded on 2026-07-10–11
-> before the fidelity checker was version-stamped, using the old note-onset
-> harmony-Jaccard semantics. They are **not** results under the current
-> `fidelity@0.3.0`. The historical code/document state is pinned by the
-> consolidated baseline commit `bee8a1c`; the versioned evidence/paired rerun is
-> governed by [`2026-07-17-benchmark-v2.md`](superpowers/plans/2026-07-17-benchmark-v2.md)
-> and remains required before publishing a current headline number.
+> **Current status (2026-07-23): benchmark v2 is complete.** The current-model
+> result uses `gpt-5.6-sol`, `oracle@0.2.0`, `tab-input@0.2.0`, and
+> `fidelity@0.3.0`; its software/statistical result is reported first below. The
+> 2026-07-10–11 tables are preserved afterward as a **LEGACY / UNVERSIONED
+> FIDELITY SNAPSHOT**. They used the old note-onset harmony-Jaccard semantics and
+> must not be pooled with or relabeled as v2 evidence. Their historical state is
+> pinned by consolidated baseline commit `bee8a1c`.
 >
 > The active proxy default moved to canonical `gpt-5.6-sol` on 2026-07-16.
 > Current trace and aggregate benchmark JSON stamp `llm_model_id`; the legacy
@@ -39,7 +38,145 @@ engineering roadmap, but it does block real-world false-accept claims, profile/t
 calibration, human-musicality claims, and any stronger promise that a real guitarist
 can play every GREEN result.
 
-## How to run the current benchmark shape
+## Benchmark v2 — current-model result
+
+The formal run is `benchmark-v2-formal-20260717-attempt-004`. Requested and returned
+model IDs were both exactly `gpt-5.6-sol`. The confirmatory profile was
+`median@0.1`; package/runtime bindings were Fretsure `0.6.0`, Python `3.11.15`,
+Darwin/arm64. Collection binds execution commit
+`773c69deca4d2b00cdcdc5a33841369cb3016955`; deterministic analysis binds
+`495ac3870a79ef394323f59cd664d551f1696ae58b52184f8e9fc351ec495281`.
+
+The primary population is 500 independent procedural families/clusters, balanced
+over a 3×3 `synthetic_complexity × polyphony` design and carrying complete
+melody+bass+harmony evidence. Ten proposals are nested within each family; they do
+not make inferential N equal 5,000. Secondary evidence comprises one public-classical
+and two public-MIDI controls with melody+harmony evidence. These three controls are
+reported separately and are not a representative real-music sample.
+
+### Controlled-full headline and the important negative strata
+
+The frozen `full` policy is repaired best-of-4 with critic enabled. It achieved
+74/500 joint successes, `0.148`, with Wilson 95% CI
+`[0.119561, 0.181806]` and exact Clopper–Pearson 95% CI
+`[0.118033, 0.182200]`.
+
+| procedural complexity / polyphony | full joint success |
+|---|---:|
+| high / high | 0/55 |
+| high / low | 0/55 |
+| high / medium | 0/55 |
+| low / high | 16/56 |
+| low / low | 20/56 |
+| low / medium | 27/56 |
+| medium / high | 0/55 |
+| medium / low | 4/56 |
+| medium / medium | 7/56 |
+
+All high-complexity cells and the medium/high cell were zero. The single public
+classical control was 0/1 and the two public MIDI controls were 0/2 under the same
+selected-policy view; at candidate level, terminal GREEN/joint was 0/10 and 0/20
+respectively. This is a material negative generalization result. The 14.8% procedural
+rate is not evidence that the system handles arbitrary real pieces.
+
+### Preregistered component decisions
+
+| capability | paired evidence | preregistered decision |
+|---|---|---|
+| Repair | Δ joint `+0.0566`; family bootstrap 95% `[0.0456, 0.068205]`; 283 improved / 0 worsened nested candidate pairs; Holm-adjusted `p=9.9999e-6` | `NOT_KEPT`: positive, but below the `0.10` SESOI; the matched no-repair guard was only `+0.02531` |
+| Best-of-4 search | best-of-1 40/500 → best-of-4 74/500; Δ `+0.068`, 95% `[0.048, 0.088]`; McNemar 34 improved / 0 worsened, raw `p=5.82077e-11`, Holm `p=1.16415e-10`; matched OR `∞`, exact 95% lower `8.72593` | `PROBATION_COST_UNKNOWN`: the efficacy gate passes, but provider token/cost fields are incomplete, so deployment Pareto status is unavailable |
+| Critic | without/with critic 75/500 → 74/500; joint Δ `-0.002`, 95% `[-0.006, 0]`; self-score Δ `+0.00272`, 95% `[0.0015, 0.00416]` | `HUMAN_BLOCKED_PROBATION`: the self-score direction is structural, joint is slightly negative, and no blind human evidence exists |
+
+The matched controls are guards, not extra component verdicts. The full arm's margin
+over matched no-repair was `+0.02531`, 95% `[0.01276, 0.03870]`, below its `0.05`
+SESOI. Its margin over matched raw LLM was `+0.0726`, 95%
+`[0.0594, 0.0862]`, Holm-adjusted `p=1.99998e-5`, so that raw-baseline guard passed.
+Critic's failure-inclusive fidelity side effects were melody `+0.000167`, bass-root
+`-0.0005`, and harmony `-0.001167` (95% `[-0.002167, -0.000333]`). These machine
+effects are not musical-taste evidence.
+
+The release consequence follows those decisions: product entry points now default to
+`n=1`, `max_iters=0`, and `use_critic=false`. Best-of-N search, verifier-guided repair,
+and critic scoring remain explicit research/compatibility opt-ins. The frozen formal
+`full` arm above remains the benchmark estimand; changing product defaults does not
+rewrite that run or its execution SHA.
+
+Search breadth improved the selected joint rate monotonically on this frozen shared
+pool, but the real deployment cost dimension remains unknown:
+
+| search k | selected joint | Wilson 95% CI |
+|---:|---:|---:|
+| 1 | 40/500 = 0.080 | [0.05930, 0.10711] |
+| 2 | 52/500 = 0.104 | [0.08019, 0.13384] |
+| 4 | 74/500 = 0.148 | [0.11956, 0.18181] |
+| 8 | 105/500 = 0.210 | [0.17658, 0.24784] |
+
+This table is a selected-policy curve, not `pass^8`. The canonical report retains the
+complete terminal GREEN and joint `pass@k`/`pass^k` curves for every k=1..10; no
+favorable k is promoted as a generic reliability number.
+
+### Candidate availability and profile sensitivity
+
+Across the 500 procedural families, the 5,000 nested proposal outcomes were:
+
+| arm | GREEN | joint | LLM-only success |
+|---|---:|---:|---:|
+| initial | 108/5,000 | 80/5,000 | 24/5,000 |
+| terminal repaired | 445/5,000 | 363/5,000 | 306/5,000 |
+| raw LLM | 0/5,000 | 0/5,000 | 0/5,000 |
+| pure solver | 69/500 | 44/500 | N/A |
+
+The terminal fidelity view had 1,419 scored and 3,581 failed/unscored outcomes; missing
+or invalid outcomes remain failures in structurally applicable ITT denominators. They
+are not dropped as complete cases.
+
+Deterministic profile rechecks below are model sensitivity only, not human difficulty
+calibration. The candidate denominator is 5,030 terminal slots: 5,000 procedural plus
+30 public.
+
+| profile | GREEN | AMBER | RED | unavailable |
+|---|---:|---:|---:|---:|
+| `small@0.1` | 112 | 770 | 537 | 3,611 |
+| `median@0.1` | 445 | 974 | 0 | 3,611 |
+| `large@0.1` | 1,150 | 269 | 0 | 3,611 |
+
+### Corpus exclusions, usage, and unavailable comparisons
+
+The run produced 10,563 canonical rows and 15,887 blobs from 503 items. The corpus
+domain SHA-256 is
+`b4e2a1ed05eb07d82bdea18b9105cdd92b564cf864d8acedaa3c37d820848e8b`.
+No license/evidence-compatible public lead-sheet entered the corpus. Mutopia BWV 773,
+Bizet Op. 21 No. 10, and Abbott's *Just for Today* were excluded for explicit frozen-
+normalizer contract violations. Checker-only tab fixtures remained software tests.
+Optional baselines B3/B4 are unavailable with reason
+`LICENSE_AUDITED_REPRODUCIBLE_ADAPTER_ABSENT`; no comparison was fabricated.
+
+Collection recorded 45,215 logical calls and 45,700 provider attempts, including 485
+extra attempts; requested output was 84,894,720 tokens and attempt-reserved output was
+87,030,688 tokens. Summed recorded elapsed time was 1,108,043,068,140 µs. Complete
+provider-token totals and all input/output/cache token components are `null` because
+some attempts lack complete usage. Actual token cost, dollar cost, and deployment
+Pareto non-dominance are therefore unavailable—not zero. The orphan-recovery supplement
+is disclosed separately as `$0.219054` known / `$28.363054` tight with four
+usage-unknown attempts; it is not benchmark data.
+
+### Replay receipt and artifact access
+
+Two fresh default FULL_RESCORE replays produced byte-identical seven-file canonical
+directories and report digest
+`79d1927b5100bd80db2f47b056ad5a7887739460869020c7b53a65d0d19bb3f8`.
+The claim is restricted to the manifest-bound Fretsure 0.6.0, Python 3.11.15,
+Darwin/arm64 runtime; no cross-platform byte-equality claim is made.
+
+The public aggregate report, COMPLETE receipt, every raw/domain hash, exact replay
+commands, access policy, and compression receipt are in
+[`benchmark-v2-formal-attempt-004`](experiments/benchmark-v2-formal-attempt-004/README.md).
+The full replay package remains owner-controlled because the repository lacks a data
+license grant and a recorded provider-output redistribution basis. Consequently this
+repository makes an integrity and authorized-replay claim, **not** a public-rescore
+claim.
+
+## Legacy Plan 4 command shape (historical)
 
 ```bash
 export ANTHROPIC_BASE_URL=http://localhost:4141 ANTHROPIC_AUTH_TOKEN=<token>
@@ -47,7 +184,9 @@ uv run fretsure-bench --seed 1 --items 16 --bars 2 --paired
 uv run fretsure-bench --seed 2 --items 16 --bars 2 --paired
 ```
 
-Same seed rebuilds the same procedurally novel corpus, which resists exact-item tab
+These commands describe the historical Plan 4 shape; the v2 CLI/artifact contract
+requires an explicit output directory and preregistration/replay inputs. Same seed
+rebuilds the same procedurally novel corpus, which resists exact-item tab
 memorization but is not an absolute proof against learned generator patterns or
 contamination. The current LLM (`gpt-5.6-sol` via the
 local proxy) is stochastic, so this reproduces the experiment shape, **not the exact
@@ -206,7 +345,7 @@ is **not external musicality evidence**. The
 critic must justify itself on harder/taste-sensitive corpora and a human blind A/B,
 or be cut.
 
-## Legacy scorecard (provisional until the v2 rerun)
+## Legacy scorecard (superseded by benchmark v2)
 
 - **Repair — strongest positive evidence.** Pooled 0.31 → 0.88 with non-overlapping
   marginal intervals; retain it, while still adding a same-proposal paired repair test.
@@ -221,9 +360,8 @@ or be cut.
 Keeping this scorecard public — including the component that has *not* paid its way —
 is the anti-LARP discipline the project runs on. Under the historical metric, repair
 has a large descriptive association, best-of-N has a provisional paired gain, and
-critic is honestly flagged rather than quietly promoted. These component verdicts
-must be refreshed, not silently carried forward, when benchmark v2 is run under
-`fidelity@0.3.0`.
+critic is honestly flagged rather than quietly promoted. Benchmark v2 refreshed these
+verdicts above; the legacy decisions were not silently carried forward.
 
 ## A "who checks the corpus" finding
 
@@ -264,10 +402,9 @@ checker") turned on the benchmark corpus.
   explicit evidence availability; therefore the old and new joint counts are not
   score-compatible. Grid/DTW
   tolerance for real human-timed corpora remains a later refinement.
-- There is no current real-LLM benchmark baseline under `fidelity@0.3.0` yet.
-  Benchmark v2 must retain paired per-item rows, rerun the baselines/ablations,
-  and use McNemar for binary paired outcomes plus a justified paired test for
-  continuous critic/taste scores.
+- Benchmark v2 now supplies the current `fidelity@0.3.0` real-model baseline, paired
+  rows, family bootstrap/sign-flip repair inference, and exact McNemar search inference.
+  It does not retroactively make the legacy numbers score-compatible.
 
 ## Also implemented in this harness (not headline empirical results)
 
@@ -276,6 +413,6 @@ checker") turned on the benchmark corpus.
   fixture. The planned human-labeled, repeated real-LLM experiment has not yet been
   run, so no empirical superiority claim is made from that fixture.
 - **Baselines** (`bench/baselines.py`): raw-LLM-unverified and pure-solver arms are
-  implemented; a full published baseline table on the frozen real/hard corpus is pending.
+  included in the v2 canonical report; B3/B4 remain explicitly unavailable.
 - **pass@k / pass^k** estimators + Wilson primitives (`bench/reliability.py`) are
-  unit-tested but not currently emitted by `fretsure-bench`'s JSON report.
+  emitted for every valid k in the v2 canonical JSON report.

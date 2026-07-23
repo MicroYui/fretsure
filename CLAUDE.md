@@ -2,43 +2,28 @@
 
 > 本文件在该目录启动会话时自动加载。**恢复上下文第一步：按下面“如何恢复”读取设计真源与当前实现状态。**
 
-**产品目标一句话**：一个 agent，把一首歌（符号谱 / MIDI / lead sheet；mp3 作 best-effort 前端）编配成**人手可证明弹得出来**的吉他谱（HERO = 指弹独奏；也做伴奏、难度简化）。核心 = "LLM 提议 → 确定性可弹性 oracle 逐音把关并修复 → checker 打分 benchmark"。
+**产品目标一句话**：一个 agent，把一首歌（符号谱 / MIDI / lead sheet；mp3 作 best-effort 前端）编配成在版本化模型内经确定性 oracle 逐音核验的吉他谱（HERO = 指弹独奏；也做伴奏、难度简化）。核心 = "LLM 提议 → 确定性可弹性 oracle 把关 → checker 打分 benchmark"；verifier-guided repair 可选，但 v2 未过保留阈值。
 
-**当前恢复真源（2026-07-21）**：Task 9 formal attempts 001–003 均已 terminal
-`INCOMPLETE`，不得 resume、覆盖或复用编号；下一次正式采集只能是 fresh attempt-004。
-attempt-003 在 503 个 pure-solver rows 后暴露系统性的 30 秒 request timeout，并以
-`523/10,563` rows、78 logical calls / 113 provider attempts、`$0.955113 / $359.791113`
-known/tight cost 终止。三次累计 known/tight 为 `$2.130022 / $804.234022`；加一个完整
-formal attempt 后的累计审计上界为 `$1,168,709.874022`。attempt-004 前须推送 300 秒整次
-attempt 硬 deadline（另含 10 秒/attempt 记录开销）、
-默认 4-lane 的 operational amendment；analysis-excluded pilot 按 `2 → 4 → 8` 运行，只有
-`4` 与 `8` 各至少八个完整 block（各 64 units）并经独立确认后才能选择 `8`，否则保持 `4`。
-正式进程 detached 运行，按 durable-unit 边界恢复，progress 只进 append-only operator log；
-formal/pilot 在建客户端前要求数值 loopback，拒绝 `localhost`；运行时不调用 Git 或子进程。
-普通 full stub A/B 只验证报告/字节，4-lane 恢复另由 provider-free
-`scripts/task9_operational_stub_gate.py` 对完整 schedule 验证；两类最终 amended A/B 均已通过，
-4-lane A 在 admitted 284 时唯一一次 `SIGINT` 后干净排空并同目录 resume，最终与不间断 B
-逐字节一致。最终 provider-free release gates 也已通过：`2599 passed, 8 deselected`、
-integration 边界 `8 skipped`、116-wheel/331-sdist 审计和七组 clean-install smoke 全绿。live
-throughput pilot 已在 pushed commit
-`08f456d2…` 完成 4/8 路各 8 blocks；8/4 unit/call 吞吐比仅 `0.9795 / 0.9897`，独立确认后正式
-并发保持 `4`。comparison SHA-256=`452d31be314bd66a6fe73548bb8d12078c38a132c968c3b95f92b212c9901d6d`；
-attempt-004 已绑定 execution `773c69de…` / pre-call `facafd05…` detached 启动，并通过精确
-5% / 10% / 15% / 20% / 25% checkpoints。随后机器离线，main durable prefix 停在 2,622 units /
-3,125 rows / 8,445 calls；4 个 active lanes 留下 open provider boundary，旧 `--resume` 生成
-INCOMPLETE checkpoint。用户批准的 post-hoc orphan-lane recovery 已由 pushed operator-only 工具
-按 plan `bf662a67…` 应用，receipt=`c53c1d8a…`；原 `773c69de…` runtime 已从 2,622 durable units
-同目录 resume。重跑的 4 units 已全部越过，并通过恢复后的精确 30% / 35% checkpoints；最新
-用户出门前的单次 `SIGINT` 曾干净排空到 3,705 admitted = READY、4,208 rows / 13,840 calls
-（36.83%）；用户随后明确要求继续，PID 38427 / detached screen 的同目录 resume 已接受完整
-prefix，仍为 4 lanes、无 abort，automation=`ACTIVE`。隔离的 9 attempts（5 usage 完整、4
-unknown）须进最终 cost addendum，不能记零。网络改善后的 4-vs-8 pilot 已在 formal 干净暂停
-期间一次性完成：comparison=`1fcfb8a3…`，8/4 unit/call ratios=`1.008834716058 /
-1.070286574518`，两级均 0 retries，但仍未过 `1.35 / 1.25` 门槛，因此 formal 保持 4 lanes。
-batch 已自动从 3,789-unit prefix 同目录 resume，并通过精确 40% / 45% / 50% / 55% / 60% / 65% / 70% / 75% / 80% / 85% / 90% / 95% checkpoints；最新只读快照为
-9,650 READY / 9,654 admitted、10,153 rows / 43,320 calls（95.92%），extra attempts=485，
-PID/screen 正常且无 terminal/abort/canonical。复测不得重复；完成前不启动 Task 10。现有
-pre-call、WAL、config、历史 receipt 与金额均须保留。
+**当前恢复真源（2026-07-23）**：Benchmark v2 Task 9 已完成。Formal attempt-004 绑定
+execution `773c69de…`，完成 10,060/10,060 network units、10,563/10,563 rows、45,215 logical
+calls / 45,700 attempts，并由 provider-free finalizer 发布 5 个 raw canonical 文件；两个 fresh
+FULL_RESCORE 的 7 文件目录逐字节一致，report digest=`79d1927…`。Attempts 001–003 保留为
+不可恢复的 `INCOMPLETE` 历史证据，不得覆盖或并入结果；小时监控已删除，attempt-004 不得重启。
+
+Task 10 的结果、fresh gates 与独立 review 已完成，正在做 Git closure。当前正式裁决：repair Δjoint=`+0.0566` 但低于 `0.10` SESOI，
+`NOT_KEPT`；best-of-4 Δ=`+0.068`，但完整 provider token/cost 为 null，
+`PROBATION_COST_UNKNOWN`；critic joint=`-0.002` 且无真人证据，
+`HUMAN_BLOCKED_PROBATION`。`full` 是 74/500=`14.8%`，所有高复杂度格及 3 个 public controls
+均为 0，不能外推真实曲目。repair 实现只作为研究/兼容控制保留，不再宣称已挣得默认存在。
+Task 10 因此把 CLI/demo/application/pipeline/API/Web 的产品基线统一为
+`n=1, max_iters=0, use_critic=false`；search、repair、critic 只能显式 opt in，formal Task 9
+工件与 execution SHA 不变。
+
+公开 Git 只纳入 aggregate report/receipt/index。完整 7-file replay 包留在版本化 owner-controlled
+locator；因项目数据许可条款和模型输出再分发依据尚未记录，不主张 public rescore 或 remote
+durability。Task 10 只剩 commit/push、fast-forward `main` 与 local/tracking/remote SHA equality。
+真人 gold、盲测、difficulty
+校准、design partner、cross-provider 与完整数据公开保持 OPEN。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。
 

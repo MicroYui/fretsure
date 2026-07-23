@@ -98,12 +98,17 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("file", type=Path, metavar="SCORE")
     parser.add_argument("--llm", action="store_true", help="use the local LLM proxy")
     parser.add_argument("--trace-jsonl", type=Path, metavar="PATH")
-    parser.add_argument("--n", type=_candidate_count, default=4, help="best-of-N candidates")
+    parser.add_argument(
+        "--n",
+        type=_candidate_count,
+        default=1,
+        help="candidate count (default: 1; values above 1 opt into search)",
+    )
     parser.add_argument(
         "--max-iters",
         type=_repair_iterations,
-        default=8,
-        help="maximum verifier-guided repair edits per candidate",
+        default=0,
+        help="maximum verifier-guided repair edits per candidate (default: 0)",
     )
     parser.add_argument(
         "--tempo-bpm",
@@ -111,10 +116,19 @@ def _parser() -> argparse.ArgumentParser:
         default=None,
         help="explicitly override the source tempo",
     )
-    parser.add_argument(
-        "--no-critic",
+    critic = parser.add_mutually_exclusive_group()
+    critic.add_argument(
+        "--critic",
+        dest="use_critic",
         action="store_true",
-        help="disable taste-only critic scoring (playability checks are unchanged)",
+        default=False,
+        help="opt into taste-only critic scoring",
+    )
+    critic.add_argument(
+        "--no-critic",
+        dest="use_critic",
+        action="store_false",
+        help="compatibility alias; critic scoring is already off by default",
     )
     return parser
 
@@ -330,7 +344,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 options=PipelineOptions(
                     n=args.n,
                     max_iters=args.max_iters,
-                    use_critic=not args.no_critic,
+                    use_critic=args.use_critic,
                     tempo_override_bpm=args.tempo_bpm,
                 ),
             )

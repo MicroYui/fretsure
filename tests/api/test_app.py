@@ -220,6 +220,21 @@ def test_same_loopback_origin_is_accepted(client: TestClient) -> None:
     assert response.status_code == 200, response.text
 
 
+def test_arrangement_http_defaults_match_the_evidence_backed_product_baseline(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/api/v1/arrangements?filename={BASIC.name}",
+        content=BASIC.read_bytes(),
+        headers={"content-type": XML_MEDIA_TYPE},
+    )
+    assert response.status_code == 200, response.text
+    options = response.json()["options"]
+    assert options["candidate_count"] == 1
+    assert options["max_repair_iterations"] == 0
+    assert options["critic_enabled"] is False
+
+
 def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> None:
     response = client.get("/api/v1/capabilities")
     assert response.status_code == 200
@@ -245,7 +260,14 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
         "max": 1000.0,
         "nullable": True,
     }
-    assert body["controls"]["arrange"]["defaults"]["engine"] == "offline"
+    assert body["controls"]["arrange"]["defaults"] == {
+        "profile": "median",
+        "n": 1,
+        "max_iters": 0,
+        "use_critic": False,
+        "tempo_bpm": None,
+        "engine": "offline",
+    }
     assert body["score_inputs"]["musicxml"]["max_body_bytes"] == 10 * 1024 * 1024
     assert body["score_inputs"]["mxl"]["max_body_bytes"] == 20 * 1024 * 1024
     assert body["score_inputs"]["midi"] == {
@@ -1019,6 +1041,15 @@ def test_openapi_documents_only_real_raw_body_endpoints(client: TestClient) -> N
     assert "audio/x-midi" not in operation["requestBody"]["content"]
     n_parameter = next(item for item in operation["parameters"] if item["name"] == "n")
     assert n_parameter["schema"]["maximum"] == 8
+    assert n_parameter["schema"]["default"] == 1
+    max_iters_parameter = next(
+        item for item in operation["parameters"] if item["name"] == "max_iters"
+    )
+    assert max_iters_parameter["schema"]["default"] == 0
+    critic_parameter = next(
+        item for item in operation["parameters"] if item["name"] == "use_critic"
+    )
+    assert critic_parameter["schema"]["default"] is False
     arrangement_schema = operation["responses"]["200"]["content"]["application/json"][
         "schema"
     ]

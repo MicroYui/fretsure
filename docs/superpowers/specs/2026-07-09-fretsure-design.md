@@ -1,17 +1,25 @@
 # Fretsure —— 可证明可弹的吉他谱智能体（设计文档 / Design Spec）
 
 > 产品名 **Fretsure**（fret + ensure，已定）。备选 PlayProof / Fretwright 仅存档。
-> 状态（2026-07-17）：设计已锁定；Plan 1–5、受限 MusicXML、Oracle 0.2、安全 `.mxl`、Plan 6A 与 producer-driven MusicXML/IR 已闭门。strict MIDI input 的实现、exact producer corpus、repository/real-proxy/Web/distribution gates 与三轮独立 review 已完成，containing commit/push/SHA equality 的外部 Git receipt 已在 `46ff8ac` 关闭。当前组合树为 package=`0.5.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace=`agent-trace@0.2.0`、service=`fretsure-service@0.2.0`、API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0` 保持不变，runtime 精确锁定 `music21==10.5.0`，默认真代理模型为 `gpt-5.6-sol`。当前按独立 benchmark-v2 计划重建版本化证据与配对消融；完整 Plan 6 的音频/琴颈/导出/live demo 仍 open。本文中的 target 数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+> 状态（2026-07-23）：设计已锁定；Plan 1–5、MusicXML/MXL/MIDI、Oracle 0.2、Plan 6A 与 benchmark v2 Task 1–9 已闭门，Task 10 的 fresh gates/review 已完成，正在做 Git closure。当前组合树为 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace/service/API/MCP/Web=`0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`，runtime 锁定 `music21==10.5.0`，正式模型为 `gpt-5.6-sol`。完整 Plan 6 的音频/琴颈/导出/live demo 仍 open。本文中的 target/预测数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+>
+> **当前证据修正**：本设计中的“repair 脊柱/头牌”是跑前假设，不是当前结论。正式 v2 得到 repair Δjoint `+0.0566`，低于预注册 `0.10` SESOI，裁决 `NOT_KEPT`；best-of-4 为 `PROBATION_COST_UNKNOWN`，critic 为 `HUMAN_BLOCKED_PROBATION`。产品缺省因此为 `n=1, max_iters=0, use_critic=false`；三个组件仅显式 opt in，repair 实现保留作研究/兼容控制。实测真源见 [`BENCHMARK_RESULTS.md`](../../BENCHMARK_RESULTS.md) 与 [`BENCHMARK_V2_ACCEPTANCE.md`](../../BENCHMARK_V2_ACCEPTANCE.md)。
+>
+> **全文 claim override**：下文所有未限定的“可弹”“保证”“真人弹出”、真人 demo、critic
+> musicality、live leaderboard 和营销句均是历史设计目标或 aspirational 计划，不是当前产品
+> 证据。当前只允许主张带 checker/profile/version stamps 的模型内 GREEN；真人 playability、
+> profile/tier calibration、盲测 musicality、真实设计伙伴与完整 Plan 6 demo 均为 OPEN。正文若与
+> 本段或当前 acceptance receipt 冲突，以本段和 acceptance receipt 为准。
 
 ---
 
 ## 0. TL;DR（一句话 + 定位）
 
-**给它一首歌的音乐内容（乐谱/MIDI/和弦谱，或尽力而为的音频），Fretsure 用前沿 LLM 提议一版吉他编配，再用一个确定性 oracle 逐音把关"人手能不能弹"，弹不出来的当场定位并自动修复——最终产出一份在你指定难度/调弦/变调夹下"可证明弹得出来"的指弹或伴奏吉他谱，并配一套用 checker（而非 LLM 评委）打分的公开 benchmark。**
+**给它一首歌的音乐内容（乐谱/MIDI/和弦谱，或尽力而为的音频），Fretsure 用前沿 LLM 提议一版吉他编配，再用确定性 oracle 在版本化模型/profile 内逐音把关；可选 repair 能读取定位诊断并编辑——最终产出带明确机器证据的指弹或伴奏吉他谱，并配一套用 checker（而非 LLM 评委）打分的 benchmark。**
 
-**能扛住敌意核查的唯一创新主张（moat claim）：**
+**原始设计差异化目标（不是当前 empirical claim）：**
 
-> 第一个输出"人手可证明弹得出来"的吉他谱的系统——确定性 oracle 硬门卡住 fret span / 横按 / 换把 / 右手可行性，并在保住旋律/低音/和声的前提下**自动修复**任何弹不出来的地方，配一套**机器可检（非 LLM 评委）**的可弹性/难度/忠实度 benchmark。
+> 用确定性 oracle 硬门卡住 fret span / 横按 / 换把 / 右手可行性，并提供可选的 verifier-guided repair，配一套**机器可检（非 LLM 评委）**的可弹性/难度/忠实度 benchmark。v2 已否定 repair “已挣得默认存在”的假设。
 
 **不主张**（这三样会被证伪，严禁写进创新点）：不主张"第一个做编配"、不主张"第一个出指法"、不主张"第一个 AI 吉他谱"。
 
@@ -351,9 +359,9 @@ class MusicIR:
 
 ---
 
-## 附:一句话对外定位（营销用，已过敌意核查）
+## 附：历史营销假设（受顶部 v2 裁决约束）
 
-> "Suno 给你一首**弹不了**的歌;Fretsure 给你一份**人手可证明弹得出来**的谱——AI 提议、确定性引擎逐音把关并自动修复,并在公开 benchmark 上用机器(而非另一个 AI)证明它真的能弹。"
+> 历史草案："Suno 给你一首弹不了的歌；Fretsure 给你一份谱——AI 提议、确定性引擎在版本化模型/profile 内逐音把关，并用 checker（而非另一个 AI）给出可审计证据。" 自动 repair 的默认价值未获 v2 支持，不得恢复原绝对营销句。
 
 ---
 
@@ -385,7 +393,7 @@ class MusicIR:
 - **自标注(无人)**:可弹性(oracle 即 label,合法因为是物理谓词);忠实度(对符号源精确计算,程序生成输入下完美)。
 - **需人(有界,建一次复用)**:musicality(~40 条×3 人 MOS + 盲 A/B);难度校准(专家排 ~150 条一次,拟合 learn-to-rank);**checker 金标集(~300 条分层,一名琴手逐条实弹 ~2–3 小时)**。**总常备人力 ≈ 每次大改 <1 天。**
 
-**A.5 忠实度指标（目标规格）**：目标按 voice-role 用 DTW((onset,pitch)) 对齐；DTW 与 1/16 网格宽松匹配尚未实现。当前 `fidelity@0.3.0` 保留 melody/bass exact-onset 与 active chord-segment harmony Jaccard，并增加 nullable scores、evaluated/unavailable dimensions 与可重算 passed；旧 benchmark 尚未按 0.3 重跑，详见 `docs/BENCHMARK_RESULTS.md`。
+**A.5 忠实度指标（目标规格）**：目标按 voice-role 用 DTW((onset,pitch)) 对齐；DTW 与 1/16 网格宽松匹配尚未实现。当前 `fidelity@0.3.0` 保留 melody/bass exact-onset 与 active chord-segment harmony Jaccard，并增加 nullable scores、evaluated/unavailable dimensions 与可重算 passed；benchmark v2 已按 0.3 完成，详见 `docs/BENCHMARK_RESULTS.md`。
 - **Melody-F1** = recall 与 precision 的调和平均,匹配需 MIDI 音高精确 + onset 在 1/16 网格内;另报八度等价宽松版 + 音高误差直方图。
 - **Bass-root-accuracy** = 强拍上"编配最低发声 pitch-class = 源和弦根/记谱低音"的比例。
 - **Harmony-Jaccard** = 逐和弦段"编配 pitch-class 集 vs 源和弦 pitch-class 集"的平均 Jaccard。

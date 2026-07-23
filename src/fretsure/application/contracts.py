@@ -87,9 +87,9 @@ class ArrangeOptions:
     """User-selectable controls for one score-arrangement request."""
 
     profile: str = "median"
-    n: int = 4
-    max_iters: int = 8
-    use_critic: bool = True
+    n: int = 1
+    max_iters: int = 0
+    use_critic: bool = False
     tempo_bpm: float | None = None
 
 

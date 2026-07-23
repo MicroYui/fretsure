@@ -4,18 +4,17 @@
 >
 > **真源**：设计 spec `docs/superpowers/specs/2026-07-09-fretsure-design.md`（§0–§15）。本路线图**不新增设计决策**，只把 spec 落成可执行的里程碑序列与验收门；任何冲突以 spec 为准。
 
-> **当前执行位置（2026-07-17）**：Plan 1–5、MusicXML-first、Oracle 0.2、安全 MXL、Plan 6A 与
-> [`producer-driven MusicXML/IR`](2026-07-16-producer-driven-musicxml-ir.md) 与 strict MIDI input 已各自
-> 闭门；MIDI 的 local/tracking/remote receipt 均为 `46ff8ac`。当前执行
-> [`benchmark v2`](2026-07-17-benchmark-v2.md)：先冻结 versioned corpus/manifest/raw rows/report 与统计
-> 预注册，再实现共享 proposal 的配对消融和当前模型重跑。下面早期章节中的
-> “Plan 1→2 补 MIDI”与“下一步写 Plan 1”只保留为
-> 初始路线历史，不再控制当前顺序。真人 gold/calibration 继续限制经验主张，但不阻塞这三个软件阶段。
-> 当前版本树是 package `0.5.0`、`score-input@0.1.0`、`musicxml@0.3.0`、`midi@0.1.0`、
-> `fidelity@0.3.0`、`agent-trace@0.2.0`、`fretsure-service@0.2.0`、`fretsure-api@0.2.0`、
-> `fretsure-mcp@0.2.0` 与 `fretsure-web@0.2.0`。
+> **当前执行位置（2026-07-23）**：Plan 1–5、MusicXML/MXL/MIDI、Oracle 0.2、Plan 6A 与
+> [`benchmark v2`](2026-07-17-benchmark-v2.md) Task 1–9 已闭门；Task 10 的 fresh
+> release gates 与独立 review 已完成，正在做 Git closure。正式 v2 的 repair=`NOT_KEPT`、
+> best-of-4=`PROBATION_COST_UNKNOWN`、critic=`HUMAN_BLOCKED_PROBATION`；旧 Plan 4 结论仅作
+> legacy。下面早期章节只保留为初始路线历史，不再控制当前顺序。真人 gold/calibration、完整
+> replay 包公开和 cross-provider 继续限制相应主张。当前版本树是 package `0.6.0`、
+> `score-input@0.1.0`、`musicxml@0.3.0`、`midi@0.1.0`、`fidelity@0.3.0`，其余公开
+> trace/service/API/MCP/Web 合同为 `0.2.0`。
+> 当前产品基线为 `n=1, max_iters=0, use_critic=false`；三个实验组件仅显式 opt in。
 
-**Goal（一句话）**：把一首歌的符号音乐内容编配成「人手可证明弹得出来」的吉他谱——LLM 提议 → 确定性可弹性 oracle 逐音硬门 + 定位化诊断 → verifier-guided 自动修复 → checker 打分 benchmark。
+**Goal（一句话）**：把一首歌的符号音乐内容编配成在版本化模型/profile 内可证明可弹的吉他谱——LLM 提议 → 确定性可弹性 oracle 逐音硬门 + 定位化诊断 → checker 打分 benchmark；verifier-guided repair 可选，但 v2 未过保留线。
 
 **Architecture（范式）**：**oracle 当环境、LLM 当策略（policy）**。确定性 oracle / 指法求解器 / 乐理分析 / 忠实度 diff 是一套工具与环境；LLM 驱动「规划 → 用 edit-DSL 编辑 → 读定位化诊断 → 定点编辑 → 重查到不动点」的自纠回路。深度不在「图里有 LLM」，在「每个 agent 能力都用 leave-one-out 消融证明它挪动了 checker 打分的指标，否则砍掉并公开」。
 
@@ -520,9 +519,9 @@ Plan 1 (oracle+验证台) ──┬─→ Plan 2 (solver+M0) ──→ Plan 3 (a
 
 ## 执行入口
 
-- **当前下一步**：不重做 MIDI 或历史 Plan 4；按
-  [`2026-07-17-benchmark-v2.md`](2026-07-17-benchmark-v2.md) 分 prereg、runner-ready、results 三个 Git gate
-  实现。旧 Claude/旧 fidelity 数只保留为历史证据。v2 只做 CLI/JSON/JSONL/文档；若加入 dashboard、
+- **当前下一步**：不重做 MIDI、历史 Plan 4 或 Task 9 collection；完成
+  [`benchmark v2`](2026-07-17-benchmark-v2.md) Task 10 的 fresh gates、独立 reviews、closure
+  commit/push 与 `main` SHA equality，然后在真人/许可等 OPEN gate 处暂停。若加入 dashboard、
   图表页、live leaderboard 或其他前端，仍须先与用户确认统一视觉。
 - 每个阶段在前置提交的 local/remote SHA 一致后才开启；阶段末做独立 scope/security/consumer 审计。
   用户审计只在新视觉、音频/听感、真人演奏或 calibration gate 出现时暂停，不把普通代码审查误写成

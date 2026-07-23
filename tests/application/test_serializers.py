@@ -311,6 +311,15 @@ def test_capabilities_wire_is_transport_neutral_and_honest() -> None:
             "midi": "midi@0.1.0",
         },
     }
+    controls = wire["controls"]
+    assert isinstance(controls, dict)
+    assert controls["arrange"]["defaults"] == {
+        "profile": "median",
+        "n": 1,
+        "max_iters": 0,
+        "use_critic": False,
+        "tempo_bpm": None,
+    }
     assert "render_audio" in wire["deferred"]  # type: ignore[operator]
     assert "render_audio" not in wire["implemented"]  # type: ignore[operator]
     assert wire["stamps"]["package_version"] == "0.6.0"  # type: ignore[index]

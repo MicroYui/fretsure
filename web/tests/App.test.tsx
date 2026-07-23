@@ -49,6 +49,9 @@ describe("Fretsure product flow", () => {
     expect(String(url)).toContain("/api/v1/arrangements?");
     expect(String(url)).toContain("filename=song.musicxml");
     expect(String(url)).toContain("engine=offline");
+    expect(String(url)).toContain("n=1");
+    expect(String(url)).toContain("max_iters=0");
+    expect(String(url)).toContain("use_critic=false");
     expect(init?.method).toBe("POST");
     expect(init?.body).toBe(file);
     expect(new Headers(init?.headers).get("content-type")).toBe(

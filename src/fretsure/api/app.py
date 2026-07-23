@@ -832,14 +832,28 @@ _ARRANGE_OPENAPI = {
         {
             "name": "n",
             "in": "query",
-            "schema": {"type": "integer", "minimum": 1, "maximum": MAX_API_CANDIDATES},
+            "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": MAX_API_CANDIDATES,
+                "default": 1,
+            },
         },
         {
             "name": "max_iters",
             "in": "query",
-            "schema": {"type": "integer", "minimum": 0, "maximum": MAX_API_REPAIR_ITERS},
+            "schema": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": MAX_API_REPAIR_ITERS,
+                "default": 0,
+            },
         },
-        {"name": "use_critic", "in": "query", "schema": {"type": "boolean"}},
+        {
+            "name": "use_critic",
+            "in": "query",
+            "schema": {"type": "boolean", "default": False},
+        },
         {"name": "tempo_bpm", "in": "query", "schema": {"type": "number"}},
     ],
     "requestBody": {
@@ -1077,18 +1091,18 @@ def create_app(
             n=_integer_control(
                 query,
                 "n",
-                4,
+                1,
                 minimum=1,
                 maximum=MAX_API_CANDIDATES,
             ),
             max_iters=_integer_control(
                 query,
                 "max_iters",
-                8,
+                0,
                 minimum=0,
                 maximum=MAX_API_REPAIR_ITERS,
             ),
-            use_critic=_boolean_control(query, "use_critic", True),
+            use_critic=_boolean_control(query, "use_critic", False),
             tempo_bpm=_float_control(query, "tempo_bpm", None),
         )
         data = await read_bounded_body(request, limit=body_limit)

@@ -26,6 +26,17 @@ function requestArrangement(document: unknown): ReturnType<typeof arrangeScore> 
 describe("API client", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("accepts the evidence-backed arrangement defaults", async () => {
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(capabilities)));
+    await expect(getCapabilities()).resolves.toMatchObject({
+      controls: {
+        arrange: {
+          defaults: { n: 1, max_iters: 0, use_critic: false },
+        },
+      },
+    });
+  });
+
   it("rejects incompatible success documents", async () => {
     vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ ok: true })));
     await expect(getCapabilities()).rejects.toThrow("incompatible capabilities");

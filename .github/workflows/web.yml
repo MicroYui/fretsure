@@ -55,4 +55,6 @@ jobs:
         run: npm run build
 
       - name: Verify generated assets
-        run: git diff --exit-code -- src/fretsure/web_static
+        run: |
+          git diff --exit-code -- src/fretsure/web_static
+          test -z "$(git ls-files --others --exclude-standard -- src/fretsure/web_static)"

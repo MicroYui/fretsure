@@ -1,0 +1,154 @@
+{
+  "access": {
+    "audience": "repository_owner_and_explicitly_approved_auditors",
+    "automatic_expiry": false,
+    "controlled_locator": "fretsure-private://benchmark-v2/benchmark-v2-formal-20260717-attempt-004/v1",
+    "local_backing_path": "outputs/private/benchmark-v2-release/benchmark-v2-formal-20260717-attempt-004-v1",
+    "onward_redistribution": "prohibited_pending_license_and_provider_rights_decision",
+    "public_rescore_claim": "unavailable",
+    "remote_durability_claim": "unavailable",
+    "request_channel": "repository_owner",
+    "retention": "retain_until_a_later_index_records_migration_and_replacement_hash"
+  },
+  "artifacts": [
+    {
+      "domain_sha256": "61f5ce16de31ce11c55b750a8d5d39a3824cb93c6696be2d9f07b16bd49297a8",
+      "encoding": "identity",
+      "logical_name": "config.json",
+      "media_type": "application/json",
+      "public_distribution": false,
+      "raw_bytes": 5426801,
+      "raw_sha256": "5942b278558274dd71d75a4f2ed6d7dc2918ae6927568671cf1b39e62b48f631",
+      "stored_bytes": 5426801,
+      "stored_sha256": "5942b278558274dd71d75a4f2ed6d7dc2918ae6927568671cf1b39e62b48f631"
+    },
+    {
+      "domain_sha256": "f58b29df41cfe06456b44f2c2a6a15d44a8e73d43c5ee6f95aeae237ca175899",
+      "encoding": "identity",
+      "logical_name": "observations.json",
+      "media_type": "application/json",
+      "public_distribution": false,
+      "raw_bytes": 17517584,
+      "raw_sha256": "4436f7a1435857054c2077c0e6485375600897131b8e7cfa9c0bf9da05da6ef8",
+      "stored_bytes": 17517584,
+      "stored_sha256": "4436f7a1435857054c2077c0e6485375600897131b8e7cfa9c0bf9da05da6ef8"
+    },
+    {
+      "domain_sha256": "d64fa9c6435c1f1e0771f836768b80e3dbfce23dea017e6bdd185998a96bb174",
+      "encoding": "identity",
+      "logical_name": "receipt.json",
+      "media_type": "application/json",
+      "public_distribution": true,
+      "raw_bytes": 851,
+      "raw_sha256": "84f9933655ca027d745693131c0d135b95942ee0d71a93c14ac3e616614e6d7c",
+      "repository_path": "docs/experiments/benchmark-v2-formal-attempt-004/receipt.json",
+      "stored_bytes": 851,
+      "stored_sha256": "84f9933655ca027d745693131c0d135b95942ee0d71a93c14ac3e616614e6d7c"
+    },
+    {
+      "domain_sha256": "79d1927b5100bd80db2f47b056ad5a7887739460869020c7b53a65d0d19bb3f8",
+      "encoding": "identity",
+      "logical_name": "report.json",
+      "media_type": "application/json",
+      "public_distribution": true,
+      "raw_bytes": 789714,
+      "raw_sha256": "1a44c02329cbdd99dc9fc30fd8bcf7da2bed6dba349d4b16ddb6ade509f73398",
+      "repository_path": "docs/experiments/benchmark-v2-formal-attempt-004/report.json",
+      "stored_bytes": 789714,
+      "stored_sha256": "1a44c02329cbdd99dc9fc30fd8bcf7da2bed6dba349d4b16ddb6ade509f73398"
+    },
+    {
+      "domain_sha256": null,
+      "encoding": "identity",
+      "logical_name": "report.md",
+      "media_type": "text/markdown",
+      "public_distribution": true,
+      "raw_bytes": 1301,
+      "raw_sha256": "ab865e6d6cd985f20d0487c5ab3ac2df858d320bc5b141efa47e4ce95f755893",
+      "repository_path": "docs/experiments/benchmark-v2-formal-attempt-004/report.md",
+      "stored_bytes": 1301,
+      "stored_sha256": "ab865e6d6cd985f20d0487c5ab3ac2df858d320bc5b141efa47e4ce95f755893"
+    },
+    {
+      "domain_sha256": "a1260b6d7751b94ef9524aacdc7168bb61e9bf1aca82dfdcd80595b35c8fa7d2",
+      "encoding": "zstd",
+      "logical_name": "rows.jsonl.zst",
+      "media_type": "application/x-ndjson",
+      "public_distribution": false,
+      "raw_bytes": 65463114,
+      "raw_logical_name": "rows.jsonl",
+      "raw_sha256": "d8c4b072186fe00719e60cf90ef06f9556ddc77aac5320d811a9d1450a006ecc",
+      "stored_bytes": 4265171,
+      "stored_sha256": "4c4e6290f11bd8fecda9d829c3c4da671606e68fc7672471191d1dbd3c574434"
+    },
+    {
+      "domain_sha256": "819fbc163d751fc799e2e0baaed1ac73d35578bc5282359a8e44353a1abd7276",
+      "encoding": "zstd",
+      "logical_name": "blobs.jsonl.zst",
+      "media_type": "application/x-ndjson",
+      "public_distribution": false,
+      "raw_bytes": 242766495,
+      "raw_logical_name": "blobs.jsonl",
+      "raw_sha256": "b543e32ac1f7e3869e5d0040a93e56d6abeafd93d6f13a1d2ff92428e42e48b9",
+      "stored_bytes": 5680746,
+      "stored_sha256": "d0df3762dc152e55480c3aaea9d87966dc6cf79d18c2f7e0986d3d5912156bc6"
+    }
+  ],
+  "compression": {
+    "algorithm": "zstd",
+    "command": "zstd -19 -q -c <raw> > <compressed>",
+    "dictionary": null,
+    "version": "1.5.7"
+  },
+  "domain_bindings": {
+    "analysis_code_sha256": "495ac3870a79ef394323f59cd664d551f1696ae58b52184f8e9fc351ec495281",
+    "corpus_sha256": "b4e2a1ed05eb07d82bdea18b9105cdd92b564cf864d8acedaa3c37d820848e8b",
+    "journal_sha256": "ca34117badc09ef469eed9132ba11026a9518c0564ad8252144e736c014adc9b"
+  },
+  "licensing": {
+    "included_public_sources": [
+      "CC0-1.0",
+      "CC-PDDC"
+    ],
+    "model_output_redistribution_basis": "not_recorded",
+    "package_license": "not_declared",
+    "procedural_data_identifier": "LicenseRef-FretSure-Generated-Benchmark-v2",
+    "procedural_data_terms": "not_present",
+    "release_decision": "aggregate_report_and_receipt_public_full_replay_package_access_controlled"
+  },
+  "privacy_exclusions": [
+    "private-observations.json",
+    "journal_or_wal",
+    "staging",
+    "concurrent_lane_or_unit_state",
+    "operator_logs",
+    "pid_or_lock_files",
+    "abort_or_audit_records",
+    "recovery_telemetry",
+    "prompt_or_response_payloads"
+  ],
+  "provenance": {
+    "collection_execution_sha": "773c69deca4d2b00cdcdc5a33841369cb3016955",
+    "finalizer_amendment_sha": "33577c8d41198c6d604e5a4323239e74a309945c",
+    "task9_closure_sha": "6683183e0d09eff3208be70e425db4ae6714ee3d"
+  },
+  "replay": {
+    "canonical_file_count": 7,
+    "cross_platform_byte_equality_claim": false,
+    "independent_runs": 2,
+    "mode": "full_rescore",
+    "report_sha256": "79d1927b5100bd80db2f47b056ad5a7887739460869020c7b53a65d0d19bb3f8",
+    "runs_byte_identical": true,
+    "runtime_binding": {
+      "architecture": "arm64",
+      "operating_system": "Darwin",
+      "package_version": "0.6.0",
+      "python_version": "3.11.15",
+      "uv_lock_sha256": "5a8b43a396b5854057c554c4c0d0c6629ffbb58cae5edc9d6bc49bc5a6df2f8e"
+    }
+  },
+  "run_id": "benchmark-v2-formal-20260717-attempt-004",
+  "schema": "benchmark-v2-artifact-index@0.1.0",
+  "status": "COMPLETE",
+  "stored_bundle_bytes": 33682168
+}

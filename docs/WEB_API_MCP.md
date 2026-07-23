@@ -43,18 +43,21 @@ fretsure-serve
   `max_iters`、`use_critic`、`tempo_bpm`。
 - `POST /api/v1/oracle/check`：raw canonical Tab JSON。
 
+`GET /api/v1/capabilities` 是默认值真源。benchmark v2 后的产品基线为
+`n=1`、`max_iters=0`、`use_critic=false`；search、repair 与 critic 仍可显式 opt in。
+
 离线示例：
 
 ```bash
 curl --fail-with-body \
   -H 'Content-Type: application/vnd.recordare.musicxml+xml' \
   --data-binary @score.musicxml \
-  'http://127.0.0.1:8000/api/v1/arrangements?filename=score.musicxml&engine=offline&n=4&max_iters=8&use_critic=true'
+  'http://127.0.0.1:8000/api/v1/arrangements?filename=score.musicxml&engine=offline&n=1&max_iters=0&use_critic=false'
 
 curl --fail-with-body \
   -H 'Content-Type: audio/midi' \
   --data-binary @melody.mid \
-  'http://127.0.0.1:8000/api/v1/arrangements?filename=melody.mid&engine=offline&n=4&max_iters=8&use_critic=true'
+  'http://127.0.0.1:8000/api/v1/arrangements?filename=melody.mid&engine=offline&n=1&max_iters=0&use_critic=false'
 ```
 
 成功结果明确区分 `tab_produced` 与 `no_fingering_within_budget`，并返回 source provenance、import

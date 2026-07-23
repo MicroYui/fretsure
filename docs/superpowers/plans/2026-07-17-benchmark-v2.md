@@ -1,12 +1,15 @@
 # Benchmark v2 — versioned evidence, paired ablations, and honest replay
 
-> **Status (2026-07-17): FROZEN FOR IMPLEMENTATION.** The strict MIDI stage is
-> closed at `46ff8ac070e97422b4aecf5c0f2a22b588a5fda4`, with local, tracking, and
-> remote SHA equality. This document is the new benchmark-v2 contract required
-> by the roadmap; the historical 2026-07-10 Plan 4 remains an implementation
-> record and its numerical tables are not a current baseline.
+> **Status (2026-07-23): IMPLEMENTED; TASK 10 GIT CLOSURE IN PROGRESS.** The
+> historical 2026-07-10 Plan 4 remains an implementation record and its numerical
+> tables are not the current baseline. Formal v2 results and acceptance are in
+> [`BENCHMARK_RESULTS.md`](../../BENCHMARK_RESULTS.md) and
+> [`BENCHMARK_V2_ACCEPTANCE.md`](../../BENCHMARK_V2_ACCEPTANCE.md).
+> The release consequence is an evidence-backed product baseline of
+> `n=1, max_iters=0, use_critic=false`; search, repair, and critic remain explicit
+> research/compatibility opt-ins, while the frozen formal `full` arm is unchanged.
 >
-> **Implementation progress (2026-07-23): Tasks 1–9 complete; Task 10 pending.** Attempt-004
+> **Implementation progress (2026-07-23): Tasks 1–9 complete; Task 10 validation/review complete, Git closure in progress.** Attempt-004
 > completed 10,563 rows / 45,215 calls and passed byte-identical independent full replays. Strict
 > corpus/generator contracts, observable trajectories, the shared ten-sample pool,
 > baselines, registered statistics, durable artifacts, deterministic reports, and
@@ -57,7 +60,8 @@
 > stopped at `523/10,563` rows, 78 logical calls / 113 provider attempts and is terminal
 > `INCOMPLETE`; known/tight cost is `$0.955113 / $359.791113`. Attempts 001–003 total
 > `$2.130022 / $804.234022`, and adding one complete formal attempt gives the cumulative
-> audit maximum `$1,168,709.874022`. The next collection must be fresh attempt-004.
+> audit maximum `$1,168,709.874022`. That next collection was fresh attempt-004; it
+> completed 10,563 rows / 45,215 calls and passed two independent FULL_RESCORE replays.
 >
 > **Runtime provenance correction (2026-07-17, before any model outcome):** per the
 > user-approved simplicity boundary, runtime collection/replay must not spawn Git or
@@ -785,7 +789,7 @@ pre-consumption hard gate. The old envelope (`5bcd2458…`) and gates (`a421e1c3
 **Status (2026-07-23): COMPLETE.** Attempts 001–003 remain terminal `INCOMPLETE` historical
 evidence. Attempt-004 completed all 10,563 rows / 45,215 calls, published raw-only canonical
 artifacts through the disclosed provider-free finalization amendment, and passed two
-byte-identical default FULL_RESCORE replays. Task 10 remains pending. The historical
+byte-identical default FULL_RESCORE replays. Task 10 closure is in progress. The historical
 external-ceiling gate SHA-256 is
 `931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9`; its
 `$538,865.486400` value and the attempt-001 pre-call remain immutable audit evidence,
@@ -797,8 +801,10 @@ and independent double-replay workflow are implemented. The corrected
 `benchmark-formal-budget-gate@0.3.0` has SHA-256
 `9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6`; it remains
 historical evidence and is not a gate for attempt-004. Attempt-004 requires a new pre-call
-and formal budget gate bound to the operational preregistration and its eventual pushed
-execution SHA.
+and formal budget gate bound to the operational preregistration and pushed execution SHA;
+the completed bindings are pre-call
+`facafd058cba2eb5223bde1ddf6f6da802cdbc6ab439eb40e749171a8ec9b76b` and budget gate
+`26260e11ebbbdffc05f9770957075f2a88b8925888887cb5564789e5f9f8c5d7`.
 
 Attempt-001 completed 503 pure-solver units and the first agent unit. On logical call 13,
 a critic request with visible limit `512` returned exact model `gpt-5.6-sol` and `704`
@@ -832,7 +838,7 @@ repeatedly ended after three 30-second attempts plus frozen backoff. The run was
 Attempts 001–003 have cumulative known/tight cost `$2.130022 / $804.234022`. Adding one
 complete formal attempt's `$1,167,905.640000` mechanical maximum yields cumulative audit
 maximum `$1,168,709.874022`. Neither amount is a claim that the local proxy has a
-pre-consumption hard gate. Fresh attempt-004 may start only after the 300-second timeout,
+pre-consumption hard gate. Before attempt-004 started, the 300-second timeout,
 default four-lane runner, operational preregistration/budget bindings, crash/resume tests,
 analysis-excluded throughput pilot, and full release gates are pushed. The pilot advances
 `2 → 4 → 8`; selecting `8` requires at least eight complete blocks at both `4` and `8`
@@ -849,9 +855,9 @@ The live throughput pilot subsequently completed eight blocks / 64 units at both
 eight lanes. Eight lanes failed both frozen throughput gates: its 8/4 unit and call ratios
 were `0.979490526` and `0.989746973`, with nine retries versus zero at four lanes. Independent
 confirmation retained the default four-lane formal level. Comparison SHA-256 is
-`452d31be314bd66a6fe73548bb8d12078c38a132c968c3b95f92b212c9901d6d`. The remaining order
-is to push this decision receipt, build fresh attempt-004 bindings, and start detached
-collection.
+`452d31be314bd66a6fe73548bb8d12078c38a132c968c3b95f92b212c9901d6d`. A later network
+retest also failed the frozen thresholds; attempt-004 therefore ran and completed at
+four lanes.
 
 - Before any Task 9 provider call, the formal runner must enforce the billing envelope's
   input ceiling as UTF-8 prompt bytes plus the fixed 256-token framing allowance before
@@ -870,6 +876,10 @@ collection.
 
 ## 14. Task 10 — Documentation, acceptance, review, and closure
 
+**Status (2026-07-23): GIT CLOSURE IN PROGRESS.** Results, acceptance, artifact access
+policy, stale public claims, fresh validation, and zero-finding independent review are
+complete. Closure commit/push and `main` SHA equality remain.
+
 **Files:**
 
 - `docs/BENCHMARK_RESULTS.md`
@@ -878,6 +888,10 @@ collection.
 - `README.md`
 - `CLAUDE.md`
 - roadmap/spec/scope references
+- product-default implementations and contracts in CLI/demo/application/pipeline/API,
+  their Python/Web tests, and the rebuilt packaged Web asset;
+- lightweight/manual workflow checks needed to keep generated assets and Task 9
+  operator-script typing reviewable;
 - sanitized config/observations/receipt/report plus compressed canonical rows/blobs
   when legally redistributable. If size/license prevents repository storage, retain
   them in a stable access-controlled artifact location with hashes and access policy;

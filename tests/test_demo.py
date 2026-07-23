@@ -19,6 +19,17 @@ def test_demo_stub_produces_model_green_tab() -> None:
     assert demo.gate is not None and demo.gate.passed
 
 
+def test_demo_defaults_to_one_candidate_without_repair_or_critic() -> None:
+    demo = run_demo(sample_ir(), ConstantLLM("noop"))
+    assert demo.result.candidates_tried == 1
+    assert demo.result.critic is None
+    configured = demo.result.trace.steps[0]
+    assert configured.event == "PIPELINE_CONFIGURED"
+    assert configured.data["candidates"] == 1
+    assert configured.data["max_repair_iterations"] == 0
+    assert configured.data["critic_enabled"] is False
+
+
 def test_demo_is_deterministic_offline() -> None:
     ir = sample_ir()
     a = run_demo(ir, ConstantLLM("noop"), n=2)

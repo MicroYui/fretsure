@@ -12,6 +12,14 @@ The oracle makes a **narrow, bounded** claim. Read this before trusting a GREEN.
 > empirical claims, profile/tier calibration, human-musicality conclusions, and any
 > claim that a matching real player is guaranteed to perform every GREEN result.
 
+> **Benchmark v2 evidence update (2026-07-23):** the 500-family current-model run is
+> complete. Its controlled full policy reached 74/500 joint successes, while every
+> high-complexity stratum and all three public controls were zero. Repair was
+> `NOT_KEPT`, best-of-4 is `PROBATION_COST_UNKNOWN`, and critic is
+> `HUMAN_BLOCKED_PROBATION`. These are software/statistical outcomes inside this scope,
+> not evidence that real players can perform the outputs. Product defaults therefore
+> use one candidate with repair and critic disabled; all three remain explicit opt-ins.
+
 ## What GREEN means
 
 > For a valid ordinary six-string `Tab`, **GREEN** means that
@@ -173,7 +181,7 @@ PPQN tick early; music21 10.5.0 melody-only output retains notation durations an
 Both producers' frozen harmony-realized `supported_basic` exports fail typed rather
 than triggering melody/chord-role heuristics. Evidence and limitations are recorded
 in [`2026-07-17-midi-census.json`](experiments/2026-07-17-midi-census.json) and the
-in-progress [`MIDI_ACCEPTANCE.md`](MIDI_ACCEPTANCE.md).
+completed [`MIDI_ACCEPTANCE.md`](MIDI_ACCEPTANCE.md).
 
 ## In scope
 

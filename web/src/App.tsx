@@ -12,9 +12,9 @@ import type {
 const FALLBACK_CONTROLS: ArrangeControls = {
   engine: "offline",
   profile: "median",
-  n: 4,
-  maxIters: 8,
-  useCritic: true,
+  n: 1,
+  maxIters: 0,
+  useCritic: false,
   tempoBpm: null,
 };
 
