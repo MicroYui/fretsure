@@ -6,8 +6,8 @@
 > by the roadmap; the historical 2026-07-10 Plan 4 remains an implementation
 > record and its numerical tables are not a current baseline.
 >
-> **Implementation progress (2026-07-18): Tasks 1–8 complete; Task 9 formal runner
-> implemented; attempts 001–003 terminal `INCOMPLETE`; fresh attempt-004 pending.** Strict
+> **Implementation progress (2026-07-23): Tasks 1–9 complete; Task 10 pending.** Attempt-004
+> completed 10,563 rows / 45,215 calls and passed byte-identical independent full replays. Strict
 > corpus/generator contracts, observable trajectories, the shared ten-sample pool,
 > baselines, registered statistics, durable artifacts, deterministic reports, and
 > full/fast CLI replay have passed their directed and independent gates. The licensed
@@ -782,8 +782,11 @@ pre-consumption hard gate. The old envelope (`5bcd2458…`) and gates (`a421e1c3
 
 ## 13. Task 9 — Current-model collection and deterministic analysis
 
-**Status (2026-07-18): FORMAL RUNNER IMPLEMENTED / ATTEMPTS 001–003 TERMINAL
-INCOMPLETE / OPERATIONALLY AMENDED ATTEMPT-004 PENDING.** The historical external-ceiling gate SHA-256 is
+**Status (2026-07-23): COMPLETE.** Attempts 001–003 remain terminal `INCOMPLETE` historical
+evidence. Attempt-004 completed all 10,563 rows / 45,215 calls, published raw-only canonical
+artifacts through the disclosed provider-free finalization amendment, and passed two
+byte-identical default FULL_RESCORE replays. Task 10 remains pending. The historical
+external-ceiling gate SHA-256 is
 `931b5ae14d587d89511aa3b5c45c7458e96c377df54093ad6244a14948527bd9`; its
 `$538,865.486400` value and the attempt-001 pre-call remain immutable audit evidence,
 but neither is valid for another provider call. The corrected official-contract

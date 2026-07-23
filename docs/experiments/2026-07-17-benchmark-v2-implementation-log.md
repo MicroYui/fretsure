@@ -1311,3 +1311,29 @@ all benchmark Python source hashes, original execution/pre-call/pricing/budget b
 the new finalizer commit. Both provider factories fail immediately if invoked. After raw-only
 COMPLETE publication, two fresh full offline replays remain mandatory before Task 9 closure;
 Task 10 remains unopened.
+
+The amendment was pushed as finalizer commit
+`33577c8d41198c6d604e5a4323239e74a309945c`. The exact zero-lane plan SHA-256 is
+`fe612a6b42e5d511a9b7e044c941b6617cf41392df42b0c13e53b9d58108a726`; apply and immediate
+check both returned APPLIED receipt SHA-256
+`0c9e71516a2d9e152f71698a450b43b2bedb27ba57a149f4aca0514f1c22028e`.
+The offline finalizer then returned COMPLETE for all 10,563 rows and 45,215 calls, with
+exactly five raw canonical files and zero provider-factory calls. The raw receipt SHA-256 is
+`84f9933655ca027d745693131c0d135b95942ee0d71a93c14ac3e616614e6d7c`.
+
+Two fresh default FULL_RESCORE replays ran independently and both returned report SHA-256
+`79d1927b5100bd80db2f47b056ad5a7887739460869020c7b53a65d0d19bb3f8`. Their seven-file
+canonical directories are byte-identical, and each replay's five raw files are byte-identical
+to the source publication. The raw report JSON and Markdown SHA-256 values are respectively
+`1a44c02329cbdd99dc9fc30fd8bcf7da2bed6dba349d4b16ddb6ade509f73398` and
+`ab865e6d6cd985f20d0487c5ab3ac2df858d320bc5b141efa47e4ce95f755893`.
+Task 9 collection, deterministic analysis, and double-replay acceptance are closed. The
+previous orphan-lane supplement remains `$0.219054` known / `$28.363054` tight with four
+usage-unknown attempts; it must remain a disclosed cost addendum rather than benchmark data.
+Task 10 has not started.
+
+The Task 9 closeout release gate passed with `2612 passed, 8 deselected` in the complete
+provider-free offline suite and `8 skipped, 2612 deselected` at the empty-provider integration
+boundary. Ruff, strict mypy for all source modules and the recovery tool, Markdown links, and
+diff checks passed. The only warning is the third-party Starlette/httpx deprecation notice.
+The obsolete hourly automation `fretsure-task-9-formal-monitor` was deleted.

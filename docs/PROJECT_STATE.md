@@ -41,13 +41,29 @@ Formal attempt-004 已完成全部 provider collection，绑定 execution commit
 巨大 Python JSON tree，触发通用 1,000,000-node guard，因而写出 terminal `INCOMPLETE`，尚未发布
 canonical。该失败发生在 provider collection 之后，不需要也不允许重跑任何 READY unit。
 
-用户已授权 provider-free finalization amendment。修复只为 observations 外层 envelope 增加流式拼接
+用户已授权并完成 provider-free finalization amendment。修复只为 observations 外层 envelope 增加流式拼接
 和对应 strict parser：每条 call 仍先独立 canonical/typed 验证，最终 bytes、schema 与 domain-separated
 SHA 算法不变，通用 JSON node guard 也不放宽。零-active-lane recovery plan 只归档旧 abort/audit，
 不移动或改写 coordinator、lane WAL、main journal、rows/blobs；`--finalize` 传入 fail-fast provider
 factories，任何客户端创建都会立刻失败。plan 同时绑定原 execution/pre-call/pricing/budget、恢复脚本
-raw SHA、全部 `src/fretsure/bench/*.py` source-bundle SHA 和新的 finalizer commit。完成后必须进行两次
-fresh FULL_RESCORE 离线 replay，Task 9 验收前不得启动 Task 10。
+raw SHA、全部 `src/fretsure/bench/*.py` source-bundle SHA 和 finalizer commit
+`33577c8d41198c6d604e5a4323239e74a309945c`。精确 plan SHA-256=
+`fe612a6b42e5d511a9b7e044c941b6617cf41392df42b0c13e53b9d58108a726`，APPLIED receipt SHA-256=
+`0c9e71516a2d9e152f71698a450b43b2bedb27ba57a149f4aca0514f1c22028e`。零-provider finalizer
+发布 5 个 raw canonical 文件并返回 `COMPLETE`，provider factory calls=0；raw receipt SHA-256=
+`84f9933655ca027d745693131c0d135b95942ee0d71a93c14ac3e616614e6d7c`。
+
+两次 fresh FULL_RESCORE 离线 replay 已并行完成，均返回 report SHA-256=
+`79d1927b5100bd80db2f47b056ad5a7887739460869020c7b53a65d0d19bb3f8`。A/B 七文件全目录逐字节
+一致；各自前五个 raw 文件也与 source 逐字节一致。report.json raw SHA-256=
+`1a44c02329cbdd99dc9fc30fd8bcf7da2bed6dba349d4b16ddb6ade509f73398`，report.md raw SHA-256=
+`ab865e6d6cd985f20d0487c5ab3ac2df858d320bc5b141efa47e4ce95f755893`。Task 9 collection、
+deterministic analysis 与双 replay 验收已闭合；Task 10 尚未启动。
+
+Task 9 closeout release gate 已通过：provider-free offline suite 为 `2612 passed, 8 deselected`，
+integration 边界为 `8 skipped, 2612 deselected`；Ruff、`mypy --strict src`、恢复脚本 strict mypy、
+Markdown links 与 `git diff --check` 全绿。唯一 warning 来自第三方 Starlette/httpx 弃用提示。
+小时监控 automation `fretsure-task-9-formal-monitor` 已删除。
 
 canonical operator sequence 24 是精确 5% checkpoint：网络段 elapsed `16,980.321718` 秒，
 503/10,060 network units、1,006/10,563 total rows、2,451 completed calls，overall/recent
@@ -245,10 +261,10 @@ lock/prereg/Markdown/diff、116-wheel/331-sdist 内容审计及七组 clean-inst
 已应用并由 receipt `c53c1d8a…` 回检；原 runtime 从 2,622 durable units 接受同目录 resume，4 个
 重跑 units 均已越过。用户主动暂停后又明确要求继续，原目录 resume 保留了 durable prefix。
 一次性 4-vs-8 网络复测已经完成且不得重复；8 路仅提升 0.88% unit 与 7.03% call throughput，
-未过门槛，formal 随后保持 4 lanes 并完成全部 collection。当前 PID/screen 已正常退出，终态仅因
-observations aggregate node limit 停在 post-collection `INCOMPLETE`；按上文零-provider amendment
-完成 raw canonical 和双 replay 后再关闭 Task 9 automation。正式与 pilot 在建客户端前机械要求
-数值 loopback，拒绝 `localhost`；Task 9 验收前不启动 Task 10。
+未过门槛，formal 随后保持 4 lanes 并完成全部 collection。PID/screen 正常退出；post-collection
+node-limit abort 已按上文零-provider amendment 归档，raw canonical 与双 replay 均已 COMPLETE。
+Task 9 automation 已删除；正式与 pilot 的历史建客户端边界仍机械要求数值 loopback 并拒绝
+`localhost`。下一阶段是尚未启动的 Task 10。
 
 ## 0a. 其余现状
 
