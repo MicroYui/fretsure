@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { arrangeScore, FretsureAPIError, getCapabilities } from "../src/api";
+import {
+  arrangeScore,
+  canonicalTabJSON,
+  exportGuitarPro,
+  exportMidi,
+  exportMusicXMLTab,
+  exportPdfTab,
+  exportTabText,
+  FretsureAPIError,
+  getCapabilities,
+} from "../src/api";
 import {
   arrangement,
   capabilities,
@@ -205,6 +215,20 @@ describe("API client", () => {
     };
     missingFilename.source.filename = null;
 
+    const invalidTab = structuredClone(arrangement) as unknown as {
+      tab: { notes: unknown[] };
+    };
+    invalidTab.tab.notes = [
+      {
+        onset: "0/1",
+        duration: "1/1",
+        string: 0,
+        fret: 0,
+        left_finger: 0,
+        right_finger: "thumb",
+      },
+    ];
+
     for (const document of [
       invalidTimeSignature,
       invalidDiagnostic,
@@ -216,6 +240,7 @@ describe("API client", () => {
       mismatchedStamp,
       staleImporter,
       missingFilename,
+      invalidTab,
     ]) {
       await expect(requestArrangement(document)).rejects.toThrow("incompatible arrangement");
     }
@@ -303,6 +328,181 @@ describe("API client", () => {
     ]) {
       await expect(requestArrangement(document)).rejects.toThrow("incompatible arrangement");
     }
+  });
+
+  it("accepts a deterministic baseline selection without a model candidate index", async () => {
+    const baseline = structuredClone(midiArrangement);
+    const selection = baseline.trace.steps.find(
+      (step) => step.event === "CANDIDATE_SELECTED",
+    )!;
+    selection.candidate_index = null;
+    selection.detail =
+      "Selected the deterministic baseline after the model candidates returned no tablature.";
+    selection.data.winner_candidate_index = null;
+
+    await expect(requestArrangement(baseline)).resolves.toEqual(baseline);
+  });
+
+  it("exports the canonical Tab JSON as MIDI at the effective tempo", async () => {
+    const midiBytes = new Uint8Array([0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06]);
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(midiBytes, {
+        headers: {
+          "content-disposition": 'attachment; filename="fretsure-arrangement.mid"',
+          "content-type": "audio/midi",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const asset = await exportMidi(arrangement.tab!, 87.5);
+
+    expect(asset.filename).toBe("fretsure-arrangement.mid");
+    expect(new Uint8Array(await asset.blob.arrayBuffer())).toEqual(midiBytes);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe("/api/v1/exports/midi?tempo_bpm=87.5");
+    expect(init?.method).toBe("POST");
+    expect(new Headers(init?.headers).get("accept")).toBe("audio/midi");
+    expect(new Headers(init?.headers).get("content-type")).toBe("application/json");
+    expect(init?.body).toBe(canonicalTabJSON(arrangement.tab!));
+  });
+
+  it("exports canonical Tab as a fingered six-line text score", async () => {
+    const body = "Six-line tablature (high e to low E):\ne|--0--|\n";
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(body, {
+        headers: {
+          "content-disposition": 'attachment; filename="fretsure-guitar-tablature.txt"',
+          "content-type": "text/plain; charset=utf-8",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const asset = await exportTabText(arrangement.tab!);
+
+    expect(asset.filename).toBe("fretsure-guitar-tablature.txt");
+    expect(await asset.blob.text()).toBe(body);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe("/api/v1/exports/tab-text");
+    expect(init?.method).toBe("POST");
+    expect(new Headers(init?.headers).get("accept")).toBe("text/plain");
+    expect(init?.body).toBe(canonicalTabJSON(arrangement.tab!));
+  });
+
+  it.each([
+    {
+      label: "MusicXML TAB",
+      run: exportMusicXMLTab,
+      path: "/api/v1/exports/musicxml-tab?tempo_bpm=96",
+      contentType: "application/vnd.recordare.musicxml+xml",
+      filename: "fretsure-guitar-tablature.musicxml",
+      bytes: new TextEncoder().encode("<?xml version=\"1.0\"?><score-partwise/>"),
+    },
+    {
+      label: "Guitar Pro",
+      run: exportGuitarPro,
+      path: "/api/v1/exports/guitar-pro?tempo_bpm=96",
+      contentType: "application/octet-stream",
+      filename: "fretsure-guitar-tab.gp5",
+      bytes: new TextEncoder().encode("FICHIER GUITAR PRO v5.10"),
+    },
+    {
+      label: "PDF TAB",
+      run: exportPdfTab,
+      path: "/api/v1/exports/pdf-tab?tempo_bpm=96",
+      contentType: "application/pdf",
+      filename: "fretsure-guitar-tab.pdf",
+      bytes: new TextEncoder().encode("%PDF-1.4"),
+    },
+  ])("exports canonical Tab as $label", async ({
+    run,
+    path,
+    contentType,
+    filename,
+    bytes,
+  }) => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(bytes, {
+        headers: {
+          "content-disposition": `attachment; filename="${filename}"`,
+          "content-type": contentType,
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const asset = await run(arrangement.tab!, 96);
+
+    expect(asset.filename).toBe(filename);
+    expect(Array.from(new Uint8Array(await asset.blob.arrayBuffer()))).toEqual(
+      Array.from(bytes),
+    );
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe(path);
+    expect(init?.method).toBe("POST");
+    expect(new Headers(init?.headers).get("accept")).toBe(contentType);
+    expect(init?.body).toBe(canonicalTabJSON(arrangement.tab!));
+  });
+
+  it("serializes downloaded Tab JSON in the canonical field order", () => {
+    expect(
+      canonicalTabJSON({
+        tuning: [40, 45, 50, 55, 59, 64],
+        capo: 0,
+        notes: [
+          {
+            onset: "0/1",
+            duration: "1/2",
+            string: 4,
+            fret: 1,
+            left_finger: 1,
+            right_finger: "i",
+          },
+        ],
+      }),
+    ).toBe(
+      '{"tuning":[40,45,50,55,59,64],"capo":0,"notes":[{"onset":"0/1","duration":"1/2","string":4,"fret":1,"left_finger":1,"right_finger":"i"}]}',
+    );
+  });
+
+  it("rejects a non-MIDI success response from the export endpoint", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockResolvedValue(
+        new Response("not midi", { headers: { "content-type": "text/plain" } }),
+      ),
+    );
+
+    await expect(exportMidi(arrangement.tab!, 90)).rejects.toThrow(
+      "incompatible MIDI export",
+    );
+  });
+
+  it("rejects a non-text success response from the guitar TAB endpoint", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockResolvedValue(
+        new Response("not tab text", { headers: { "content-type": "application/json" } }),
+      ),
+    );
+
+    await expect(exportTabText(arrangement.tab!)).rejects.toThrow(
+      "incompatible guitar TAB export",
+    );
+  });
+
+  it("rejects a format-inconsistent professional export response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockResolvedValue(
+        new Response("not pdf", { headers: { "content-type": "text/plain" } }),
+      ),
+    );
+
+    await expect(exportPdfTab(arrangement.tab!, 90)).rejects.toThrow(
+      "incompatible PDF TAB export",
+    );
   });
 
   it("rejects format-inconsistent source provenance and MIDI channel locations", async () => {

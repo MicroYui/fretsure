@@ -22,9 +22,7 @@ if TYPE_CHECKING:
     from fretsure.solver.api import Infeasible
     from fretsure.tab import Tab
 
-StepKind = Literal[
-    "PLAN", "PROPOSE", "SOLVE", "ORACLE", "REASON", "EDIT", "RECHECK", "SELECT"
-]
+StepKind = Literal["PLAN", "PROPOSE", "SOLVE", "ORACLE", "REASON", "EDIT", "RECHECK", "SELECT"]
 
 TraceEvent = Literal[
     "PLAN",
@@ -190,12 +188,8 @@ _PRODUCT_EVENT_FIELDS: dict[str, frozenset[str]] = {
         }
     ),
     "CANDIDATE_PROPOSED": frozenset({"temperature", "target_checkpoint"}),
-    "CANDIDATE_FINISHED": frozenset(
-        {"verdict", "tab_available", "repair_iterations"}
-    ),
-    "SOLVER_RETURNED_TAB": frozenset(
-        {"status", "target_sha256", "target_note_count"}
-    ),
+    "CANDIDATE_FINISHED": frozenset({"verdict", "tab_available", "repair_iterations"}),
+    "SOLVER_RETURNED_TAB": frozenset({"status", "target_sha256", "target_note_count"}),
     "SOLVER_RETURNED_NO_TAB": frozenset(
         {
             "status",
@@ -230,9 +224,7 @@ _PRODUCT_EVENT_FIELDS: dict[str, frozenset[str]] = {
             "terminal_reason",
         }
     ),
-    "REPAIR_EDIT_PROPOSED": frozenset(
-        {"edit", "based_on_diagnostic_codes"}
-    ),
+    "REPAIR_EDIT_PROPOSED": frozenset({"edit", "based_on_diagnostic_codes"}),
     "MODEL_CALL_FAILED": frozenset({"reason_code", "target_sha256"}),
     "EDIT_APPLIED": frozenset(
         {
@@ -361,14 +353,10 @@ def _validate_fidelity_availability(data: dict[str, object], *, path: str) -> No
     for field_name in ("evaluated_dimensions", "unavailable_dimensions"):
         raw = data[field_name]
         if type(raw) not in (list, tuple):
-            raise TraceInputError(
-                f"{path}.{field_name}", "must be an exact dimension sequence"
-            )
+            raise TraceInputError(f"{path}.{field_name}", "must be an exact dimension sequence")
         sequence = tuple(cast(list[object] | tuple[object, ...], raw))
         if any(type(value) is not str for value in sequence):
-            raise TraceInputError(
-                f"{path}.{field_name}", "dimension names must be exact strings"
-            )
+            raise TraceInputError(f"{path}.{field_name}", "dimension names must be exact strings")
         values = cast(tuple[str, ...], sequence)
         canonical = tuple(
             dimension for dimension in _TRACE_FIDELITY_DIMENSIONS if dimension in values
@@ -382,9 +370,9 @@ def _validate_fidelity_availability(data: dict[str, object], *, path: str) -> No
 
     evaluated = dimensions["evaluated_dimensions"]
     unavailable = dimensions["unavailable_dimensions"]
-    if set(evaluated).isdisjoint(unavailable) is False or set(evaluated) | set(
-        unavailable
-    ) != set(_TRACE_FIDELITY_DIMENSIONS):
+    if set(evaluated).isdisjoint(unavailable) is False or set(evaluated) | set(unavailable) != set(
+        _TRACE_FIDELITY_DIMENSIONS
+    ):
         raise TraceInputError(path, "fidelity dimensions must form a complete partition")
 
     score_fields = {
@@ -397,9 +385,7 @@ def _validate_fidelity_availability(data: dict[str, object], *, path: str) -> No
         score = data[score_field]
         if dimension in evaluated:
             normalized = _unit_float(score, path=f"{path}.{score_field}")
-            evaluated_scores.append(
-                normalized >= _TRACE_FIDELITY_THRESHOLDS[dimension]
-            )
+            evaluated_scores.append(normalized >= _TRACE_FIDELITY_THRESHOLDS[dimension])
         elif score is not None:
             raise TraceInputError(
                 f"{path}.{score_field}",
@@ -461,14 +447,9 @@ def _validate_public_trace_content(value: object, *, path: str) -> None:
                 # The JSON normalizer owns the stable error for non-string keys.
                 continue
             camel_separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
-            normalized = re.sub(
-                r"[^a-z0-9]+", "_", camel_separated.lower()
-            ).strip("_")
+            normalized = re.sub(r"[^a-z0-9]+", "_", camel_separated.lower()).strip("_")
             bounded_key = f"_{normalized}_"
-            if any(
-                f"_{sensitive_part}_" in bounded_key
-                for sensitive_part in _SENSITIVE_KEY_PARTS
-            ):
+            if any(f"_{sensitive_part}_" in bounded_key for sensitive_part in _SENSITIVE_KEY_PARTS):
                 raise TraceInputError(
                     f"{path}.key[{index}]",
                     "sensitive trace fields are not public",
@@ -565,14 +546,10 @@ def _validate_target_checkpoint_state(state: dict[str, object], *, path: str) ->
         if frozenset(note) != {"onset", "duration", "pitch", "voice"}:
             raise TraceInputError(note_path, "target note fields do not match its schema")
         onset = _canonical_fraction_parts(note["onset"], path=f"{note_path}.onset")
-        duration = _canonical_fraction_parts(
-            note["duration"], path=f"{note_path}.duration"
-        )
+        duration = _canonical_fraction_parts(note["duration"], path=f"{note_path}.duration")
         if onset[0] < 0 or duration[0] <= 0:
             raise TraceInputError(note_path, "target onset/duration are outside their domain")
-        pitch = _bounded_integer(
-            note["pitch"], path=f"{note_path}.pitch", maximum=127
-        )
+        pitch = _bounded_integer(note["pitch"], path=f"{note_path}.pitch", maximum=127)
         _stable_string(
             note["voice"],
             path=f"{note_path}.voice",
@@ -624,9 +601,7 @@ def _validate_tab_checkpoint_state(state: dict[str, object], *, path: str) -> in
         }:
             raise TraceInputError(note_path, "Tab note fields do not match its schema")
         onset = _canonical_fraction_parts(note["onset"], path=f"{note_path}.onset")
-        duration = _canonical_fraction_parts(
-            note["duration"], path=f"{note_path}.duration"
-        )
+        duration = _canonical_fraction_parts(note["duration"], path=f"{note_path}.duration")
         if onset[0] < 0 or duration[0] <= 0:
             raise TraceInputError(note_path, "Tab onset/duration are outside their domain")
         _bounded_integer(note["string"], path=f"{note_path}.string", maximum=5)
@@ -696,10 +671,14 @@ def _validate_checkpoint(value: object, *, path: str, expected_type: str) -> Non
         omission = cast(dict[str, object], checkpoint["omission"])
         code = omission.get("code")
         if code == "NOTE_LIMIT":
-            if omission != {
-                "code": "NOTE_LIMIT",
-                "limit_notes": MAX_TRACE_CHECKPOINT_NOTES,
-            } or note_count <= MAX_TRACE_CHECKPOINT_NOTES:
+            if (
+                omission
+                != {
+                    "code": "NOTE_LIMIT",
+                    "limit_notes": MAX_TRACE_CHECKPOINT_NOTES,
+                }
+                or note_count <= MAX_TRACE_CHECKPOINT_NOTES
+            ):
                 raise TraceInputError(path, "NOTE_LIMIT omission is inconsistent")
         elif code == "BYTE_LIMIT":
             if omission != {
@@ -803,9 +782,11 @@ def _validate_diagnostics(data: dict[str, object], *, path: str) -> None:
         )
         if diagnostic["message"] != expected_message:
             raise TraceInputError(f"{row_path}.message", "does not match the stable formatter")
-    if complete and hashlib.sha256(_canonical_payload(diagnostics)).hexdigest() != data[
-        "diagnostics_sha256"
-    ]:
+    if (
+        complete
+        and hashlib.sha256(_canonical_payload(diagnostics)).hexdigest()
+        != data["diagnostics_sha256"]
+    ):
         raise TraceInputError(path, "complete diagnostic digest does not match its rows")
 
 
@@ -840,9 +821,7 @@ def _validate_infeasible(value: object, *, path: str) -> None:
         raise TraceInputError(f"{path}.bounded_search", "must be exactly true")
 
 
-def _validate_product_payload(
-    event: str, data: dict[str, object], *, path: str
-) -> None:
+def _validate_product_payload(event: str, data: dict[str, object], *, path: str) -> None:
     if "target_checkpoint" in data:
         _validate_checkpoint(
             data["target_checkpoint"],
@@ -876,9 +855,7 @@ def _validate_product_payload(
         or data["state_changed"] is not True
     ):
         raise TraceInputError(path, "EDIT_APPLIED status fields are inconsistent")
-    if event in {"EDIT_REJECTED", "MODEL_EDIT_INVALID"} and (
-        data["state_changed"] is not False
-    ):
+    if event in {"EDIT_REJECTED", "MODEL_EDIT_INVALID"} and (data["state_changed"] is not False):
         raise TraceInputError(path, "rejected edit status fields are inconsistent")
 
     if event == "PIPELINE_CONFIGURED":
@@ -897,9 +874,10 @@ def _validate_product_payload(
             allowed=frozenset({"4/4"}),
         )
         tuning = data["tuning"]
-        if type(tuning) not in (list, tuple) or len(
-            cast(list[object] | tuple[object, ...], tuning)
-        ) != 6:
+        if (
+            type(tuning) not in (list, tuple)
+            or len(cast(list[object] | tuple[object, ...], tuning)) != 6
+        ):
             raise TraceInputError(f"{path}.tuning", "must be an exact six-pitch sequence")
         pitches = [
             _bounded_integer(value, path=f"{path}.tuning[{index}]", maximum=127)
@@ -907,9 +885,7 @@ def _validate_product_payload(
         ]
         if any(left >= right for left, right in zip(pitches, pitches[1:], strict=False)):
             raise TraceInputError(f"{path}.tuning", "must be strictly increasing")
-        _bounded_integer(
-            data["capo"], path=f"{path}.capo", maximum=MAX_TRACE_SUPPORTED_FRET
-        )
+        _bounded_integer(data["capo"], path=f"{path}.capo", maximum=MAX_TRACE_SUPPORTED_FRET)
         for name in (
             "profile",
             "checker_version",
@@ -1043,9 +1019,7 @@ def _validate_product_payload(
             path=f"{path}.reason_code",
             allowed=frozenset({"MELODY_PROTECTED", "TARGET_NOT_FOUND"}),
         )
-        expected_status = (
-            "rejected" if data["reason_code"] == "MELODY_PROTECTED" else "noop"
-        )
+        expected_status = "rejected" if data["reason_code"] == "MELODY_PROTECTED" else "noop"
         if data["status"] != expected_status:
             raise TraceInputError(path, "rejected edit status and reason disagree")
         if data["before_target_sha256"] != data["after_target_sha256"]:
@@ -1070,10 +1044,15 @@ def _validate_product_payload(
             allowed=frozenset({"MODEL_EDIT_INVALID", "EDIT_APPLIED", "EDIT_REJECTED"}),
         )
     elif event == "CANDIDATE_SELECTED":
-        winner = _bounded_integer(
-            data["winner_candidate_index"],
-            path=f"{path}.winner_candidate_index",
-            maximum=MAX_TRACE_AGENT_CANDIDATES - 1,
+        raw_winner = data["winner_candidate_index"]
+        winner = (
+            None
+            if raw_winner is None
+            else _bounded_integer(
+                raw_winner,
+                path=f"{path}.winner_candidate_index",
+                maximum=MAX_TRACE_AGENT_CANDIDATES - 1,
+            )
         )
         considered = _bounded_integer(
             data["candidates_considered"],
@@ -1081,7 +1060,7 @@ def _validate_product_payload(
             minimum=1,
             maximum=MAX_TRACE_AGENT_CANDIDATES,
         )
-        if winner >= considered:
+        if winner is not None and winner >= considered:
             raise TraceInputError(path, "winner must be among considered candidates")
         verdict = _stable_string(
             data["verdict"],
@@ -1146,9 +1125,7 @@ def _validate_product_context(
         candidate_index is not None or iteration is not None
     ):
         raise TraceInputError(path, "event must be pipeline-scoped")
-    if event == "CANDIDATE_PROPOSED" and (
-        candidate_index is None or iteration is not None
-    ):
+    if event == "CANDIDATE_PROPOSED" and (candidate_index is None or iteration is not None):
         raise TraceInputError(path, "proposal must identify only its candidate")
     if event == "CANDIDATE_FINISHED":
         if candidate_index is None or iteration != data["repair_iterations"]:
@@ -1156,12 +1133,16 @@ def _validate_product_context(
     if event == "CANDIDATE_SELECTED":
         if candidate_index != data["winner_candidate_index"] or iteration is not None:
             raise TraceInputError(path, "selection context is inconsistent")
-    if event in {
-        "SOLVER_RETURNED_TAB",
-        "SOLVER_RETURNED_NO_TAB",
-        "PLAYABILITY_CHECKED",
-        "TIER_CHECKED",
-    } and iteration is None:
+    if (
+        event
+        in {
+            "SOLVER_RETURNED_TAB",
+            "SOLVER_RETURNED_NO_TAB",
+            "PLAYABILITY_CHECKED",
+            "TIER_CHECKED",
+        }
+        and iteration is None
+    ):
         raise TraceInputError(path, "solver/checker event must identify an iteration")
     if event in {
         "REPAIR_EDIT_PROPOSED",
@@ -1215,8 +1196,7 @@ def _validate_product_detail(
         expected = {f"Oracle returned {data['verdict']} with {count} {noun}."}
     elif event == "TIER_CHECKED":
         expected = {
-            "The deterministic tier checker returned "
-            f"meets={data['meets']} for {data['tier']}."
+            f"The deterministic tier checker returned meets={data['meets']} for {data['tier']}."
         }
     elif event == "REPAIR_EDIT_PROPOSED":
         edit = cast(dict[str, object], data["edit"])
@@ -1227,8 +1207,7 @@ def _validate_product_detail(
             "revoice": "Revoice one non-melody note",
         }[cast(str, edit["op"])]
         expected = {
-            f"{strategy} at onset {edit['target_onset']} and recheck pitch "
-            f"{edit['target_pitch']}."
+            f"{strategy} at onset {edit['target_onset']} and recheck pitch {edit['target_pitch']}."
         }
     elif event == "MODEL_CALL_FAILED":
         expected = {
@@ -1259,9 +1238,19 @@ def _validate_product_detail(
             "Run the bounded solver and tier checker again for the post-edit target.",
         }
     elif event == "CANDIDATE_SELECTED":
-        expected = {
-            f"Selected candidate {candidate_index}; playability and fidelity remain separate gates."
-        }
+        expected = (
+            {
+                "Selected the deterministic baseline after the model candidates "
+                "returned no tablature.",
+                "Selected the deterministic melody baseline; no Agent addition "
+                "passed every gate.",
+            }
+            if data["winner_candidate_index"] is None
+            else {
+                f"Selected candidate {candidate_index}; playability and fidelity "
+                "remain separate gates."
+            }
+        )
     else:
         expected = {"No candidate returned a tablature result within the bounded search."}
     if detail not in expected:
@@ -1279,9 +1268,7 @@ class _EmbeddedStateBudget:
     bytes_used: int = 0
 
 
-def _snapshot_value(
-    items: tuple[tuple[object, object], ...], name: str
-) -> object | None:
+def _snapshot_value(items: tuple[tuple[object, object], ...], name: str) -> object | None:
     for key, value in items:
         if type(key) is str and key == name:
             return value
@@ -1292,8 +1279,7 @@ def _checkpoint_uses_aggregate_budget(
     items: tuple[tuple[object, object], ...], budget: _EmbeddedStateBudget
 ) -> bool:
     if (
-        _snapshot_value(items, "checkpoint_schema_version")
-        != TRACE_CHECKPOINT_SCHEMA_VERSION
+        _snapshot_value(items, "checkpoint_schema_version") != TRACE_CHECKPOINT_SCHEMA_VERSION
         or _snapshot_value(items, "complete") is not True
     ):
         return False
@@ -1426,9 +1412,7 @@ def _normalize_json_value(
                 path,
                 f"JSON value count exceeds the public limit {MAX_TRACE_JSON_NODES}",
             )
-        omit_checkpoint_state = _checkpoint_uses_aggregate_budget(
-            dict_items, embedded_budget
-        )
+        omit_checkpoint_state = _checkpoint_uses_aggregate_budget(dict_items, embedded_budget)
         active_containers.add(container_id)
         try:
             normalized: dict[str, object] = {}
@@ -1594,9 +1578,7 @@ def target_checkpoint(target: tuple[Note, ...]) -> dict[str, object]:
         notes.append(
             {
                 "onset": canonical_fraction_token(onset, path=f"{path}.onset"),
-                "duration": canonical_fraction_token(
-                    duration, path=f"{path}.duration"
-                ),
+                "duration": canonical_fraction_token(duration, path=f"{path}.duration"),
                 "pitch": pitch,
                 "voice": voice,
             }
@@ -1735,10 +1717,7 @@ def infeasible_detail(value: Infeasible) -> str:
         if value.onset is None
         else f"onset {canonical_fraction_token(value.onset, path='infeasible.onset')}"
     )
-    return (
-        "The bounded fingering search returned no candidate "
-        f"({value.code.value}) at {location}."
-    )
+    return f"The bounded fingering search returned no candidate ({value.code.value}) at {location}."
 
 
 def edit_trace_payload(edit: Edit) -> dict[str, object]:
@@ -1748,9 +1727,7 @@ def edit_trace_payload(edit: Edit) -> dict[str, object]:
         raise TraceInputError("edit", "must be an exact Edit")
     return {
         "op": edit.op,
-        "target_onset": canonical_fraction_token(
-            edit.target_onset, path="edit.target_onset"
-        ),
+        "target_onset": canonical_fraction_token(edit.target_onset, path="edit.target_onset"),
         "target_pitch": edit.target_pitch,
         "arg": edit.arg,
     }
@@ -1884,17 +1861,13 @@ def _encode_trace_steps(
         except (AttributeError, TypeError) as error:
             raise TraceInputError(step_path, "TraceStep fields are missing") from error
         if type(kind) is not str or kind not in _STEP_KINDS:
-            raise TraceInputError(
-                f"{step_path}.kind", "must be a standard trace-step kind"
-            )
+            raise TraceInputError(f"{step_path}.kind", "must be a standard trace-step kind")
         if type(detail) is not str:
             raise TraceInputError(f"{step_path}.detail", "must be an exact string")
         if event is None:
             event = kind
         if type(event) is not str or event not in _EVENT_KINDS:
-            raise TraceInputError(
-                f"{step_path}.event", "must be a standard trace event"
-            )
+            raise TraceInputError(f"{step_path}.event", "must be a standard trace event")
         if _EVENT_KINDS[event] != kind:
             raise TraceInputError(
                 f"{step_path}.event",
@@ -1905,9 +1878,7 @@ def _encode_trace_steps(
             ("candidate_index", candidate_index),
             ("iteration", iteration),
         ):
-            if value is not None and (
-                type(value) is not int or not 0 <= value <= MAX_TRACE_STEPS
-            ):
+            if value is not None and (type(value) is not int or not 0 <= value <= MAX_TRACE_STEPS):
                 raise TraceInputError(
                     f"{step_path}.{name}",
                     f"must be null or an exact integer in 0..{MAX_TRACE_STEPS}",
@@ -1984,9 +1955,7 @@ def _encode_trace_steps(
             )
             line_bytes = len(line.encode("utf-8"))
         except (TypeError, ValueError, OverflowError, UnicodeError) as error:
-            raise TraceInputError(
-                step_path, "could not be encoded as standard JSON"
-            ) from error
+            raise TraceInputError(step_path, "could not be encoded as standard JSON") from error
         if line_bytes != expected_line_bytes:
             raise TraceInputError(
                 step_path,
@@ -2030,9 +1999,7 @@ class Trace:
             ("candidate_index", candidate_index),
             ("iteration", iteration),
         ):
-            if value is not None and (
-                type(value) is not int or not 0 <= value <= MAX_TRACE_STEPS
-            ):
+            if value is not None and (type(value) is not int or not 0 <= value <= MAX_TRACE_STEPS):
                 raise TraceInputError(
                     name,
                     f"must be null or an exact integer in 0..{MAX_TRACE_STEPS}",

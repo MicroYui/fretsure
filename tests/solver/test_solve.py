@@ -161,7 +161,10 @@ def test_hundred_note_sequence_uses_only_bounded_final_full_checks(
 
     monkeypatch.setattr(solver_api, "check_playability", counted_check)
     notes = tuple(Note(F(index), F(1), 60, "melody") for index in range(100))
-    result = solve_fingering(notes, STANDARD_TUNING, 0, MEDIAN_HAND)
+    # The two-profile prefix search is deliberately charged twice by the work
+    # gate.  Beam 8 keeps this long-path regression within the same fixed 12M
+    # budget; beam 16's preflight rejection is covered by the resource tests.
+    result = solve_fingering(notes, STANDARD_TUNING, 0, MEDIAN_HAND, beam=8)
 
     assert isinstance(result, Tab)
     assert 1 <= calls <= 16
@@ -266,6 +269,8 @@ def test_final_gate_continues_past_amber_to_prefer_green(
     result = solve_fingering(notes, STANDARD_TUNING, 0, MEDIAN_HAND, beam=8)
 
     assert result == checked[1]
+    # The public path stops at the first full GREEN.  Full-pool collection is a
+    # private offline-evaluation feature tested separately.
     assert len(checked) == 2
 
 

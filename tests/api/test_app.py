@@ -38,6 +38,10 @@ from fretsure.importers import (
     SCORE_INPUT_VERSION,
 )
 from fretsure.llm.client import CONSTANT_LLM_MODEL_ID, ConstantLLM
+from fretsure.render.guitar_pro import render_guitar_pro
+from fretsure.render.musicxml_tab import render_musicxml_tab
+from fretsure.render.pdf_tab import render_tab_pdf
+from fretsure.render.tab_text import render_tab_text
 from fretsure.tab import MAX_TAB_JSON_BYTES, tab_to_json
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "musicxml"
@@ -49,6 +53,10 @@ MUSESCORE_MXL = PRODUCER_FIXTURES / "musescore-4.7.4-roundtrip-supported_basic.m
 UNPROVIDED_KEY = "key-signature:fifths=0;mode=unprovided"
 XML_MEDIA_TYPE = "application/vnd.recordare.musicxml+xml"
 MIDI_MEDIA_TYPE = "audio/midi"
+TAB_TEXT_MEDIA_TYPE = "text/plain; charset=utf-8"
+MUSICXML_TAB_MEDIA_TYPE = "application/vnd.recordare.musicxml+xml"
+GUITAR_PRO_MEDIA_TYPE = "application/octet-stream"
+PDF_MEDIA_TYPE = "application/pdf"
 TEST_BASE_URL = "http://127.0.0.1"
 MINIMAL_MIDI = bytes.fromhex(
     "4d546864000000060000000101e0"  # format 0, one track, PPQN 480
@@ -245,6 +253,9 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
     assert body["package_version"] == "0.6.0"
     assert "importer_version" not in body["stamps"]
     assert body["stamps"]["score_input_version"] == SCORE_INPUT_VERSION
+    assert body["stamps"]["musicxml_tab_export_version"] == "musicxml-tab@0.1.0"
+    assert body["stamps"]["guitar_pro_export_version"] == "guitar-pro-5.1@0.1.0"
+    assert body["stamps"]["pdf_tab_export_version"] == "tab-pdf@0.1.0"
     assert body["inputs"]["score_input"] == {
         "router_version": "score-input@0.1.0",
         "format_importers": {
@@ -285,6 +296,16 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
     assert "render_audio" in body["deferred"]
     assert "render_audio" not in body["implemented"]
     assert "midi_input" in body["implemented"]
+    assert "render_midi" in body["implemented"]
+    assert "render_tab_text" in body["implemented"]
+    assert "render_musicxml_tab" in body["implemented"]
+    assert "render_guitar_pro_5" in body["implemented"]
+    assert "render_pdf_tab" in body["implemented"]
+    assert body["http"]["midi_export"] == "/api/v1/exports/midi"
+    assert body["http"]["tab_text_export"] == "/api/v1/exports/tab-text"
+    assert body["http"]["musicxml_tab_export"] == "/api/v1/exports/musicxml-tab"
+    assert body["http"]["guitar_pro_export"] == "/api/v1/exports/guitar-pro"
+    assert body["http"]["pdf_tab_export"] == "/api/v1/exports/pdf-tab"
     assert body["http"]["multipart_uploads"] is False
 
 
@@ -451,6 +472,201 @@ def test_oracle_endpoint_matches_application_service(client: TestClient) -> None
     )
 
 
+def test_midi_export_endpoint_returns_deterministic_download(client: TestClient) -> None:
+    payload = _valid_tab_json()
+
+    first = client.post(
+        "/api/v1/exports/midi?tempo_bpm=96.0",
+        content=payload,
+        headers={"content-type": "application/json; charset=utf-8"},
+    )
+    second = client.post(
+        "/api/v1/exports/midi?tempo_bpm=96.0",
+        content=payload,
+        headers={"content-type": "application/json; charset=utf-8"},
+    )
+
+    assert first.status_code == second.status_code == 200
+    assert first.content == second.content
+    assert first.headers["content-type"] == MIDI_MEDIA_TYPE
+    assert first.headers["content-disposition"] == (
+        'attachment; filename="fretsure-arrangement.mid"'
+    )
+    assert first.headers["cache-control"] == "no-store"
+    assert first.content[:14] == bytes.fromhex("4d546864000000060000000101e0")
+    assert first.content[14:18] == b"MTrk"
+    assert b"\x00\xff\x51\x03\x09\x89\x68" in first.content
+    assert b"\x00\xc0\x18" in first.content
+
+
+def test_midi_export_rejects_invalid_tab_and_scales_supported_slow_tempo(
+    client: TestClient,
+) -> None:
+    invalid = client.post(
+        "/api/v1/exports/midi?tempo_bpm=96",
+        content='{"tuning":[],"capo":0,"notes":[]}',
+        headers={"content-type": "application/json"},
+    )
+    _problem(invalid, 422, "TAB_INPUT_REJECTED")
+
+    slow = client.post(
+        "/api/v1/exports/midi?tempo_bpm=1",
+        content=_valid_tab_json(),
+        headers={"content-type": "application/json"},
+    )
+    assert slow.status_code == 200
+    assert b"\x00\xff\x51\x03\xe4\xe1\xc0" in slow.content
+
+
+def test_tab_text_export_is_direct_deterministic_fingered_download(
+    client: TestClient,
+) -> None:
+    payload = _valid_tab_json()
+    expected_tab = check_tab_json(payload, options=CheckOptions()).tab
+
+    first = client.post(
+        "/api/v1/exports/tab-text",
+        content=payload,
+        headers={"content-type": "application/json; charset=utf-8"},
+    )
+    second = client.post(
+        "/api/v1/exports/tab-text",
+        content=payload,
+        headers={"content-type": "application/json"},
+    )
+
+    assert first.status_code == second.status_code == 200
+    assert first.content == second.content == render_tab_text(expected_tab).encode()
+    assert first.headers["content-type"] == TAB_TEXT_MEDIA_TYPE
+    assert first.headers["content-disposition"] == (
+        'attachment; filename="fretsure-guitar-tablature.txt"'
+    )
+    assert first.headers["cache-control"] == "no-store"
+    assert "Six-line tablature (high e to low E):" in first.text
+    assert "Canonical fingering table" in first.text
+    assert "direct export; not derived from MIDI" in first.text
+
+
+def test_tab_text_export_rejects_invalid_tab_and_unknown_query(
+    client: TestClient,
+) -> None:
+    invalid = client.post(
+        "/api/v1/exports/tab-text",
+        content='{"tuning":[],"capo":0,"notes":[]}',
+        headers={"content-type": "application/json"},
+    )
+    _problem(invalid, 422, "TAB_INPUT_REJECTED")
+
+    unknown_query = client.post(
+        "/api/v1/exports/tab-text?tempo_bpm=90",
+        content=_valid_tab_json(),
+        headers={"content-type": "application/json"},
+    )
+    _problem(unknown_query, 400, "UNKNOWN_QUERY_FIELD")
+
+
+@pytest.mark.parametrize(
+    ("path", "media_type", "filename", "render"),
+    [
+        (
+            "/api/v1/exports/musicxml-tab?tempo_bpm=96",
+            MUSICXML_TAB_MEDIA_TYPE,
+            "fretsure-guitar-tablature.musicxml",
+            render_musicxml_tab,
+        ),
+        (
+            "/api/v1/exports/guitar-pro?tempo_bpm=96",
+            GUITAR_PRO_MEDIA_TYPE,
+            "fretsure-guitar-tab.gp5",
+            render_guitar_pro,
+        ),
+        (
+            "/api/v1/exports/pdf-tab?tempo_bpm=96",
+            PDF_MEDIA_TYPE,
+            "fretsure-guitar-tab.pdf",
+            render_tab_pdf,
+        ),
+    ],
+)
+def test_professional_tab_exports_are_deterministic_validated_downloads(
+    client: TestClient,
+    path: str,
+    media_type: str,
+    filename: str,
+    render: Any,
+) -> None:
+    payload = _valid_tab_json()
+    expected_tab = check_tab_json(
+        payload,
+        options=CheckOptions(tempo_bpm=96.0),
+    ).tab
+
+    first = client.post(
+        path,
+        content=payload,
+        headers={"content-type": "application/json; charset=utf-8"},
+    )
+    second = client.post(
+        path,
+        content=payload,
+        headers={"content-type": "application/json"},
+    )
+
+    assert first.status_code == second.status_code == 200
+    assert first.content == second.content == render(expected_tab, tempo_bpm=96.0)
+    assert first.headers["content-type"] == media_type
+    assert first.headers["content-disposition"] == f'attachment; filename="{filename}"'
+    assert first.headers["cache-control"] == "no-store"
+
+    if filename.endswith(".musicxml"):
+        assert b"MusicXML 4.0 Partwise" in first.content
+        assert b"<sign>TAB</sign>" in first.content
+        assert b"<string>" in first.content and b"<fret>" in first.content
+    elif filename.endswith(".gp5"):
+        assert b"FICHIER GUITAR PRO v5.10" in first.content[:32]
+    else:
+        assert first.content.startswith(b"%PDF-1.4")
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/exports/musicxml-tab",
+        "/api/v1/exports/guitar-pro",
+        "/api/v1/exports/pdf-tab",
+    ],
+)
+def test_professional_tab_exports_reject_invalid_tab(
+    client: TestClient,
+    path: str,
+) -> None:
+    response = client.post(
+        path,
+        content='{"tuning":[],"capo":0,"notes":[]}',
+        headers={"content-type": "application/json"},
+    )
+    _problem(response, 422, "TAB_INPUT_REJECTED")
+
+
+def test_guitar_pro_export_rounds_fractional_tempo_to_gp5_precision(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/api/v1/exports/guitar-pro?tempo_bpm=90.5",
+        content=_valid_tab_json(),
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 200
+    assert response.content == render_guitar_pro(
+        check_tab_json(
+            _valid_tab_json(),
+            options=CheckOptions(tempo_bpm=90.5),
+        ).tab,
+        tempo_bpm=90.5,
+    )
+
+
 @pytest.mark.parametrize(
     ("url", "content_type", "status", "code"),
     [
@@ -492,6 +708,18 @@ def test_oracle_endpoint_matches_application_service(client: TestClient) -> None
         ),
         (
             "/api/v1/oracle/check",
+            "application/json; charset=latin-1",
+            415,
+            "UNSUPPORTED_MEDIA_TYPE_PARAMETER",
+        ),
+        (
+            "/api/v1/exports/midi",
+            MIDI_MEDIA_TYPE,
+            415,
+            "UNSUPPORTED_MEDIA_TYPE",
+        ),
+        (
+            "/api/v1/exports/midi",
             "application/json; charset=latin-1",
             415,
             "UNSUPPORTED_MEDIA_TYPE_PARAMETER",
@@ -732,6 +960,29 @@ def test_engine_initialization_and_transport_failures_are_redacted(
     _problem(transport_response, 502, "ARRANGEMENT_FAILED")
     assert "secret-transport-token" not in transport_response.text
     assert "RuntimeError" not in transport_response.text
+
+
+def test_default_proxy_factory_uses_product_request_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, float]] = []
+    sentinel = _NamedConstantLLM("gpt-5.6-sol")
+
+    def fake_proxy_llm(
+        model: str,
+        *,
+        request_timeout_seconds: float,
+    ) -> _NamedConstantLLM:
+        calls.append((model, request_timeout_seconds))
+        return sentinel
+
+    monkeypatch.setattr(api_module, "ProxyLLM", fake_proxy_llm)
+
+    built = api_module._default_proxy_factory("gpt-5.6-sol")()
+
+    assert built is sentinel
+    assert calls == [("gpt-5.6-sol", api_module.API_PROXY_REQUEST_TIMEOUT_SECONDS)]
+    assert api_module.API_PROXY_REQUEST_TIMEOUT_SECONDS == 300.0
 
 
 def test_import_rejection_never_initializes_engine_factory(static_root: Path) -> None:
@@ -1006,6 +1257,11 @@ def test_openapi_documents_only_real_raw_body_endpoints(client: TestClient) -> N
     document = response.json()
     assert "/api/v1/arrangements" in document["paths"]
     assert "/api/v1/oracle/check" in document["paths"]
+    assert "/api/v1/exports/midi" in document["paths"]
+    assert "/api/v1/exports/tab-text" in document["paths"]
+    assert "/api/v1/exports/musicxml-tab" in document["paths"]
+    assert "/api/v1/exports/guitar-pro" in document["paths"]
+    assert "/api/v1/exports/pdf-tab" in document["paths"]
     capabilities_schema = document["paths"]["/api/v1/capabilities"]["get"]["responses"][
         "200"
     ]["content"]["application/json"]["schema"]
@@ -1064,6 +1320,21 @@ def test_openapi_documents_only_real_raw_body_endpoints(client: TestClient) -> N
         "trace",
         "stamps",
     }
+    midi_export = document["paths"]["/api/v1/exports/midi"]["post"]
+    assert set(midi_export["requestBody"]["content"]) == {"application/json"}
+    assert "audio/midi" in midi_export["responses"]["200"]["content"]
+    tab_text_export = document["paths"]["/api/v1/exports/tab-text"]["post"]
+    assert set(tab_text_export["requestBody"]["content"]) == {"application/json"}
+    assert "text/plain" in tab_text_export["responses"]["200"]["content"]
+    musicxml_export = document["paths"]["/api/v1/exports/musicxml-tab"]["post"]
+    assert set(musicxml_export["requestBody"]["content"]) == {"application/json"}
+    assert MUSICXML_TAB_MEDIA_TYPE in musicxml_export["responses"]["200"]["content"]
+    guitar_pro_export = document["paths"]["/api/v1/exports/guitar-pro"]["post"]
+    assert set(guitar_pro_export["requestBody"]["content"]) == {"application/json"}
+    assert GUITAR_PRO_MEDIA_TYPE in guitar_pro_export["responses"]["200"]["content"]
+    pdf_export = document["paths"]["/api/v1/exports/pdf-tab"]["post"]
+    assert set(pdf_export["requestBody"]["content"]) == {"application/json"}
+    assert PDF_MEDIA_TYPE in pdf_export["responses"]["200"]["content"]
     faithfulness_schema = arrangement_schema["properties"]["faithfulness"]
     assert faithfulness_schema["type"] == ["object", "null"]
     assert faithfulness_schema["additionalProperties"] is False

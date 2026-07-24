@@ -26,7 +26,17 @@ from fretsure.agent.arranger import (
 from fretsure.agent.critic import CriticOutcome, CriticScore, critique_outcome
 from fretsure.agent.model_calls import ModelCallScopeFactory
 from fretsure.agent.repair import RepairSnapshot, repair
-from fretsure.agent.trace import StepKind, Trace, TraceEvent, TraceStep, target_checkpoint
+from fretsure.agent.tools import solve_and_check
+from fretsure.agent.trace import (
+    StepKind,
+    Trace,
+    TraceEvent,
+    TraceStep,
+    oracle_detail,
+    oracle_trace_payload,
+    target_checkpoint,
+)
+from fretsure.arrange.propose import propose_fingerstyle
 from fretsure.ir import MusicIR, Note, snapshot_music_ir
 from fretsure.llm.client import LLMClient
 from fretsure.metrics.fidelity import FaithfulnessGate, Fidelity, faithfulness, fidelity
@@ -40,6 +50,7 @@ from fretsure.oracle.input import (
     ensure_solver_domain,
 )
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
+from fretsure.solver.api import Infeasible
 from fretsure.tab import Tab
 
 
@@ -203,8 +214,7 @@ class CandidateTrajectory:
         if self.work.solver_calls != self.terminal.iteration + 1:
             raise ValueError("solver work count disagrees with terminal iteration")
         repair_events = sum(
-            step.event
-            in {"REPAIR_EDIT_PROPOSED", "MODEL_EDIT_INVALID", "MODEL_CALL_FAILED"}
+            step.event in {"REPAIR_EDIT_PROPOSED", "MODEL_EDIT_INVALID", "MODEL_CALL_FAILED"}
             for step in self.trace_steps
         )
         if self.work.repair_llm_calls != repair_events:
@@ -246,12 +256,48 @@ class CandidateTrajectory:
         return tuple(step.to_trace_step() for step in self.trace_snapshots)
 
 
+@dataclass(frozen=True, slots=True)
+class DeterministicBaseline:
+    """One zero-model fallback target and its bounded solver result."""
+
+    target: tuple[Note, ...]
+    tab: Tab | None
+    oracle: OracleResult | None
+    infeasible: Infeasible | None
+    fidelity: Fidelity | None
+    faithfulness: FaithfulnessGate | None
+
+    def __post_init__(self) -> None:
+        if type(self.target) is not tuple:
+            raise ValueError("baseline target must be an exact tuple")
+        has_tab = self.tab is not None
+        if has_tab:
+            if (
+                type(self.tab) is not Tab
+                or type(self.oracle) is not OracleResult
+                or self.infeasible is not None
+                or type(self.fidelity) is not Fidelity
+                or type(self.faithfulness) is not FaithfulnessGate
+            ):
+                raise ValueError("a solved baseline requires both gates and no failure")
+        elif (
+            self.oracle is not None
+            or type(self.infeasible) is not Infeasible
+            or self.fidelity is not None
+            or self.faithfulness is not None
+        ):
+            raise ValueError("an unsolved baseline requires one bounded-search failure")
+
+
 @dataclass(frozen=True)
 class ArrangePool:
     """An ordered pool of repaired candidates (index 0 = the greedy temp-0 draw).
 
     ``candidates[i]`` is ``None`` when proposal ``i`` had no feasible arrangement,
-    so slot order (and thus "best-of-1 == the greedy draw") is preserved.
+    so slot order (and thus "best-of-1 == the greedy draw") is preserved.  The
+    deterministic baseline is stored separately and consumes neither a model slot
+    nor a candidate index; selection consults it only when the requested model
+    prefix contains no tablature result.
     """
 
     candidates: tuple[CandidateTrajectory | None, ...]
@@ -259,6 +305,7 @@ class ArrangePool:
     n: int
     candidate_traces: tuple[tuple[TraceStep, ...], ...] = ()
     trajectories: tuple[CandidateTrajectory, ...] = ()
+    baseline: DeterministicBaseline | None = None
 
 
 def _rank(
@@ -304,6 +351,42 @@ def _resolve_temperature_schedule(
             for index, value in enumerate(temperature_schedule)
         )
     return tuple(min(1.0, 0.2 * index) for index in range(n))
+
+
+def _deterministic_baseline(
+    source_ir: MusicIR,
+    solver_ir: MusicIR,
+    goal: ArrangeGoal,
+    profile: Profile,
+) -> DeterministicBaseline:
+    """Solve the rule target once without consuming a model candidate slot."""
+
+    target = propose_fingerstyle(
+        solver_ir,
+        goal.tuning,
+        goal.capo,
+        profile=profile,
+        tempo_bpm=goal.tempo_bpm,
+    )
+    solved, oracle = solve_and_check(
+        target,
+        goal.tuning,
+        goal.capo,
+        profile,
+        tempo_bpm=goal.tempo_bpm,
+        beats_per_bar=source_ir.meta.time_sig[0],
+    )
+    if isinstance(solved, Infeasible):
+        return DeterministicBaseline(target, None, None, solved, None, None)
+    assert oracle is not None
+    return DeterministicBaseline(
+        target,
+        solved,
+        oracle,
+        None,
+        fidelity(source_ir, solved),
+        faithfulness(source_ir, solved),
+    )
 
 
 def build_candidate_trajectory(
@@ -420,9 +503,7 @@ def build_candidate_trajectory(
         proposal_llm_calls=proposal.llm_calls,
         repair_llm_calls=repaired.model_calls,
         critic_llm_calls=(
-            candidate_critic_outcome.llm_calls
-            if candidate_critic_outcome is not None
-            else 0
+            candidate_critic_outcome.llm_calls if candidate_critic_outcome is not None else 0
         ),
         solver_calls=repaired.solve_calls,
     )
@@ -506,12 +587,20 @@ def arrange_pool(
         candidate_traces.append(trajectory.trace_steps)
         trace.steps.extend(trajectory.trace_steps)
         slots.append(trajectory if trajectory.terminal.tab is not None else None)
+    # Every non-empty prefix already has a model result when slot zero has a
+    # tab, so avoid an unnecessary full-score solve on the normal success path.
+    baseline = (
+        _deterministic_baseline(source_ir, solver_ir, goal, profile)
+        if slots and slots[0] is None
+        else None
+    )
     return ArrangePool(
         tuple(slots),
         trace,
         n,
         tuple(candidate_traces),
         tuple(trajectories),
+        baseline,
     )
 
 
@@ -541,6 +630,107 @@ def _failed_candidate_to_retain(pool: ArrangePool, k: int) -> int | None:
     return 0
 
 
+def _add_selection_step(
+    trace: Trace,
+    *,
+    candidate_index: int | None,
+    candidates_considered: int,
+    verdict: str,
+    candidate_fidelity: Fidelity,
+    candidate_faithfulness: FaithfulnessGate,
+    critic: CriticScore | None,
+) -> None:
+    green = verdict == "GREEN"
+    detail = (
+        f"Selected candidate {candidate_index}; playability and fidelity remain separate gates."
+        if candidate_index is not None
+        else "Selected the deterministic baseline after the model candidates returned no tablature."
+    )
+    trace.add(
+        "SELECT",
+        detail,
+        event="CANDIDATE_SELECTED",
+        candidate_index=candidate_index,
+        winner_candidate_index=candidate_index,
+        candidates_considered=candidates_considered,
+        verdict=verdict,
+        green_certified=green,
+        playability_gate="passed" if green else "not_passed",
+        faithfulness_passed=candidate_faithfulness.passed,
+        ranking_melody_recall=candidate_fidelity.melody_recall,
+        ranking_bass_preserved=candidate_fidelity.bass_preserved,
+        ranking_harmony_jaccard=candidate_fidelity.harmony_jaccard,
+        melody_f1=candidate_faithfulness.melody_f1,
+        bass_root_accuracy=candidate_faithfulness.bass_root,
+        harmony_jaccard=candidate_faithfulness.harmony,
+        evaluated_dimensions=candidate_faithfulness.evaluated_dimensions,
+        unavailable_dimensions=candidate_faithfulness.unavailable_dimensions,
+        critic_status="SCORED" if critic is not None else "NOT_RUN",
+        critic_overall=critic.overall if critic is not None else None,
+    )
+
+
+def _select_baseline(
+    baseline: DeterministicBaseline,
+    trace: Trace,
+    candidates_considered: int,
+) -> ArrangeResult:
+    assert baseline.tab is not None
+    assert baseline.oracle is not None
+    assert baseline.fidelity is not None
+    assert baseline.faithfulness is not None
+    target_state = target_checkpoint(baseline.target)
+    target_digest = target_state["sha256"]
+    assert type(target_digest) is str
+    trace.add(
+        "PROPOSE",
+        "Built a deterministic baseline target from the validated source.",
+        event="PROPOSE",
+        policy="deterministic_baseline",
+        model_calls=0,
+        target_checkpoint=target_state,
+    )
+    trace.add(
+        "SOLVE",
+        "Solver returned a tablature candidate.",
+        event="SOLVER_RETURNED_TAB",
+        candidate_index=None,
+        iteration=0,
+        status="TAB",
+        target_sha256=target_digest,
+        target_note_count=len(baseline.target),
+    )
+    trace.add(
+        "ORACLE",
+        oracle_detail(baseline.oracle),
+        event="PLAYABILITY_CHECKED",
+        candidate_index=None,
+        iteration=0,
+        **oracle_trace_payload(
+            baseline.oracle,
+            baseline.tab,
+            terminal_reason=("GREEN" if baseline.oracle.verdict == "GREEN" else None),
+        ),
+    )
+    _add_selection_step(
+        trace,
+        candidate_index=None,
+        candidates_considered=candidates_considered,
+        verdict=baseline.oracle.verdict,
+        candidate_fidelity=baseline.fidelity,
+        candidate_faithfulness=baseline.faithfulness,
+        critic=None,
+    )
+    return ArrangeResult(
+        baseline.tab,
+        baseline.oracle,
+        baseline.fidelity,
+        None,
+        trace,
+        candidates_considered,
+    )
+
+
 def best_of_k(pool: ArrangePool, k: int, *, use_critic: bool = True) -> ArrangeResult:
     """Select the best among the first ``k`` candidates of ``pool`` (paired-safe).
 
@@ -556,6 +746,8 @@ def best_of_k(pool: ArrangePool, k: int, *, use_critic: bool = True) -> ArrangeR
         failed_index = _failed_candidate_to_retain(pool, k)
         if failed_index is not None:
             trace.steps.extend(_retained_candidate_steps(pool, failed_index))
+        if k > 0 and pool.baseline is not None and pool.baseline.tab is not None:
+            return _select_baseline(pool.baseline, trace, k)
         trace.add(
             "SELECT",
             "No candidate returned a tablature result within the bounded search.",
@@ -574,27 +766,15 @@ def best_of_k(pool: ArrangePool, k: int, *, use_critic: bool = True) -> ArrangeR
     assert best.fidelity is not None
     assert best.faithfulness is not None
     verdict = best.terminal.oracle.verdict if best.terminal.oracle is not None else None
-    trace.add(
-        "SELECT",
-        f"Selected candidate {best.index}; playability and fidelity remain separate gates.",
-        event="CANDIDATE_SELECTED",
+    assert verdict is not None
+    _add_selection_step(
+        trace,
         candidate_index=best.index,
-        winner_candidate_index=best.index,
         candidates_considered=k,
         verdict=verdict,
-        green_certified=best.is_green,
-        playability_gate="passed" if best.is_green else "not_passed",
-        faithfulness_passed=best.faithfulness.passed,
-        ranking_melody_recall=best.fidelity.melody_recall,
-        ranking_bass_preserved=best.fidelity.bass_preserved,
-        ranking_harmony_jaccard=best.fidelity.harmony_jaccard,
-        melody_f1=best.faithfulness.melody_f1,
-        bass_root_accuracy=best.faithfulness.bass_root,
-        harmony_jaccard=best.faithfulness.harmony,
-        evaluated_dimensions=best.faithfulness.evaluated_dimensions,
-        unavailable_dimensions=best.faithfulness.unavailable_dimensions,
-        critic_status="SCORED" if best.critic is not None else "NOT_RUN",
-        critic_overall=best.critic.overall if best.critic is not None else None,
+        candidate_fidelity=best.fidelity,
+        candidate_faithfulness=best.faithfulness,
+        critic=best.critic,
     )
     return ArrangeResult(
         best.terminal.tab,

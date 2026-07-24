@@ -19,6 +19,7 @@ from fretsure.agent.arranger import (
     arrangement_source_context_sha256,
     ensure_llm_capacity,
     proposal_output_token_budget,
+    proposal_target_note_limit,
     propose_arrangement,
     propose_arrangement_outcome,
 )
@@ -140,6 +141,25 @@ def test_invalid_llm_note_domain_falls_back_before_solver(reply: str) -> None:
     assert notes == propose_arrangement(_leadsheet(), ArrangeGoal(), ConstantLLM("noop"))
 
 
+def test_overdense_proposal_falls_back_before_repair() -> None:
+    reply = (
+        '{"notes":['
+        '{"onset":"0","duration":"1","pitch":64,"voice":"melody"},'
+        '{"onset":"0","duration":"1","pitch":47,"voice":"bass"},'
+        '{"onset":"0","duration":"1","pitch":55,"voice":"harmony"},'
+        '{"onset":"0","duration":"1","pitch":52,"voice":"harmony"}'
+        "]}"
+    )
+
+    outcome = propose_arrangement_outcome(_leadsheet(), ArrangeGoal(), FakeLLM([reply]))
+
+    assert proposal_target_note_limit(_leadsheet()) == 3
+    assert outcome.status is ProposalStatus.PARSE_VALIDATION_FALLBACK
+    assert outcome.target == propose_arrangement(
+        _leadsheet(), ArrangeGoal(), ConstantLLM("noop")
+    )
+
+
 def test_prompt_contains_every_melody_duration_and_chord_without_truncation() -> None:
     notes = tuple(Note(F(i), F(3, 2), 60 + (i % 12), "melody") for i in range(65))
     chords = tuple(ChordSymbol(F(i), f"C{i}", frozenset({0, 4, 7}), 0) for i in range(33))
@@ -166,6 +186,72 @@ def test_prompt_playable_range_accounts_for_capo() -> None:
     assert "Effective arrangement tempo: 72.0 BPM" in llm.calls[0]["user"]
 
 
+def test_incremental_guidance_is_product_only_and_matches_acceptance_gates() -> None:
+    llm = FakeLLM([_VALID])
+
+    propose_arrangement_outcome(
+        _leadsheet(),
+        ArrangeGoal(),
+        llm,
+        incremental_guidance=True,
+    )
+
+    prompt = llm.calls[0]["user"]
+    assert "Incremental product policy" in prompt
+    assert "source melody exactly, including every onset, duration, and pitch" in prompt
+    assert "no more than 1 attack onsets total" in prompt
+    assert "no more than 2 attack onsets per bar" in prompt
+    assert "First cover the whole piece" in prompt
+    assert "one sustained chord-root bass on beats 1 or 3" in prompt
+    assert "Only after every bar has a bass foundation" in prompt
+    assert "for an 8-bar piece, target 8-12 accompaniment attacks" in prompt
+    assert "2-4 cadence/ending voicings" in prompt
+    assert "short passing or neighbor melody fill" in prompt
+    assert "only wholly inside a genuine source-melody rest" in prompt
+    assert len(llm.calls) == 1
+
+
+def test_incremental_guidance_requires_harmony_for_long_chorded_piece() -> None:
+    melody = tuple(Note(F(onset), F(1), 64, "melody") for onset in range(16))
+    chords = tuple(
+        ChordSymbol(F(bar * 4), "C", frozenset({0, 4, 7}), 0)
+        for bar in range(4)
+    )
+    ir = MusicIR(
+        melody,
+        chords,
+        Meta("C", (4, 4), 90.0, "t", "t", "PD", F(16)),
+    )
+    llm = FakeLLM([_VALID])
+
+    propose_arrangement_outcome(
+        ir,
+        ArrangeGoal(),
+        llm,
+        incremental_guidance=True,
+    )
+
+    prompt = llm.calls[0]["user"]
+    assert "a bass-only proposal is incomplete" in prompt
+    assert "at least 2, and ideally 2-4, independent" in prompt
+    assert "voice=harmony cadence or inner-motion attack onsets" in prompt
+    assert "Every required harmony attack must use an onset with no bass note" in prompt
+    assert "never stack bass plus harmony into a same-onset dyad" in prompt
+    assert "Keep each harmony attack to at most one beat" in prompt
+    assert "There is no genuine bounded source-melody rest" in prompt
+    assert "do not invent or relabel any voice=melody fill" in prompt
+
+
+def test_incremental_guidance_requires_exact_bool() -> None:
+    with pytest.raises(ValueError, match="incremental_guidance must be an exact bool"):
+        propose_arrangement_outcome(
+            _leadsheet(),
+            ArrangeGoal(),
+            FakeLLM([_VALID]),
+            incremental_guidance=1,  # type: ignore[arg-type]
+        )
+
+
 def test_public_source_context_and_token_policy_preserve_proposal_request_bytes() -> None:
     llm = FakeLLM([_VALID])
     source_context = (
@@ -181,6 +267,10 @@ def test_public_source_context_and_token_policy_preserve_proposal_request_bytes(
         "Playable range on this tuning: MIDI 40-86 "
         "(the lowest playable note is 40; never write a note below 40). "
         "Keep at most 4 notes sounding at the same onset. "
+        "Keep the texture sparse: output at most 3 target notes total, including melody. "
+        "Do not harmonize every melody attack; normally add at most one new bass or "
+        "inner-harmony attack per source melody attack. Reserve denser frames for "
+        "occasional cadences. "
         "Goal: fingerstyle, intermediate difficulty. Produce the target note set now."
     )
 

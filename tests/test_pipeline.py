@@ -33,7 +33,11 @@ def test_source_tempo_is_the_default_effective_tempo(monkeypatch: pytest.MonkeyP
         seen_controls.append((kwargs["n"], kwargs["max_iters"], kwargs["use_critic"]))
         return ArrangeResult(None, None, None, None, Trace(), 0)
 
+    def fail_incremental(*args: object, **kwargs: object) -> ArrangeResult:
+        raise AssertionError("the default pipeline must preserve the frozen legacy policy")
+
     monkeypatch.setattr("fretsure.pipeline.arrange", fake_arrange)
+    monkeypatch.setattr("fretsure.pipeline.arrange_incremental", fail_incremental)
 
     result = run_pipeline(ir, ConstantLLM(), options=PipelineOptions())
 
@@ -41,6 +45,41 @@ def test_source_tempo_is_the_default_effective_tempo(monkeypatch: pytest.MonkeyP
     assert seen_controls == [(1, 0, False)]
     assert result.source_tempo_bpm == 137.5
     assert result.effective_tempo_bpm == 137.5
+
+
+def test_incremental_product_policy_is_explicit_and_uses_its_own_trial_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen_controls: list[tuple[object, object, object]] = []
+
+    def fail_legacy(*args: object, **kwargs: object) -> ArrangeResult:
+        raise AssertionError("legacy arranger must not run for the incremental product policy")
+
+    def fake_incremental(*args: object, **kwargs: object) -> ArrangeResult:
+        seen_controls.append((kwargs["n"], kwargs["max_iters"], kwargs["use_critic"]))
+        return ArrangeResult(None, None, None, None, Trace(), 0)
+
+    monkeypatch.setattr("fretsure.pipeline.arrange", fail_legacy)
+    monkeypatch.setattr("fretsure.pipeline.arrange_incremental", fake_incremental)
+
+    run_pipeline(
+        sample_ir(bars=1),
+        ConstantLLM(),
+        options=PipelineOptions(n=2, max_iters=0, use_critic=True),
+        incremental_agent=True,
+    )
+
+    assert seen_controls == [(2, pipeline_module.MAX_INCREMENTAL_TRIAL_SOLVES, True)]
+
+
+def test_incremental_product_policy_requires_exact_bool() -> None:
+    with pytest.raises(ValueError, match="incremental_agent must be an exact bool"):
+        run_pipeline(
+            sample_ir(bars=1),
+            ConstantLLM(),
+            options=PipelineOptions(),
+            incremental_agent=1,  # type: ignore[arg-type]
+        )
 
 
 def test_explicit_tempo_override_reaches_arrange_goal(monkeypatch: pytest.MonkeyPatch) -> None:

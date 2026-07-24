@@ -37,6 +37,15 @@ _PROP_INFEASIBLE = (
     '{"onset":"0","duration":"1","pitch":86,"voice":"harmony"}]}'
 )
 
+_IR_BASELINE_INFEASIBLE = MusicIR(
+    (
+        Note(F(0), F(1), 85, "melody"),
+        Note(F(0), F(1), 86, "melody"),
+    ),
+    (),
+    Meta("C", (4, 4), 90.0, "t", "t", "PD"),
+)
+
 
 def _script() -> list[str]:
     # per candidate: propose, then (both already GREEN -> 0 repair calls) critic
@@ -127,9 +136,44 @@ def test_best_of_n_picks_higher_critic_green_candidate() -> None:
     ]
 
 
-def test_no_tab_retains_one_complete_bounded_failure_replay() -> None:
+def test_model_no_tab_selects_zero_model_deterministic_baseline() -> None:
+    llm = FakeLLM([_PROP_INFEASIBLE])
     result = arrange(
         _IR,
+        ArrangeGoal(),
+        llm,
+        n=1,
+        max_iters=0,
+        use_critic=False,
+    )
+
+    assert result.tab is not None
+    assert result.oracle is not None and result.oracle.verdict == "GREEN"
+    assert result.fidelity is not None and result.fidelity.melody_recall == 1.0
+    assert result.critic is None
+    assert len(llm.calls) == 1
+    assert [step.event for step in result.trace.steps] == [
+        "CANDIDATE_PROPOSED",
+        "SOLVER_RETURNED_NO_TAB",
+        "CANDIDATE_FINISHED",
+        "PROPOSE",
+        "SOLVER_RETURNED_TAB",
+        "PLAYABILITY_CHECKED",
+        "CANDIDATE_SELECTED",
+    ]
+    assert {step.candidate_index for step in result.trace.steps[:3]} == {0}
+    terminal = result.trace.steps[-1]
+    assert terminal.candidate_index is None
+    assert terminal.data["winner_candidate_index"] is None
+    assert terminal.data["playability_gate"] == "passed"
+    assert terminal.data["faithfulness_passed"] is True
+    assert terminal.data["candidates_considered"] == 1
+    result.trace.to_public_dict()
+
+
+def test_baseline_infeasible_retains_original_no_selection_behavior() -> None:
+    result = arrange(
+        _IR_BASELINE_INFEASIBLE,
         ArrangeGoal(),
         FakeLLM([_PROP_INFEASIBLE]),
         n=1,
@@ -137,19 +181,37 @@ def test_no_tab_retains_one_complete_bounded_failure_replay() -> None:
         use_critic=False,
     )
 
-    assert result.tab is None
+    assert result.tab is None and result.oracle is None
     assert [step.event for step in result.trace.steps] == [
         "CANDIDATE_PROPOSED",
         "SOLVER_RETURNED_NO_TAB",
         "CANDIDATE_FINISHED",
         "NO_CANDIDATE_SELECTED",
     ]
-    assert {step.candidate_index for step in result.trace.steps[:-1]} == {0}
-    terminal = result.trace.steps[-1]
-    assert terminal.data["playability_gate"] is None
-    assert terminal.data["faithfulness_passed"] is None
-    assert terminal.data["candidates_considered"] == 1
     result.trace.to_public_dict()
+
+
+def test_model_tab_selection_does_not_expose_or_rank_the_baseline() -> None:
+    pool = arrange_pool(
+        _IR,
+        ArrangeGoal(),
+        FakeLLM([_PROP_A]),
+        n=1,
+        use_critic=False,
+    )
+
+    assert pool.baseline is None
+    result = best_of_k(pool, 1, use_critic=False)
+    assert result.tab is not None
+    assert [step.event for step in result.trace.steps] == [
+        "CANDIDATE_PROPOSED",
+        "SOLVER_RETURNED_TAB",
+        "PLAYABILITY_CHECKED",
+        "CANDIDATE_FINISHED",
+        "CANDIDATE_SELECTED",
+    ]
+    assert result.trace.steps[-1].candidate_index == 0
+    assert result.trace.steps[-1].data["winner_candidate_index"] == 0
 
 
 def test_melody_preserved_in_selection() -> None:
@@ -447,8 +509,8 @@ def test_public_arrange_results_and_traces_match_clean_prerefactor_goldens() -> 
             ("GREEN", 1.0, None, 1),
         ),
         "no-tab": (
-            "908a8b23d7ab5aeb44b0f1f28cbfba8fcfb1cd5f0fba29fd7dc08d8ee4ac07ee",
-            (None, None, None, 1),
+            "e73d71654b7c5946b45a7ec935db71fb39c25759bf64c7e47784be8ce538cae7",
+            ("GREEN", 1.0, None, 1),
         ),
     }
 

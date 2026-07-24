@@ -36,12 +36,22 @@ from fretsure.oracle.predicates import (
     check_finger_monotonic,
     check_fret_span,
 )
-from fretsure.oracle.profiles import Profile, optimistic
+from fretsure.oracle.profiles import Profile, optimistic, pessimistic
 from fretsure.solver.candidates import candidates
-from fretsure.solver.cost import config_base_cost, transition_cost
+from fretsure.solver.cost import (
+    HandWindow,
+    QualityCost,
+    advance_hand_window,
+    config_finger_load,
+    config_fret_exposure,
+    hand_window_for_frets,
+    string_crossing_distance,
+)
 from fretsure.solver.frames import FrameConfig
 from fretsure.solver.frames import frame_configs as _frame_configs
 from fretsure.tab import RightFinger, Tab, TabNote
+
+FINGERING_SOLVER_VERSION = "fingering-solver@0.3.0"
 
 
 class InfeasibleCode(StrEnum):
@@ -59,6 +69,28 @@ class Infeasible:
     onset: Fraction | None
     reason: str
     pitches: tuple[int, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _GreenFinalist:
+    """One fully checked GREEN finalist in canonical search order.
+
+    This private record is intentionally importable by offline evaluators.  It
+    is not part of the package's public API and must not influence the public
+    winner selection.
+    """
+
+    tab: Tab
+    quality: QualityCost
+    stable_rank: int
+
+
+@dataclass(frozen=True, slots=True)
+class _FingeringSearchOutcome:
+    """Public result plus the bounded, fully certified GREEN finalist pool."""
+
+    result: Tab | Infeasible
+    green_pool: tuple[_GreenFinalist, ...]
 
 
 _RIGHT_ORDER: tuple[RightFinger, ...] = ("p", "i", "m", "a")
@@ -87,19 +119,27 @@ class _IncrementalOracleState:
 
 @dataclass(frozen=True, slots=True)
 class _State:
-    cost: float
+    quality: QualityCost
+    hand_window: HandWindow | None
     parent: _State | None
     added: tuple[TabNote, ...]
     note_count: int
     rank: int
     last_cfg: FrameConfig | None
     oracle: _IncrementalOracleState
+    pessimistic_oracle: _IncrementalOracleState | None
 
 
-def _state_sort_key(state: _State) -> tuple[float, int]:
-    """Constant-size deterministic ordering for beam and finalist selection."""
+def _state_sort_key(state: _State) -> tuple[bool, QualityCost, int]:
+    """Prefer potentially GREEN prefixes, then deterministic musical quality.
 
-    return (state.cost, state.rank)
+    ``pessimistic_oracle is None`` is monotone: once a prefix has a proven
+    pessimistic-profile violation, adding more attacks cannot turn that same
+    complete prefix into GREEN.  Such paths remain available as the bounded
+    AMBER fallback, but cannot displace a prefix which may still finish GREEN.
+    """
+
+    return (state.pessimistic_oracle is None, state.quality, state.rank)
 
 
 def _reconstruct_notes(state: _State) -> tuple[TabNote, ...]:
@@ -122,34 +162,36 @@ def _frame_geometry(config: FrameConfig | None) -> tuple[tuple[int, int], ...]:
     return tuple((placement.string, placement.fret) for placement in config.placements)
 
 
+_DiversityKey = tuple[tuple[tuple[int, int], ...], HandWindow | None]
+
+
 def _state_diversity_key(
     state: _State,
-) -> tuple[tuple[tuple[int, int], ...], float | None]:
+) -> _DiversityKey:
     """Group RH/LH variants while retaining distinct placement/hand positions."""
 
-    shift_center = state.oracle.shift.center if state.oracle.shift is not None else None
-    return (_frame_geometry(state.last_cfg), shift_center)
+    # The complete propagated interval is future-relevant even while a fretted
+    # shape sounds: different prior paths can reach different subsets of the
+    # same current shape.  Keep those bands in separate bounded diversity groups.
+    return (_frame_geometry(state.last_cfg), state.hand_window)
 
 
-def _select_diverse_states(states: list[_State], limit: int) -> list[_State]:
+def _select_diverse_partition(states: list[_State], limit: int) -> list[_State]:
+    """Apply the existing bounded diversity policy inside one verdict tier."""
+
     ordered = sorted(states, key=_state_sort_key)
-    groups: dict[
-        tuple[tuple[tuple[int, int], ...], float | None],
-        list[tuple[int, _State]],
-    ] = {}
+    groups: dict[_DiversityKey, list[tuple[int, _State]]] = {}
     for index, state in enumerate(ordered):
         groups.setdefault(_state_diversity_key(state), []).append((index, state))
 
     selected_indices: list[int] = []
     selected: set[int] = set()
-    seen_left: dict[
-        tuple[tuple[tuple[int, int], ...], float | None],
-        set[tuple[tuple[int, int, int], ...]],
-    ] = {geometry: set() for geometry in groups}
-    seen_right: dict[
-        tuple[tuple[tuple[int, int], ...], float | None],
-        set[_RightHistory],
-    ] = {geometry: set() for geometry in groups}
+    seen_left: dict[_DiversityKey, set[tuple[tuple[int, int, int], ...]]] = {
+        geometry: set() for geometry in groups
+    }
+    seen_right: dict[_DiversityKey, set[_RightHistory]] = {
+        geometry: set() for geometry in groups
+    }
 
     def left_key(state: _State) -> tuple[tuple[int, int, int], ...]:
         return tuple(
@@ -163,7 +205,7 @@ def _select_diverse_states(states: list[_State], limit: int) -> list[_State]:
     def add(
         index: int,
         state: _State,
-        geometry: tuple[tuple[tuple[int, int], ...], float | None],
+        geometry: _DiversityKey,
     ) -> None:
         selected_indices.append(index)
         selected.add(index)
@@ -222,6 +264,35 @@ def _select_diverse_states(states: list[_State], limit: int) -> list[_State]:
         if not added_variant:
             break
     return [ordered[i] for i in selected_indices]
+
+
+def _select_diverse_states(states: list[_State], limit: int) -> list[_State]:
+    """Fill the beam from GREEN-possible paths before AMBER fallbacks.
+
+    Diversity is intentionally scoped *within* the two hard verdict tiers.  If
+    it were applied across both at once, many distinct failed geometries could
+    evict right-hand or shift-history variants of the sole geometry that still
+    has a possible GREEN completion.
+    """
+
+    green_possible = [
+        state for state in states if state.pessimistic_oracle is not None
+    ]
+    if len(green_possible) >= limit:
+        return _select_diverse_partition(green_possible, limit)
+
+    selected_green = _select_diverse_partition(
+        green_possible,
+        len(green_possible),
+    )
+    amber_fallbacks = [
+        state for state in states if state.pessimistic_oracle is None
+    ]
+    selected_amber = _select_diverse_partition(
+        amber_fallbacks,
+        limit - len(selected_green),
+    )
+    return selected_green + selected_amber
 
 
 def _left_hand_frame_passes(
@@ -351,7 +422,7 @@ def _advance_oracle_state(
     )
 
 
-def solve_fingering(
+def _solve_fingering_with_green_pool(
     notes: Sequence[Note],
     tuning: tuple[int, ...],
     capo: int,
@@ -360,7 +431,15 @@ def solve_fingering(
     tempo_bpm: float = 90.0,
     beats_per_bar: int = 4,
     beam: int = 16,
-) -> Tab | Infeasible:
+    _collect_full_green_pool: bool = True,
+) -> _FingeringSearchOutcome:
+    """Run the bounded search and optionally retain all checked GREEN finalists.
+
+    Offline evaluation uses the default full pool.  The public wrapper disables
+    full collection and returns immediately on the first certified GREEN state,
+    preserving interactive latency without creating a second search path.
+    """
+
     notes, tuning, capo, profile, tempo_bpm, beam = ensure_solver_input(
         notes,
         tuning,
@@ -374,11 +453,14 @@ def solve_fingering(
         by_onset[n.onset].append(n)
     onsets = sorted(by_onset)
     if not onsets:
-        return Infeasible(
-            code=InfeasibleCode.EMPTY_TARGET,
-            onset=None,
-            reason="target contains no notes",
-            pitches=(),
+        return _FingeringSearchOutcome(
+            Infeasible(
+                code=InfeasibleCode.EMPTY_TARGET,
+                onset=None,
+                reason="target contains no notes",
+                pitches=(),
+            ),
+            (),
         )
 
     empty_oracle_state = _IncrementalOracleState(
@@ -387,7 +469,17 @@ def solve_fingering(
         None,
     )
     states: list[_State] = [
-        _State(0.0, None, (), 0, 0, None, empty_oracle_state)
+        _State(
+            QualityCost(),
+            None,
+            None,
+            (),
+            0,
+            0,
+            None,
+            empty_oracle_state,
+            empty_oracle_state,
+        )
     ]
     next_state_rank = 1
     pitches_at_onset = {
@@ -397,24 +489,31 @@ def solve_fingering(
     pitch_frame_counts = Counter(pitches_at_onset.values())
     config_cache: dict[tuple[int, ...], tuple[FrameConfig, ...]] = {}
     optimistic_profile = optimistic(profile)
+    pessimistic_profile = pessimistic(profile)
     for onset in onsets:
         fnotes = by_onset[onset]
         pitches = pitches_at_onset[onset]
         durs = {fn.pitch: fn.duration for fn in fnotes}
         if len(pitches) > len(_RIGHT_ORDER):
-            return Infeasible(
-                code=InfeasibleCode.NO_FRAME_CONFIG,
-                onset=onset,
-                reason="frame has more attacks than available right-hand fingers",
-                pitches=pitches,
+            return _FingeringSearchOutcome(
+                Infeasible(
+                    code=InfeasibleCode.NO_FRAME_CONFIG,
+                    onset=onset,
+                    reason="frame has more attacks than available right-hand fingers",
+                    pitches=pitches,
+                ),
+                (),
             )
         for pitch in pitches:
             if not candidates(pitch, tuning, capo, profile.max_fret):
-                return Infeasible(
-                    code=InfeasibleCode.UNREACHABLE_PITCH,
-                    onset=onset,
-                    reason=f"pitch {pitch} unreachable on this tuning/capo",
-                    pitches=(pitch,),
+                return _FingeringSearchOutcome(
+                    Infeasible(
+                        code=InfeasibleCode.UNREACHABLE_PITCH,
+                        onset=onset,
+                        reason=f"pitch {pitch} unreachable on this tuning/capo",
+                        pitches=(pitch,),
+                    ),
+                    (),
                 )
         cacheable = pitch_frame_counts[pitches] > 1
         cfgs = config_cache.get(pitches) if cacheable else None
@@ -431,11 +530,14 @@ def solve_fingering(
             if cacheable:
                 config_cache[pitches] = cfgs
         if not cfgs:
-            return Infeasible(
-                code=InfeasibleCode.NO_FRAME_CONFIG,
-                onset=onset,
-                reason="no feasible frame config",
-                pitches=pitches,
+            return _FingeringSearchOutcome(
+                Infeasible(
+                    code=InfeasibleCode.NO_FRAME_CONFIG,
+                    onset=onset,
+                    reason="no feasible frame config",
+                    pitches=pitches,
+                ),
+                (),
             )
 
         extended: list[_State] = []
@@ -457,30 +559,66 @@ def solve_fingering(
                 )
                 if oracle_state is None:
                     continue
-                step = (
-                    0.0
-                    if state.last_cfg is None
-                    else transition_cost(state.last_cfg, cfg, capo, profile)
+                pessimistic_oracle_state = (
+                    None
+                    if state.pessimistic_oracle is None
+                    else _advance_oracle_state(
+                        state.pessimistic_oracle,
+                        onset=onset,
+                        added=added,
+                        first_note_id=state.note_count,
+                        tuning=tuning,
+                        capo=capo,
+                        profile=pessimistic_profile,
+                        tempo_bpm=tempo_bpm,
+                    )
+                )
+                current_window = hand_window_for_frets(
+                    (note.fret for _, note in oracle_state.active),
+                    capo,
+                    profile,
+                )
+                hand_window, shifted, shift_distance = advance_hand_window(
+                    state.hand_window,
+                    current_window,
+                )
+                frame_max_fret = max(
+                    (placement.fret for placement in cfg.placements),
+                    default=0,
+                )
+                quality = QualityCost(
+                    max(state.quality.max_fret, frame_max_fret),
+                    state.quality.fret_exposure + config_fret_exposure(cfg, durs),
+                    state.quality.shift_count + int(shifted),
+                    state.quality.shift_distance_um + shift_distance,
+                    state.quality.finger_load + config_finger_load(cfg),
+                    state.quality.string_crossings
+                    + string_crossing_distance(state.last_cfg, cfg),
                 )
                 extended.append(
                     _State(
-                        state.cost + step + config_base_cost(cfg),
+                        quality,
+                        hand_window,
                         state,
                         added,
                         state.note_count + len(added),
                         next_state_rank,
                         cfg,
                         oracle_state,
+                        pessimistic_oracle_state,
                     )
                 )
                 next_state_rank += 1
 
         if not extended:
-            return Infeasible(
-                code=InfeasibleCode.NO_NON_RED_EXTENSION,
-                onset=onset,
-                reason="no non-red extension within beam",
-                pitches=pitches,
+            return _FingeringSearchOutcome(
+                Infeasible(
+                    code=InfeasibleCode.NO_NON_RED_EXTENSION,
+                    onset=onset,
+                    reason="no non-red extension within beam",
+                    pitches=pitches,
+                ),
+                (),
             )
         states = _select_diverse_states(extended, beam)
 
@@ -488,6 +626,7 @@ def solve_fingering(
     # pruning may conservatively return Infeasible, but no discrepancy can leak
     # a RED Tab to the caller.
     first_amber: Tab | None = None
+    green_pool: list[_GreenFinalist] = []
     finalists = sorted(states, key=_state_sort_key)[:MAX_SOLVER_FINAL_CHECKS]
     for state in finalists:
         result = Tab(_reconstruct_notes(state), tuning, capo)
@@ -498,22 +637,54 @@ def solve_fingering(
             beats_per_bar=beats_per_bar,
         ).verdict
         if verdict == "GREEN":
-            return result
+            green_pool.append(_GreenFinalist(result, state.quality, state.rank))
+            if not _collect_full_green_pool:
+                return _FingeringSearchOutcome(result, tuple(green_pool))
         if verdict == "AMBER" and first_amber is None:
             first_amber = result
+    if green_pool:
+        return _FingeringSearchOutcome(green_pool[0].tab, tuple(green_pool))
     if first_amber is not None:
-        return first_amber
+        return _FingeringSearchOutcome(first_amber, ())
 
     final_onset = onsets[-1]
-    return Infeasible(
-        code=InfeasibleCode.NO_NON_RED_EXTENSION,
-        onset=final_onset,
-        reason="no candidate passes the final full-oracle gate",
-        pitches=tuple(sorted(note.pitch for note in by_onset[final_onset])),
+    return _FingeringSearchOutcome(
+        Infeasible(
+            code=InfeasibleCode.NO_NON_RED_EXTENSION,
+            onset=final_onset,
+            reason="no candidate passes the final full-oracle gate",
+            pitches=tuple(sorted(note.pitch for note in by_onset[final_onset])),
+        ),
+        (),
     )
 
 
+def solve_fingering(
+    notes: Sequence[Note],
+    tuning: tuple[int, ...],
+    capo: int,
+    profile: Profile,
+    *,
+    tempo_bpm: float = 90.0,
+    beats_per_bar: int = 4,
+    beam: int = 16,
+) -> Tab | Infeasible:
+    """Return the same canonical winner while keeping diagnostics private."""
+
+    return _solve_fingering_with_green_pool(
+        notes,
+        tuning,
+        capo,
+        profile,
+        tempo_bpm=tempo_bpm,
+        beats_per_bar=beats_per_bar,
+        beam=beam,
+        _collect_full_green_pool=False,
+    ).result
+
+
 __all__ = [
+    "FINGERING_SOLVER_VERSION",
     "Infeasible",
     "InfeasibleCode",
     "SolverInputError",

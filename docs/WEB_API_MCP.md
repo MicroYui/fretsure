@@ -42,9 +42,25 @@ fretsure-serve
 - `POST /api/v1/arrangements?filename=...`：raw MusicXML/MXL/MIDI；控制项为 `engine`、`n`、
   `max_iters`、`use_critic`、`tempo_bpm`。
 - `POST /api/v1/oracle/check`：raw canonical Tab JSON。
+- `POST /api/v1/exports/midi?tempo_bpm=...`：raw canonical Tab JSON，返回可下载的 `audio/midi`。
+- `POST /api/v1/exports/tab-text`：raw canonical Tab JSON，返回可下载的 UTF-8 `.txt` 吉他六线谱与
+  逐音指法表。
+- `POST /api/v1/exports/musicxml-tab?tempo_bpm=...`：返回可继续编辑的 MusicXML 4.0 吉他 TAB。
+- `POST /api/v1/exports/guitar-pro?tempo_bpm=...`：返回真实 Guitar Pro 5.1 `.gp5` 二进制。
+- `POST /api/v1/exports/pdf-tab?tempo_bpm=...`：返回可打印的 A4 矢量六线谱 PDF。
 
-`GET /api/v1/capabilities` 是默认值真源。benchmark v2 后的产品基线为
-`n=1`、`max_iters=0`、`use_critic=false`；search、repair 与 critic 仍可显式 opt in。
+`GET /api/v1/capabilities` 是默认值真源。proxy 产品路径采用 baseline-first incremental policy：先把
+source melody 的 onset/pitch/duration anchors 原样求解为 GREEN 基线，每个候选只调用一次模型提议；
+允许的增量包括 bass、harmony，以及只落在源旋律真实静音 gap 内、不覆盖 source melody 发声区间的
+安全 melody fills。确定性调度把全曲 bass 骨架放入 layer 1、harmony/fill 放入 layer 2。每个候选
+最多进行 8 次全曲 solver/oracle 检查，跨 layer 轮转且每层内部 breadth-first，避免 bass 拆分饿死
+harmony/fill；任一批次若不再 GREEN、改写原旋律 anchors、降低已有
+faithfulness 或没有确定性的音乐覆盖收益，就回滚到上一个 GREEN checkpoint。模型输出不可用或没有
+增量通过时，结果明确标为 deterministic baseline，不冒充 Agent 贡献。
+
+benchmark v2 的 legacy policy 及离线兼容入口仍保留 `n=1`、`max_iters=0`、`use_critic=false` 默认值；
+`max_iters` 不控制 proxy incremental policy 的 8 次确定性检查。`n` 仍控制独立 proposal 数，critic 仅在
+候选已有被接受的 Agent 增量时对最终 checkpoint 运行。
 
 离线示例：
 
@@ -58,7 +74,62 @@ curl --fail-with-body \
   -H 'Content-Type: audio/midi' \
   --data-binary @melody.mid \
   'http://127.0.0.1:8000/api/v1/arrangements?filename=melody.mid&engine=offline&n=1&max_iters=0&use_critic=false'
+
+curl --fail-with-body \
+  -H 'Content-Type: application/json' \
+  --data-binary @arranged-tab.json \
+  -o fretsure-arrangement.mid \
+  'http://127.0.0.1:8000/api/v1/exports/midi?tempo_bpm=96'
+
+curl --fail-with-body \
+  -H 'Content-Type: application/json' \
+  --data-binary @arranged-tab.json \
+  -o fretsure-guitar-tablature.txt \
+  'http://127.0.0.1:8000/api/v1/exports/tab-text'
+
+curl --fail-with-body \
+  -H 'Content-Type: application/json' \
+  --data-binary @arranged-tab.json \
+  -o fretsure-guitar-tablature.musicxml \
+  'http://127.0.0.1:8000/api/v1/exports/musicxml-tab?tempo_bpm=96'
+
+curl --fail-with-body \
+  -H 'Content-Type: application/json' \
+  --data-binary @arranged-tab.json \
+  -o fretsure-guitar-tab.gp5 \
+  'http://127.0.0.1:8000/api/v1/exports/guitar-pro?tempo_bpm=96'
+
+curl --fail-with-body \
+  -H 'Content-Type: application/json' \
+  --data-binary @arranged-tab.json \
+  -o fretsure-guitar-tab.pdf \
+  'http://127.0.0.1:8000/api/v1/exports/pdf-tab?tempo_bpm=96'
 ```
+
+Web 结果页中的 MusicXML TAB 与 GP5 是可编辑交换文件；PDF 是打印谱；MIDI 是试听/播放器输入；
+ASCII `.txt` 便于快速核对；canonical Tab JSON 是机器可读的精确结果，适合归档、重放或继续交给 API。
+这些导出都直接读取同一份 canonical Tab，MIDI 不能代替 canonical Tab 或指法谱。
+
+MIDI 导出是确定性的 format-0 SMF：480 PPQN、单轨、单 MIDI channel、General MIDI 尼龙弦吉他音色。
+同一 onset 的和弦音保留在同一 tick；同 tick 先写 note-off 再写 note-on，以正确重奏重复音。它是符号
+演奏文件而不是合成音频，实际音色由播放器的 MIDI 音源决定。SMF 的 tempo 字段只有 24 bits；对
+产品域内低于其直接表示范围的慢速 tempo，导出器会确定性放大 timeline ticks 并相应提高编码 tempo，
+使实际播放时长仍等于请求 tempo，而不是拒绝已经成功生成的结果。
+
+Tab text 导出直接读取同一份 canonical Tab，不从 MIDI 音高反推。文件上半部分是 high-e 在上的标准
+六线 ASCII tab；下半部分按原 Tab note 顺序逐行保留 exact onset/duration、常规吉他弦号 1..6、内部
+canonical string 0..5、fret、left_finger 与 right_finger，因此视觉谱面与求解器给出的双手指法可以
+交叉核对。`left_finger=0` 表示空弦，右手使用 `p/i/m/a`。
+
+MusicXML 导出使用 4.0 `score-partwise`、六线 TAB clef/staff tuning、精确 integer divisions、多声部、
+跨小节 ties，以及 `technical` 中的 string/fret/fingering/pluck。Guitar Pro 导出是真实 GP5 5.1 binary，
+不是把 JSON 或 MIDI 改扩展名；自动兼容性证据是 PyGuitarPro 写出后回读，标准 GP5 5.1 预期可由
+Guitar Pro/TuxGuitar 导入，但尚未把这两个桌面应用的实开结果纳入自动验收。GP5 只存整数 BPM，
+因此请求的小数 tempo 会按最近整数、`.5` 向上确定性取整；CP1252 无法表示的元数据仍 typed 422。
+PDF 使用 A4 矢量几何分页，包含 tempo/tuning/capo、小节与节拍、节奏 token、品位和双手指法图例。
+
+`exports` extra 的 GP5 writer PyGuitarPro 使用 LGPL-3.0-only；PDF writer ReportLab 使用 BSD 许可。
+pdfplumber（MIT）和 pypdf（BSD）只用于 `dev` 测试，依赖版本均由 `uv.lock` 固定，仓库不复制其源码。
 
 成功结果明确区分 `tab_produced` 与 `no_fingering_within_budget`，并返回 source provenance、import
 warnings、独立 playability / availability-aware faithfulness、ASCII tab、`agent-trace@0.2.0` replay rows
@@ -137,5 +208,5 @@ stdout 只承载 MCP protocol。server initialize identity 是 `Fretsure` / `fre
 ## Plan 6A 之后仍未实现
 
 通用多轨/角色映射 MIDI 输入、AlphaTab、音频/FluidSynth、播放同步、真实琴颈动画、
-GP/MIDI/MusicXML 导出、WebSocket/SSE、live A/B、
+原生 GP7 `.gp`、WebSocket/SSE、live A/B、
 live leaderboard、账户/数据库/云部署、真人 calibration 与完整 Plan 6 money moment 均保持 open。

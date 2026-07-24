@@ -1,7 +1,7 @@
 # Fretsure —— 可证明可弹的吉他谱智能体（设计文档 / Design Spec）
 
 > 产品名 **Fretsure**（fret + ensure，已定）。备选 PlayProof / Fretwright 仅存档。
-> 状态（2026-07-23）：设计已锁定；Plan 1–5、MusicXML/MXL/MIDI、Oracle 0.2、Plan 6A 与 benchmark v2 Task 1–10 已闭门，当前在真人、许可、cross-provider 等 OPEN gate 处暂停。当前组合树为 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace/service/API/MCP/Web=`0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`，runtime 锁定 `music21==10.5.0`，正式模型为 `gpt-5.6-sol`。完整 Plan 6 的音频/琴颈/导出/live demo 仍 open。本文中的 target/预测数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+> 状态（2026-07-23）：设计已锁定；Plan 1–5、MusicXML/MXL/MIDI、Oracle 0.2、Plan 6A 与 benchmark v2 Task 1–10 已闭门，当前在真人、许可、cross-provider 等 OPEN gate 处暂停。当前组合树为 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace/service/API/MCP/Web=`0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`，runtime 锁定 `music21==10.5.0`，正式模型为 `gpt-5.6-sol`。MusicXML TAB、真实 GP5、A4 PDF、MIDI、ASCII TAB 与 canonical JSON 导出已实现；完整 Plan 6 的音频/琴颈/原生 GP7 `.gp`/live demo 仍 open。本文中的 target/预测数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
 >
 > **当前证据修正**：本设计中的“repair 脊柱/头牌”是跑前假设，不是当前结论。正式 v2 得到 repair Δjoint `+0.0566`，低于预注册 `0.10` SESOI，裁决 `NOT_KEPT`；best-of-4 为 `PROBATION_COST_UNKNOWN`，critic 为 `HUMAN_BLOCKED_PROBATION`。产品缺省因此为 `n=1, max_iters=0, use_critic=false`；三个组件仅显式 opt in，repair 实现保留作研究/兼容控制。实测真源见 [`BENCHMARK_RESULTS.md`](../../BENCHMARK_RESULTS.md) 与 [`BENCHMARK_V2_ACCEPTANCE.md`](../../BENCHMARK_V2_ACCEPTANCE.md)。
 >
@@ -224,7 +224,7 @@ class MusicIR:
 ### 5.8 渲染 / 导出 Render/Export
 - **前端渲染**:**AlphaTab**(MPL-2.0,浏览器渲染 tab、可播放、可导入导出 GuitarPro/MusicXML) + **自研指板动画**(把 (string,fret,finger) 动到指板上,红/绿标注可弹性)。
 - **音频**:**FluidSynth**(LGPL) + **GeneralUser GS soundfont**(允许商用) 做 MIDI→WAV 播放。
-- **导出**:GuitarPro(.gp)、MusicXML、MIDI、ASCII tab → 与现有软件(Guitar Pro/TuxGuitar/MuseScore)互操作。
+- **导出**:当前已有真实 GP5、MusicXML、PDF、MIDI、ASCII tab 与 canonical JSON；原生 GP7 `.gp` 与桌面软件实开验收仍 open。
 
 ### 5.9 落地形态（已与 founder 锁定）
 - **主打:独立 web app**(React/TS + AlphaTab + 指板动画),present 时对 UI/卡拉OK高亮/基准计分板完全可控。

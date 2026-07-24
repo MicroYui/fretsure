@@ -463,6 +463,31 @@ def test_solver_work_envelope_preserves_long_narrow_open_chord_search() -> None:
     )
 
 
+def test_solver_work_envelope_prices_both_incremental_profile_states() -> None:
+    """The GREEN-prefix state is charged without raising the global ceiling."""
+
+    notes = tuple(Note(F(frame), F(1), 60, "melody") for frame in range(100))
+
+    diagnostics = validate_solver_input(
+        notes,
+        STANDARD_TUNING,
+        0,
+        MEDIAN_HAND,
+        beam=16,
+    )
+
+    work = [
+        item
+        for item in diagnostics
+        if item.code is OracleInputCode.SOLVER_WORK_LIMIT
+    ]
+    assert len(work) == 1
+    # 76,080 bounded state/config extensions x 128 units: 64 for each of
+    # optimistic admission and independent pessimistic prefix viability.
+    assert "extensions=9738240" in work[0].message
+    assert "limit is 12000000" in work[0].message
+
+
 def test_final_checker_work_bound_charges_profiles_sorts_and_frame_pairs() -> None:
     assert oracle_checker_work_upper_bound(2_000, (4,) * 500) == 889_024
 

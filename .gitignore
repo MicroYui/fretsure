@@ -34,6 +34,7 @@ data/corpus/
 data/*.mid
 data/*.midi
 outputs/
+output/
 benchmarks/results/
 *.wav
 

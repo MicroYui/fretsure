@@ -23,16 +23,26 @@ uv run fretsure-arrange tests/fixtures/musicxml/supported_basic.musicxml \
 
 uv sync --extra midi
 uv run fretsure-arrange tests/fixtures/midi/producers/music21-10.5.0-melody_only.mid
+
+uv sync --extra exports       # MusicXML TAB / GP5 / PDF programmatic renderers
 ```
+
+`exports` 使用 LGPL-3.0-only 的 PyGuitarPro 写 GP5，并使用 BSD 许可的 ReportLab 写 PDF；
+依赖由 `uv.lock` 固定而不复制进仓库。PDF 测试工具 pdfplumber（MIT）与 pypdf（BSD）仅属于 `dev` extra。
 
 该入口会依次输出 typed import diagnostics、MusicIR 摘要、ASCII tab、
 `oracle@0.2.0` 判决、fingerprinted profile、`tab-input@0.2.0`、独立的
 `fidelity@0.3.0` 门与可回放 JSONL trace；CLI 结果头另行绑定 importer/router
 版本。`--llm` 的当前默认是 canonical `gpt-5.6-sol`；CLI、trace 与 benchmark
 聚合 JSON 都显式记录 model id。
-与 v2 裁决一致，产品基线默认是单候选、零 repair、critic 关闭：`--n 1
---max-iters 0` 且不加 `--critic`。研究/兼容实验仍可显式使用例如
-`--n 4 --max-iters 8 --critic`；这不会把观察期能力重新声明为默认价值。
+与 v2 裁决一致，冻结 benchmark/legacy policy 仍默认单候选、零 repair、critic 关闭。真实 LLM 产品
+路径则使用独立的 baseline-first incremental policy：source melody 的 onset/pitch/duration anchors 原样成为
+GREEN 基线，模型每个候选只提议一次，可添加 bass、harmony，以及只落在源旋律真实静音 gap 内的安全
+melody fills。确定性调度把全曲 bass 骨架放入 layer 1、harmony/fill 放入 layer 2，最多 8 次全曲
+检查采用跨层轮转、层内 breadth-first，避免 bass 拆分耗尽预算而让 harmony/fill 没有被验证；失败增量立即
+回滚，不会改写原旋律 anchors 或牺牲最后一个 GREEN checkpoint。`--max-iters`
+只保留给不加 `--llm` 的 legacy/研究兼容路径，不控制这个增量策略；
+`--n` 仍控制 proposal 数，`--critic` 只评价已真正加入 Agent 音符的最终候选。
 MusicXML 路径当前只支持单 part/staff/voice 的 4/4 单音旋律、固定传统调号、
 固定 quarter-note tempo、普通 note/rest/tie 和白名单 root+kind harmony。MusicXML 4.0
 可以省略 `<mode>`：importer 不猜 major/minor，而是保留
@@ -51,7 +61,11 @@ uv run fretsure-mcp         # stdout 只承载 MCP protocol
 ```
 
 Web 可以上传同一受限 MusicXML/MXL/MIDI 输入或加载 CC0 示例，显示独立的 playability / faithfulness
-证据、ASCII tab、版本 stamps 与 `agent-trace@0.2.0` 回放。MIDI 不提供 bass-root/harmony 真值时，
+证据、ASCII tab、Agent/确定性来源、版本 stamps 与 `agent-trace@0.2.0` 回放，并可按用途下载：可继续
+编辑的 MusicXML 4.0 TAB、真实 Guitar Pro 5.1 `.gp5`、可打印 A4 矢量 PDF、用于试听的 format-0 MIDI，
+以及供核验/归档的 ASCII TAB `.txt` 与 canonical Tab JSON。所有格式都从同一份已经验证的 canonical
+Tab 直接生成；GP5、MusicXML 与 PDF 保留弦、品和可表示的双手指法。MIDI
+输入不提供 bass-root/harmony 真值时，
 `fidelity@0.3.0` 把两项显示为 `N/A`，不会把“没有证据”显示成 100%。API 使用有界 raw body，不使用 multipart 或
 临时文件；proxy 默认禁用，只有有效的 loopback proxy 配置加 `fretsure-serve --allow-proxy` 才可用。
 端点、安装组合、MCP tools 与 Claude Desktop/Cursor 配置格式见
@@ -154,7 +168,7 @@ FULL_RESCORE 均已完成。完整 operator 证据、金额与 hashes 留在
 [`docs/experiments/2026-07-17-benchmark-v2-implementation-log.md`](docs/experiments/2026-07-17-benchmark-v2-implementation-log.md)，README 不重复展开。
 本阶段只把 Web 控件默认值同步为同一证据基线，没有视觉设计改动；若后续涉及前端设计，仍须先确认统一审美。详见
 [`2026-07-17-benchmark-v2.md`](docs/superpowers/plans/2026-07-17-benchmark-v2.md)。完整 Plan 6 的音频、
-AlphaTab、真实琴颈动画、导出、live A/B/榜单与真人 money moment 仍 open。
+AlphaTab、真实琴颈动画、原生 GP7 `.gp`、live A/B/榜单与真人 money moment 仍 open。
 
 - **Plan 1 核心 + 可弹性 Oracle**：Music IR + strict public Tab schema + 毫米几何/active-sustain/连续换把 oracle（三态 + 定位化诊断）+ fingerprinted profile + 自验证台（property/metamorphic/mutation/N-version + fail-closed gold/statistics）。zero-GREEN 明确是 `no_green`/`None`，不是完美的 `0.0`。见 [`docs/PLAN1_ACCEPTANCE.md`](docs/PLAN1_ACCEPTANCE.md)、[`docs/SCOPE.md`](docs/SCOPE.md)。
 - **Plan 2 求解器**：beam-search 指法求解，每个部分谱都对真 oracle 核验 → **永不返回 RED**。

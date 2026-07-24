@@ -9,6 +9,10 @@ from dataclasses import dataclass, replace
 
 from fretsure.agent.arranger import ArrangeGoal
 from fretsure.agent.harness import ArrangeResult, arrange
+from fretsure.agent.incremental import (
+    MAX_INCREMENTAL_TRIAL_SOLVES,
+    arrange_incremental,
+)
 from fretsure.agent.trace import Trace
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import IRInputError, MusicIR, snapshot_music_ir, validate_ir
@@ -113,6 +117,7 @@ def run_pipeline(
     llm: LLMClient,
     *,
     options: PipelineOptions,
+    incremental_agent: bool = False,
 ) -> PipelineResult:
     """Arrange, solve, verify, score, render, and expose a deterministic trace.
 
@@ -121,6 +126,8 @@ def run_pipeline(
     the harness passes unchanged to both solver and oracle during every repair.
     """
     options = _validated_pipeline_options(options)
+    if type(incremental_agent) is not bool:
+        raise ValueError("incremental_agent must be an exact bool")
     source_ir = ir
     try:
         ir = snapshot_music_ir(source_ir)
@@ -178,15 +185,26 @@ def run_pipeline(
         tempo_bpm=effective_tempo,
     )
     llm_model_id = snapshot_llm_model_id(llm)
-    raw_arrangement = arrange(
-        ir,
-        goal,
-        llm,
-        profile=profile,
-        n=n,
-        max_iters=max_iters,
-        use_critic=use_critic,
-    )
+    if incremental_agent:
+        raw_arrangement = arrange_incremental(
+            ir,
+            goal,
+            llm,
+            profile=profile,
+            n=n,
+            max_iters=MAX_INCREMENTAL_TRIAL_SOLVES,
+            use_critic=use_critic,
+        )
+    else:
+        raw_arrangement = arrange(
+            ir,
+            goal,
+            llm,
+            profile=profile,
+            n=n,
+            max_iters=max_iters,
+            use_critic=use_critic,
+        )
     trace = Trace()
     trace.add(
         "PLAN",

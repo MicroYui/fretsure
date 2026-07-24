@@ -47,7 +47,12 @@ from fretsure.oracle.input import (
 )
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile, validated_profile_snapshot
 from fretsure.render.ascii import render_ascii
-from fretsure.solver.api import Infeasible, InfeasibleCode
+from fretsure.render.contracts import (
+    GUITAR_PRO_EXPORT_VERSION,
+    MUSICXML_TAB_EXPORT_VERSION,
+    PDF_TAB_EXPORT_VERSION,
+)
+from fretsure.solver.api import FINGERING_SOLVER_VERSION, Infeasible, InfeasibleCode
 from fretsure.tab import MAX_TAB_JSON_BYTES, Tab, tab_to_json
 
 Wire = dict[str, object]
@@ -361,6 +366,7 @@ def _base_stamps(profile: Profile) -> Wire:
         "oracle_checker_version": CHECKER_VERSION,
         "oracle_input_schema_version": ORACLE_INPUT_SCHEMA_VERSION,
         "fidelity_checker_version": FIDELITY_CHECKER_VERSION,
+        "fingering_solver_version": FINGERING_SOLVER_VERSION,
         "target_input_schema_version": TARGET_INPUT_SCHEMA_VERSION,
         "trace_schema_version": _trace_schema_version(),
     }
@@ -533,6 +539,9 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
         profile = validated_profile_snapshot(MEDIAN_HAND)
         stamps = _base_stamps(profile)
         stamps["score_input_version"] = SCORE_INPUT_VERSION
+        stamps["musicxml_tab_export_version"] = MUSICXML_TAB_EXPORT_VERSION
+        stamps["guitar_pro_export_version"] = GUITAR_PRO_EXPORT_VERSION
+        stamps["pdf_tab_export_version"] = PDF_TAB_EXPORT_VERSION
         registry = dict(value.score_format_registry)
         if (
             value.service_version != SERVICE_VERSION
@@ -610,6 +619,11 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
                 "check_playability",
                 "bounded_fingering_search",
                 "render_ascii",
+                "render_guitar_pro_5",
+                "render_midi",
+                "render_musicxml_tab",
+                "render_pdf_tab",
+                "render_tab_text",
             ],
             "deferred": [
                 "render_audio",
@@ -617,7 +631,6 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
                 "animated_fretboard",
                 "live_ab",
                 "live_leaderboard",
-                "export_interoperability",
             ],
         }
     except ApplicationError:

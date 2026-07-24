@@ -61,10 +61,16 @@ from fretsure.llm.client import (
 )
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
 from fretsure.oracle.input import MAX_BEATS_PER_BAR, MAX_TEMPO_BPM, MIN_TEMPO_BPM
+from fretsure.render.guitar_pro import GuitarProExportError, render_guitar_pro
+from fretsure.render.midi import MidiExportError, render_midi
+from fretsure.render.musicxml_tab import MusicXMLTabExportError, render_musicxml_tab
+from fretsure.render.pdf_tab import PdfTabExportError, render_tab_pdf
+from fretsure.render.tab_text import TabTextExportError, render_tab_text
 from fretsure.tab import MAX_TAB_JSON_BYTES
 
 MAX_API_CANDIDATES = 8
 MAX_API_REPAIR_ITERS = 16
+API_PROXY_REQUEST_TIMEOUT_SECONDS = 300.0
 
 _XML_MEDIA_TYPES = frozenset(
     {
@@ -433,6 +439,11 @@ def _capabilities_wire(config: _AppConfig) -> dict[str, object]:
     wire["http"] = {
         "arrangements": "/api/v1/arrangements",
         "oracle_check": "/api/v1/oracle/check",
+        "midi_export": "/api/v1/exports/midi",
+        "tab_text_export": "/api/v1/exports/tab-text",
+        "musicxml_tab_export": "/api/v1/exports/musicxml-tab",
+        "guitar_pro_export": "/api/v1/exports/guitar-pro",
+        "pdf_tab_export": "/api/v1/exports/pdf-tab",
         "health": "/healthz",
         "raw_request_bodies": True,
         "multipart_uploads": False,
@@ -458,7 +469,10 @@ def _default_static_root() -> Path:
 
 def _default_proxy_factory(model_id: str) -> LLMFactory:
     def build() -> LLMClient:
-        return ProxyLLM(model=model_id)
+        return ProxyLLM(
+            model=model_id,
+            request_timeout_seconds=API_PROXY_REQUEST_TIMEOUT_SECONDS,
+        )
 
     return build
 
@@ -895,6 +909,115 @@ _CHECK_OPENAPI = {
     },
 }
 
+_MIDI_EXPORT_OPENAPI = {
+    "parameters": [
+        {
+            "name": "tempo_bpm",
+            "in": "query",
+            "schema": {"type": "number", "default": 90.0},
+        },
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {"application/json": {"schema": {"type": "object"}}},
+    },
+    "responses": {
+        "200": {
+            "description": "One-track General MIDI guitar performance",
+            "content": {"audio/midi": {"schema": {"type": "string", "format": "binary"}}},
+        }
+    },
+}
+
+_TAB_TEXT_EXPORT_OPENAPI = {
+    "requestBody": {
+        "required": True,
+        "content": {"application/json": {"schema": {"type": "object"}}},
+    },
+    "responses": {
+        "200": {
+            "description": (
+                "Six-line guitar tablature with exact canonical timing and fingering rows"
+            ),
+            "content": {
+                "text/plain": {"schema": {"type": "string", "format": "binary"}}
+            },
+        }
+    },
+}
+
+_MUSICXML_TAB_EXPORT_OPENAPI = {
+    "parameters": [
+        {
+            "name": "tempo_bpm",
+            "in": "query",
+            "schema": {"type": "number", "default": 90.0},
+        },
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {"application/json": {"schema": {"type": "object"}}},
+    },
+    "responses": {
+        "200": {
+            "description": "Editable MusicXML 4.0 guitar tablature",
+            "content": {
+                "application/vnd.recordare.musicxml+xml": {
+                    "schema": {"type": "string", "format": "binary"}
+                }
+            },
+        }
+    },
+}
+
+_GUITAR_PRO_EXPORT_OPENAPI = {
+    "parameters": [
+        {
+            "name": "tempo_bpm",
+            "in": "query",
+            "schema": {"type": "number", "default": 90.0},
+        },
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {"application/json": {"schema": {"type": "object"}}},
+    },
+    "responses": {
+        "200": {
+            "description": "Genuine Guitar Pro 5.1 tablature",
+            "content": {
+                "application/octet-stream": {
+                    "schema": {"type": "string", "format": "binary"}
+                }
+            },
+        }
+    },
+}
+
+_PDF_TAB_EXPORT_OPENAPI = {
+    "parameters": [
+        {
+            "name": "tempo_bpm",
+            "in": "query",
+            "schema": {"type": "number", "default": 90.0},
+        },
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {"application/json": {"schema": {"type": "object"}}},
+    },
+    "responses": {
+        "200": {
+            "description": "Printable A4 guitar tablature with exact fingering",
+            "content": {
+                "application/pdf": {
+                    "schema": {"type": "string", "format": "binary"}
+                }
+            },
+        }
+    },
+}
+
 
 def create_app(
     *,
@@ -1155,6 +1278,198 @@ def create_app(
             return _api_wire(check_outcome_to_wire(check_tab_json(tab_json, options=options)))
 
         return JSONResponse(await run_in_threadpool(execute))
+
+    @app.post(
+        "/api/v1/exports/midi",
+        tags=["exports"],
+        openapi_extra=_MIDI_EXPORT_OPENAPI,
+    )
+    async def midi_export(request: Request) -> Response:
+        query = parse_query(request, allowed={"tempo_bpm"})
+        require_media_type(request, _JSON_MEDIA_TYPES, allow_utf8_charset=True)
+        tempo_bpm = cast(float, _float_control(query, "tempo_bpm", 90.0))
+        data = await read_bounded_body(request, limit=MAX_TAB_JSON_BYTES)
+        tab_json = _json_text(data)
+
+        def execute() -> bytes:
+            checked = check_tab_json(
+                tab_json,
+                options=CheckOptions(tempo_bpm=tempo_bpm),
+            )
+            try:
+                return render_midi(checked.tab, tempo_bpm=tempo_bpm)
+            except MidiExportError:
+                raise _api_problem(
+                    422,
+                    "MIDI_EXPORT_REJECTED",
+                    "MIDI export rejected",
+                    "the validated Tab cannot be represented by the canonical MIDI profile",
+                ) from None
+
+        content = await run_in_threadpool(execute)
+        return Response(
+            content=content,
+            media_type="audio/midi",
+            headers={
+                "Content-Disposition": 'attachment; filename="fretsure-arrangement.mid"'
+            },
+        )
+
+    @app.post(
+        "/api/v1/exports/tab-text",
+        tags=["exports"],
+        openapi_extra=_TAB_TEXT_EXPORT_OPENAPI,
+    )
+    async def tab_text_export(request: Request) -> Response:
+        parse_query(request, allowed=set())
+        require_media_type(request, _JSON_MEDIA_TYPES, allow_utf8_charset=True)
+        data = await read_bounded_body(request, limit=MAX_TAB_JSON_BYTES)
+        tab_json = _json_text(data)
+
+        def execute() -> str:
+            checked = check_tab_json(tab_json, options=CheckOptions())
+            try:
+                return render_tab_text(checked.tab)
+            except TabTextExportError:
+                raise _api_problem(
+                    422,
+                    "TAB_TEXT_EXPORT_REJECTED",
+                    "Tab text export rejected",
+                    (
+                        "the validated Tab cannot be represented by the canonical "
+                        "guitar tablature text profile"
+                    ),
+                ) from None
+
+        content = await run_in_threadpool(execute)
+        return Response(
+            content=content.encode("utf-8"),
+            media_type="text/plain; charset=utf-8",
+            headers={
+                "Content-Disposition": (
+                    'attachment; filename="fretsure-guitar-tablature.txt"'
+                )
+            },
+        )
+
+    @app.post(
+        "/api/v1/exports/musicxml-tab",
+        tags=["exports"],
+        openapi_extra=_MUSICXML_TAB_EXPORT_OPENAPI,
+    )
+    async def musicxml_tab_export(request: Request) -> Response:
+        query = parse_query(request, allowed={"tempo_bpm"})
+        require_media_type(request, _JSON_MEDIA_TYPES, allow_utf8_charset=True)
+        tempo_bpm = cast(float, _float_control(query, "tempo_bpm", 90.0))
+        data = await read_bounded_body(request, limit=MAX_TAB_JSON_BYTES)
+        tab_json = _json_text(data)
+
+        def execute() -> bytes:
+            checked = check_tab_json(
+                tab_json,
+                options=CheckOptions(tempo_bpm=tempo_bpm),
+            )
+            try:
+                return render_musicxml_tab(checked.tab, tempo_bpm=tempo_bpm)
+            except MusicXMLTabExportError:
+                raise _api_problem(
+                    422,
+                    "MUSICXML_TAB_EXPORT_REJECTED",
+                    "MusicXML TAB export rejected",
+                    (
+                        "the validated Tab cannot be represented by the "
+                        "canonical MusicXML 4.0 guitar tablature profile"
+                    ),
+                ) from None
+
+        content = await run_in_threadpool(execute)
+        return Response(
+            content=content,
+            media_type="application/vnd.recordare.musicxml+xml",
+            headers={
+                "Content-Disposition": (
+                    'attachment; filename="fretsure-guitar-tablature.musicxml"'
+                )
+            },
+        )
+
+    @app.post(
+        "/api/v1/exports/guitar-pro",
+        tags=["exports"],
+        openapi_extra=_GUITAR_PRO_EXPORT_OPENAPI,
+    )
+    async def guitar_pro_export(request: Request) -> Response:
+        query = parse_query(request, allowed={"tempo_bpm"})
+        require_media_type(request, _JSON_MEDIA_TYPES, allow_utf8_charset=True)
+        tempo_bpm = cast(float, _float_control(query, "tempo_bpm", 90.0))
+        data = await read_bounded_body(request, limit=MAX_TAB_JSON_BYTES)
+        tab_json = _json_text(data)
+
+        def execute() -> bytes:
+            checked = check_tab_json(
+                tab_json,
+                options=CheckOptions(tempo_bpm=tempo_bpm),
+            )
+            try:
+                return render_guitar_pro(checked.tab, tempo_bpm=tempo_bpm)
+            except GuitarProExportError:
+                raise _api_problem(
+                    422,
+                    "GUITAR_PRO_EXPORT_REJECTED",
+                    "Guitar Pro export rejected",
+                    (
+                        "the validated Tab cannot be represented losslessly by the "
+                        "canonical Guitar Pro 5.1 profile"
+                    ),
+                ) from None
+
+        content = await run_in_threadpool(execute)
+        return Response(
+            content=content,
+            media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": 'attachment; filename="fretsure-guitar-tab.gp5"'
+            },
+        )
+
+    @app.post(
+        "/api/v1/exports/pdf-tab",
+        tags=["exports"],
+        openapi_extra=_PDF_TAB_EXPORT_OPENAPI,
+    )
+    async def pdf_tab_export(request: Request) -> Response:
+        query = parse_query(request, allowed={"tempo_bpm"})
+        require_media_type(request, _JSON_MEDIA_TYPES, allow_utf8_charset=True)
+        tempo_bpm = cast(float, _float_control(query, "tempo_bpm", 90.0))
+        data = await read_bounded_body(request, limit=MAX_TAB_JSON_BYTES)
+        tab_json = _json_text(data)
+
+        def execute() -> bytes:
+            checked = check_tab_json(
+                tab_json,
+                options=CheckOptions(tempo_bpm=tempo_bpm),
+            )
+            try:
+                return render_tab_pdf(checked.tab, tempo_bpm=tempo_bpm)
+            except PdfTabExportError:
+                raise _api_problem(
+                    422,
+                    "PDF_TAB_EXPORT_REJECTED",
+                    "PDF TAB export rejected",
+                    (
+                        "the validated Tab cannot be rendered by the canonical "
+                        "printable guitar tablature profile"
+                    ),
+                ) from None
+
+        content = await run_in_threadpool(execute)
+        return Response(
+            content=content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": 'attachment; filename="fretsure-guitar-tab.pdf"'
+            },
+        )
 
     async def static_or_spa(path: str) -> Response:
         first = path.split("/", 1)[0]

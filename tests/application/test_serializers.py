@@ -324,6 +324,7 @@ def test_capabilities_wire_is_transport_neutral_and_honest() -> None:
     assert "render_audio" not in wire["implemented"]  # type: ignore[operator]
     assert wire["stamps"]["package_version"] == "0.6.0"  # type: ignore[index]
     assert wire["stamps"]["score_input_version"] == "score-input@0.1.0"  # type: ignore[index]
+    assert wire["stamps"]["fingering_solver_version"] == "fingering-solver@0.3.0"  # type: ignore[index]
     assert "importer_version" not in wire["stamps"]  # type: ignore[operator]
 
 

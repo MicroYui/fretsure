@@ -349,6 +349,20 @@ def proposal_output_token_budget(ir: MusicIR) -> int:
     return max(MIN_OUTPUT_TOKENS, OUTPUT_TOKEN_FIXED_ALLOWANCE + per_event * events)
 
 
+def proposal_target_note_limit(ir: MusicIR) -> int:
+    """Allow at most one new accompaniment attack per source melody attack.
+
+    A proposer may retain the source and add bass or inner motion, but it may not
+    turn every melody attack into a saturated four-note frame. Over-dense replies
+    take the existing deterministic fallback path instead of entering a repair
+    loop that can remove only one bad note per pass.
+    """
+
+    source = snapshot_music_ir(ir)
+    melody_attacks = {note.onset for note in source.notes if note.voice == "melody"}
+    return len(source.notes) + len(melody_attacks)
+
+
 def ensure_llm_capacity(ir: MusicIR) -> None:
     """Raise a typed error rather than silently truncating a real-LLM request."""
 
@@ -364,9 +378,12 @@ def propose_arrangement_outcome(
     profile: Profile = MEDIAN_HAND,
     call_scope_factory: ModelCallScopeFactory | None = None,
     candidate_index: int | None = None,
+    incremental_guidance: bool = False,
 ) -> ProposalOutcome:
     """Return one target and explicit provenance without exposing model content."""
 
+    if type(incremental_guidance) is not bool:
+        raise ValueError("incremental_guidance must be an exact bool")
     source_ir = snapshot_music_ir(ir)
     ir = arrangement_solver_ir(source_ir)
     notes, tuning, capo, profile, tempo_bpm = ensure_solver_domain(
@@ -403,6 +420,7 @@ def propose_arrangement_outcome(
         )
     protocol = arrangement_output_protocol(source_ir)
     max_tokens = proposal_output_token_budget(source_ir)
+    target_note_limit = proposal_target_note_limit(source_ir)
     system = (
         _ARRANGE_OBJECT_SYSTEM
         if protocol is ArrangementOutputProtocol.OBJECT
@@ -410,12 +428,91 @@ def propose_arrangement_outcome(
     )
     low = min(goal.tuning) + goal.capo
     high = max(goal.tuning) + goal.capo + 22
+    melody_attacks = len({note.onset for note in source_ir.notes if note.voice == "melody"})
+    incremental_addition_attacks = (melody_attacks + 1) // 2
+    inferred_end = max(
+        (note.onset + note.duration for note in source_ir.notes),
+        default=Fraction(0),
+    )
+    piece_end = (
+        source_ir.meta.duration_beats
+        if source_ir.meta.duration_beats is not None
+        else inferred_end
+    )
+    numerator, denominator = source_ir.meta.time_sig
+    bar_duration = Fraction(numerator * 4, denominator)
+    bar_count = max(1, -(-piece_end // bar_duration))
+    target_minimum = min(incremental_addition_attacks, bar_count)
+    target_maximum = min(incremental_addition_attacks, (3 * bar_count + 1) // 2)
+    strong_beat_guidance = (
+        "beats 1 or 3" if source_ir.meta.time_sig == (4, 4) else "the strong beats"
+    )
+    harmony_requirement = (
+        "Because this piece has annotated chords and at least 4 bars, a bass-only "
+        "proposal is incomplete. Include at least 2, and ideally 2-4, independent "
+        "voice=harmony cadence or inner-motion attack onsets. Every required harmony "
+        "attack must use an onset with no bass note: arpeggiate the parts and never "
+        "stack bass plus harmony into a same-onset dyad. Keep each harmony attack to "
+        "at most one beat so it does not block the next melodic move. "
+        if source_ir.chords and bar_count >= 4
+        else ""
+    )
+    melody = tuple(
+        sorted(
+            (note for note in source_ir.notes if note.voice == "melody"),
+            key=lambda note: (note.onset, note.pitch, note.duration),
+        )
+    )
+    melody_frontier: Fraction | None = None
+    has_genuine_melody_rest = False
+    for note in melody:
+        if melody_frontier is not None and note.onset > melody_frontier:
+            has_genuine_melody_rest = True
+            break
+        note_end = note.onset + note.duration
+        melody_frontier = (
+            note_end if melody_frontier is None else max(melody_frontier, note_end)
+        )
+    melody_fill_requirement = (
+        "There is no genuine bounded source-melody rest in this piece, so do not "
+        "invent or relabel any voice=melody fill. "
+        if melody and not has_genuine_melody_rest
+        else ""
+    )
+    incremental_instructions = (
+        "Incremental product policy: reproduce the source melody exactly, including every "
+        "onset, duration, and pitch; those source anchors are immutable. First cover the "
+        f"whole piece: in each complete bar, aim for one sustained chord-root bass on "
+        f"{strong_beat_guidance} before adding any second attack. Only after every bar has "
+        "a bass foundation, add at most one later-half inner-harmony or secondary-bass "
+        f"attack per bar. Aim for {target_minimum}-{target_maximum} accompaniment attack "
+        f"onsets across this approximately {bar_count}-bar piece; for an 8-bar piece, "
+        "target 8-12 accompaniment attacks and 2-4 cadence/ending voicings. Add no more "
+        f"than {incremental_addition_attacks} attack onsets total, no more than 2 attack "
+        "onsets per bar, and at most 2 added notes at one onset. Keep bass/harmony below "
+        "the active melody. At annotated chords use only chord tones for bass/harmony; "
+        "prefer sustained roots and connect bass attacks by leaps no larger than one "
+        "octave. Without an annotated chord, use only consonant bass/harmony intervals. "
+        f"{harmony_requirement}"
+        "You may add a short passing or neighbor melody fill when it improves the line: "
+        "emit it with voice melody, only wholly inside a genuine source-melody rest, "
+        "never on a source onset or across a sounding source note, and keep it within "
+        "7 semitones of both neighboring source notes and within 4 semitones of at least "
+        f"one neighbor. {melody_fill_requirement}"
+        if incremental_guidance
+        else ""
+    )
     user = (
         f"{arrangement_source_context(source_ir)}\n"
         f"Effective arrangement tempo: {goal.tempo_bpm} BPM.\n\n"
         f"Playable range on this tuning: MIDI {low}-{high} "
         f"(the lowest playable note is {low}; never write a note below {low}). "
         f"Keep at most 4 notes sounding at the same onset. "
+        f"Keep the texture sparse: output at most {target_note_limit} target notes "
+        f"total, including melody. Do not harmonize every melody attack; normally add "
+        f"at most one new bass or inner-harmony attack per source melody attack. "
+        f"Reserve denser frames for occasional cadences. "
+        f"{incremental_instructions}"
         f"Goal: {goal.style}, {goal.tier} difficulty. Produce the target note set now."
     )
     try:
@@ -455,6 +552,8 @@ def propose_arrangement_outcome(
         notes = _parse_notes(parsed, protocol)
         if not any(n.voice == "melody" for n in notes):
             raise ValueError("proposal has no melody")
+        if len(notes) > target_note_limit:
+            raise ValueError("proposal exceeds the source-relative target-note limit")
         notes, _tuning, _capo, _profile, _tempo = ensure_solver_domain(
             notes,
             goal.tuning,

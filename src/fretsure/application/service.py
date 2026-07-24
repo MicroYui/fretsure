@@ -441,6 +441,7 @@ def arrange_score_bytes(
         pipeline = run_pipeline(
             imported.ir,
             pinned_llm,
+            incremental_agent=model_id != CONSTANT_LLM_MODEL_ID,
             options=PipelineOptions(
                 profile=profile,
                 n=options_snapshot.n,
@@ -449,7 +450,7 @@ def arrange_score_bytes(
                 tempo_override_bpm=options_snapshot.tempo_bpm,
             ),
         )
-        # The core repair loop records and terminates on transport failure so
+        # Core arrangement policies record and terminate on transport failure so
         # direct library callers retain a diagnostic replay.  The service seam
         # must still reject that request instead of stamping a successful
         # response with a model that failed to answer.

@@ -38,9 +38,19 @@ class DemoResult:
 
 
 def run_demo(
-    ir: MusicIR, llm: LLMClient, *, profile: Profile = MEDIAN_HAND, n: int = 1
+    ir: MusicIR,
+    llm: LLMClient,
+    *,
+    profile: Profile = MEDIAN_HAND,
+    n: int = 1,
+    incremental_agent: bool = False,
 ) -> DemoResult:
-    pipeline = run_pipeline(ir, llm, options=PipelineOptions(profile=profile, n=n))
+    pipeline = run_pipeline(
+        ir,
+        llm,
+        options=PipelineOptions(profile=profile, n=n),
+        incremental_agent=incremental_agent,
+    )
     return DemoResult(
         pipeline.arrangement,
         pipeline.faithfulness,
@@ -156,7 +166,7 @@ def main() -> None:
     ir = sample_ir(seed=args.seed, bars=args.bars)
     llm, engine = _make_llm(args.llm)
     with managed_llm_client(llm):
-        demo = run_demo(ir, llm, n=args.n)
+        demo = run_demo(ir, llm, n=args.n, incremental_agent=args.llm)
     print(render_demo(demo, ir, engine=engine))
 
 

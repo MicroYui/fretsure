@@ -341,6 +341,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = run_pipeline(
                 imported.ir,
                 llm,
+                incremental_agent=args.llm,
                 options=PipelineOptions(
                     n=args.n,
                     max_iters=args.max_iters,

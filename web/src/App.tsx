@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { arrangeScore, FretsureAPIError, getCapabilities } from "./api";
+import {
+  arrangeScore,
+  canonicalTabJSON,
+  exportGuitarPro,
+  exportMidi,
+  exportMusicXMLTab,
+  exportPdfTab,
+  exportTabText,
+  FretsureAPIError,
+  getCapabilities,
+} from "./api";
 import type {
   APIProblem,
   ArrangeControls,
@@ -59,6 +69,15 @@ function UploadIcon(): React.JSX.Element {
     <svg aria-hidden="true" viewBox="0 0 28 28">
       <path d="M14 19V5m0 0L8.5 10.5M14 5l5.5 5.5" />
       <path d="M5 17.5V23h18v-5.5" />
+    </svg>
+  );
+}
+
+function DownloadIcon(): React.JSX.Element {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20">
+      <path d="M10 3v9m0 0 4-4m-4 4L6 8" />
+      <path d="M4 14.5V17h12v-2.5" />
     </svg>
   );
 }
@@ -305,6 +324,57 @@ function TraceViewer({ trace }: { trace: ArrangementResponse["trace"] }) {
   );
 }
 
+type OutputProvenance = {
+  kind: "agent" | "offline" | "baseline";
+  kicker: string;
+  title: string;
+  detail: string;
+};
+
+function outputProvenance(result: ArrangementResponse): OutputProvenance | null {
+  if (!result.tab) return null;
+  const selection = result.trace.steps.find((step) => step.event === "CANDIDATE_SELECTED");
+  if (!selection || selection.candidate_index === null) {
+    return {
+      kind: "baseline",
+      kicker: "Deterministic baseline",
+      title: "No Agent candidate was used",
+      detail:
+        "Agent candidates were rejected or unavailable. This selected score comes entirely from the deterministic baseline.",
+    };
+  }
+  const candidate = selection.candidate_index + 1;
+  if (result.model.engine === "proxy") {
+    return {
+      kind: "agent",
+      kicker: "Agent contribution",
+      title: `Agent candidate ${candidate} selected`,
+      detail: `${result.model.model_id} proposed this candidate; it survived the solver and the displayed verification gates.`,
+    };
+  }
+  return {
+    kind: "offline",
+    kicker: "Deterministic candidate",
+    title: `Offline candidate ${candidate} selected`,
+    detail: "This score was produced by the offline candidate path; no remote Agent contributed notes.",
+  };
+}
+
+function saveDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.hidden = true;
+  document.body.append(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+}
+
 function Arrangement({
   result,
   onReset,
@@ -314,6 +384,12 @@ function Arrangement({
   onReset: () => void;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
 }) {
+  const [exporting, setExporting] = useState<
+    "musicxml" | "guitar-pro" | "pdf" | "tab-text" | "midi" | null
+  >(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const tab = result.tab;
+  const provenance = outputProvenance(result);
   const fidelityStatus = result.faithfulness
     ? `available fidelity ${result.faithfulness.passed ? "passed" : "needs review"} (${result.faithfulness.evaluated_dimensions.length}/3)`
     : "fidelity unavailable";
@@ -363,6 +439,167 @@ function Arrangement({
               <span>The result does not claim that no solution exists.</span>
             </div>
           )}
+          {provenance ? (
+            <section className={`output-provenance provenance-${provenance.kind}`}>
+              <span className="provenance-mark" aria-hidden="true" />
+              <div>
+                <p>{provenance.kicker}</p>
+                <strong>{provenance.title}</strong>
+                <span>{provenance.detail}</span>
+              </div>
+            </section>
+          ) : null}
+          {tab ? (
+            <section className="export-panel" aria-label="Download selected output">
+              <div className="export-panel-copy">
+                <p className="eyebrow">Take the result with you</p>
+                <strong>Choose the file for what you want to do next.</strong>
+                <span>
+                  MusicXML and Guitar Pro stay editable; PDF is print-ready; MIDI is for
+                  listening at {result.options.effective_tempo_bpm} BPM; ASCII and JSON expose
+                  the exact verified fingering.
+                </span>
+              </div>
+              <div className="export-actions">
+                <button
+                  disabled={exporting !== null}
+                  onClick={() => {
+                    setExportError(null);
+                    setExporting("musicxml");
+                    void exportMusicXMLTab(tab, result.options.effective_tempo_bpm)
+                      .then((asset) => saveDownload(asset.blob, asset.filename))
+                      .catch((error: unknown) => {
+                        setExportError(
+                          error instanceof Error
+                            ? error.message
+                            : "The MusicXML TAB export did not complete.",
+                        );
+                      })
+                      .finally(() => setExporting(null));
+                  }}
+                  type="button"
+                >
+                  <DownloadIcon />
+                  <span>
+                    {exporting === "musicxml" ? "Preparing MusicXML…" : "Download MusicXML"}
+                  </span>
+                </button>
+                <button
+                  disabled={exporting !== null}
+                  onClick={() => {
+                    setExportError(null);
+                    setExporting("guitar-pro");
+                    void exportGuitarPro(tab, result.options.effective_tempo_bpm)
+                      .then((asset) => saveDownload(asset.blob, asset.filename))
+                      .catch((error: unknown) => {
+                        setExportError(
+                          error instanceof Error
+                            ? error.message
+                            : "The Guitar Pro export did not complete.",
+                        );
+                      })
+                      .finally(() => setExporting(null));
+                  }}
+                  type="button"
+                >
+                  <DownloadIcon />
+                  <span>
+                    {exporting === "guitar-pro"
+                      ? "Preparing Guitar Pro…"
+                      : "Download Guitar Pro"}
+                  </span>
+                </button>
+                <button
+                  disabled={exporting !== null}
+                  onClick={() => {
+                    setExportError(null);
+                    setExporting("pdf");
+                    void exportPdfTab(tab, result.options.effective_tempo_bpm)
+                      .then((asset) => saveDownload(asset.blob, asset.filename))
+                      .catch((error: unknown) => {
+                        setExportError(
+                          error instanceof Error
+                            ? error.message
+                            : "The printable PDF export did not complete.",
+                        );
+                      })
+                      .finally(() => setExporting(null));
+                  }}
+                  type="button"
+                >
+                  <DownloadIcon />
+                  <span>{exporting === "pdf" ? "Preparing PDF…" : "Download PDF"}</span>
+                </button>
+                <button
+                  disabled={exporting !== null}
+                  onClick={() => {
+                    setExportError(null);
+                    setExporting("tab-text");
+                    void exportTabText(tab)
+                      .then((asset) => saveDownload(asset.blob, asset.filename))
+                      .catch((error: unknown) => {
+                        setExportError(
+                          error instanceof Error
+                            ? error.message
+                            : "The guitar TAB export did not complete.",
+                        );
+                      })
+                      .finally(() => setExporting(null));
+                  }}
+                  type="button"
+                >
+                  <DownloadIcon />
+                  <span>
+                    {exporting === "tab-text" ? "Preparing ASCII TAB…" : "Download ASCII TAB"}
+                  </span>
+                </button>
+                <button
+                  disabled={exporting !== null}
+                  onClick={() => {
+                    setExportError(null);
+                    setExporting("midi");
+                    void exportMidi(tab, result.options.effective_tempo_bpm)
+                      .then((asset) => saveDownload(asset.blob, asset.filename))
+                      .catch((error: unknown) => {
+                        setExportError(
+                          error instanceof Error ? error.message : "The MIDI export did not complete.",
+                        );
+                      })
+                      .finally(() => setExporting(null));
+                  }}
+                  type="button"
+                >
+                  <DownloadIcon />
+                  <span>{exporting === "midi" ? "Preparing MIDI…" : "Download MIDI"}</span>
+                </button>
+                <button
+                  disabled={exporting !== null}
+                  onClick={() => {
+                    setExportError(null);
+                    try {
+                      saveDownload(
+                        new Blob([canonicalTabJSON(tab)], { type: "application/json" }),
+                        "fretsure-arrangement.tab.json",
+                      );
+                    } catch (error: unknown) {
+                      setExportError(
+                        error instanceof Error ? error.message : "The Tab JSON download did not complete.",
+                      );
+                    }
+                  }}
+                  type="button"
+                >
+                  <DownloadIcon />
+                  <span>Download Tab JSON</span>
+                </button>
+              </div>
+              {exportError ? (
+                <p className="export-error" role="alert">
+                  {exportError}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
           <footer className="source-strip">
             <div>
               <span>Input</span>
@@ -737,23 +974,19 @@ export default function App(): React.JSX.Element {
                 </div>
               </label>
               <label>
-                <span>Repair passes</span>
-                <div className="range-control">
-                  <input
-                    aria-label="Repair passes"
-                    max={capabilities?.controls.arrange.max_iters.max ?? 16}
-                    min={capabilities?.controls.arrange.max_iters.min ?? 0}
-                    onChange={(event) =>
-                      setControls((current) => ({
-                        ...current,
-                        maxIters: Number(event.target.value),
-                      }))
-                    }
-                    type="range"
-                    value={controls.maxIters}
-                  />
-                  <output>{controls.maxIters}</output>
-                </div>
+                <span>Refinement policy</span>
+                <span className="policy-value">
+                  <strong>
+                    {controls.engine === "proxy"
+                      ? "Baseline-first · 8 checks"
+                      : "Deterministic baseline"}
+                  </strong>
+                  <small>
+                    {controls.engine === "proxy"
+                      ? "Agent additions survive only if the full score stays GREEN"
+                      : "No remote Agent or destructive repair loop"}
+                  </small>
+                </span>
               </label>
               <label>
                 <span>Tempo override</span>
@@ -805,23 +1038,23 @@ export default function App(): React.JSX.Element {
         <section className="method-strip" aria-label="How Fretsure works">
           <article>
             <span>01</span>
-            <h3>Propose</h3>
-            <p>The policy sketches a musical target—not a verdict.</p>
+            <h3>Preserve melody</h3>
+            <p>The source tune becomes the immutable GREEN baseline.</p>
           </article>
           <article>
             <span>02</span>
-            <h3>Check</h3>
-            <p>A deterministic oracle localizes physical conflicts.</p>
+            <h3>Propose layers</h3>
+            <p>The Agent suggests bass, harmony, and safe fills while source anchors stay fixed.</p>
           </article>
           <article>
             <span>03</span>
-            <h3>Repair</h3>
-            <p>Typed edits change only the diagnosed target, then re-check.</p>
+            <h3>Verify & rollback</h3>
+            <p>Every addition is checked; failed batches return to the last GREEN score.</p>
           </article>
           <article>
             <span>04</span>
-            <h3>Bind evidence</h3>
-            <p>Every result carries model, checker, profile and input hashes.</p>
+            <h3>Export evidence</h3>
+            <p>Export editable MusicXML/GP5, printable PDF, MIDI, ASCII, or JSON.</p>
           </article>
         </section>
       </main>

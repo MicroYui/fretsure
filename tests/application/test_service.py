@@ -261,11 +261,11 @@ def test_pipeline_failure_is_safe_and_drops_raw_provider_text(
     assert error.__cause__ is None
 
 
-def test_repair_transport_failure_is_a_typed_service_failure_not_a_200() -> None:
+def test_incremental_proposal_transport_failure_is_a_typed_service_failure_not_a_200() -> None:
     secret = "Bearer private-provider-token at /private/provider/socket"
 
-    class FailsDuringRepair:
-        model_id = "repair-transport-test"
+    class FailsDuringProposal:
+        model_id = "incremental-transport-test"
 
         def __init__(self) -> None:
             self.calls = 0
@@ -273,16 +273,9 @@ def test_repair_transport_failure_is_a_typed_service_failure_not_a_200() -> None
         def complete(self, **kwargs: object) -> str:
             del kwargs
             self.calls += 1
-            if self.calls == 1:
-                return (
-                    '{"notes":['
-                    '{"onset":"0","duration":"1","pitch":85,"voice":"melody"},'
-                    '{"onset":"0","duration":"1","pitch":86,"voice":"harmony"}'
-                    "]}"
-                )
             raise RuntimeError(secret)
 
-    llm = FailsDuringRepair()
+    llm = FailsDuringProposal()
     error = _application_error(
         lambda: arrange_score_bytes(
             _BASIC.read_bytes(),
@@ -292,7 +285,7 @@ def test_repair_transport_failure_is_a_typed_service_failure_not_a_200() -> None
         )
     )
 
-    assert llm.calls == 2
+    assert llm.calls == 1
     assert error.code is ApplicationCode.ARRANGEMENT_FAILED
     assert error.path == "arrangement"
     assert secret not in str(error)
@@ -324,6 +317,7 @@ def test_real_arrangement_matches_the_existing_pipeline_and_pins_model_once() ->
         imported.ir,
         ConstantLLM("noop"),
         options=PipelineOptions(n=1, max_iters=0, use_critic=False),
+        incremental_agent=True,
     )
     assert direct.arrangement.tab is not None
     assert tab_to_json(outcome.tab) == tab_to_json(direct.arrangement.tab)

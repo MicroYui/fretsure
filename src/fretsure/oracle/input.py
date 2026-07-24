@@ -51,12 +51,18 @@ MAX_AGENT_REPAIR_ITERS = 64
 # the former ~39 s / 105 MiB high-branching case is rejected before generation.
 MAX_SOLVER_WORK_UNITS = 12_000_000
 
-# Wall-relevant work coefficients.  One extension performs several bounded
-# active-note scans plus four static left-hand predicate calls; the selection
-# pass then sorts all extensions and may repeatedly scan variants while retaining
-# geometry/LH/RH diversity.  These constants deliberately overcharge those
-# bounded operations instead of pretending that one state×config pair is one unit.
-_SOLVER_EXTENSION_WORK_PER_CONFIG = 64
+# Wall-relevant work coefficients.  One extension advances two independent
+# finite oracle states: optimistic admission and pessimistic GREEN-prefix
+# viability.  Each performs several bounded active-note scans plus four static
+# left-hand predicate calls.  The doubled conservative charge also covers the
+# extra state retained per extension: at most six active strings, four fixed RH
+# history cells, and one shift summary for each profile.  Parent chains retain at
+# most the cumulative selected states already charged as extensions.  The
+# selection pass then sorts all extensions and may repeatedly scan variants while
+# retaining geometry/LH/RH diversity.  These constants deliberately overcharge
+# those bounded operations instead of pretending that one state×config pair is
+# one unit.
+_SOLVER_EXTENSION_WORK_PER_CONFIG = 128
 _SOLVER_SELECTION_RESCAN_PASSES = 4
 
 # ``check_playability`` can evaluate optimistic, pessimistic and median profiles.

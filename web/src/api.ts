@@ -2,6 +2,7 @@ import type {
   APIProblem,
   ArrangeControls,
   ArrangementResponse,
+  CanonicalTab,
   CapabilitiesResponse,
   FaithfulnessDimension,
   ScoreFormat,
@@ -288,6 +289,15 @@ const ARRANGEMENT_KEYS = [
   "stamps",
 ] as const;
 const MODEL_KEYS = ["model_id", "engine"] as const;
+const TAB_KEYS = ["tuning", "capo", "notes"] as const;
+const TAB_NOTE_KEYS = [
+  "onset",
+  "duration",
+  "string",
+  "fret",
+  "left_finger",
+  "right_finger",
+] as const;
 const FAITHFULNESS_KEYS = [
   "melody_f1",
   "bass_root_accuracy",
@@ -449,6 +459,37 @@ function isArrangementOptions(value: unknown): boolean {
   );
 }
 
+function isCanonicalTab(value: unknown): value is CanonicalTab {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, TAB_KEYS) &&
+    Array.isArray(value.tuning) &&
+    value.tuning.length === 6 &&
+    value.tuning.every((pitch) => isIntegerAtLeast(pitch, 0)) &&
+    isIntegerAtLeast(value.capo, 0) &&
+    Array.isArray(value.notes) &&
+    value.notes.every(
+      (note) =>
+        isRecord(note) &&
+        hasExactKeys(note, TAB_NOTE_KEYS) &&
+        isString(note.onset) &&
+        FRACTION.test(note.onset) &&
+        isString(note.duration) &&
+        FRACTION.test(note.duration) &&
+        note.duration !== "0/1" &&
+        isIntegerAtLeast(note.string, 0) &&
+        note.string <= 5 &&
+        isIntegerAtLeast(note.fret, 0) &&
+        isIntegerAtLeast(note.left_finger, 0) &&
+        note.left_finger <= 4 &&
+        (note.right_finger === "p" ||
+          note.right_finger === "i" ||
+          note.right_finger === "m" ||
+          note.right_finger === "a"),
+    )
+  );
+}
+
 function isPlayabilityDiagnostic(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -548,12 +589,13 @@ function candidateSelectionMatchesGates(
 
   const selection = selections[0];
   const data = selection.data;
+  const winner = data.winner_candidate_index;
   if (
     !hasExactKeys(data, CANDIDATE_SELECTED_KEYS) ||
-    !isIntegerAtLeast(data.winner_candidate_index, 0) ||
+    (winner !== null && !isIntegerAtLeast(winner, 0)) ||
     !isIntegerAtLeast(data.candidates_considered, 1) ||
-    data.winner_candidate_index >= data.candidates_considered ||
-    selection.candidate_index !== data.winner_candidate_index ||
+    (winner !== null && winner >= data.candidates_considered) ||
+    selection.candidate_index !== winner ||
     selection.iteration !== null ||
     (data.verdict !== "GREEN" && data.verdict !== "AMBER" && data.verdict !== "RED") ||
     data.verdict !== playability.verdict ||
@@ -615,7 +657,7 @@ function isArrangement(value: unknown): value is ArrangementResponse {
 
   const produced = value.status === "tab_produced";
   const productOutputsAgree = produced
-    ? isRecord(value.tab) &&
+    ? isCanonicalTab(value.tab) &&
       isNonEmptyString(value.ascii) &&
       isPlayability(value.playability) &&
       isFaithfulness(value.faithfulness)
@@ -751,4 +793,202 @@ export async function arrangeScore(
     throw new Error("Fretsure returned an incompatible arrangement document.");
   }
   return payload;
+}
+
+export interface DownloadAsset {
+  blob: Blob;
+  filename: string;
+}
+
+export function canonicalTabJSON(tab: CanonicalTab): string {
+  return JSON.stringify({
+    tuning: tab.tuning,
+    capo: tab.capo,
+    notes: tab.notes.map((note) => ({
+      onset: note.onset,
+      duration: note.duration,
+      string: note.string,
+      fret: note.fret,
+      left_finger: note.left_finger,
+      right_finger: note.right_finger,
+    })),
+  });
+}
+
+function attachmentFilename(header: string | null, fallback: string): string {
+  const match = header?.match(/(?:^|;)\s*filename="([A-Za-z0-9][A-Za-z0-9._-]{0,127})"/i);
+  return match?.[1] ?? fallback;
+}
+
+export async function exportMidi(
+  tab: CanonicalTab,
+  tempoBpm: number,
+  signal?: AbortSignal,
+): Promise<DownloadAsset> {
+  const query = new URLSearchParams({ tempo_bpm: String(tempoBpm) });
+  const response = await fetch(`/api/v1/exports/midi?${query.toString()}`, {
+    method: "POST",
+    headers: {
+      Accept: "audio/midi",
+      "Content-Type": "application/json",
+    },
+    body: canonicalTabJSON(tab),
+    signal,
+  });
+  if (!response.ok) {
+    const payload = await decodeJSON(response);
+    if (isProblem(payload)) throw new FretsureAPIError(payload);
+    throw new Error(`Fretsure MIDI export failed with HTTP ${response.status}.`);
+  }
+  const contentType = response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+  if (contentType !== "audio/midi") {
+    throw new Error("Fretsure returned an incompatible MIDI export.");
+  }
+  const blob = await response.blob();
+  if (blob.size === 0) {
+    throw new Error("Fretsure returned an empty MIDI export.");
+  }
+  return {
+    blob,
+    filename: attachmentFilename(
+      response.headers.get("content-disposition"),
+      "fretsure-arrangement.mid",
+    ),
+  };
+}
+
+export async function exportTabText(
+  tab: CanonicalTab,
+  signal?: AbortSignal,
+): Promise<DownloadAsset> {
+  const response = await fetch("/api/v1/exports/tab-text", {
+    method: "POST",
+    headers: {
+      Accept: "text/plain",
+      "Content-Type": "application/json",
+    },
+    body: canonicalTabJSON(tab),
+    signal,
+  });
+  if (!response.ok) {
+    const payload = await decodeJSON(response);
+    if (isProblem(payload)) throw new FretsureAPIError(payload);
+    throw new Error(`Fretsure guitar TAB export failed with HTTP ${response.status}.`);
+  }
+  const contentType = response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+  if (contentType !== "text/plain") {
+    throw new Error("Fretsure returned an incompatible guitar TAB export.");
+  }
+  const blob = await response.blob();
+  if (blob.size === 0) {
+    throw new Error("Fretsure returned an empty guitar TAB export.");
+  }
+  return {
+    blob,
+    filename: attachmentFilename(
+      response.headers.get("content-disposition"),
+      "fretsure-guitar-tablature.txt",
+    ),
+  };
+}
+
+async function exportProfessionalTab(
+  tab: CanonicalTab,
+  tempoBpm: number,
+  options: {
+    path: string;
+    accept: string;
+    expectedContentType: string;
+    label: string;
+    fallbackFilename: string;
+  },
+  signal?: AbortSignal,
+): Promise<DownloadAsset> {
+  const query = new URLSearchParams({ tempo_bpm: String(tempoBpm) });
+  const response = await fetch(`${options.path}?${query.toString()}`, {
+    method: "POST",
+    headers: {
+      Accept: options.accept,
+      "Content-Type": "application/json",
+    },
+    body: canonicalTabJSON(tab),
+    signal,
+  });
+  if (!response.ok) {
+    const payload = await decodeJSON(response);
+    if (isProblem(payload)) throw new FretsureAPIError(payload);
+    throw new Error(`Fretsure ${options.label} export failed with HTTP ${response.status}.`);
+  }
+  const contentType = response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+  if (contentType !== options.expectedContentType) {
+    throw new Error(`Fretsure returned an incompatible ${options.label} export.`);
+  }
+  const blob = await response.blob();
+  if (blob.size === 0) {
+    throw new Error(`Fretsure returned an empty ${options.label} export.`);
+  }
+  return {
+    blob,
+    filename: attachmentFilename(
+      response.headers.get("content-disposition"),
+      options.fallbackFilename,
+    ),
+  };
+}
+
+export function exportMusicXMLTab(
+  tab: CanonicalTab,
+  tempoBpm: number,
+  signal?: AbortSignal,
+): Promise<DownloadAsset> {
+  return exportProfessionalTab(
+    tab,
+    tempoBpm,
+    {
+      path: "/api/v1/exports/musicxml-tab",
+      accept: "application/vnd.recordare.musicxml+xml",
+      expectedContentType: "application/vnd.recordare.musicxml+xml",
+      label: "MusicXML TAB",
+      fallbackFilename: "fretsure-guitar-tablature.musicxml",
+    },
+    signal,
+  );
+}
+
+export function exportGuitarPro(
+  tab: CanonicalTab,
+  tempoBpm: number,
+  signal?: AbortSignal,
+): Promise<DownloadAsset> {
+  return exportProfessionalTab(
+    tab,
+    tempoBpm,
+    {
+      path: "/api/v1/exports/guitar-pro",
+      accept: "application/octet-stream",
+      expectedContentType: "application/octet-stream",
+      label: "Guitar Pro",
+      fallbackFilename: "fretsure-guitar-tab.gp5",
+    },
+    signal,
+  );
+}
+
+export function exportPdfTab(
+  tab: CanonicalTab,
+  tempoBpm: number,
+  signal?: AbortSignal,
+): Promise<DownloadAsset> {
+  return exportProfessionalTab(
+    tab,
+    tempoBpm,
+    {
+      path: "/api/v1/exports/pdf-tab",
+      accept: "application/pdf",
+      expectedContentType: "application/pdf",
+      label: "PDF TAB",
+      fallbackFilename: "fretsure-guitar-tab.pdf",
+    },
+    signal,
+  );
 }

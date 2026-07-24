@@ -1,0 +1,60 @@
+{
+  "deployment_status": "experimental_offline_only",
+  "feature_schema": "fingering-generic-burden-features@0.1.0",
+  "features": [
+    {
+      "name": "max_fret",
+      "scale": "11.883403459353628",
+      "scaled_nonnegative_weight": "0.90993065483100111"
+    },
+    {
+      "name": "duration_weighted_fret_exposure",
+      "scale": "151.77989344489924",
+      "scaled_nonnegative_weight": "0.41021332982702235"
+    },
+    {
+      "name": "shift_count",
+      "scale": "4.7738194196944495",
+      "scaled_nonnegative_weight": "0.81580745511648445"
+    },
+    {
+      "name": "shift_distance_micrometres",
+      "scale": "196095.44941775638",
+      "scaled_nonnegative_weight": "0.47354811322436891"
+    },
+    {
+      "name": "finger_load",
+      "scale": "19.807464455304423",
+      "scaled_nonnegative_weight": "0.033571922300352407"
+    },
+    {
+      "name": "string_crossings",
+      "scale": "20.310323957516268",
+      "scaled_nonnegative_weight": "0"
+    }
+  ],
+  "guard": "candidate.max_fret <= legacy_green_winner.max_fret",
+  "ranker_version": "fingering-green-ranker@0.1.0",
+  "selection_safety": "full_oracle_green_then_relative_max_fret_guard_then_pareto_frontier",
+  "source_artifact": {
+    "schema": "fingering-green-pairwise-ranker@0.1.0",
+    "sha256": "b6cc57b0b55ed55f959d827e46276371e87820938c5678adf860ffa60f845315",
+    "solver_version": "fingering-solver@0.3.0"
+  },
+  "training_data": {
+    "artifact_kind": "derived non-negative pairwise ranking weights trained from annotations",
+    "corpus": "GuitarSet",
+    "creators": [
+      "Qingyang Xi",
+      "Rachel M. Bittner",
+      "Johan Pauwels",
+      "Xuzhou Ye",
+      "Juan P. Bello"
+    ],
+    "doi": "10.5281/zenodo.3371780",
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "modifications": "Annotations were transformed into fixed windows and used to fit the recorded weights; no corpus data is redistributed.",
+    "record_url": "https://zenodo.org/records/3371780"
+  }
+}

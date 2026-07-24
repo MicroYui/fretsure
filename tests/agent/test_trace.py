@@ -103,9 +103,7 @@ def test_add_takes_a_detached_snapshot() -> None:
     source["nested"][1]["value"] = "after"  # type: ignore[index]
     source["nested"].append(2)  # type: ignore[union-attr]
 
-    assert trace.steps[0].data["source"] == {
-        "nested": [1, {"value": "before"}]
-    }
+    assert trace.steps[0].data["source"] == {"nested": [1, {"value": "before"}]}
 
 
 def test_product_events_reject_missing_and_unknown_payload_fields() -> None:
@@ -386,6 +384,24 @@ def test_candidate_selection_accepts_canonical_unavailable_fidelity_dimensions()
     assert data["faithfulness_passed"] is True
 
 
+def test_candidate_selection_accepts_index_free_deterministic_baseline() -> None:
+    candidate = _product_event("CANDIDATE_SELECTED").steps[0]
+    data = dict(candidate.data)
+    data["winner_candidate_index"] = None
+    trace = Trace()
+    trace.add(
+        "SELECT",
+        "Selected the deterministic baseline after the model candidates returned no tablature.",
+        event="CANDIDATE_SELECTED",
+        candidate_index=None,
+        **data,
+    )
+
+    step = trace.to_wire()["steps"][0]
+    assert step["candidate_index"] is None
+    assert step["data"]["winner_candidate_index"] is None
+
+
 @pytest.mark.parametrize(
     ("event", "changes"),
     [
@@ -427,9 +443,7 @@ def test_candidate_selection_accepts_canonical_unavailable_fidelity_dimensions()
         ("NO_CANDIDATE_SELECTED", {"playability_gate": "not_passed"}),
     ],
 )
-def test_product_event_semantic_forgery_is_rejected(
-    event: str, changes: dict[str, object]
-) -> None:
+def test_product_event_semantic_forgery_is_rejected(event: str, changes: dict[str, object]) -> None:
     with pytest.raises(TraceInputError):
         _product_event(event, **changes)
 
@@ -776,8 +790,7 @@ def test_nested_container_is_detached_before_source_grows_during_serialization(
         if (
             not mutated
             and event == "line"
-            and getattr(frame, "f_code", None)
-            is trace_module._normalize_json_value.__code__
+            and getattr(frame, "f_code", None) is trace_module._normalize_json_value.__code__
             and getattr(frame, "f_lineno", None) == snapshot_line
         ):
             if type(value) is list:

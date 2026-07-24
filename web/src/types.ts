@@ -115,6 +115,21 @@ export interface ArrangementOptionsWire {
   effective_tempo_bpm: number;
 }
 
+export interface CanonicalTabNote {
+  onset: string;
+  duration: string;
+  string: number;
+  fret: number;
+  left_finger: number;
+  right_finger: "p" | "i" | "m" | "a";
+}
+
+export interface CanonicalTab {
+  tuning: number[];
+  capo: number;
+  notes: CanonicalTabNote[];
+}
+
 export interface ArrangementResponse {
   api_version: string;
   service_version: string;
@@ -123,7 +138,7 @@ export interface ArrangementResponse {
   score: ScoreSummary;
   options: ArrangementOptionsWire;
   model: { model_id: string; engine: "offline" | "proxy" };
-  tab: Record<string, unknown> | null;
+  tab: CanonicalTab | null;
   ascii: string | null;
   playability: PlayabilityResult | null;
   faithfulness: FaithfulnessResult | null;

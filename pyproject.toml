@@ -29,12 +29,18 @@ musicxml = [
 midi = [
     "music21==10.5.0",
 ]
+exports = [
+    "pyguitarpro>=0.11,<0.12",
+    "reportlab>=4.4,<5",
+]
 score = [
     "defusedxml>=0.7.1,<1",
     "music21==10.5.0",
 ]
 service = [
     "fastapi>=0.139,<0.140",
+    "pyguitarpro>=0.11,<0.12",
+    "reportlab>=4.4,<5",
     "uvicorn[standard]>=0.41,<0.42",
 ]
 mcp = [
@@ -52,6 +58,10 @@ dev = [
     "httpx>=0.28,<0.29",
     "mcp>=1.28.1,<1.29",
     "music21==10.5.0",
+    "pdfplumber>=0.11,<0.12",
+    "pyguitarpro>=0.11,<0.12",
+    "pypdf>=6,<7",
+    "reportlab>=4.4,<5",
     "uvicorn[standard]>=0.41,<0.42",
 ]
 

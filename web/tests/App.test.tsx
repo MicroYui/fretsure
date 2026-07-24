@@ -59,6 +59,21 @@ describe("Fretsure product flow", () => {
     );
   });
 
+  it("explains the baseline-first proxy policy instead of exposing repair passes", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(capabilities)));
+    render(<App />);
+
+    expect(await screen.findByText("Deterministic baseline")).toBeInTheDocument();
+    expect(screen.queryByText("Repair passes")).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Engine"), "proxy");
+
+    expect(screen.getByText("Baseline-first · 8 checks")).toBeInTheDocument();
+    expect(
+      screen.getByText("Agent additions survive only if the full score stays GREEN"),
+    ).toBeInTheDocument();
+  });
+
   it("submits MIDI bytes unchanged and renders unavailable fidelity as N/A", async () => {
     const user = userEvent.setup();
     const fetchMock = vi
@@ -328,6 +343,167 @@ describe("Fretsure product flow", () => {
     expect(screen.getByText("Arrangement evidence / bounded search ended")).toBeInTheDocument();
     expect(screen.getAllByText("N/A")).toHaveLength(2);
     expect(screen.getByText("No public trace steps were recorded.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download MusicXML" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download Guitar Pro" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download PDF" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download ASCII TAB" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download MIDI" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download Tab JSON" })).not.toBeInTheDocument();
+  });
+
+  it("distinguishes an Agent-selected candidate from a deterministic baseline", async () => {
+    const user = userEvent.setup();
+    const agent = structuredClone(arrangement);
+    agent.model = { engine: "proxy", model_id: "gpt-5.6-sol" };
+    agent.stamps.model_id = "gpt-5.6-sol";
+    const baseline = structuredClone(agent);
+    const baselineSelection = baseline.trace.steps.find(
+      (step) => step.event === "CANDIDATE_SELECTED",
+    )!;
+    baselineSelection.candidate_index = null;
+    baselineSelection.data.winner_candidate_index = null;
+    baselineSelection.detail =
+      "Selected the deterministic baseline after the model candidates returned no tablature.";
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(capabilities))
+      .mockResolvedValueOnce(jsonResponse(agent))
+      .mockResolvedValueOnce(jsonResponse(baseline));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    await screen.findByText("Oracle ready");
+    await user.selectOptions(screen.getByRole("combobox"), "proxy");
+    await user.upload(
+      screen.getByLabelText("Choose a supported symbolic score"),
+      new File(["score"], "agent.musicxml"),
+    );
+    await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
+
+    expect(await screen.findByText("Agent candidate 1 selected")).toBeInTheDocument();
+    expect(screen.getByText(/gpt-5.6-sol proposed this candidate/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Arrange another" }));
+    await user.upload(
+      screen.getByLabelText("Choose a supported symbolic score"),
+      new File(["score"], "baseline.musicxml"),
+    );
+    await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
+
+    expect(await screen.findByText("No Agent candidate was used")).toBeInTheDocument();
+    expect(screen.getByText(/entirely from the deterministic baseline/)).toBeInTheDocument();
+  });
+
+  it("offers editable, printable, listening, and evidence export choices", async () => {
+    const user = userEvent.setup();
+    const midiBytes = new Uint8Array([0x4d, 0x54, 0x68, 0x64]);
+    const musicxmlBytes = new TextEncoder().encode("<score-partwise/>");
+    const guitarProBytes = new TextEncoder().encode("FICHIER GUITAR PRO v5.10");
+    const pdfBytes = new TextEncoder().encode("%PDF-1.4");
+    const guitarTab = "Six-line tablature (high e to low E):\ne|--0--|\n";
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(capabilities))
+      .mockResolvedValueOnce(jsonResponse(arrangement))
+      .mockResolvedValueOnce(
+        new Response(musicxmlBytes, {
+          headers: {
+            "content-disposition":
+              'attachment; filename="fretsure-guitar-tablature.musicxml"',
+            "content-type": "application/vnd.recordare.musicxml+xml",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(guitarProBytes, {
+          headers: {
+            "content-disposition": 'attachment; filename="fretsure-guitar-tab.gp5"',
+            "content-type": "application/octet-stream",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(pdfBytes, {
+          headers: {
+            "content-disposition": 'attachment; filename="fretsure-guitar-tab.pdf"',
+            "content-type": "application/pdf",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(guitarTab, {
+          headers: {
+            "content-disposition": 'attachment; filename="fretsure-guitar-tablature.txt"',
+            "content-type": "text/plain; charset=utf-8",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(midiBytes, {
+          headers: {
+            "content-disposition": 'attachment; filename="fretsure-arrangement.mid"',
+            "content-type": "audio/midi",
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const createObjectURL = vi.fn(() => "blob:fretsure-download");
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: revokeObjectURL,
+    });
+    const anchorClick = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined);
+    render(<App />);
+    await screen.findByText("Oracle ready");
+    await user.upload(
+      screen.getByLabelText("Choose a supported symbolic score"),
+      new File(["score"], "export.musicxml"),
+    );
+    await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
+
+    await user.click(await screen.findByRole("button", { name: "Download Tab JSON" }));
+    expect(createObjectURL).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "application/json" }),
+    );
+    expect(anchorClick).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: "Download MusicXML" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(2));
+    expect(String(fetchMock.mock.calls[2][0])).toBe(
+      "/api/v1/exports/musicxml-tab?tempo_bpm=90",
+    );
+    expect(fetchMock.mock.calls[2][1]?.body).toBe(JSON.stringify(arrangement.tab));
+
+    await user.click(screen.getByRole("button", { name: "Download Guitar Pro" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(3));
+    expect(String(fetchMock.mock.calls[3][0])).toBe(
+      "/api/v1/exports/guitar-pro?tempo_bpm=90",
+    );
+    expect(fetchMock.mock.calls[3][1]?.body).toBe(JSON.stringify(arrangement.tab));
+
+    await user.click(screen.getByRole("button", { name: "Download PDF" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(4));
+    expect(String(fetchMock.mock.calls[4][0])).toBe("/api/v1/exports/pdf-tab?tempo_bpm=90");
+
+    await user.click(screen.getByRole("button", { name: "Download ASCII TAB" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(5));
+    expect(String(fetchMock.mock.calls[5][0])).toBe("/api/v1/exports/tab-text");
+
+    await user.click(screen.getByRole("button", { name: "Download MIDI" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(7));
+    await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(6));
+    expect(String(fetchMock.mock.calls[6][0])).toBe("/api/v1/exports/midi?tempo_bpm=90");
+    expect(revokeObjectURL).toHaveBeenCalledTimes(6);
   });
 
   it.each(["AMBER", "RED"] as const)(
