@@ -727,10 +727,12 @@ handoff operation rather than runtime behavior.
 **Historical status (2026-07-18; superseded by Task 9 status below): OPERATIONAL PILOT
 COMPLETE / BILLING CONTRACT CORRECTED / TASK 9 ATTEMPTS 001–002 TERMINAL INCOMPLETE.**
 The canonical
-[pilot specification](../../experiments/2026-07-18-benchmark-v2-pilot-spec.json),
+pilot specification (`docs/experiments/2026-07-18-benchmark-v2-pilot-spec.json`,
+removed 2026-07-25),
 scripts-only collector, exact pricing/budget gate, clean-resume tests, and explicit
 spend-confirmation boundary are complete. See the
-[Task 8 readiness record](../../BENCHMARK_V2_TASK8_READINESS.md). The official-reference
+Task 8 readiness record (`docs/BENCHMARK_V2_TASK8_READINESS.md`, removed
+2026-07-25). The official-reference
 price contract and its pre-network input bound are verified. The user authorized
 attempt 001, which made 6 logical calls/7 provider attempts and committed 0/8 rows
 before the trace exception. The run cannot resume; its known cost is `$0.074775`, and

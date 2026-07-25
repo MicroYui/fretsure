@@ -243,7 +243,8 @@ The canonical pilot-spec SHA-256 is
 Task 8 suites passed 34 tests; Ruff and strict mypy passed both scripts. One-shot stub
 collection and a clean resume after one row produced byte-identical config, receipt,
 rows, blobs, and observations. Full hashes and resource arithmetic are recorded in
-[`BENCHMARK_V2_TASK8_READINESS.md`](../BENCHMARK_V2_TASK8_READINESS.md).
+`BENCHMARK_V2_TASK8_READINESS.md` (removed 2026-07-25 with the budget-gate
+machinery it documented).
 
 No `src/`, package metadata, dependency lock, runtime Git behavior, or frontend surface
 changed. No real proxy, network, or provider call was used. The official-reference
@@ -274,7 +275,8 @@ input ceilings to the seven attempts plus their 9,216 stage-specific reserved ou
 tokens gives a conservative `$0.613376` upper bound. The private
 pre-call, manifest, and WAL were preserved outside Git under ignored `outputs/private/`;
 their public audit hashes are recorded in
-[`BENCHMARK_V2_TASK8_READINESS.md`](../BENCHMARK_V2_TASK8_READINESS.md).
+`BENCHMARK_V2_TASK8_READINESS.md` (removed 2026-07-25 with the budget-gate
+machinery it documented).
 
 The exception exposed one narrow trace inconsistency. AMBER can legitimately have zero
 median-profile diagnostics because its verdict also considers optimistic/pessimistic

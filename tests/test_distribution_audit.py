@@ -164,56 +164,13 @@ def test_sdist_audit_requires_task7_task8_and_task9_evidence_and_exact_sources(
     with pytest.raises(ValueError, match="operational-prereg"):
         _audit_sdist(missing_prereg)
 
-    missing_pilot = tmp_path / "missing-task8-pilot.tar.gz"
+    missing_envelope = tmp_path / "missing-formal-billing-envelope.tar.gz"
     _write_test_sdist(
-        missing_pilot,
-        omitted="docs/experiments/2026-07-18-benchmark-v2-pilot-spec.json",
+        missing_envelope,
+        omitted=("docs/experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json"),
     )
-    with pytest.raises(ValueError, match="benchmark-v2-pilot-spec"):
-        _audit_sdist(missing_pilot)
-
-    for label, relative in (
-        (
-            "pricing-source",
-            "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-source.json",
-        ),
-        (
-            "pricing-contract",
-            "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract.json",
-        ),
-        (
-            "pricing-source-v2",
-            "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-source-v2.json",
-        ),
-        (
-            "pricing-contract-v2",
-            "docs/experiments/2026-07-18-gpt-5.6-sol-pricing-contract-v2.json",
-        ),
-        (
-            "formal-billing-envelope",
-            ("docs/experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json"),
-        ),
-    ):
-        missing_price = tmp_path / f"missing-task8-{label}.tar.gz"
-        _write_test_sdist(missing_price, omitted=relative)
-        with pytest.raises(ValueError, match=label):
-            _audit_sdist(missing_price)
-
-    missing_budget_gate = tmp_path / "missing-task8-budget-gate.tar.gz"
-    _write_test_sdist(
-        missing_budget_gate,
-        omitted="scripts/task8_budget_gate.py",
-    )
-    with pytest.raises(ValueError, match="task8_budget_gate"):
-        _audit_sdist(missing_budget_gate)
-
-    missing_pre_call_builder = tmp_path / "missing-task9-precall-builder.tar.gz"
-    _write_test_sdist(
-        missing_pre_call_builder,
-        omitted="scripts/build_benchmark_precall.py",
-    )
-    with pytest.raises(ValueError, match="build_benchmark_precall"):
-        _audit_sdist(missing_pre_call_builder)
+    with pytest.raises(ValueError, match="formal-billing-envelope"):
+        _audit_sdist(missing_envelope)
 
     missing_operational_stub_gate = tmp_path / "missing-task9-operational-stub-gate.tar.gz"
     _write_test_sdist(
