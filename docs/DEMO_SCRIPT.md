@@ -4,7 +4,7 @@ A tight, reproducible walkthrough for a screen recording or live demo. The defau
 path is fully offline, including the MusicXML and MIDI imports. A real-LLM benchmark or
 `--llm` arrangement needs the local proxy and defaults to canonical
 `gpt-5.6-sol`. The current package/router/importers are `0.6.0`,
-`score-input@0.1.0`, and `musicxml@0.3.0` / `midi@0.1.0`, with
+`score-input@0.1.0`, and `musicxml@0.4.0` / `midi@0.1.0`, with
 `music21==10.5.0` pinned exactly. Target length ≈ 3 minutes.
 
 Setup (once, off-camera):
@@ -39,11 +39,11 @@ Open `http://127.0.0.1:8000/`, click **Or load the CC0 example**, then
 
 - INPUT — a real, bundled CC0 MusicXML lead sheet sent as a raw request body.
 - ARRANGED TAB — a fingerstyle tab, high-e on top, with source SHA-256 provenance.
-- ORACLE VERDICT — GREEN, stamped `oracle@0.2.0` / `tab-input@0.2.0` /
+- ORACLE VERDICT — GREEN, stamped `oracle@0.3.0` / `tab-input@0.2.0` /
   `median@0.1` plus the canonical profile SHA-256.
 - FAITHFULNESS — melody-F1 `1.00`, bass-root `1.00`, harmony `0.29`, REVIEW,
   stamped `fidelity@0.3.0`; every score is backed by source evidence.
-- REPLAY — public `agent-trace@0.2.0` steps from plan/proposal through oracle and
+- REPLAY — public `agent-trace@0.3.0` steps from plan/proposal through oracle and
   selection, with typed evidence rather than hidden chain-of-thought.
 
 **Say:** "This path is offline and deterministic, but it is the real browser/API/
@@ -70,7 +70,7 @@ performance instead of quantizing it back to notation. Then linger on:
 
 ```text
 ORACLE VERDICT
-  GREEN ... checker oracle@0.2.0
+  GREEN ... checker oracle@0.3.0
 FAITHFULNESS TO INPUT
   melody-F1 1.00   bass-root N/A   harmony N/A
   available-dimension gate PASS (1/3 evaluated)
