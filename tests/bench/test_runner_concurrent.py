@@ -225,6 +225,7 @@ def _collect(
     with runner_module._deferred_operational_sigint() as stop_requested:
         result = runner_module._collect_operational_concurrent(
             context=context,
+            worker_count=policy.max_in_flight_units,
             output_dir=output_dir,
             resume=resume,
             agent_llm_factory=factory,
@@ -733,3 +734,39 @@ def test_terminal_concurrent_abort_receipt_binds_complete_lane_audit(
         assert audit_path.read_bytes() == audit_bytes
     finally:
         store.close()
+
+
+def test_stub_lanes_reproduce_the_serial_collection_byte_for_byte(tmp_path: Path) -> None:
+    """The offline coordinator drill that used to live in a separate script.
+
+    Four lanes with no provider must publish exactly what one lane publishes, so
+    the durable multi-lane path stays exercised without spending anything.
+    """
+
+    config = BenchmarkV2Config(
+        family_count=4,
+        bars=1,
+        bootstrap_repetitions=11,
+        sign_flip_draws=11,
+        run_id="stub-lane-drill",
+    )
+    serial = tmp_path / "serial"
+    concurrent = tmp_path / "concurrent"
+
+    runner_module.collect_benchmark_v2(config=config, output_dir=serial)
+    runner_module.collect_benchmark_v2(
+        config=config,
+        output_dir=concurrent,
+        concurrent_units=4,
+    )
+
+    assert _canonical_bytes(serial) == _canonical_bytes(concurrent)
+    assert set(_canonical_bytes(concurrent)) == {
+        "blobs.jsonl",
+        "config.json",
+        "observations.json",
+        "receipt.json",
+        "report.json",
+        "report.md",
+        "rows.jsonl",
+    }

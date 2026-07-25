@@ -1869,7 +1869,7 @@ def _execute_concurrent_unit(
     context: BenchmarkV2Context,
     permit: UnitPermit,
     clients: tuple[LLMClient, LLMClient],
-    request_guard: Callable[[bytes, bytes, int], None],
+    request_guard: Callable[[bytes, bytes, int], None] | None,
 ) -> _ConcurrentUnitArtifact:
     schedule_index = permit.schedule_index
     unit = context.plan.collection_schedule[schedule_index]
@@ -1980,7 +1980,10 @@ def _append_rebased_ready_unit(
             "ready unit is not the next main-journal schedule index",
         )
     call_offset = store.sink.intent_count
-    store.reserve_next_unit(ready.reservation)
+    # Scalar stub manifests carry no reservation contract; the preregistered and
+    # live manifests that fund provider calls always do.
+    if context.manifest.limits.complete_unit_reservation is not None:
+        store.reserve_next_unit(ready.reservation)
     for event in rebase_journal_events(
         ready.events,
         call_offset=call_offset,
@@ -2058,7 +2061,7 @@ def _run_operational_schedule(
     coordinator: ConcurrentUnitCoordinator,
     unit_artifact_dir: Path,
     client_pairs: tuple[tuple[LLMClient, LLMClient], ...],
-    request_guard: Callable[[bytes, bytes, int], None],
+    request_guard: Callable[[bytes, bytes, int], None] | None,
     stop_requested: Callable[[], bool],
     progress: ProgressReporter,
     *,
@@ -2319,22 +2322,60 @@ def _run_operational_schedule(
     return restored.completed_units
 
 
+def _stub_report_callback(
+    context: BenchmarkV2Context,
+    publish: Callable[[BenchmarkV2Report], None],
+) -> Callable[[FinalizationInputs], FinalizedReport]:
+    """Build the deterministic report a stub collection publishes with its rows."""
+
+    def report_callback(inputs: FinalizationInputs) -> FinalizedReport:
+        bindings = publication_bindings_from_artifacts(inputs.manifest, inputs.receipt)
+        report = build_benchmark_report(
+            context.plan,
+            context.goal,
+            context.profile,
+            inputs.rows,
+            inputs.blobs,
+            inputs.observations,
+            publication_bindings=bindings,
+            mode=ReplayMode.FULL_RESCORE,
+            bootstrap_seed=context.config.bootstrap_seed,
+            bootstrap_repetitions=context.config.bootstrap_repetitions,
+            sign_flip_seed=context.config.sign_flip_seed,
+            sign_flip_draws=context.config.sign_flip_draws,
+        )
+        publish(report)
+        return FinalizedReport(report.wire_json, report_to_markdown(report).encode("utf-8"))
+
+    return report_callback
+
+
 def _collect_operational_concurrent(
     *,
     context: BenchmarkV2Context,
+    worker_count: int,
     output_dir: Path,
     resume: bool,
     agent_llm_factory: Callable[[], LLMClient] | None,
     raw_llm_factory: Callable[[], LLMClient] | None,
     stop_requested: Callable[[], bool],
 ) -> BenchmarkV2Result:
+    # A stub run drives the same coordinator with no provider: that is how the
+    # durable multi-lane path stays exercised offline at full corpus scale.
     policy = context.live_policy
-    if policy is None:
+    if type(worker_count) is not int or not 2 <= worker_count <= 8:
+        raise BenchmarkInputError("concurrent_units", "must be an exact integer in 2..8")
+    if policy is not None and policy.max_in_flight_units != worker_count:
         raise BenchmarkInputError(
-            "live_policy", "operational concurrency requires a live run policy"
+            "concurrent_units", "differs from the live policy lane count"
         )
-    worker_count = policy.max_in_flight_units
     contract = CollectionExecutionContract.preregistered(max_in_flight_units=worker_count)
+    stub_report: BenchmarkV2Report | None = None
+
+    def set_report(value: BenchmarkV2Report) -> None:
+        nonlocal stub_report
+        stub_report = value
+
     client_pairs: tuple[tuple[LLMClient, LLMClient], ...] = ()
     if not resume:
         client_pairs = _create_v2_worker_client_pairs(
@@ -2403,9 +2444,15 @@ def _collect_operational_concurrent(
                     "staging", "rows do not form pure controls plus one schedule prefix"
                 )
 
-            operational_timeout_seconds = policy.request_timeout_seconds
+            operational_timeout_seconds = (
+                FORMAL_OPERATIONAL_REQUEST_TIMEOUT_SECONDS
+                if policy is None
+                else policy.request_timeout_seconds
+            )
             operational_attempt_overhead_seconds = (
-                policy.recorded_attempt_elapsed_overhead_seconds
+                FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS
+                if policy is None
+                else policy.recorded_attempt_elapsed_overhead_seconds
             )
             reservations = tuple(
                 _scheduled_unit_reservation(
@@ -2436,7 +2483,11 @@ def _collect_operational_concurrent(
                 run_id=context.plan.run_id,
                 unit_reservations=reservations,
                 collection_limits=_collection_reservation_limits(context),
-                lane_policy=_formal_lane_policy(policy),
+                lane_policy=(
+                    LaneObservationPolicy()
+                    if policy is None
+                    else _formal_lane_policy(policy)
+                ),
             )
             try:
                 if stop_requested():
@@ -2491,7 +2542,7 @@ def _collect_operational_concurrent(
                     coordinator,
                     unit_artifact_dir,
                     client_pairs,
-                    _formal_observation_request_guard(policy),
+                    None if policy is None else _formal_observation_request_guard(policy),
                     stop_requested,
                     progress,
                     committed_count=committed_count,
@@ -2516,7 +2567,15 @@ def _collect_operational_concurrent(
                 raise BenchmarkInputError(
                     "staging", "concurrent rows/blobs differ from the complete collection"
                 )
-            receipt = store.finalize()
+            if context.config.stub:
+                # A stub lane run must publish exactly what the serial stub run
+                # publishes, report included.  A live run still publishes only the
+                # five raw inputs and is scored later by independent replays.
+                receipt = store.finalize(
+                    report_callback=_stub_report_callback(context, set_report)
+                )
+            else:
+                receipt = store.finalize()
         except _OperationalResumeClientUnavailable:
             raise
         except KeyboardInterrupt:
@@ -2555,7 +2614,7 @@ def _collect_operational_concurrent(
             store.close()
     finally:
         _close_v2_client_pairs(client_pairs)
-    return BenchmarkV2Result(receipt, None)
+    return BenchmarkV2Result(receipt, stub_report)
 
 
 def _formal_abort_reason(error: BaseException) -> str:
@@ -2588,6 +2647,7 @@ def collect_benchmark_v2(
     agent_llm_factory: Callable[[], LLMClient] | None = None,
     raw_llm_factory: Callable[[], LLMClient] | None = None,
     authorized_maximum_spend_microunits: int | None = None,
+    concurrent_units: int | None = None,
 ) -> BenchmarkV2Result:
     """Collect one stub run or one explicitly authorized raw-only live run."""
 
@@ -2636,17 +2696,23 @@ def collect_benchmark_v2(
         assert context.live_policy is not None
         observation_request_guard = _formal_observation_request_guard(context.live_policy)
 
-    operational_concurrent = (
-        not context.config.stub
-        and context.live_policy is not None
-        and context.live_policy.max_in_flight_units > 1
-    )
-    if operational_concurrent:
-        if agent_llm_factory is None:
+    if context.live_policy is not None:
+        if concurrent_units is not None:
+            raise BenchmarkInputError(
+                "concurrent_units", "a live run takes its lane count from the policy"
+            )
+        worker_count = context.live_policy.max_in_flight_units
+    else:
+        worker_count = 1 if concurrent_units is None else concurrent_units
+        if type(worker_count) is not int or not 1 <= worker_count <= 8:
+            raise BenchmarkInputError("concurrent_units", "must be an exact integer in 1..8")
+    if worker_count > 1:
+        if not context.config.stub and agent_llm_factory is None:
             require_numeric_loopback_proxy_environment()
         with _deferred_operational_sigint() as stop_requested:
             return _collect_operational_concurrent(
                 context=context,
+                worker_count=worker_count,
                 output_dir=output_dir,
                 resume=resume,
                 agent_llm_factory=agent_llm_factory,
@@ -2953,14 +3019,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.sign_flip_seed,
         args.sign_flip_draws,
     )
-    live_values = (
-        args.max_spend_microunits,
-        args.confirm_spend,
-        args.collection_attempt,
-        args.concurrent_units,
-    )
-    if args.stub and any(value is not None for value in live_values):
-        parser.error("--stub cannot be combined with live collection controls")
+    if args.stub and any(
+        value is not None
+        for value in (args.max_spend_microunits, args.confirm_spend, args.collection_attempt)
+    ):
+        parser.error("--stub cannot be combined with live spend controls")
+    if args.concurrent_units is not None and not args.full_corpus:
+        parser.error("--concurrent-units requires --full-corpus")
     if args.live and not replay:
         if not args.full_corpus:
             parser.error("--live requires --full-corpus")
@@ -3010,6 +3075,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 authorized_maximum_spend_microunits=(
                     None if policy is None else args.confirm_spend
                 ),
+                concurrent_units=None if policy is not None else args.concurrent_units,
             )
         else:
             result = collect_benchmark_v2(
