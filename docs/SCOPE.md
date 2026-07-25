@@ -2,8 +2,8 @@
 
 The oracle makes a **narrow, bounded** claim. Read this before trusting a GREEN.
 
-> **Current empirical status (2026-07-17):** GREEN is currently a deterministic,
-> model-relative certification against `oracle@0.2.0`, `tab-input@0.2.0`, and a
+> **Current empirical status (2026-07-24):** GREEN is currently a deterministic,
+> model-relative certification against `oracle@0.3.0`, `tab-input@0.2.0`, and a
 > versioned, fingerprinted profile. The
 > real human-played gold set has **not** been collected; the repository contains only
 > six constructed sample labels for exercising the statistics pipeline. Therefore no
@@ -23,7 +23,7 @@ The oracle makes a **narrow, bounded** claim. Read this before trusting a GREEN.
 ## What GREEN means
 
 > For a valid ordinary six-string `Tab`, **GREEN** means that
-> `oracle@0.2.0` found the exhibited fingering feasible under the parameters it
+> `oracle@0.3.0` found the exhibited fingering feasible under the parameters it
 > actually consumes: hand span, hand-centre reach, shift-speed ceiling,
 > right-finger repeat-rate ceiling, scale length and max fret from the selected profile, plus capo and the
 > call-time tempo. `beats_per_bar` affects diagnostic measure/beat localization only,
@@ -73,7 +73,7 @@ bound; no such empirical rate is currently available.
 
 ## Public input-domain contract
 
-`oracle@0.2.0` is defined for **valid, ordinary six-string `Tab` values**. The public
+`oracle@0.3.0` is defined for **valid, ordinary six-string `Tab` values**. The public
 entry point enforces that boundary before any geometric or temporal predicate runs.
 `tab-input@0.2.0` requires exact built-in containers and scalar types, six strictly
 ascending MIDI tuning pitches, a bounded capo, non-negative exact-`Fraction` onsets,
@@ -101,15 +101,21 @@ weighted input-specific work units. Work estimation includes configuration gener
 state extensions, diversity selection, path reconstruction, and the final checker's
 three profiles plus sorting/frame-pair costs. Its bounded search can conservatively
 return typed `Infeasible`; that is not proof that no fingering exists. Every returned
-`Tab` still passes a complete final `oracle@0.2.0` check, so incompleteness cannot leak
+`Tab` still passes a complete final `oracle@0.3.0` check, so incompleteness cannot leak
 a RED result.
 
 The `score-input@0.1.0` router selects the actual importer from the inert suffix and
-binds its version in provenance. The current `musicxml@0.3.0` entry point narrows
+binds its version in provenance. The current `musicxml@0.4.0` entry point narrows
 untrusted MusicXML files before this boundary.
 It accepts uncompressed `.musicxml`/`.xml` and strict `.mxl` containers whose root is
 MusicXML 3.1/4.0 `score-partwise` in the frozen single-note-bearing-part/staff/voice monophonic
-lead-sheet subset, with one
+lead-sheet subset, plus one fail-closed two-staff piano-reduction shape. In that shape, staff 1
+is one monophonic melody, staff 2 follows one exact rewind per measure and contains simultaneous
+pitch sets that each identify exactly one supported harmony. The adapter emits
+`PIANO_REDUCTION_DERIVED`; lower-staff voicing and inversion are intentionally not preserved.
+Ambiguous roots, omitted chord members, independent counterpoint, misaligned timelines, or any
+otherwise unsupported raw semantic still fail before the rebuilt single-staff tree is preflighted
+again. The shared subset has one
 fixed positive decimal divisions value, one fixed traditional key signature, 4/4 and quarter-note
 tempo, ordinary notes/rests/ties, and whitelisted root+kind harmony. `defusedxml`
 enforces byte/tree limits and disables entity/external resolution; URI/resource
@@ -213,9 +219,15 @@ completed [`MIDI_ACCEPTANCE.md`](MIDI_ACCEPTANCE.md).
   **not** tendon coupling,
   fatigue, or endurance. The current schema cannot detect or flag fatigue.
 - **Only the notated tempo.** No rubato/expressive-timing modeling.
-- **Not "idiomatic".** We certify that *a* feasible fingering exists, not that it
-  is the most natural one. Musicality is a separate axis; the current LLM critic
-  has not earned a human-musicality claim.
+- **No universal "idiomatic" guarantee.** We certify that *a* feasible fingering
+  exists, not that it is the only or most natural one. Plan 7B's published-score
+  ranker resolves guarded near-ties only inside the fully checked GREEN pool and
+  improves held-out edition agreement; this is expert-score evidence, not a
+  representative-player calibration. Musicality and style resemblance are
+  separate axes. Jazz rhythm phases now have performer-disjoint GuitarSet
+  evidence and R&B has an explicitly labelled Funk-adjacent proxy; neither the
+  current LLM critic nor these controls have earned a human-musicality or
+  idiomatic-style claim.
 - **Model/profile-relative.** A preset currently selects model parameters only.
   Mapping those presets—or a user's measured hand size—to real-player capability
   is pending human calibration, so no “matching player” claim is made yet.
@@ -248,20 +260,23 @@ Technique-aware AMBER diagnostics are a future requirement, not a current capabi
 
 The current distribution package is `0.6.0`. Every oracle verdict carries `checker_version`, `profile_version`, a canonical
 profile SHA-256 fingerprint, and `input_schema_version`; current values are
-`oracle@0.2.0` and `tab-input@0.2.0`, while the bundled preset remains
+`oracle@0.3.0` and `tab-input@0.2.0`, while the bundled preset remains
 `median@0.1` with fingerprint
 `fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62`.
 Current CLI/product output names `fidelity@0.3.0` and `score-input@0.1.0` plus the
-actual importer. Successful MusicXML imports carry `musicxml@0.3.0`; successful MIDI
+actual importer. Successful MusicXML imports carry `musicxml@0.4.0`; successful MIDI
 imports carry `midi@0.1.0`. Both retain structured provenance and raw SHA-256; `.mxl`
 additionally binds the root XML SHA-256, exact rootfile member and
 `mxl-container@0.1.0`, while MIDI requires raw/root hashes to match and has no root
-member/container version. Public contracts are `agent-trace@0.2.0`,
-`fretsure-service@0.2.0`, `fretsure-api@0.2.0`, `fretsure-mcp@0.2.0`, and
-`fretsure-web@0.2.0`. Exact benchmark
+member/container version. Public contracts are `agent-trace@0.3.0`,
+`fretsure-service@0.3.0`, `fretsure-api@0.3.0`, `fretsure-mcp@0.2.0`, and
+`fretsure-web@0.3.0`. The player/style/technique registries are
+`profile-registry@0.2.0`, `arrangement-style-registry@0.2.0`, and
+`technique-profile-registry@0.1.0`; editable section checkpoints use
+`editable-arrangement-target@0.1.0` and `section-regeneration@0.1.0`. Exact benchmark
 reproduction still requires the Git commit and corpus artifact hash. In particular, the 2026-07-10/11
 LLM benchmark tables remain stamped `oracle@0.1.0` plus a legacy/unversioned fidelity
-snapshot; they are not results under the current `oracle@0.2.0` / `fidelity@0.3.0`
+snapshot; they are not results under the current `oracle@0.3.0` / `fidelity@0.3.0`
 checker pair.
 
 ## Gold/statistics trust boundary

@@ -272,10 +272,10 @@ def test_collection_row_bundle_indexes_joined_calls_once_without_byte_drift(
 
     assert joined_iterations == 1
     assert hashlib.sha256(rows_bytes).hexdigest() == (
-        "6931e13d8625d288d198b7c03aee3bbf0001cf7c2f758814ed49ff5f204f5c95"
+        "cb6d984fe15b161012907a440db8f050b1d3dc6175efe5df29a65673fa86f67c"
     )
     assert hashlib.sha256(blobs_bytes).hexdigest() == (
-        "0d074e5ce058b79e6026ae16a9a0a70a45dd9a45c69985f21b73321135fa26b2"
+        "a96fd3519c82c67ce78ff0c8822032bab2fe90524119d3c322aa4fb6fb722c6c"
     )
 
 
@@ -751,7 +751,7 @@ def test_report_aggregates_separate_strata_inference_baselines_usage_and_wire(
     wire = report_to_dict(report)
 
     assert hashlib.sha256(report.wire_json).hexdigest() == (
-        "8d57ca8b783798c02c02d256db6687b97ced77cb7ca370e4885484e76a9feed8"
+        "65ee876838ebe69ee99b60942493e229339c916a6dc77336d9cad1d845f094db"
     )
     assert report == build_benchmark_report(
         collection.plan,

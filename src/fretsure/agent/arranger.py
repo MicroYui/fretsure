@@ -15,12 +15,15 @@ from fractions import Fraction
 from typing import cast
 
 from fretsure.agent.model_calls import ModelCallScopeFactory, model_call_scope
-from fretsure.arrange.propose import propose_fingerstyle
+from fretsure.arrange.propose import propose_style
+from fretsure.arrange.styles import DEFAULT_ARRANGEMENT_STYLE, arrangement_style
+from fretsure.difficulty.tiers import difficulty_tier
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import MusicIR, Note, VoiceRole, snapshot_music_ir
 from fretsure.llm.client import ConstantLLM, LLMClient, LLMIntegrityError, extract_json
 from fretsure.oracle.input import ensure_solver_domain
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
+from fretsure.solver.technique import DEFAULT_TECHNIQUE_PROFILE, technique_profile
 
 PROPOSAL_OBJECT_PROTOCOL_VERSION = "arrangement-proposal-object@0.1.0"
 PROPOSAL_COMPACT_PROTOCOL_VERSION = "arrangement-proposal-compact@0.1.0"
@@ -61,9 +64,7 @@ MAX_COMPACT_SOURCE_EVENTS = (
 ) // COMPACT_OUTPUT_TOKENS_PER_EVENT
 _SOURCE_CONTEXT_DIGEST_DOMAIN = b"fretsure:arrangement-source-context@0.1.0\0"
 _PROMPT_DIGEST_DOMAIN = b"fretsure:arrangement-prompt@0.1.0\0"
-_CANONICAL_FRACTION = re.compile(
-    r"(?P<numerator>0|-?[1-9][0-9]*)/(?P<denominator>[1-9][0-9]*)\Z"
-)
+_CANONICAL_FRACTION = re.compile(r"(?P<numerator>0|-?[1-9][0-9]*)/(?P<denominator>[1-9][0-9]*)\Z")
 
 
 class ArrangementOutputProtocol(StrEnum):
@@ -124,8 +125,9 @@ class ProposalOutcome:
 
 @dataclass(frozen=True)
 class ArrangeGoal:
-    style: str = "fingerstyle"
+    style: str = DEFAULT_ARRANGEMENT_STYLE
     tier: str = "intermediate"
+    technique_profile: str = DEFAULT_TECHNIQUE_PROFILE
     tuning: tuple[int, ...] = STANDARD_TUNING
     capo: int = 0
     tempo_bpm: float = 90.0
@@ -396,24 +398,29 @@ def propose_arrangement_outcome(
     ir = MusicIR(notes, tuple(ir.chords), ir.meta)
     goal = ArrangeGoal(
         style=goal.style,
-        tier=goal.tier,
+        tier=difficulty_tier(goal.tier).name,
+        technique_profile=goal.technique_profile,
         tuning=tuning,
         capo=capo,
         tempo_bpm=tempo_bpm,
         extras=goal.extras,
     )
+    style = arrangement_style(goal.style)
+    technique = technique_profile(goal.technique_profile)
     # ``ConstantLLM`` is the documented offline switch that previously reached
     # the same rule path via malformed JSON.  Dispatch directly so the non-LLM
     # vertical slice continues to accept the importer's much larger resource
     # envelope without constructing an enormous prompt.
     if isinstance(llm, ConstantLLM):
         return ProposalOutcome(
-            propose_fingerstyle(
+            propose_style(
                 ir,
+                style.id,
                 goal.tuning,
                 goal.capo,
                 profile=profile,
                 tempo_bpm=goal.tempo_bpm,
+                difficulty_tier=goal.tier,
             ),
             ProposalStatus.CONSTANT_LLM_BYPASS,
             0,
@@ -435,9 +442,7 @@ def propose_arrangement_outcome(
         default=Fraction(0),
     )
     piece_end = (
-        source_ir.meta.duration_beats
-        if source_ir.meta.duration_beats is not None
-        else inferred_end
+        source_ir.meta.duration_beats if source_ir.meta.duration_beats is not None else inferred_end
     )
     numerator, denominator = source_ir.meta.time_sig
     bar_duration = Fraction(numerator * 4, denominator)
@@ -470,9 +475,7 @@ def propose_arrangement_outcome(
             has_genuine_melody_rest = True
             break
         note_end = note.onset + note.duration
-        melody_frontier = (
-            note_end if melody_frontier is None else max(melody_frontier, note_end)
-        )
+        melody_frontier = note_end if melody_frontier is None else max(melody_frontier, note_end)
     melody_fill_requirement = (
         "There is no genuine bounded source-melody rest in this piece, so do not "
         "invent or relabel any voice=melody fill. "
@@ -502,6 +505,26 @@ def propose_arrangement_outcome(
         if incremental_guidance
         else ""
     )
+    revision_instructions = goal.extras.get("revision_instructions", "")
+    baseline_section = goal.extras.get("baseline_section", "")
+    revision_context = (
+        f"\nRevision request: {revision_instructions}\n"
+        f"Current selected-section target: {baseline_section}\n"
+        if revision_instructions
+        else ""
+    )
+    control_guidance = (
+        ""
+        if (
+            style.id == DEFAULT_ARRANGEMENT_STYLE
+            and technique.id == DEFAULT_TECHNIQUE_PROFILE
+            and not revision_instructions
+        )
+        else (
+            f"Style guidance: {style.prompt_guidance} "
+            f"Player technique guidance: {technique.prompt_guidance} "
+        )
+    )
     user = (
         f"{arrangement_source_context(source_ir)}\n"
         f"Effective arrangement tempo: {goal.tempo_bpm} BPM.\n\n"
@@ -513,7 +536,9 @@ def propose_arrangement_outcome(
         f"at most one new bass or inner-harmony attack per source melody attack. "
         f"Reserve denser frames for occasional cadences. "
         f"{incremental_instructions}"
-        f"Goal: {goal.style}, {goal.tier} difficulty. Produce the target note set now."
+        f"{control_guidance}"
+        f"{revision_context}"
+        f"Goal: {style.id}, {goal.tier} difficulty. Produce the target note set now."
     )
     try:
         with model_call_scope(
@@ -532,12 +557,14 @@ def propose_arrangement_outcome(
         raise
     except (ValueError, KeyError, TypeError, RuntimeError, ZeroDivisionError):
         return ProposalOutcome(
-            propose_fingerstyle(
+            propose_style(
                 ir,
+                style.id,
                 goal.tuning,
                 goal.capo,
                 profile=profile,
                 tempo_bpm=goal.tempo_bpm,
+                difficulty_tier=goal.tier,
             ),
             ProposalStatus.CALL_FAILURE_FALLBACK,
             1,
@@ -564,12 +591,14 @@ def propose_arrangement_outcome(
         return ProposalOutcome(notes, ProposalStatus.LLM_SUCCESS, 1)
     except (ValueError, KeyError, TypeError, RuntimeError, ArithmeticError):
         return ProposalOutcome(
-            propose_fingerstyle(
+            propose_style(
                 ir,
+                style.id,
                 goal.tuning,
                 goal.capo,
                 profile=profile,
                 tempo_bpm=goal.tempo_bpm,
+                difficulty_tier=goal.tier,
             ),
             ProposalStatus.PARSE_VALIDATION_FALLBACK,
             1,

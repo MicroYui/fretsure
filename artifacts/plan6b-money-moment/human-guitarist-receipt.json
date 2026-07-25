@@ -1,0 +1,26 @@
+{
+  "schema": "plan6b-human-guitarist-receipt@0.1.0",
+  "status": "COMPLETE",
+  "performed_at": "2026-07-24T07:51:47Z",
+  "guitarist": {
+    "name_or_pseudonym": "Anonymous",
+    "experience": "Amateur guitarist, 3 years"
+  },
+  "instrument": {
+    "description": "Classical guitar",
+    "tuning": "E2 A2 D3 G3 B3 E4",
+    "capo": 0
+  },
+  "source_sha256": "0b6568715fc62cf963f7eac66adff13e73de6c88b1a7dcd65a26fab4f2332630",
+  "canonical_tab_sha256": "3764d70399152d2ead40e47e8cd230797acb2249383d93b2d632d6a881187a0e",
+  "requested_tier": "advanced",
+  "full_playthrough": "PARTIAL",
+  "localized_playability_issues": [
+    "Sequence 12-10-8-12 requires a large position change; the final 8-to-12 jump is comparatively awkward to fret."
+  ],
+  "perceived_difficulty": "Overall difficulty is not high because the tempo is only 84 BPM, but the large fret-position changes increase local difficulty.",
+  "musicality_notes": "Hard to evaluate reliably because the excerpt contains only four measures.",
+  "audio_or_video_locator": null,
+  "consent_to_publish_summary": false,
+  "signed_by": "Anonymous"
+}

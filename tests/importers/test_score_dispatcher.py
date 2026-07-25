@@ -76,8 +76,8 @@ def _supported_basic_melody_midi() -> bytes:
 def test_score_registry_is_exact_versioned_and_immutable() -> None:
     assert SCORE_INPUT_VERSION == "score-input@0.1.0"
     assert dict(SCORE_FORMAT_REGISTRY) == {
-        "musicxml": "musicxml@0.3.0",
-        "mxl": "musicxml@0.3.0",
+        "musicxml": "musicxml@0.4.0",
+        "mxl": "musicxml@0.4.0",
         "midi": "midi@0.1.0",
     }
 
@@ -162,7 +162,7 @@ def test_cross_format_same_melody_differs_only_in_public_source_evidence() -> No
     assert musicxml.provenance is not None and midi.provenance is not None
     assert musicxml.provenance.source_format == "musicxml"
     assert midi.provenance.source_format == "midi"
-    assert musicxml.importer_version == "musicxml@0.3.0"
+    assert musicxml.importer_version == "musicxml@0.4.0"
     assert midi.importer_version == "midi@0.1.0"
     assert musicxml.ir.meta.license == "CC0-1.0"
     assert midi.ir.meta.license == "unprovided"

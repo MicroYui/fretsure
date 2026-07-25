@@ -26,6 +26,8 @@ node_modules/
 web/dist/
 web/.vite/
 web/coverage/
+web/public/font/
+web/public/soundfont/
 *.tsbuildinfo
 *.log
 

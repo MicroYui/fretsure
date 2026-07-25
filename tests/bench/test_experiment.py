@@ -66,6 +66,7 @@ from fretsure.metrics.fidelity import FaithfulnessGate
 from fretsure.oracle.core import OracleResult
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 from fretsure.solver.api import Infeasible
+from fretsure.solver.technique import DEFAULT_TECHNIQUE_PROFILE
 from fretsure.tab import Tab
 
 _PROPOSAL = '{"notes":[{"onset":"0","duration":"1","pitch":64,"voice":"melody"}]}'
@@ -1046,6 +1047,7 @@ def test_agent_collection_threads_source_meter_through_solve_and_both_checks(
         tempo_bpm: float = 90.0,
         beats_per_bar: int = 4,
         beam: int = 16,
+        technique_profile_name: str = DEFAULT_TECHNIQUE_PROFILE,
     ) -> Tab | Infeasible:
         solve_meters.append(beats_per_bar)
         return real_solve(
@@ -1056,6 +1058,7 @@ def test_agent_collection_threads_source_meter_through_solve_and_both_checks(
             tempo_bpm=tempo_bpm,
             beats_per_bar=beats_per_bar,
             beam=beam,
+            technique_profile_name=technique_profile_name,
         )
 
     def recording_tool_check(

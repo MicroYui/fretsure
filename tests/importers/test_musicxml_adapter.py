@@ -16,6 +16,7 @@ from fretsure.importers import (
     ImportFailure,
     ImportSuccess,
     import_musicxml,
+    import_musicxml_bytes,
 )
 from fretsure.ir import ChordSymbol, Meta, MusicIR, Note, validate_ir
 
@@ -31,6 +32,111 @@ def _success(path: Path) -> ImportSuccess:
 
 def _without_provenance(ir: MusicIR) -> MusicIR:
     return replace(ir, meta=replace(ir.meta, source=""))
+
+
+def _two_staff_piano_reduction(*, backup_duration: str = "4") -> bytes:
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <work><work-title>Piano reduction</work-title></work>
+  <identification><rights>CC0-1.0</rights></identification>
+  <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <divisions>1</divisions>
+        <key><fifths>0</fifths><mode>major</mode></key>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <staves>2</staves>
+        <clef number="1"><sign>G</sign><line>2</line></clef>
+        <clef number="2"><sign>F</sign><line>4</line></clef>
+      </attributes>
+      <direction><direction-type><metronome><beat-unit>quarter</beat-unit>
+        <per-minute>96</per-minute></metronome></direction-type>
+        <sound tempo="96"/></direction>
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration>
+        <voice>1</voice><type>quarter</type><staff>1</staff></note>
+      <note><pitch><step>F</step><octave>4</octave></pitch><duration>1</duration>
+        <voice>1</voice><type>quarter</type><staff>1</staff></note>
+      <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration>
+        <voice>1</voice><type>quarter</type><staff>1</staff></note>
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration>
+        <voice>1</voice><type>quarter</type><staff>1</staff></note>
+      <backup><duration>{backup_duration}</duration></backup>
+      <note><pitch><step>E</step><octave>3</octave></pitch><duration>4</duration>
+        <voice>2</voice><type>whole</type><staff>2</staff></note>
+      <note><chord/><pitch><step>G</step><octave>3</octave></pitch><duration>4</duration>
+        <voice>2</voice><type>whole</type><staff>2</staff></note>
+      <note><chord/><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration>
+        <voice>2</voice><type>whole</type><staff>2</staff></note>
+    </measure>
+  </part>
+</score-partwise>
+""".encode()
+
+
+def test_two_staff_piano_reduction_derives_melody_and_unambiguous_harmony() -> None:
+    raw = _two_staff_piano_reduction()
+
+    result = import_musicxml_bytes(raw, "piano.musicxml")
+
+    assert isinstance(result, ImportSuccess), getattr(result, "diagnostics", None)
+    assert result.sha256 == hashlib.sha256(raw).hexdigest()
+    assert result.ir.notes == (
+        Note(Fraction(0), Fraction(1), 64, "melody"),
+        Note(Fraction(1), Fraction(1), 65, "melody"),
+        Note(Fraction(2), Fraction(1), 67, "melody"),
+        Note(Fraction(3), Fraction(1), 64, "melody"),
+    )
+    assert result.ir.chords == (
+        ChordSymbol(Fraction(0), "C", frozenset({0, 4, 7}), 0),
+    )
+    assert [warning.code for warning in result.warnings] == [
+        ImportCode.PIANO_REDUCTION_DERIVED
+    ]
+    assert "staff 1" in result.warnings[0].message
+    assert "staff 2" in result.warnings[0].message
+
+
+def test_two_staff_piano_reduction_rejects_a_misaligned_backup() -> None:
+    result = import_musicxml_bytes(
+        _two_staff_piano_reduction(backup_duration="3"),
+        "piano.musicxml",
+    )
+
+    assert isinstance(result, ImportFailure)
+    assert [diagnostic.code for diagnostic in result.diagnostics] == [
+        ImportCode.PIANO_REDUCTION_UNSUPPORTED
+    ]
+    assert "backup" in result.diagnostics[0].message.lower()
+
+
+def test_two_staff_piano_reduction_does_not_guess_an_ambiguous_chord_root() -> None:
+    raw = _two_staff_piano_reduction().replace(
+        b"<step>G</step><octave>3</octave>",
+        b"<step>G</step><alter>1</alter><octave>3</octave>",
+    )
+
+    result = import_musicxml_bytes(raw, "ambiguous.musicxml")
+
+    assert isinstance(result, ImportFailure)
+    assert [diagnostic.code for diagnostic in result.diagnostics] == [
+        ImportCode.PIANO_REDUCTION_UNSUPPORTED
+    ]
+    assert "unique supported harmony" in result.diagnostics[0].message
+
+
+def test_two_staff_piano_reduction_cannot_hide_an_unexpected_raw_error() -> None:
+    raw = _two_staff_piano_reduction().replace(
+        b"</measure>",
+        b'<barline><repeat direction="forward"/></barline></measure>',
+    )
+
+    result = import_musicxml_bytes(raw, "repeat.musicxml")
+
+    assert isinstance(result, ImportFailure)
+    codes = {diagnostic.code for diagnostic in result.diagnostics}
+    assert ImportCode.REPEAT_UNSUPPORTED in codes
+    assert ImportCode.PIANO_REDUCTION_DERIVED not in codes
 
 
 def test_basic_score_maps_exactly_to_music_ir() -> None:
@@ -61,7 +167,7 @@ def test_basic_score_maps_exactly_to_music_ir() -> None:
         duration_beats=Fraction(8),
     )
     assert result.ir.meta.duration_beats == Fraction(8)
-    assert result.importer_version == IMPORTER_VERSION == "musicxml@0.3.0"
+    assert result.importer_version == IMPORTER_VERSION == "musicxml@0.4.0"
     assert result.warnings == ()
     assert max(note.onset + note.duration for note in result.ir.notes) == Fraction(7)
     assert validate_ir(result.ir) == []

@@ -36,7 +36,7 @@ from fretsure.agent.trace import (
     oracle_trace_payload,
     target_checkpoint,
 )
-from fretsure.arrange.propose import propose_fingerstyle
+from fretsure.arrange.propose import propose_style
 from fretsure.ir import MusicIR, Note, snapshot_music_ir
 from fretsure.llm.client import LLMClient
 from fretsure.metrics.fidelity import FaithfulnessGate, Fidelity, faithfulness, fidelity
@@ -69,6 +69,7 @@ class ArrangeResult:
     critic: CriticScore | None
     trace: Trace
     candidates_tried: int
+    target: tuple[Note, ...] | None = None
 
 
 class CandidateStatus(StrEnum):
@@ -361,12 +362,14 @@ def _deterministic_baseline(
 ) -> DeterministicBaseline:
     """Solve the rule target once without consuming a model candidate slot."""
 
-    target = propose_fingerstyle(
+    target = propose_style(
         solver_ir,
+        goal.style,
         goal.tuning,
         goal.capo,
         profile=profile,
         tempo_bpm=goal.tempo_bpm,
+        difficulty_tier=goal.tier,
     )
     solved, oracle = solve_and_check(
         target,
@@ -375,6 +378,7 @@ def _deterministic_baseline(
         profile,
         tempo_bpm=goal.tempo_bpm,
         beats_per_bar=source_ir.meta.time_sig[0],
+        technique_profile_name=goal.technique_profile,
     )
     if isinstance(solved, Infeasible):
         return DeterministicBaseline(target, None, None, solved, None, None)
@@ -422,6 +426,7 @@ def build_candidate_trajectory(
     goal = ArrangeGoal(
         style=goal.style,
         tier=goal.tier,
+        technique_profile=goal.technique_profile,
         tuning=tuning,
         capo=capo,
         tempo_bpm=tempo_bpm,
@@ -459,6 +464,7 @@ def build_candidate_trajectory(
         llm,
         tempo_bpm=goal.tempo_bpm,
         beats_per_bar=source_ir.meta.time_sig[0],
+        technique_profile_name=goal.technique_profile,
         max_iters=max_iters,
         candidate_index=candidate_index,
         call_scope_factory=call_scope_factory,
@@ -538,6 +544,7 @@ def arrange_pool(
     temperature: float | None = None,
     temperature_schedule: tuple[float, ...] | None = None,
     call_scope_factory: ModelCallScopeFactory | None = None,
+    fallback_to_deterministic_baseline: bool = True,
 ) -> ArrangePool:
     """Build one ordered pool while retaining a trajectory for every slot."""
 
@@ -546,6 +553,10 @@ def arrange_pool(
     n = ensure_candidate_count(n)
     max_iters = ensure_repair_iterations(max_iters)
     use_critic = ensure_boolean_control(use_critic, path="use_critic")
+    fallback_to_deterministic_baseline = ensure_boolean_control(
+        fallback_to_deterministic_baseline,
+        path="fallback_to_deterministic_baseline",
+    )
     temperatures = _resolve_temperature_schedule(
         n,
         temperature=temperature,
@@ -562,6 +573,7 @@ def arrange_pool(
     goal = ArrangeGoal(
         style=goal.style,
         tier=goal.tier,
+        technique_profile=goal.technique_profile,
         tuning=tuning,
         capo=capo,
         tempo_bpm=tempo_bpm,
@@ -591,7 +603,7 @@ def arrange_pool(
     # tab, so avoid an unnecessary full-score solve on the normal success path.
     baseline = (
         _deterministic_baseline(source_ir, solver_ir, goal, profile)
-        if slots and slots[0] is None
+        if fallback_to_deterministic_baseline and slots and slots[0] is None
         else None
     )
     return ArrangePool(
@@ -728,6 +740,7 @@ def _select_baseline(
         None,
         trace,
         candidates_considered,
+        baseline.target,
     )
 
 
@@ -783,6 +796,7 @@ def best_of_k(pool: ArrangePool, k: int, *, use_critic: bool = True) -> ArrangeR
         best.critic,
         trace,
         k,
+        best.terminal.target,
     )
 
 
@@ -798,6 +812,7 @@ def arrange(
     temperature: float | None = None,
     temperature_schedule: tuple[float, ...] | None = None,
     call_scope_factory: ModelCallScopeFactory | None = None,
+    fallback_to_deterministic_baseline: bool = True,
 ) -> ArrangeResult:
     pool = arrange_pool(
         ir,
@@ -810,5 +825,6 @@ def arrange(
         temperature=temperature,
         temperature_schedule=temperature_schedule,
         call_scope_factory=call_scope_factory,
+        fallback_to_deterministic_baseline=fallback_to_deterministic_baseline,
     )
     return best_of_k(pool, pool.n)

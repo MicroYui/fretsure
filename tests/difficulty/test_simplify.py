@@ -6,7 +6,7 @@ import pytest
 
 import fretsure.difficulty.simplify as simplify_module
 from fretsure.difficulty.simplify import SimplifyResult, simplify_to_tier
-from fretsure.difficulty.tiers import BEGINNER
+from fretsure.difficulty.tiers import ADVANCED, BEGINNER
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import Note
 from fretsure.llm.client import FakeLLM
@@ -80,6 +80,32 @@ def test_deterministic() -> None:
     a = simplify_to_tier(_TARGET, BEGINNER, STANDARD_TUNING, 0, FakeLLM([_DROP]))
     b = simplify_to_tier(_TARGET, BEGINNER, STANDARD_TUNING, 0, FakeLLM([_DROP]))
     assert a.tab == b.tab and a.iterations == b.iterations
+
+
+def test_fixed_target_fingering_is_independent_of_difficulty_tier() -> None:
+    target = (Note(F(0), F(1), 76, "melody"),)
+
+    beginner = simplify_to_tier(
+        target,
+        BEGINNER,
+        STANDARD_TUNING,
+        0,
+        FakeLLM([]),
+        max_iters=0,
+    )
+    advanced = simplify_to_tier(
+        target,
+        ADVANCED,
+        STANDARD_TUNING,
+        0,
+        FakeLLM([]),
+        max_iters=0,
+    )
+
+    assert beginner.tab is not None
+    assert beginner.tab == advanced.tab
+    assert beginner.tier_result is not None and not beginner.tier_result.meets
+    assert advanced.tier_result is not None and advanced.tier_result.meets
 
 
 def test_simplify_trace_redacts_raw_reply_and_transport_exception() -> None:

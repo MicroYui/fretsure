@@ -11,9 +11,14 @@ from fretsure.agent.arranger import ArrangeGoal
 from fretsure.agent.harness import ArrangeResult, arrange
 from fretsure.agent.incremental import (
     MAX_INCREMENTAL_TRIAL_SOLVES,
-    arrange_incremental,
+    IncrementalCandidate,
+    arrange_incremental_pool,
+    best_of_incremental_pool,
 )
+from fretsure.agent.model_calls import ModelCallScopeFactory
 from fretsure.agent.trace import Trace
+from fretsure.arrange.styles import DEFAULT_ARRANGEMENT_STYLE, arrangement_style
+from fretsure.difficulty.tiers import difficulty_tier
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import IRInputError, MusicIR, snapshot_music_ir, validate_ir
 from fretsure.llm.client import LLMClient, snapshot_llm_model_id
@@ -31,6 +36,7 @@ from fretsure.oracle.input import (
 )
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 from fretsure.render.ascii import render_ascii
+from fretsure.solver.technique import DEFAULT_TECHNIQUE_PROFILE, technique_profile
 
 MAX_PIPELINE_CANDIDATES = MAX_AGENT_CANDIDATES
 MAX_PIPELINE_REPAIR_ITERS = MAX_AGENT_REPAIR_ITERS
@@ -43,6 +49,9 @@ class PipelineOptions:
     tuning: tuple[int, ...] = STANDARD_TUNING
     capo: int = 0
     profile: Profile = MEDIAN_HAND
+    style: str = DEFAULT_ARRANGEMENT_STYLE
+    difficulty_tier: str = "intermediate"
+    technique_profile: str = DEFAULT_TECHNIQUE_PROFILE
     n: int = 1
     max_iters: int = 0
     use_critic: bool = False
@@ -58,6 +67,7 @@ class PipelineResult:
     ascii: str | None
     source_tempo_bpm: float
     effective_tempo_bpm: float
+    alternatives: tuple[IncrementalCandidate, ...] = ()
 
     @property
     def trace(self) -> Trace:
@@ -84,6 +94,9 @@ def _validated_pipeline_options(options: object) -> PipelineOptions:
             tuning=object.__getattribute__(options, "tuning"),
             capo=object.__getattribute__(options, "capo"),
             profile=object.__getattribute__(options, "profile"),
+            style=object.__getattribute__(options, "style"),
+            difficulty_tier=object.__getattribute__(options, "difficulty_tier"),
+            technique_profile=object.__getattribute__(options, "technique_profile"),
             n=object.__getattribute__(options, "n"),
             max_iters=object.__getattribute__(options, "max_iters"),
             use_critic=object.__getattribute__(options, "use_critic"),
@@ -91,24 +104,20 @@ def _validated_pipeline_options(options: object) -> PipelineOptions:
         )
     except (AttributeError, TypeError):
         raise ValueError("PipelineOptions fields are missing") from None
-    if (
-        type(snapshot.n) is not int
-        or not 1 <= snapshot.n <= MAX_PIPELINE_CANDIDATES
-    ):
+    if type(snapshot.n) is not int or not 1 <= snapshot.n <= MAX_PIPELINE_CANDIDATES:
         raise ValueError(
-            "best-of-N candidate count must be an exact integer in "
-            f"1..{MAX_PIPELINE_CANDIDATES}"
+            f"best-of-N candidate count must be an exact integer in 1..{MAX_PIPELINE_CANDIDATES}"
         )
     if (
         type(snapshot.max_iters) is not int
         or not 0 <= snapshot.max_iters <= MAX_PIPELINE_REPAIR_ITERS
     ):
-        raise ValueError(
-            "max_iters must be an exact integer in "
-            f"0..{MAX_PIPELINE_REPAIR_ITERS}"
-        )
+        raise ValueError(f"max_iters must be an exact integer in 0..{MAX_PIPELINE_REPAIR_ITERS}")
     if type(snapshot.use_critic) is not bool:
         raise ValueError("use_critic must be an exact bool")
+    arrangement_style(snapshot.style)
+    difficulty_tier(snapshot.difficulty_tier)
+    technique_profile(snapshot.technique_profile)
     return snapshot
 
 
@@ -118,6 +127,7 @@ def run_pipeline(
     *,
     options: PipelineOptions,
     incremental_agent: bool = False,
+    call_scope_factory: ModelCallScopeFactory | None = None,
 ) -> PipelineResult:
     """Arrange, solve, verify, score, render, and expose a deterministic trace.
 
@@ -180,13 +190,16 @@ def run_pipeline(
             tempo_bpm=tempo_override,
         )
     goal = ArrangeGoal(
+        style=options.style,
+        tier=options.difficulty_tier,
+        technique_profile=options.technique_profile,
         tuning=tuning,
         capo=capo,
         tempo_bpm=effective_tempo,
     )
     llm_model_id = snapshot_llm_model_id(llm)
     if incremental_agent:
-        raw_arrangement = arrange_incremental(
+        incremental_pool = arrange_incremental_pool(
             ir,
             goal,
             llm,
@@ -194,7 +207,14 @@ def run_pipeline(
             n=n,
             max_iters=MAX_INCREMENTAL_TRIAL_SOLVES,
             use_critic=use_critic,
+            call_scope_factory=call_scope_factory,
         )
+        raw_arrangement = best_of_incremental_pool(
+            incremental_pool,
+            incremental_pool.requested_candidates,
+            use_critic=use_critic,
+        )
+        alternatives = incremental_pool.candidates
     else:
         raw_arrangement = arrange(
             ir,
@@ -204,7 +224,9 @@ def run_pipeline(
             n=n,
             max_iters=max_iters,
             use_critic=use_critic,
+            call_scope_factory=call_scope_factory,
         )
+        alternatives = ()
     trace = Trace()
     trace.add(
         "PLAN",
@@ -217,6 +239,9 @@ def run_pipeline(
         tuning=tuning,
         capo=capo,
         profile=profile.version,
+        style=options.style,
+        difficulty_tier=options.difficulty_tier,
+        technique_profile=options.technique_profile,
         checker_version=CHECKER_VERSION,
         profile_version=profile.version,
         profile_fingerprint=profile.fingerprint,
@@ -240,4 +265,5 @@ def run_pipeline(
         ascii=ascii_tab,
         source_tempo_bpm=source_tempo,
         effective_tempo_bpm=effective_tempo,
+        alternatives=alternatives,
     )

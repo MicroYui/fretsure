@@ -50,7 +50,7 @@ TraceEvent = Literal[
     "NO_CANDIDATE_SELECTED",
 ]
 
-TRACE_SCHEMA_VERSION = "agent-trace@0.2.0"
+TRACE_SCHEMA_VERSION = "agent-trace@0.3.0"
 TRACE_CHECKPOINT_SCHEMA_VERSION = "trace-checkpoint@0.1.0"
 
 MAX_TRACE_STEPS = 10_000
@@ -177,6 +177,9 @@ _PRODUCT_EVENT_FIELDS: dict[str, frozenset[str]] = {
             "tuning",
             "capo",
             "profile",
+            "style",
+            "difficulty_tier",
+            "technique_profile",
             "checker_version",
             "profile_version",
             "profile_fingerprint",
@@ -888,6 +891,9 @@ def _validate_product_payload(event: str, data: dict[str, object], *, path: str)
         _bounded_integer(data["capo"], path=f"{path}.capo", maximum=MAX_TRACE_SUPPORTED_FRET)
         for name in (
             "profile",
+            "style",
+            "difficulty_tier",
+            "technique_profile",
             "checker_version",
             "profile_version",
             "input_schema_version",
@@ -1242,8 +1248,7 @@ def _validate_product_detail(
             {
                 "Selected the deterministic baseline after the model candidates "
                 "returned no tablature.",
-                "Selected the deterministic melody baseline; no Agent addition "
-                "passed every gate.",
+                "Selected the deterministic melody baseline; no Agent addition passed every gate.",
             }
             if data["winner_candidate_index"] is None
             else {

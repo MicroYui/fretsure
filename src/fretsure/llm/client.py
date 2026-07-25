@@ -502,6 +502,7 @@ class ProxyLLM:
         model: str = DEFAULT_PROXY_MODEL,
         *,
         request_timeout_seconds: float = PROXY_REQUEST_TIMEOUT_SECONDS,
+        max_attempts: int = 3,
     ) -> None:
         model = validate_llm_model_id(model)
         if type(request_timeout_seconds) not in (int, float):
@@ -513,6 +514,8 @@ class ProxyLLM:
             raise LLMProxyConfigurationError(
                 "request_timeout_seconds must be a positive finite number"
             )
+        if type(max_attempts) is not int or not 1 <= max_attempts <= 3:
+            raise LLMProxyConfigurationError("max_attempts must be an exact integer in 1..3")
         base_url, auth_token = _proxy_environment()
         http_client: Any | None = None
         try:
@@ -548,6 +551,7 @@ class ProxyLLM:
         )
         self._model = model
         self._request_timeout_seconds = exact_request_timeout
+        self._max_attempts = max_attempts
         self._last_call_metadata: ProxyCallMetadata | None = None
         self._closed = False
 
@@ -594,7 +598,7 @@ class ProxyLLM:
             max_tokens,
             temperature,
         )
-        for attempt in range(3):  # transient proxy/network errors -> back off and retry
+        for attempt in range(self._max_attempts):
             _before_proxy_attempt(attempt)
             try:
                 from fretsure.llm._proxy_transport import proxy_attempt_deadline
@@ -644,9 +648,9 @@ class ProxyLLM:
                     raise RuntimeError("LLM proxy transport failed validation") from None
                 if not retryable:
                     raise RuntimeError("LLM call failed") from None
-                if attempt < 2:
+                if attempt + 1 < self._max_attempts:
                     time.sleep(0.5 * (attempt + 1))
-        self._last_call_metadata = _failed_proxy_metadata(3)
+        self._last_call_metadata = _failed_proxy_metadata(self._max_attempts)
         raise RuntimeError("LLM call failed after bounded retries") from None
 
 

@@ -15,13 +15,18 @@ import type {
   ArrangeControls,
   ArrangementResponse,
   CapabilitiesResponse,
+  DifficultyTierName,
   TraceStep,
   Verdict,
 } from "./types";
+import PerformanceWorkspace from "./PerformanceWorkspace";
 
 const FALLBACK_CONTROLS: ArrangeControls = {
   engine: "offline",
   profile: "median",
+  style: "fingerstyle",
+  difficultyTier: "intermediate",
+  techniqueProfile: "balanced",
   n: 1,
   maxIters: 0,
   useCritic: false,
@@ -97,6 +102,9 @@ function initialControls(capabilities: CapabilitiesResponse): ArrangeControls {
   return {
     engine: defaults.engine ?? "offline",
     profile: defaults.profile,
+    style: defaults.style,
+    difficultyTier: defaults.difficulty_tier,
+    techniqueProfile: defaults.technique_profile,
     n: defaults.n,
     maxIters: defaults.max_iters,
     useCritic: defaults.use_critic,
@@ -776,21 +784,16 @@ export default function App(): React.JSX.Element {
 
   if (result) {
     return (
-      <div className="app result-app">
-        <Header
-          capabilities={capabilities}
-          capabilityError={capabilityError}
-          modelLabel={`${result.model.engine} · ${result.model.model_id}`}
-        />
-        <Arrangement
-          headingRef={resultHeadingRef}
-          result={result}
-          onReset={() => {
-            setResult(null);
-            setProblem(null);
-          }}
-        />
-      </div>
+      <PerformanceWorkspace
+        capabilities={capabilities!}
+        initialTier={result.options.difficulty_tier}
+        result={result}
+        sourceFile={file!}
+        onReset={() => {
+          setResult(null);
+          setProblem(null);
+        }}
+      />
     );
   }
 
@@ -958,20 +961,114 @@ export default function App(): React.JSX.Element {
                 </select>
               </label>
               <label>
-                <span>Candidate breadth</span>
-                <div className="range-control">
-                  <input
-                    aria-label="Candidate breadth"
-                    max={capabilities?.controls.arrange.n.max ?? 8}
-                    min={capabilities?.controls.arrange.n.min ?? 1}
+                <span>Arrangement style</span>
+                <span className="policy-value">
+                  <select
+                    aria-label="Arrangement style"
                     onChange={(event) =>
-                      setControls((current) => ({ ...current, n: Number(event.target.value) }))
+                      setControls((current) => ({
+                        ...current,
+                        style: event.target.value as ArrangeControls["style"],
+                      }))
                     }
-                    type="range"
-                    value={controls.n}
-                  />
-                  <output>{controls.n}</output>
+                    value={controls.style}
+                  >
+                    {capabilities?.arrangement_styles.map((style) => (
+                      <option key={style.id} value={style.id}>{style.label}</option>
+                    ))}
+                  </select>
+                  <small>
+                    {capabilities?.arrangement_styles.find((style) => style.id === controls.style)
+                      ?.description ?? "Versioned musical intent"}
+                  </small>
+                </span>
+              </label>
+              <label>
+                <span>Player hand</span>
+                <span className="policy-value">
+                  <select
+                    aria-label="Player hand profile"
+                    onChange={(event) =>
+                      setControls((current) => ({ ...current, profile: event.target.value }))
+                    }
+                    value={controls.profile}
+                  >
+                    {capabilities?.profiles.map((profile) => (
+                      <option key={profile.name} value={profile.name}>
+                        {profile.name[0].toUpperCase() + profile.name.slice(1)} hand
+                      </option>
+                    ))}
+                  </select>
+                  <small>Physical reach model · separate from score difficulty</small>
+                </span>
+              </label>
+              <label>
+                <span>Technique preference</span>
+                <span className="policy-value">
+                  <select
+                    aria-label="Technique preference"
+                    onChange={(event) =>
+                      setControls((current) => ({
+                        ...current,
+                        techniqueProfile: event.target
+                          .value as ArrangeControls["techniqueProfile"],
+                      }))
+                    }
+                    value={controls.techniqueProfile}
+                  >
+                    {capabilities?.technique_profiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>{profile.label}</option>
+                    ))}
+                  </select>
+                  <small>
+                    {capabilities?.technique_profiles.find(
+                      (profile) => profile.id === controls.techniqueProfile,
+                    )?.description ?? "Ranks only fully checked GREEN fingerings"}
+                  </small>
+                </span>
+              </label>
+              <label>
+                <span>Candidate breadth</span>
+                <div className="candidate-control">
+                  <div className="range-control">
+                    <input
+                      aria-label="Candidate breadth"
+                      max={capabilities?.controls.arrange.n.max ?? 8}
+                      min={capabilities?.controls.arrange.n.min ?? 1}
+                      onChange={(event) =>
+                        setControls((current) => ({ ...current, n: Number(event.target.value) }))
+                      }
+                      type="range"
+                      value={controls.n}
+                    />
+                    <output>{controls.n}</output>
+                  </div>
+                  <small>
+                    {controls.engine === "proxy"
+                      ? `Up to ${controls.n * (controls.useCritic ? 2 : 1)} logical model call${controls.n * (controls.useCritic ? 2 : 1) === 1 ? "" : "s"}`
+                      : "0 model calls"}
+                  </small>
                 </div>
+              </label>
+              <label>
+                <span>Difficulty target</span>
+                <span className="policy-value">
+                  <select
+                    aria-label="Difficulty target"
+                    onChange={(event) =>
+                      setControls((current) => ({
+                        ...current,
+                        difficultyTier: event.target.value as DifficultyTierName,
+                      }))
+                    }
+                    value={controls.difficultyTier}
+                  >
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                  <small>Shapes the score, then checks the selected checkpoint</small>
+                </span>
               </label>
               <label>
                 <span>Refinement policy</span>
@@ -1100,7 +1197,7 @@ function Footer() {
         <span>Fret<em>sure</em></span>
       </div>
       <p>Versioned evidence for guitar arrangement.</p>
-      <p>Plan 6A · replay-first interface</p>
+      <p>Plan 7A · editable performance workspace</p>
     </footer>
   );
 }

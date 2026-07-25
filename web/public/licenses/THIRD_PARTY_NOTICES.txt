@@ -1,6 +1,21 @@
 Fretsure Web third-party software notices
 ==========================================
 
+alphaTab
+--------
+
+This distribution includes alphaTab 1.8.4 by Daniel Kuschny and contributors,
+licensed under the Mozilla Public License 2.0. The unmodified npm package is
+available as @coderline/alphatab@1.8.4 and its corresponding source is available
+from https://github.com/CoderLine/alphaTab/tree/v1.8.4.
+
+alphaTab includes TinySoundFont and SFZero under the MIT License, NVorbis under
+the MIT License, libvorbis-derived code under BSD-3-Clause, and SharpZipLib and
+the Haxe Standard Library under the MIT License. Its bundled SONiVOX SoundFont is
+licensed under Apache-2.0; its license is copied beside the deployed SoundFont.
+The bundled Bravura music font is licensed under SIL OFL-1.1; its license is
+copied beside the deployed font files.
+
 React family components
 -----------------------
 

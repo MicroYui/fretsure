@@ -18,17 +18,48 @@ from fretsure.application.contracts import (
     ArrangeOutcome,
     CheckOptions,
     CheckOutcome,
+    DifficultyOptions,
+    DifficultyOutcome,
+    FingeringEditOutcome,
     RenderOptions,
     RenderOutcome,
+    SectionRegenerationOutcome,
     ServiceCapabilities,
     SolveOptions,
     SolveOutcome,
+    VerifiedAlternative,
+)
+from fretsure.application.editable_target import (
+    EDITABLE_TARGET_SCHEMA_VERSION,
+    editable_target_to_wire,
 )
 from fretsure.application.target import (
     MAX_TARGET_JSON_BYTES,
     MAX_TARGET_JSON_DEPTH,
     MAX_TARGET_JSON_NODES,
     TARGET_INPUT_SCHEMA_VERSION,
+)
+from fretsure.arrange.revision import SECTION_REGENERATION_VERSION
+from fretsure.arrange.style_profiles import (
+    STYLE_PROFILE_SHA256,
+    STYLE_PROFILE_VERSION,
+)
+from fretsure.arrange.styles import (
+    ARRANGEMENT_STYLE_REGISTRY_VERSION,
+    ARRANGEMENT_STYLES,
+)
+from fretsure.difficulty.checker import DIFFICULTY_CHECKER_VERSION
+from fretsure.difficulty.estimate import (
+    PUBLISHED_GRADE_ESTIMATOR_VERSION,
+    PUBLISHED_GRADE_MODEL_SHA256,
+    PUBLISHED_GRADE_TRAINING_SCOPE,
+)
+from fretsure.difficulty.tiers import (
+    ADVANCED,
+    BEGINNER,
+    INTERMEDIATE,
+    Tier,
+    snapshot_tier,
 )
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.importers import SCORE_FORMAT_REGISTRY, SCORE_INPUT_VERSION, SCORE_SUFFIXES
@@ -45,7 +76,13 @@ from fretsure.oracle.input import (
     MIN_TEMPO_BPM,
     ORACLE_INPUT_SCHEMA_VERSION,
 )
-from fretsure.oracle.profiles import MEDIAN_HAND, Profile, validated_profile_snapshot
+from fretsure.oracle.profiles import (
+    LARGE_HAND,
+    MEDIAN_HAND,
+    SMALL_HAND,
+    Profile,
+    validated_profile_snapshot,
+)
 from fretsure.render.ascii import render_ascii
 from fretsure.render.contracts import (
     GUITAR_PRO_EXPORT_VERSION,
@@ -53,6 +90,17 @@ from fretsure.render.contracts import (
     PDF_TAB_EXPORT_VERSION,
 )
 from fretsure.solver.api import FINGERING_SOLVER_VERSION, Infeasible, InfeasibleCode
+from fretsure.solver.left_hand import LEFT_HAND_MODEL_VERSION
+from fretsure.solver.score import SCORE_SOLVER_VERSION
+from fretsure.solver.score_supervision import (
+    PUBLISHED_FINGERING_FEATURE_SCHEMA,
+    PUBLISHED_FINGERING_MODEL_SHA256,
+    PUBLISHED_FINGERING_RANKER_VERSION,
+)
+from fretsure.solver.technique import (
+    TECHNIQUE_PROFILE_REGISTRY_VERSION,
+    TECHNIQUE_PROFILES,
+)
 from fretsure.tab import MAX_TAB_JSON_BYTES, Tab, tab_to_json
 
 Wire = dict[str, object]
@@ -140,10 +188,7 @@ def _location_wire(location: SourceLocation | None) -> Wire | None:
     if any(value is not None and type(value) is not str for value in string_fields):
         raise _serialization_error("source.warnings.location")
     index_fields = (location.track_index, location.event_index, location.tick)
-    if any(
-        value is not None and (type(value) is not int or value < 0)
-        for value in index_fields
-    ):
+    if any(value is not None and (type(value) is not int or value < 0) for value in index_fields):
         raise _serialization_error("source.warnings.location")
     if location.channel is not None and (
         type(location.channel) is not int or not 1 <= location.channel <= 16
@@ -306,9 +351,7 @@ def _trace_wire(document_json: str) -> Wire:
     except (json.JSONDecodeError, RecursionError):
         raise _serialization_error("trace") from None
     wire = _canonical_plain_object(decoded, path="trace")
-    if wire.get("schema_version") != _trace_schema_version() or type(
-        wire.get("steps")
-    ) is not list:
+    if wire.get("schema_version") != _trace_schema_version() or type(wire.get("steps")) is not list:
         raise _serialization_error("trace")
     return wire
 
@@ -361,13 +404,24 @@ def _base_stamps(profile: Profile) -> Wire:
         "package_version": fretsure.__version__,
         "service_version": SERVICE_VERSION,
         "profile_registry_version": PROFILE_REGISTRY_VERSION,
+        "arrangement_style_registry_version": ARRANGEMENT_STYLE_REGISTRY_VERSION,
+        "arrangement_style_profile_version": STYLE_PROFILE_VERSION,
+        "arrangement_style_profile_sha256": STYLE_PROFILE_SHA256,
+        "technique_profile_registry_version": TECHNIQUE_PROFILE_REGISTRY_VERSION,
         "profile_version": snapshot.version,
         "profile_fingerprint": snapshot.fingerprint,
         "oracle_checker_version": CHECKER_VERSION,
         "oracle_input_schema_version": ORACLE_INPUT_SCHEMA_VERSION,
         "fidelity_checker_version": FIDELITY_CHECKER_VERSION,
         "fingering_solver_version": FINGERING_SOLVER_VERSION,
+        "score_solver_version": SCORE_SOLVER_VERSION,
+        "left_hand_model_version": LEFT_HAND_MODEL_VERSION,
+        "published_fingering_ranker_version": PUBLISHED_FINGERING_RANKER_VERSION,
+        "published_fingering_model_sha256": PUBLISHED_FINGERING_MODEL_SHA256,
+        "published_fingering_feature_schema": PUBLISHED_FINGERING_FEATURE_SCHEMA,
         "target_input_schema_version": TARGET_INPUT_SCHEMA_VERSION,
+        "editable_target_schema_version": EDITABLE_TARGET_SCHEMA_VERSION,
+        "section_regeneration_version": SECTION_REGENERATION_VERSION,
         "trace_schema_version": _trace_schema_version(),
     }
 
@@ -381,6 +435,9 @@ def _arrange_options_wire(
 ) -> Wire:
     return {
         "profile": _profile_wire(options.profile, profile),
+        "style": options.style,
+        "difficulty_tier": options.difficulty_tier,
+        "technique_profile": options.technique_profile,
         "tuning": list(STANDARD_TUNING),
         "capo": 0,
         "candidate_count": options.n,
@@ -397,6 +454,28 @@ def _check_options_wire(options: CheckOptions, profile: Profile) -> Wire:
         "profile": _profile_wire(options.profile, profile),
         "tempo_bpm": options.tempo_bpm,
         "beats_per_bar": options.beats_per_bar,
+    }
+
+
+def _difficulty_options_wire(options: DifficultyOptions, tier: Tier) -> Wire:
+    return {
+        "tier": tier.name,
+        "tempo_bpm": options.tempo_bpm,
+        "beats_per_bar": options.beats_per_bar,
+    }
+
+
+def _difficulty_tier_wire(tier: Tier) -> Wire:
+    snapshot = snapshot_tier(tier)
+    return {
+        "name": snapshot.name,
+        "profile": _profile_wire(snapshot.name, snapshot.profile),
+        "constraints": {
+            "max_simultaneous": snapshot.max_simultaneous,
+            "allow_barre": snapshot.allow_barre,
+            "max_position": snapshot.max_position,
+            "max_shifts_per_bar": snapshot.max_shifts_per_bar,
+        },
     }
 
 
@@ -431,6 +510,30 @@ def _infeasible_wire(value: Infeasible | None) -> Wire | None:
     }
 
 
+def _verified_alternative_wire(value: VerifiedAlternative) -> Wire:
+    if type(value) is not VerifiedAlternative:
+        raise _serialization_error("alternatives")
+    return {
+        "candidate_index": value.candidate_index,
+        "tab": _tab_wire(value.tab),
+        "ascii": value.ascii,
+        "playability": _playability_wire(value.oracle),
+        "faithfulness": _faithfulness_wire(value.faithfulness),
+        "work": {
+            "model_calls": value.model_calls,
+            "trial_solver_calls": value.solver_calls,
+            "proposed_additions": value.proposed_additions,
+            "accepted_additions": value.accepted_additions,
+        },
+        "proposal_status": value.proposal_status,
+        "observed_critic": {
+            "status": value.critic_status,
+            "overall": value.critic_overall,
+            "meaning": "machine_observation_not_human_musicality_evidence",
+        },
+    }
+
+
 def arrange_outcome_to_wire(outcome: ArrangeOutcome) -> Wire:
     """Serialize a full arrangement with independent product gates."""
 
@@ -460,10 +563,14 @@ def arrange_outcome_to_wire(outcome: ArrangeOutcome) -> Wire:
                 effective_tempo_bpm=outcome.effective_tempo_bpm,
             ),
             "model": {"model_id": outcome.model_id},
+            "editable_target": (
+                None if outcome.target is None else editable_target_to_wire(outcome.target)
+            ),
             "tab": _tab_wire(outcome.tab),
             "ascii": outcome.ascii,
             "playability": _playability_wire(outcome.oracle),
             "faithfulness": faithfulness,
+            "alternatives": [_verified_alternative_wire(item) for item in outcome.alternatives],
             "trace": trace,
             "stamps": stamps,
         }
@@ -484,6 +591,124 @@ def check_outcome_to_wire(outcome: CheckOutcome) -> Wire:
             "tab": _tab_wire(outcome.tab),
             "playability": _playability_wire(outcome.oracle),
             "stamps": _base_stamps(outcome.profile),
+        }
+    except ApplicationError:
+        raise
+    except Exception:
+        raise _serialization_error("outcome") from None
+
+
+def section_regeneration_outcome_to_wire(
+    outcome: SectionRegenerationOutcome,
+) -> Wire:
+    if type(outcome) is not SectionRegenerationOutcome:
+        raise _serialization_error("outcome")
+    try:
+        return {
+            "service_version": SERVICE_VERSION,
+            "status": outcome.status,
+            "selection": {
+                "start_measure": outcome.selection.start_measure,
+                "end_measure": outcome.selection.end_measure,
+                "locked_voices": list(outcome.selection.locked_voices),
+            },
+            "options": {
+                "profile": _profile_wire(outcome.options.profile, outcome.profile),
+                "style": outcome.options.style,
+                "difficulty_tier": outcome.options.difficulty_tier,
+                "technique_profile": outcome.options.technique_profile,
+                "tempo_bpm": outcome.options.tempo_bpm,
+            },
+            "model": {"model_id": outcome.model_id},
+            "editable_target": editable_target_to_wire(outcome.target),
+            "tab": _tab_wire(outcome.tab),
+            "ascii": outcome.ascii,
+            "playability": _playability_wire(outcome.oracle),
+            "faithfulness": _faithfulness_wire(outcome.faithfulness),
+            "revision": {
+                "schema_version": SECTION_REGENERATION_VERSION,
+                "proposal_status": outcome.proposal_status,
+                "model_calls": outcome.model_calls,
+                "reason": outcome.reason,
+            },
+            "stamps": _base_stamps(outcome.profile),
+        }
+    except ApplicationError:
+        raise
+    except Exception:
+        raise _serialization_error("outcome") from None
+
+
+def fingering_edit_outcome_to_wire(outcome: FingeringEditOutcome) -> Wire:
+    if type(outcome) is not FingeringEditOutcome:
+        raise _serialization_error("outcome")
+    try:
+        note = outcome.tab.notes[outcome.note_index]
+        return {
+            "service_version": SERVICE_VERSION,
+            "status": outcome.status,
+            "options": _check_options_wire(outcome.options, outcome.profile),
+            "tab": _tab_wire(outcome.tab),
+            "ascii": outcome.ascii,
+            "playability": _playability_wire(outcome.oracle),
+            "attempted_playability": _playability_wire(outcome.attempted_oracle),
+            "edit": {
+                "note_index": outcome.note_index,
+                "onset": _fraction_token(note.onset, path="edit.onset"),
+                "string": note.string,
+                "fret": note.fret,
+                "before_finger": outcome.before_finger,
+                "requested_finger": outcome.requested_finger,
+                "reason": outcome.reason,
+            },
+            "stamps": _base_stamps(outcome.profile),
+        }
+    except ApplicationError:
+        raise
+    except Exception:
+        raise _serialization_error("outcome") from None
+
+
+def difficulty_outcome_to_wire(outcome: DifficultyOutcome) -> Wire:
+    if type(outcome) is not DifficultyOutcome:
+        raise _serialization_error("outcome")
+    try:
+        stamps = _base_stamps(outcome.tier.profile)
+        stamps["difficulty_checker_version"] = DIFFICULTY_CHECKER_VERSION
+        stamps["published_grade_estimator_version"] = PUBLISHED_GRADE_ESTIMATOR_VERSION
+        stamps["published_grade_model_sha256"] = PUBLISHED_GRADE_MODEL_SHA256
+        return {
+            "service_version": SERVICE_VERSION,
+            "status": "checked",
+            "options": _difficulty_options_wire(outcome.options, outcome.tier),
+            "tab": _tab_wire(outcome.tab),
+            "tier": _difficulty_tier_wire(outcome.tier),
+            "difficulty": {
+                "checker_version": DIFFICULTY_CHECKER_VERSION,
+                "meets": outcome.result.meets,
+                "playable": outcome.result.playable,
+                "tier_violations": list(outcome.result.tier_violations),
+            },
+            "published_grade": {
+                "model_version": outcome.published_grade.model_version,
+                "model_sha256": PUBLISHED_GRADE_MODEL_SHA256,
+                "grade_system": outcome.published_grade.grade_system,
+                "estimated_grade": outcome.published_grade.estimated_grade,
+                "likely_interval": {
+                    "lower": outcome.published_grade.likely_interval[0],
+                    "upper": outcome.published_grade.likely_interval[1],
+                },
+                "band": outcome.published_grade.band,
+                "confidence": outcome.published_grade.confidence,
+                "burden_percentile": outcome.published_grade.burden_percentile,
+                "feature_percentiles": {
+                    name: value
+                    for name, value in outcome.published_grade.feature_percentiles
+                },
+                "training_scope": PUBLISHED_GRADE_TRAINING_SCOPE,
+                "meaning": "corpus_calibrated_estimate_not_a_playability_guarantee",
+            },
+            "stamps": stamps,
         }
     except ApplicationError:
         raise
@@ -542,18 +767,46 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
         stamps["musicxml_tab_export_version"] = MUSICXML_TAB_EXPORT_VERSION
         stamps["guitar_pro_export_version"] = GUITAR_PRO_EXPORT_VERSION
         stamps["pdf_tab_export_version"] = PDF_TAB_EXPORT_VERSION
+        stamps["difficulty_checker_version"] = DIFFICULTY_CHECKER_VERSION
         registry = dict(value.score_format_registry)
+        tiers = (BEGINNER, INTERMEDIATE, ADVANCED)
+        player_profiles = {
+            "small": SMALL_HAND,
+            "median": MEDIAN_HAND,
+            "large": LARGE_HAND,
+        }
         if (
             value.service_version != SERVICE_VERSION
             or value.score_input_version != SCORE_INPUT_VERSION
             or registry != dict(SCORE_FORMAT_REGISTRY)
             or value.input_suffixes != SCORE_SUFFIXES
+            or value.difficulty_tiers != tuple(tier.name for tier in tiers)
+            or value.profiles != tuple(player_profiles)
+            or value.arrangement_styles != tuple(ARRANGEMENT_STYLES)
+            or value.technique_profiles != tuple(TECHNIQUE_PROFILES)
         ):
             raise _serialization_error("capabilities.score_input")
         return {
             "service_version": value.service_version,
             "profile_registry_version": value.profile_registry_version,
-            "profiles": [_profile_wire("median", profile)],
+            "profiles": [_profile_wire(name, player_profiles[name]) for name in value.profiles],
+            "arrangement_styles": [
+                {
+                    "id": style.id,
+                    "label": style.label,
+                    "description": style.description,
+                }
+                for style in ARRANGEMENT_STYLES.values()
+            ],
+            "technique_profiles": [
+                {
+                    "id": technique.id,
+                    "label": technique.label,
+                    "description": technique.description,
+                }
+                for technique in TECHNIQUE_PROFILES.values()
+            ],
+            "difficulty_tiers": [_difficulty_tier_wire(tier) for tier in tiers],
             "inputs": {
                 "score_suffixes": list(value.input_suffixes),
                 "score_input": {
@@ -576,6 +829,9 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
                 "arrange": {
                     "defaults": {
                         "profile": value.default_arrange_options.profile,
+                        "style": value.default_arrange_options.style,
+                        "difficulty_tier": value.default_arrange_options.difficulty_tier,
+                        "technique_profile": value.default_arrange_options.technique_profile,
                         "n": value.default_arrange_options.n,
                         "max_iters": value.default_arrange_options.max_iters,
                         "use_critic": value.default_arrange_options.use_critic,
@@ -590,6 +846,16 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
                         "tempo_bpm": value.default_check_options.tempo_bpm,
                         "beats_per_bar": value.default_check_options.beats_per_bar,
                     },
+                    "tempo_bpm": {"min": MIN_TEMPO_BPM, "max": MAX_TEMPO_BPM},
+                    "beats_per_bar": {"min": 1, "max": MAX_BEATS_PER_BAR},
+                },
+                "difficulty": {
+                    "defaults": {
+                        "tier": value.default_difficulty_options.tier,
+                        "tempo_bpm": value.default_difficulty_options.tempo_bpm,
+                        "beats_per_bar": value.default_difficulty_options.beats_per_bar,
+                    },
+                    "tier": {"values": list(value.difficulty_tiers)},
                     "tempo_bpm": {"min": MIN_TEMPO_BPM, "max": MAX_TEMPO_BPM},
                     "beats_per_bar": {"min": 1, "max": MAX_BEATS_PER_BAR},
                 },
@@ -615,21 +881,28 @@ def capabilities_to_wire(value: ServiceCapabilities) -> Wire:
             "stamps": stamps,
             "implemented": [
                 "arrange_score_bytes",
+                "style_control",
+                "player_profiles",
+                "technique_profiles",
+                "section_regeneration",
+                "left_hand_fingering_edit",
                 "midi_input",
                 "check_playability",
+                "check_difficulty",
                 "bounded_fingering_search",
                 "render_ascii",
+                "render_audio",
+                "alphatab",
+                "animated_fretboard",
+                "live_ab",
                 "render_guitar_pro_5",
+                "render_guitar_pro_7",
                 "render_midi",
                 "render_musicxml_tab",
                 "render_pdf_tab",
                 "render_tab_text",
             ],
             "deferred": [
-                "render_audio",
-                "alphatab",
-                "animated_fretboard",
-                "live_ab",
                 "live_leaderboard",
             ],
         }
@@ -668,6 +941,9 @@ __all__ = [
     "arrange_outcome_to_wire",
     "capabilities_to_wire",
     "check_outcome_to_wire",
+    "difficulty_outcome_to_wire",
+    "fingering_edit_outcome_to_wire",
     "render_outcome_to_wire",
+    "section_regeneration_outcome_to_wire",
     "solve_outcome_to_wire",
 ]

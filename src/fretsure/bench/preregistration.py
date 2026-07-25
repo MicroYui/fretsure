@@ -23,7 +23,6 @@ import fretsure.bench.baselines as baselines_module
 from fretsure.agent.arranger import proposal_output_token_budget
 from fretsure.agent.critic import CRITIC_MAX_TOKENS
 from fretsure.agent.repair import REPAIR_MAX_TOKENS
-from fretsure.agent.trace import TRACE_SCHEMA_VERSION
 from fretsure.bench.artifacts import parse_canonical_json_bytes
 from fretsure.bench.contracts import (
     BENCHMARK_CORPUS_VERSION,
@@ -74,15 +73,16 @@ from fretsure.llm.client import (
     PROXY_REQUEST_TIMEOUT_SECONDS,
 )
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
-from fretsure.oracle.core import CHECKER_VERSION
 from fretsure.oracle.input import MAX_SOLVER_WORK_UNITS, ORACLE_INPUT_SCHEMA_VERSION
 from fretsure.oracle.profiles import MEDIAN_HAND
 from fretsure.solver.score import (
     MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS,
     MAX_SCORE_SOLVER_SEGMENTS,
-    SCORE_SOLVER_VERSION,
 )
 
+FROZEN_BENCHMARK_ORACLE_VERSION: Final = "oracle@0.2.0"
+FROZEN_BENCHMARK_SCORE_SOLVER_VERSION: Final = "score-solver@0.1.0"
+FROZEN_BENCHMARK_TRACE_VERSION: Final = "agent-trace@0.2.0"
 BENCHMARK_PREREGISTRATION_LEGACY_VERSION: Final = "benchmark-preregistration@0.1.0"
 BENCHMARK_PREREGISTRATION_VERSION: Final = "benchmark-preregistration@0.2.0"
 BENCHMARK_PROMPT_CONTRACT_VERSION: Final = "benchmark-prompt-contract@0.1.0"
@@ -1079,7 +1079,13 @@ def _wire(
             "manifest": BENCHMARK_MANIFEST_VERSION,
             "notegraph": BENCHMARK_NOTEGRAPH_VERSION,
             "observations": BENCHMARK_OBSERVATIONS_VERSION,
-            "oracle": CHECKER_VERSION,
+            # The 2026-07-17 preregistration is an immutable historical
+            # protocol, so these three entries stay pinned to the versions
+            # frozen then.  Current execution still binds its live checker
+            # and score-solver versions through the analysis-contract
+            # digest, and every emitted trace carries its own schema
+            # version.
+            "oracle": FROZEN_BENCHMARK_ORACLE_VERSION,
             "profile_fingerprint": MEDIAN_HAND.fingerprint,
             "profile_version": MEDIAN_HAND.version,
             "public_adapter": BENCHMARK_PUBLIC_ADAPTER_VERSION,
@@ -1092,9 +1098,9 @@ def _wire(
             "report": BENCHMARK_REPORT_VERSION,
             "row": BENCHMARK_ROW_VERSION,
             "score_input": SCORE_INPUT_VERSION,
-            "score_solver_composition": SCORE_SOLVER_VERSION,
+            "score_solver_composition": FROZEN_BENCHMARK_SCORE_SOLVER_VERSION,
             "tab_input": ORACLE_INPUT_SCHEMA_VERSION,
-            "trace": TRACE_SCHEMA_VERSION,
+            "trace": FROZEN_BENCHMARK_TRACE_VERSION,
         },
     }
     if operational:

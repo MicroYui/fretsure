@@ -3,15 +3,17 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
+import type { VerifiedAlternative } from "../src/types";
 import {
   arrangement,
   capabilities,
   jsonResponse,
   midiArrangement,
+  publishedGrade,
   producerMxlArrangement,
   producerXmlArrangement,
 } from "./fixtures";
@@ -19,6 +21,7 @@ import {
 describe("Fretsure product flow", () => {
   beforeEach(() => {
     Object.defineProperty(window, "scrollTo", { configurable: true, value: vi.fn() });
+    window.localStorage.clear();
   });
 
   afterEach(() => {
@@ -27,14 +30,28 @@ describe("Fretsure product flow", () => {
 
   it("loads server-owned controls and submits exact raw score bytes", async () => {
     const user = userEvent.setup();
+    const configuredArrangement = structuredClone(arrangement);
+    configuredArrangement.options.profile = capabilities.profiles[0];
+    configuredArrangement.options.style = "jazz";
+    configuredArrangement.options.difficulty_tier = "advanced";
+    configuredArrangement.options.technique_profile = "low_position";
+    configuredArrangement.stamps.profile_version = capabilities.profiles[0].version;
+    configuredArrangement.stamps.profile_fingerprint = capabilities.profiles[0].fingerprint;
+    configuredArrangement.playability!.profile_version = capabilities.profiles[0].version;
+    configuredArrangement.playability!.profile_fingerprint = capabilities.profiles[0].fingerprint;
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(capabilities))
-      .mockResolvedValueOnce(jsonResponse(arrangement));
+      .mockResolvedValueOnce(jsonResponse(configuredArrangement));
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
     expect(await screen.findByText("Oracle ready")).toBeInTheDocument();
+    expect(screen.getByText("Plan 7A · editable performance workspace")).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Arrangement style"), "jazz");
+    await user.selectOptions(screen.getByLabelText("Difficulty target"), "advanced");
+    await user.selectOptions(screen.getByLabelText("Player hand profile"), "small");
+    await user.selectOptions(screen.getByLabelText("Technique preference"), "low_position");
     const file = new File(["<score-partwise />"], "song.musicxml", {
       type: "application/xml",
     });
@@ -49,6 +66,10 @@ describe("Fretsure product flow", () => {
     expect(String(url)).toContain("/api/v1/arrangements?");
     expect(String(url)).toContain("filename=song.musicxml");
     expect(String(url)).toContain("engine=offline");
+    expect(String(url)).toContain("profile=small");
+    expect(String(url)).toContain("style=jazz");
+    expect(String(url)).toContain("difficulty_tier=advanced");
+    expect(String(url)).toContain("technique_profile=low_position");
     expect(String(url)).toContain("n=1");
     expect(String(url)).toContain("max_iters=0");
     expect(String(url)).toContain("use_critic=false");
@@ -72,6 +93,75 @@ describe("Fretsure product flow", () => {
     expect(
       screen.getByText("Agent additions survive only if the full score stays GREEN"),
     ).toBeInTheDocument();
+  });
+
+  it("carries the selected difficulty target into generation and the first check", async () => {
+    const user = userEvent.setup();
+    const tier = capabilities.difficulty_tiers[2];
+    const advancedArrangement = structuredClone(arrangement);
+    advancedArrangement.options.difficulty_tier = "advanced";
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url === "/api/v1/capabilities") return jsonResponse(capabilities);
+      if (url.startsWith("/api/v1/arrangements?")) return jsonResponse(advancedArrangement);
+      if (url.startsWith("/api/v1/difficulty/check?")) {
+        return jsonResponse({
+          api_version: capabilities.api_version,
+          service_version: capabilities.service_version,
+          status: "checked",
+          options: { tier: "advanced", tempo_bpm: 90, beats_per_bar: 4 },
+          tab: arrangement.tab,
+          tier,
+          difficulty: {
+            checker_version: "difficulty@0.1.0",
+            meets: true,
+            playable: "GREEN",
+            tier_violations: [],
+          },
+          published_grade: publishedGrade,
+          stamps: {
+            difficulty_checker_version: "difficulty@0.1.0",
+            published_grade_estimator_version: publishedGrade.model_version,
+            published_grade_model_sha256: publishedGrade.model_sha256,
+            profile_version: tier.profile.version,
+            profile_fingerprint: tier.profile.fingerprint,
+          },
+        });
+      }
+      if (url.startsWith("/api/v1/exports/musicxml-tab?")) {
+        return new Response("<score-partwise/>", {
+          headers: { "content-type": "application/vnd.recordare.musicxml+xml" },
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await screen.findByText("Oracle ready");
+    await user.selectOptions(screen.getByLabelText("Difficulty target"), "advanced");
+    await user.upload(
+      screen.getByLabelText("Choose a supported symbolic score"),
+      new File(["score"], "difficulty.musicxml"),
+    );
+    await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
+
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).includes("difficulty_tier=advanced"),
+      ),
+    ).toBe(true);
+    expect(await screen.findByRole("combobox", { name: "Difficulty tier" })).toHaveValue(
+      "advanced",
+    );
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).startsWith("/api/v1/difficulty/check?tier=advanced&"),
+        ),
+      ).toBe(true),
+    );
+    expect(await screen.findByText("Advanced · PASS")).toBeInTheDocument();
   });
 
   it("submits MIDI bytes unchanged and renders unavailable fidelity as N/A", async () => {
@@ -152,7 +242,13 @@ describe("Fretsure product flow", () => {
     expect(screen.getByText(/KEY_MODE_UNPROVIDED/)).toBeInTheDocument();
     expect(screen.queryByText("C major")).not.toBeInTheDocument();
     expect(screen.queryByText("A minor")).not.toBeInTheDocument();
-    expect(screen.getAllByText("musicxml@0.3.0").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("musicxml@0.4.0").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/fingering-solver@0\.6\.0/)).toHaveTextContent(
+      "score-solver@0.4.0",
+    );
+    expect(screen.getByText(/fingering-solver@0\.6\.0/)).toHaveTextContent(
+      "left-hand-ergonomics@0.1.0",
+    );
 
     const [url, init] = fetchMock.mock.calls[1];
     expect(String(url)).toContain(`filename=${producer.filename}`);
@@ -214,11 +310,61 @@ describe("Fretsure product flow", () => {
     expect(screen.getByText("Oracle returned GREEN with 0 diagnostics.")).toBeInTheDocument();
   });
 
+  it("opens on the selected checkpoint even when the trace contains a rejected trial", async () => {
+    const user = userEvent.setup();
+    const withRejectedTrial = structuredClone(arrangement);
+    withRejectedTrial.trace.steps[2].seq = 3;
+    withRejectedTrial.trace.steps.splice(2, 0, {
+      trace_schema_version: "agent-trace@0.3.0",
+      seq: 2,
+      kind: "EDIT",
+      event: "EDIT",
+      candidate_index: 0,
+      iteration: 1,
+      detail: "Rejected an unreachable addition and restored the selected checkpoint.",
+      data: {
+        policy: "incremental_v1",
+        accepted: false,
+        solver_called: true,
+        reason_code: "NON_GREEN",
+        verdict: "RED",
+        tab_checkpoint: {
+          type: "tab",
+          complete: true,
+          state: arrangement.tab,
+        },
+        diagnostics: [],
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(jsonResponse(capabilities))
+        .mockResolvedValueOnce(jsonResponse(withRejectedTrial)),
+    );
+    render(<App />);
+    await screen.findByText("Oracle ready");
+    await user.upload(
+      screen.getByLabelText("Choose a supported symbolic score"),
+      new File(["score"], "checkpoint.musicxml"),
+    );
+    await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
+
+    expect(await screen.findByText("Trial 1 rolled back")).toBeInTheDocument();
+    expect(screen.getByText("Score, audio and exports share one checkpoint")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Selected checkpoint/ })).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
+    expect(screen.queryByText("Trial replay is isolated from exports")).not.toBeInTheDocument();
+  });
+
   it("renders typed service failures and can dismiss them", async () => {
     const user = userEvent.setup();
     const problem = {
       type: "about:blank",
-      api_version: "fretsure-api@0.2.0",
+      api_version: "fretsure-api@0.3.0",
       status: 422,
       code: "IMPORT_REJECTED",
       title: "Request semantics rejected",
@@ -319,6 +465,7 @@ describe("Fretsure product flow", () => {
     const user = userEvent.setup();
     const noFingering = structuredClone(arrangement);
     noFingering.status = "no_fingering_within_budget";
+    noFingering.editable_target = null;
     noFingering.tab = null;
     noFingering.ascii = null;
     noFingering.playability = null;
@@ -364,15 +511,47 @@ describe("Fretsure product flow", () => {
     baselineSelection.data.winner_candidate_index = null;
     baselineSelection.detail =
       "Selected the deterministic baseline after the model candidates returned no tablature.";
-    const fetchMock = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(jsonResponse(capabilities))
-      .mockResolvedValueOnce(jsonResponse(agent))
-      .mockResolvedValueOnce(jsonResponse(baseline));
+    let arrangementRequest = 0;
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url === "/api/v1/capabilities") return jsonResponse(capabilities);
+      if (url.startsWith("/api/v1/arrangements?")) {
+        arrangementRequest += 1;
+        return jsonResponse(arrangementRequest === 1 ? agent : baseline);
+      }
+      if (url.startsWith("/api/v1/exports/musicxml-tab?")) {
+        return new Response("<score-partwise/>", {
+          headers: { "content-type": "application/vnd.recordare.musicxml+xml" },
+        });
+      }
+      if (url === "/api/v1/difficulty/check") {
+        return jsonResponse({
+          api_version: capabilities.api_version,
+          service_version: capabilities.service_version,
+          status: "checked",
+          options: { tier: "intermediate", tempo_bpm: 90, beats_per_bar: 4 },
+          tab: arrangement.tab,
+          tier: capabilities.difficulty_tiers[1],
+          difficulty: {
+            checker_version: "difficulty@0.1.0",
+            meets: true,
+            playable: "GREEN",
+            tier_violations: [],
+          },
+          published_grade: publishedGrade,
+          stamps: {
+            difficulty_checker_version: "difficulty@0.1.0",
+            published_grade_estimator_version: publishedGrade.model_version,
+            published_grade_model_sha256: publishedGrade.model_sha256,
+          },
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
     await screen.findByText("Oracle ready");
-    await user.selectOptions(screen.getByRole("combobox"), "proxy");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Engine" }), "proxy");
     await user.upload(
       screen.getByLabelText("Choose a supported symbolic score"),
       new File(["score"], "agent.musicxml"),
@@ -393,6 +572,316 @@ describe("Fretsure product flow", () => {
     expect(screen.getByText(/entirely from the deterministic baseline/)).toBeInTheDocument();
   });
 
+  it("inspects verified alternatives and opens only a budget-matched fair A/B", async () => {
+    const user = userEvent.setup();
+    const alternative = (candidateIndex: number): VerifiedAlternative => ({
+      candidate_index: candidateIndex,
+      tab: structuredClone(arrangement.tab!),
+      ascii: arrangement.ascii!,
+      playability: structuredClone(arrangement.playability!),
+      faithfulness: structuredClone(arrangement.faithfulness!),
+      work: {
+        model_calls: 1,
+        trial_solver_calls: candidateIndex + 1,
+        proposed_additions: 2,
+        accepted_additions: 1,
+      },
+      proposal_status: "LLM_SUCCESS",
+      observed_critic: {
+        status: null,
+        overall: null,
+        meaning: "machine_observation_not_human_musicality_evidence",
+      },
+    });
+    const agent = structuredClone(arrangement);
+    agent.model = { engine: "proxy", model_id: "gpt-5.6-sol" };
+    agent.stamps.model_id = "gpt-5.6-sol";
+    agent.options.candidate_count = 2;
+    agent.alternatives = [alternative(0), alternative(1)];
+    const tier = capabilities.difficulty_tiers[1];
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url === "/api/v1/capabilities") return jsonResponse(capabilities);
+      if (url.startsWith("/api/v1/arrangements?")) return jsonResponse(agent);
+      if (url === "/api/v1/difficulty/check") {
+        return jsonResponse({
+          api_version: capabilities.api_version,
+          service_version: capabilities.service_version,
+          status: "checked",
+          options: { tier: "intermediate", tempo_bpm: 90, beats_per_bar: 4 },
+          tab: arrangement.tab,
+          tier,
+          difficulty: {
+            checker_version: "difficulty@0.1.0",
+            meets: true,
+            playable: "GREEN",
+            tier_violations: [],
+          },
+          published_grade: publishedGrade,
+          stamps: {
+            difficulty_checker_version: "difficulty@0.1.0",
+            published_grade_estimator_version: publishedGrade.model_version,
+            published_grade_model_sha256: publishedGrade.model_sha256,
+            profile_version: tier.profile.version,
+            profile_fingerprint: tier.profile.fingerprint,
+          },
+        });
+      }
+      if (url.startsWith("/api/v1/exports/musicxml-tab?")) {
+        return new Response("<score-partwise/>", {
+          headers: { "content-type": "application/vnd.recordare.musicxml+xml" },
+        });
+      }
+      if (url.startsWith("/api/v1/exports/audio?")) {
+        return new Response(new Uint8Array(48), {
+          headers: { "content-type": "audio/wav" },
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(() => "blob:comparison"),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    render(<App />);
+    await screen.findByText("Oracle ready");
+    await user.selectOptions(screen.getByLabelText("Engine"), "proxy");
+    await user.upload(
+      screen.getByLabelText("Choose a supported symbolic score"),
+      new File(["score"], "alternatives.musicxml"),
+    );
+    await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
+
+    expect(await screen.findByText("Verified candidate pool")).toBeInTheDocument();
+    expect(screen.getByText(/Breadth used 2 logical model calls/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Inspect candidate 2" }));
+    expect(screen.getByText("Candidate 2 under inspection / independently checked")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Demo Lab" }));
+    expect(await screen.findByText("Blind A/B audition")).toBeInTheDocument();
+    expect(screen.getByText(/same source, model identity, tempo, SoundFont/i)).toBeInTheDocument();
+    expect(screen.getByText("NOT_KEPT · benchmark v2")).toBeInTheDocument();
+    expect(screen.getByText("READY · 1 call / output")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Choose A" }));
+    expect(
+      JSON.parse(window.localStorage.getItem("fretsure.feedback.v1")!).entries,
+    ).toEqual([
+      expect.objectContaining({
+        kind: "ab_preference",
+        candidate_indices: [0, 1],
+      }),
+    ]);
+  });
+
+  it("closes the offline revision, finger correction, and local feedback loop", async () => {
+    const user = userEvent.setup();
+    const editable = structuredClone(arrangement);
+    editable.score.duration_beats = "16/1";
+    editable.tab!.notes = [
+      {
+        onset: "0/1",
+        duration: "1/1",
+        string: 4,
+        fret: 1,
+        left_finger: 1,
+        right_finger: "i",
+      },
+    ];
+    const fingerEditedTab = structuredClone(editable.tab!);
+    fingerEditedTab.notes[0].left_finger = 2;
+    const sectionResponse = {
+      api_version: capabilities.api_version,
+      service_version: capabilities.service_version,
+      status: "accepted" as const,
+      selection: {
+        start_measure: 2,
+        end_measure: 4,
+        locked_voices: ["melody" as const],
+      },
+      options: {
+        profile: editable.options.profile,
+        style: editable.options.style,
+        difficulty_tier: editable.options.difficulty_tier,
+        technique_profile: editable.options.technique_profile,
+        tempo_bpm: editable.options.tempo_override_bpm,
+      },
+      model: editable.model,
+      editable_target: editable.editable_target!,
+      tab: editable.tab!,
+      ascii: editable.ascii!,
+      playability: editable.playability!,
+      faithfulness: editable.faithfulness!,
+      revision: {
+        schema_version: "section-regeneration@0.1.0" as const,
+        proposal_status: "CONSTANT_LLM_BYPASS",
+        model_calls: 0 as const,
+        reason: null,
+      },
+      stamps: editable.stamps,
+    };
+    const fingeringResponse = {
+      api_version: capabilities.api_version,
+      service_version: capabilities.service_version,
+      status: "applied" as const,
+      options: {
+        profile: editable.options.profile,
+        tempo_bpm: 90,
+        beats_per_bar: 4,
+      },
+      tab: fingerEditedTab,
+      ascii: editable.ascii!,
+      playability: editable.playability!,
+      attempted_playability: editable.playability!,
+      edit: {
+        note_index: 0,
+        onset: "0/1",
+        string: 4,
+        fret: 1,
+        before_finger: 1,
+        requested_finger: 2,
+        reason: null,
+      },
+      stamps: editable.stamps,
+    };
+    const tier = capabilities.difficulty_tiers[0];
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      const url = String(input);
+      if (url === "/api/v1/capabilities") return jsonResponse(capabilities);
+      if (url.startsWith("/api/v1/arrangements?")) return jsonResponse(editable);
+      if (url.startsWith("/api/v1/arrangements/regenerate-section?")) {
+        return jsonResponse(sectionResponse);
+      }
+      if (url.startsWith("/api/v1/fingering/left-hand?")) {
+        return jsonResponse(fingeringResponse);
+      }
+      if (url.startsWith("/api/v1/difficulty/check?")) {
+        return jsonResponse({
+          api_version: capabilities.api_version,
+          service_version: capabilities.service_version,
+          status: "checked",
+          options: { tier: "beginner", tempo_bpm: 90, beats_per_bar: 4 },
+          tab: JSON.parse(String(init?.body)),
+          tier,
+          difficulty: {
+            checker_version: "difficulty@0.1.0",
+            meets: true,
+            playable: "GREEN",
+            tier_violations: [],
+          },
+          published_grade: publishedGrade,
+          stamps: {
+            difficulty_checker_version: "difficulty@0.1.0",
+            published_grade_estimator_version: publishedGrade.model_version,
+            published_grade_model_sha256: publishedGrade.model_sha256,
+            profile_version: tier.profile.version,
+            profile_fingerprint: tier.profile.fingerprint,
+          },
+        });
+      }
+      if (url.startsWith("/api/v1/exports/musicxml-tab?")) {
+        return new Response("<score-partwise/>", {
+          headers: { "content-type": "application/vnd.recordare.musicxml+xml" },
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    await screen.findByText("Oracle ready");
+    await user.upload(
+      screen.getByLabelText("Choose a supported symbolic score"),
+      new File(["score"], "editable.musicxml"),
+    );
+    await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
+
+    expect(await screen.findByRole("heading", { name: "Regenerate a section" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Edit a finger number" })).toBeInTheDocument();
+    expect(screen.getByText("0 model calls")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("From measure"), { target: { value: "2" } });
+    expect(screen.getByLabelText("To measure")).toHaveValue(2);
+    fireEvent.change(screen.getByLabelText("To measure"), { target: { value: "4" } });
+    expect(screen.getByText("Drag across the score · measures 2–4")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Regenerate & verify" }));
+    expect(
+      await screen.findByText(
+        "Accepted: the revised section is now the selected GREEN checkpoint.",
+      ),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Left finger"), "2");
+    await user.click(screen.getByRole("button", { name: "Apply finger & recheck" }));
+    expect(await screen.findByText("Applied: note 1 now uses finger 2.")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Overall result"), "5");
+    await user.click(screen.getByLabelText("natural"));
+    await user.type(screen.getByPlaceholderText("What felt natural or awkward?"), "Easy reach");
+    await user.click(screen.getByRole("button", { name: "Save feedback" }));
+    expect(await screen.findByText("2 saved events")).toBeInTheDocument();
+    expect(screen.getByText(/API calls do not retrain the model/)).toBeInTheDocument();
+    expect(
+      JSON.parse(window.localStorage.getItem("fretsure.feedback.v1")!).entries,
+    ).toEqual([
+      expect.objectContaining({ kind: "fingering_correction", outcome: "applied" }),
+      expect.objectContaining({ kind: "rating", rating: 5, tags: ["natural"] }),
+    ]);
+
+    const revisionCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).startsWith("/api/v1/arrangements/regenerate-section?"),
+    );
+    expect(JSON.parse(String(revisionCall?.[1]?.body))).toMatchObject({
+      selection: { start_measure: 2, end_measure: 4, locked_voices: ["melody"] },
+      options: {
+        style: "fingerstyle",
+        difficulty_tier: "intermediate",
+        technique_profile: "balanced",
+      },
+    });
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).startsWith(
+          "/api/v1/fingering/left-hand?note_index=0&left_finger=2&profile=median",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("saves, reopens, and removes canonical results in the local-only library", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(jsonResponse(capabilities))
+        .mockResolvedValueOnce(jsonResponse(arrangement)),
+    );
+    render(<App />);
+    await screen.findByText("Oracle ready");
+    await user.upload(
+      screen.getByLabelText("Choose a supported symbolic score"),
+      new File(["score"], "library.musicxml"),
+    );
+    await user.click(screen.getByRole("button", { name: "Arrange and verify" }));
+    await screen.findByRole("heading", { name: "Evidence Song" });
+
+    await user.click(screen.getByRole("button", { name: "Save to local library" }));
+    expect(screen.getByRole("status")).toHaveTextContent("saved in this browser");
+    await user.click(screen.getByRole("button", { name: "Library" }));
+    expect(await screen.findByRole("heading", { name: "Personal library" })).toBeInTheDocument();
+    expect(screen.getByText(/does not store source bytes/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Evidence Song" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Open evidence" }));
+    expect(await screen.findByRole("heading", { name: "Evidence Song" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Library" }));
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(screen.getByText("No saved canonical results yet.")).toBeInTheDocument();
+  });
+
   it("offers editable, printable, listening, and evidence export choices", async () => {
     const user = userEvent.setup();
     const midiBytes = new Uint8Array([0x4d, 0x54, 0x68, 0x64]);
@@ -400,51 +889,75 @@ describe("Fretsure product flow", () => {
     const guitarProBytes = new TextEncoder().encode("FICHIER GUITAR PRO v5.10");
     const pdfBytes = new TextEncoder().encode("%PDF-1.4");
     const guitarTab = "Six-line tablature (high e to low E):\ne|--0--|\n";
-    const fetchMock = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(jsonResponse(capabilities))
-      .mockResolvedValueOnce(jsonResponse(arrangement))
-      .mockResolvedValueOnce(
-        new Response(musicxmlBytes, {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url === "/api/v1/capabilities") return jsonResponse(capabilities);
+      if (url.startsWith("/api/v1/arrangements?")) return jsonResponse(arrangement);
+      if (url === "/api/v1/difficulty/check") {
+        return jsonResponse({
+          api_version: capabilities.api_version,
+          service_version: capabilities.service_version,
+          status: "checked",
+          options: { tier: "intermediate", tempo_bpm: 90, beats_per_bar: 4 },
+          tab: arrangement.tab,
+          tier: capabilities.difficulty_tiers[1],
+          difficulty: {
+            checker_version: "difficulty@0.1.0",
+            meets: true,
+            playable: "GREEN",
+            tier_violations: [],
+          },
+          published_grade: publishedGrade,
+          stamps: {
+            difficulty_checker_version: "difficulty@0.1.0",
+            published_grade_estimator_version: publishedGrade.model_version,
+            published_grade_model_sha256: publishedGrade.model_sha256,
+          },
+        });
+      }
+      if (url.startsWith("/api/v1/exports/musicxml-tab?")) {
+        return new Response(musicxmlBytes, {
           headers: {
             "content-disposition":
               'attachment; filename="fretsure-guitar-tablature.musicxml"',
             "content-type": "application/vnd.recordare.musicxml+xml",
           },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(guitarProBytes, {
+        });
+      }
+      if (url.startsWith("/api/v1/exports/guitar-pro?")) {
+        return new Response(guitarProBytes, {
           headers: {
             "content-disposition": 'attachment; filename="fretsure-guitar-tab.gp5"',
             "content-type": "application/octet-stream",
           },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(pdfBytes, {
+        });
+      }
+      if (url.startsWith("/api/v1/exports/pdf-tab?")) {
+        return new Response(pdfBytes, {
           headers: {
             "content-disposition": 'attachment; filename="fretsure-guitar-tab.pdf"',
             "content-type": "application/pdf",
           },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(guitarTab, {
+        });
+      }
+      if (url === "/api/v1/exports/tab-text") {
+        return new Response(guitarTab, {
           headers: {
             "content-disposition": 'attachment; filename="fretsure-guitar-tablature.txt"',
             "content-type": "text/plain; charset=utf-8",
           },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(midiBytes, {
+        });
+      }
+      if (url.startsWith("/api/v1/exports/midi?")) {
+        return new Response(midiBytes, {
           headers: {
             "content-disposition": 'attachment; filename="fretsure-arrangement.mid"',
             "content-type": "audio/midi",
           },
-        }),
-      );
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
     vi.stubGlobal("fetch", fetchMock);
     const createObjectURL = vi.fn(() => "blob:fretsure-download");
     const revokeObjectURL = vi.fn();
@@ -474,35 +987,45 @@ describe("Fretsure product flow", () => {
     expect(anchorClick).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole("button", { name: "Download MusicXML" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(2));
-    expect(String(fetchMock.mock.calls[2][0])).toBe(
+    const musicXmlCalls = fetchMock.mock.calls.filter(([input]) =>
+      String(input).startsWith("/api/v1/exports/musicxml-tab?"),
+    );
+    expect(musicXmlCalls.length).toBeGreaterThanOrEqual(2);
+    expect(String(musicXmlCalls.at(-1)?.[0])).toBe(
       "/api/v1/exports/musicxml-tab?tempo_bpm=90",
     );
-    expect(fetchMock.mock.calls[2][1]?.body).toBe(JSON.stringify(arrangement.tab));
+    expect(musicXmlCalls.at(-1)?.[1]?.body).toBe(JSON.stringify(arrangement.tab));
 
-    await user.click(screen.getByRole("button", { name: "Download Guitar Pro" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    await user.click(screen.getByRole("button", { name: "Download Guitar Pro 5" }));
     await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(3));
-    expect(String(fetchMock.mock.calls[3][0])).toBe(
-      "/api/v1/exports/guitar-pro?tempo_bpm=90",
+    const guitarProCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).startsWith("/api/v1/exports/guitar-pro?"),
     );
-    expect(fetchMock.mock.calls[3][1]?.body).toBe(JSON.stringify(arrangement.tab));
+    expect(String(guitarProCall?.[0])).toBe("/api/v1/exports/guitar-pro?tempo_bpm=90");
+    expect(guitarProCall?.[1]?.body).toBe(JSON.stringify(arrangement.tab));
 
-    await user.click(screen.getByRole("button", { name: "Download PDF" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    await user.click(screen.getByRole("button", { name: "Download Printable PDF" }));
     await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(4));
-    expect(String(fetchMock.mock.calls[4][0])).toBe("/api/v1/exports/pdf-tab?tempo_bpm=90");
+    expect(
+      fetchMock.mock.calls.some(
+        ([input]) => String(input) === "/api/v1/exports/pdf-tab?tempo_bpm=90",
+      ),
+    ).toBe(true);
 
     await user.click(screen.getByRole("button", { name: "Download ASCII TAB" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
     await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(5));
-    expect(String(fetchMock.mock.calls[5][0])).toBe("/api/v1/exports/tab-text");
+    expect(
+      fetchMock.mock.calls.some(([input]) => String(input) === "/api/v1/exports/tab-text"),
+    ).toBe(true);
 
     await user.click(screen.getByRole("button", { name: "Download MIDI" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(7));
     await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(6));
-    expect(String(fetchMock.mock.calls[6][0])).toBe("/api/v1/exports/midi?tempo_bpm=90");
+    expect(
+      fetchMock.mock.calls.some(
+        ([input]) => String(input) === "/api/v1/exports/midi?tempo_bpm=90",
+      ),
+    ).toBe(true);
     expect(revokeObjectURL).toHaveBeenCalledTimes(6);
   });
 

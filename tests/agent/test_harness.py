@@ -18,7 +18,7 @@ from fretsure.agent.harness import (
 )
 from fretsure.agent.model_calls import ModelCallStage
 from fretsure.geometry import STANDARD_TUNING, note_pitch
-from fretsure.ir import Meta, MusicIR, Note
+from fretsure.ir import ChordSymbol, Meta, MusicIR, Note
 from fretsure.llm.client import FakeLLM, LLMIntegrityError
 from fretsure.oracle.input import OracleInputCode, SolverInputError
 
@@ -44,6 +44,12 @@ _IR_BASELINE_INFEASIBLE = MusicIR(
     ),
     (),
     Meta("C", (4, 4), 90.0, "t", "t", "PD"),
+)
+
+_IR_TIERED_BASELINE = MusicIR(
+    (Note(F(0), F(4), 72, "melody"),),
+    (ChordSymbol(F(0), "C", frozenset({0, 4, 7}), 0),),
+    Meta("C", (4, 4), 90.0, "t", "tiered baseline", "PD", F(4)),
 )
 
 
@@ -169,6 +175,46 @@ def test_model_no_tab_selects_zero_model_deterministic_baseline() -> None:
     assert terminal.data["faithfulness_passed"] is True
     assert terminal.data["candidates_considered"] == 1
     result.trace.to_public_dict()
+
+
+def test_deterministic_baseline_inherits_generation_difficulty() -> None:
+    harmony_counts: dict[str, int] = {}
+    for tier in ("beginner", "advanced"):
+        result = arrange(
+            _IR_TIERED_BASELINE,
+            ArrangeGoal(style="jazz", tier=tier),
+            FakeLLM([_PROP_INFEASIBLE]),
+            n=1,
+            max_iters=0,
+            use_critic=False,
+        )
+
+        assert result.tab is not None
+        assert result.oracle is not None and result.oracle.verdict == "GREEN"
+        assert result.target is not None
+        harmony_counts[tier] = sum(note.voice == "harmony" for note in result.target)
+
+    assert harmony_counts == {"beginner": 0, "advanced": 3}
+
+
+def test_historical_ablation_can_exclude_product_baseline() -> None:
+    result = arrange(
+        _IR,
+        ArrangeGoal(),
+        FakeLLM([_PROP_INFEASIBLE]),
+        n=1,
+        max_iters=0,
+        use_critic=False,
+        fallback_to_deterministic_baseline=False,
+    )
+
+    assert result.tab is None and result.oracle is None
+    assert [step.event for step in result.trace.steps] == [
+        "CANDIDATE_PROPOSED",
+        "SOLVER_RETURNED_NO_TAB",
+        "CANDIDATE_FINISHED",
+        "NO_CANDIDATE_SELECTED",
+    ]
 
 
 def test_baseline_infeasible_retains_original_no_selection_behavior() -> None:
@@ -458,10 +504,10 @@ def test_arrange_wrapper_matches_shared_pool_primitive_without_trace_drift() -> 
     assert pool.trajectories[1].work.total_llm_calls == 2
 
 
-def test_public_arrange_results_and_traces_match_clean_prerefactor_goldens() -> None:
-    # Captured by executing the clean preregistration commit
-    # 44927517958ecd3b9868bafb7bfe6133be25cc8e from a git archive. These hashes
-    # compare against the pre-trajectory implementation, not another new code path.
+def test_public_arrange_results_and_traces_match_current_versioned_goldens() -> None:
+    # Plan 7A intentionally evolved the trace schema to record style and technique
+    # controls. These hashes freeze that new document while the semantic result
+    # fingerprints below retain the clean prerefactor behavior check.
     repaired = arrange(
         _IR,
         ArrangeGoal(),
@@ -497,19 +543,19 @@ def test_public_arrange_results_and_traces_match_clean_prerefactor_goldens() -> 
     }
     expected = {
         "green-critic": (
-            "09a20699f868cc15a4c140164d8ad0fe644c2ec187e80d0f579a4a0511a347e7",
+                "0fa3e2e12eba979f800558871cbb891f244de19731ac8ef375a36c3cdcb380bd",
             ("GREEN", 1.0, 0.9, 2),
         ),
         "repair": (
-            "a5c7d9878ae8dfba8e05a14dfe9a9968e491e3a0b5fad66f6a0b0ef360f967a1",
+                "da5a8f14e15f8a97a5cf23135038ba7601bc1ff81a828e13af313198db536dd2",
             ("GREEN", 0.0, None, 1),
         ),
         "fallback": (
-            "5470d25061ff7888ecd8fa097b98c1995f6081521f6516d1f62830b58094ebd2",
+                "455234589b253e6c077599c77a6e903703c2f79dbcd4512264aabdceecdc0bd7",
             ("GREEN", 1.0, None, 1),
         ),
         "no-tab": (
-            "e73d71654b7c5946b45a7ec935db71fb39c25759bf64c7e47784be8ce538cae7",
+                "4ca0db2fa29eaa426f6fb1762a1ba72303ac3f26461fdb21561ee8b4eeee8f3e",
             ("GREEN", 1.0, None, 1),
         ),
     }

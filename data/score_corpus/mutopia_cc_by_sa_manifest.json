@@ -1,0 +1,873 @@
+{
+  "conversion": {
+    "commit": "6e0fbf4855a11d766531b27991bf581a7a9ad3a3",
+    "lxml": "5.3.0",
+    "python_ly": "0.9.10",
+    "script": "scripts/m1_lilypond.py",
+    "script_sha256": "857f7f8c73239016dc97d406483c0d1dccd9ab88b0b527ef9d872e0c98ef2da1",
+    "upstream": "HugoFara/graded-guitar"
+  },
+  "entries": [
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2015/12/27-2091)",
+      "group_id": "mutopia:aguado-op11n01",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 19,
+          "id": "mutopia-cc-by-sa-aguado-op11n01",
+          "index": 1,
+          "note_count": 332,
+          "pressed_annotation_count": 19,
+          "root_sha256": "5540864cbc230184d09d0dd15afeb81c9d1223d5cc2d1efee528f40f6e1773ea",
+          "tempo_bpm": 74.0,
+          "title": "Les Favorites, Op. 11 No. 1"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aguado-op11n01.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "efb7a57a83bcc502db829d23af65745933cb1861c1c109f46c2232b9b18dfaf4",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n01/aguado-op11n01.ly",
+      "work_id": "mutopia:aguado-op11n01"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/01/15-2093)",
+      "group_id": "mutopia:aguado-op11n02",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 15,
+          "id": "mutopia-cc-by-sa-aguado-op11n02",
+          "index": 1,
+          "note_count": 201,
+          "pressed_annotation_count": 15,
+          "root_sha256": "d287d89ffdb24e39e45878a99485de0b0439efe79cc212c6f54c33eefff4ab1b",
+          "tempo_bpm": 90.0,
+          "title": "Les Favorites, Op. 11 No. 2"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aguado-op11n02.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "3355a31990aefe83acd156c7e698c6a458228f33b92c1a25c859e970ae953c45",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n02/aguado-op11n02.ly",
+      "work_id": "mutopia:aguado-op11n02"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/01/15-2094)",
+      "group_id": "mutopia:aguado-op11n03",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 21,
+          "id": "mutopia-cc-by-sa-aguado-op11n03",
+          "index": 1,
+          "note_count": 319,
+          "pressed_annotation_count": 21,
+          "root_sha256": "69412f63c6b4e44c1d6e87aaa75801a403f8b8248ca9e2e58a392eea5faaefc4",
+          "tempo_bpm": 90.0,
+          "title": "Les Favorites, Op. 11 No. 3"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aguado-op11n03.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "e41f36b47d3aff69f8afd423a50e1fa0a326d12b2b207654b22c4a0f8d2e4257",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n03/aguado-op11n03.ly",
+      "work_id": "mutopia:aguado-op11n03"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/01/15-2095)",
+      "group_id": "mutopia:aguado-op11n04",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 21,
+          "id": "mutopia-cc-by-sa-aguado-op11n04",
+          "index": 1,
+          "note_count": 262,
+          "pressed_annotation_count": 21,
+          "root_sha256": "09d37c5964d7d88e8974720db3f5c5d95d526fe6711a7357f807a68ec7bdadbb",
+          "tempo_bpm": 90.0,
+          "title": "Les Favorites, Op. 11 No. 4"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aguado-op11n04.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "fb02ed68c988005e61b939d902b03467811bb62292be446163a000f48451ea65",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n04/aguado-op11n04.ly",
+      "work_id": "mutopia:aguado-op11n04"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/01/15-2096)",
+      "group_id": "mutopia:aguado-op11n05",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 5,
+          "id": "mutopia-cc-by-sa-aguado-op11n05",
+          "index": 1,
+          "note_count": 243,
+          "pressed_annotation_count": 5,
+          "root_sha256": "f45e0f7e7623c7b0634b92dcf2b763b84db5303dda1b3f806ef9b2ca44eec6a9",
+          "tempo_bpm": 90.0,
+          "title": "Les Favorites, Op. 11 No. 5"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aguado-op11n05.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "766414549c0029ce27eb1e64d0992c3c9dcff2284e9199e0061379391440dbb2",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n05/aguado-op11n05.ly",
+      "work_id": "mutopia:aguado-op11n05"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/01/15-2097)",
+      "group_id": "mutopia:aguado-op11n06",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 24,
+          "id": "mutopia-cc-by-sa-aguado-op11n06",
+          "index": 1,
+          "note_count": 276,
+          "pressed_annotation_count": 24,
+          "root_sha256": "e6e5a5310ceb0dd9b988fff934dcdbeb9f4e55b7097c8beec992553152c31e88",
+          "tempo_bpm": 90.0,
+          "title": "Les Favorites, Op. 11 No. 6"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aguado-op11n06.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "931a067e44de201cd83829fd718bdce1c1d8b7d8e9e581e2f868c1cbc372c5cf",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n06/aguado-op11n06.ly",
+      "work_id": "mutopia:aguado-op11n06"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/01/15-2098)",
+      "group_id": "mutopia:aguado-op11n07",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 12,
+          "id": "mutopia-cc-by-sa-aguado-op11n07",
+          "index": 1,
+          "note_count": 259,
+          "pressed_annotation_count": 12,
+          "root_sha256": "d6226a4f645ed0c8d844c34b5142c1c48eee54e3ff9cc4868f8760dfc45561bb",
+          "tempo_bpm": 90.0,
+          "title": "Les Favorites, Op. 11 No. 7"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aguado-op11n07.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "bc9975da8142b057d7f8d80d4676923c034bc43f84433a0fcfcd957fe30fcf3b",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n07/aguado-op11n07.ly",
+      "work_id": "mutopia:aguado-op11n07"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/01/15-2099)",
+      "group_id": "mutopia:aguado-op11n08",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 10,
+          "id": "mutopia-cc-by-sa-aguado-op11n08",
+          "index": 1,
+          "note_count": 310,
+          "pressed_annotation_count": 10,
+          "root_sha256": "206a67c795d70effe04165bf882d6561c0c243a6f5f88da69633e0a432c11d42",
+          "tempo_bpm": 90.0,
+          "title": "Les Favorites, Op. 11 No. 8"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aguado-op11n08.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "a91c3e13ea2e576fa91d357c97237f60ebedc4d6e42b687022e8518c0fc03060",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n08/aguado-op11n08.ly",
+      "work_id": "mutopia:aguado-op11n08"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/04/09-2108)",
+      "group_id": "mutopia:aguado-op11n09",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 27,
+          "id": "mutopia-cc-by-sa-aguado-op11n09",
+          "index": 1,
+          "note_count": 335,
+          "pressed_annotation_count": 27,
+          "root_sha256": "720c3e23ea4fe9e03c081b79a3955285bcbf382911a1a9773d0ba4d0c6d02827",
+          "tempo_bpm": 90.0,
+          "title": "Les Favorites, Op. 11 No. 9"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aguado-op11n09.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "1cf78d9df02d9c21d25a77998de07544c56f0036067ea0643e4eb730346b5e86",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n09/aguado-op11n09.ly",
+      "work_id": "mutopia:aguado-op11n09"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/01/15-2100)",
+      "group_id": "mutopia:aguado-op11n10",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 22,
+          "id": "mutopia-cc-by-sa-aguado-op11n10",
+          "index": 1,
+          "note_count": 194,
+          "pressed_annotation_count": 22,
+          "root_sha256": "2aecb23e6d577787190691cb9d89e2a2f80bd1f5d3a0e99d93c84f5db1338251",
+          "tempo_bpm": 74.0,
+          "title": "Les Favorites, Op. 11 No. 10"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aguado-op11n10.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "77c91e1ffba3ca670d1c63e84d4f73595947b536cea6b31360bb70447fe57da7",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n10/aguado-op11n10.ly",
+      "work_id": "mutopia:aguado-op11n10"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/07/18-1833)",
+      "group_id": "mutopia:aminor-study",
+      "license": "CC-BY-SA-3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "movements": [
+        {
+          "annotation_count": 28,
+          "id": "mutopia-cc-by-sa-aminor-study",
+          "index": 1,
+          "note_count": 240,
+          "pressed_annotation_count": 24,
+          "root_sha256": "9ba80802627ab1e9776de8539f2ba72ca2022f3fa58f79d959a49c1bcbe004f2",
+          "tempo_bpm": 90.0,
+          "title": "Study in A Minor"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/aminor-study.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+      "source_sha256": "a306d54cc9eaefe7e9fae0ac2426fe43d44494ba00dd8e6ae92137b34a7b7aed",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/aminor-study/aminor-study.ly",
+      "work_id": "mutopia:aminor-study"
+    },
+    {
+      "composer": "Francisco Tárrega",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/04/22-1951)",
+      "group_id": "mutopia:capricho-arabe",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 144,
+          "id": "mutopia-cc-by-sa-capricho-arabe",
+          "index": 1,
+          "note_count": 1013,
+          "pressed_annotation_count": 139,
+          "root_sha256": "03dec1d340c15595a3c671eee959a8c7062ee7648f562f2c4d59a4de0a0581c7",
+          "tempo_bpm": 90.0,
+          "title": "Capricho Árabe"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/capricho-arabe.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "9d10bb6b43d5cbe400a8cb06a3c46b1c1f0f11aff2959310af5d83dfe64fdc5d",
+      "source_url": "https://www.mutopiaproject.org/ftp/TarregaF/capricho-arabe/capricho-arabe.ly",
+      "work_id": "mutopia:capricho-arabe"
+    },
+    {
+      "composer": "Matteo Carcassi",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2017/01/16-1838)",
+      "group_id": "mutopia:carcassi-op26-03",
+      "license": "CC-BY-SA-3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "movements": [
+        {
+          "annotation_count": 24,
+          "id": "mutopia-cc-by-sa-carcassi-op26-03",
+          "index": 1,
+          "note_count": 415,
+          "pressed_annotation_count": 24,
+          "root_sha256": "eecb095921e3b30f5fa7d2ed3e69480ed28243a5926dbe0f6009ac575c0ca7a5",
+          "tempo_bpm": 90.0,
+          "title": "Six Caprices, Op. 26 No. 3"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/carcassi-op26-03.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+      "source_sha256": "16c3b1c319f7b3df7b25d770056e35ca94411aedfc65dd9bc343d939f34b7078",
+      "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O26/carcassi-op26-03/carcassi-op26-03.ly",
+      "work_id": "mutopia:carcassi-op26-03"
+    },
+    {
+      "composer": "Matteo Carcassi",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2017/01/16-1839)",
+      "group_id": "mutopia:carcassi-op26-04",
+      "license": "CC-BY-SA-3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "movements": [
+        {
+          "annotation_count": 9,
+          "id": "mutopia-cc-by-sa-carcassi-op26-04",
+          "index": 1,
+          "note_count": 957,
+          "pressed_annotation_count": 9,
+          "root_sha256": "b4a8fc07255c59129f8bdad04cf4d4505f793a33e3acbe38bb67238b51c78ca2",
+          "tempo_bpm": 90.0,
+          "title": "Six Caprices, Op. 26 No. 4"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/carcassi-op26-04.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+      "source_sha256": "ff638a0d8046ce9307731f91e21ee57c137561a6ea524abda086241afe5d5da2",
+      "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O26/carcassi-op26-04/carcassi-op26-04.ly",
+      "work_id": "mutopia:carcassi-op26-04"
+    },
+    {
+      "composer": "Matteo Carcassi",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2017/01/16-1840)",
+      "group_id": "mutopia:carcassi-op26-05",
+      "license": "CC-BY-SA-3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "movements": [
+        {
+          "annotation_count": 38,
+          "id": "mutopia-cc-by-sa-carcassi-op26-05",
+          "index": 1,
+          "note_count": 916,
+          "pressed_annotation_count": 38,
+          "root_sha256": "3ddbbac20b944e512985b1ca14a8fb94c0cf00ee34906a28935f2e1348fff1e0",
+          "tempo_bpm": 90.0,
+          "title": "Six Caprices, Op. 26 No. 5"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/carcassi-op26-05.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+      "source_sha256": "67d39e25ecb59506612f721b868c8437b003b3a2834483c85943cddb24076250",
+      "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O26/carcassi-op26-05/carcassi-op26-05.ly",
+      "work_id": "mutopia:carcassi-op26-05"
+    },
+    {
+      "composer": "Matteo Carcassi",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/02/23-1932)",
+      "group_id": "mutopia:carcassi-op60-22",
+      "license": "CC-BY-SA-3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "movements": [
+        {
+          "annotation_count": 14,
+          "id": "mutopia-cc-by-sa-carcassi-op60-22",
+          "index": 1,
+          "note_count": 102,
+          "pressed_annotation_count": 14,
+          "root_sha256": "f88ae8c5a88b8124a28f75c735b43fb04deb0f84f12963b25837f54ad2f136af",
+          "tempo_bpm": 90.0,
+          "title": "Etude 22, Op. 60, No. 22"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/carcassi-op60-22.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+      "source_sha256": "69f58bbf8e363e80994669185e3ef0da372b2ad0774ad253712576ef53a1b204",
+      "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-22/carcassi-op60-22.ly",
+      "work_id": "mutopia:carcassi-op60-22"
+    },
+    {
+      "composer": "Matteo Carcassi",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/02/23-1933)",
+      "group_id": "mutopia:carcassi-op60-23",
+      "license": "CC-BY-SA-3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "movements": [
+        {
+          "annotation_count": 42,
+          "id": "mutopia-cc-by-sa-carcassi-op60-23",
+          "index": 1,
+          "note_count": 406,
+          "pressed_annotation_count": 37,
+          "root_sha256": "21e02b5854609aefe827f23aa014b0cdebacf2749cff5b5b39e5b48e5ad7730c",
+          "tempo_bpm": 90.0,
+          "title": "Etude 23, Op. 60, No. 23"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/carcassi-op60-23.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+      "source_sha256": "d145f88c548208d0a73fa127f09dc34b8d2ceeabcf57d9209f6083f384ba5dbd",
+      "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-23/carcassi-op60-23.ly",
+      "work_id": "mutopia:carcassi-op60-23"
+    },
+    {
+      "composer": "Matteo Carcassi",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/02/23-1934)",
+      "group_id": "mutopia:carcassi-op60-24",
+      "license": "CC-BY-SA-3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "movements": [
+        {
+          "annotation_count": 66,
+          "id": "mutopia-cc-by-sa-carcassi-op60-24",
+          "index": 1,
+          "note_count": 674,
+          "pressed_annotation_count": 60,
+          "root_sha256": "0146bdedd8a191550c57005ce4ec52a58da2d9406b10ca6c719552805b037597",
+          "tempo_bpm": 90.0,
+          "title": "Etude 24, Op. 60, No. 24"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/carcassi-op60-24.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+      "source_sha256": "651cfc5351bf59a95bcc61571998d4522c8d8797f2a17de221bc37c783ab3e32",
+      "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-24/carcassi-op60-24.ly",
+      "work_id": "mutopia:carcassi-op60-24"
+    },
+    {
+      "composer": "Matteo Carcassi",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/02/22-1939)",
+      "group_id": "mutopia:carcassi-op60-25",
+      "license": "CC-BY-SA-3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "movements": [
+        {
+          "annotation_count": 65,
+          "id": "mutopia-cc-by-sa-carcassi-op60-25",
+          "index": 1,
+          "note_count": 810,
+          "pressed_annotation_count": 54,
+          "root_sha256": "7fbf2699062d9bcb4f2ec2ad6828aa0893893d8b57fc72cff6fa49dcdeba556f",
+          "tempo_bpm": 90.0,
+          "title": "Etude 25, Op. 60, No. 25"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/carcassi-op60-25.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+      "source_sha256": "9d36eba5d92b12a870b54ea3b0953256b7f9ee76e315df903ba9d39bb47759fd",
+      "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-25/carcassi-op60-25.ly",
+      "work_id": "mutopia:carcassi-op60-25"
+    },
+    {
+      "composer": "Dionisio Aguado",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/07/19-2090)",
+      "group_id": "mutopia:g-major-allegro",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 3,
+          "id": "mutopia-cc-by-sa-g-major-allegro",
+          "index": 1,
+          "note_count": 338,
+          "pressed_annotation_count": 3,
+          "root_sha256": "d7155b9e278c8c69a206dd723185a5a5beaa69e83051c324c820cac5c23f961b",
+          "tempo_bpm": 90.0,
+          "title": "Allegro"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/g-major-allegro.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "2fda15f9c8b5660fe8b732f3f7d8cfec71e6ecc8d5a64b584f59fab7ad17412c",
+      "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/g-major-allegro/g-major-allegro.ly",
+      "work_id": "mutopia:g-major-allegro"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/04/11-2109)",
+      "group_id": "mutopia:sorf-op45n01",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 45,
+          "id": "mutopia-cc-by-sa-sorf-op45n01",
+          "index": 1,
+          "note_count": 337,
+          "pressed_annotation_count": 43,
+          "root_sha256": "32da89ffd001e0478992f5361fb9458ad2298d39c7adddd25bfd1c625112ca61",
+          "tempo_bpm": 90.0,
+          "title": "Six Petites Pièces, Op. 45 No. 1"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf-op45n01.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "e4a2be23c906dea3db34ae8da16e5114b96b06f1263e0057bc51b158882c4678",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O45/sorf-op45n01/sorf-op45n01.ly",
+      "work_id": "mutopia:sorf-op45n01"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/04/11-2110)",
+      "group_id": "mutopia:sorf-op45n02",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 32,
+          "id": "mutopia-cc-by-sa-sorf-op45n02",
+          "index": 1,
+          "note_count": 395,
+          "pressed_annotation_count": 30,
+          "root_sha256": "3c06e017085a066944658037aa3e5c23ad50523fa5616c235a873ef4338e0b27",
+          "tempo_bpm": 90.0,
+          "title": "Six Petites Pièces, Op. 45 No. 2"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf-op45n02.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "5078dc213ccc99eec916629f11b6a10f0ff81288c6aa0cd0f1223ab8a693ef24",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O45/sorf-op45n02/sorf-op45n02.ly",
+      "work_id": "mutopia:sorf-op45n02"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/04/11-2111)",
+      "group_id": "mutopia:sorf-op45n03",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 1,
+          "id": "mutopia-cc-by-sa-sorf-op45n03-movement-2",
+          "index": 2,
+          "note_count": 162,
+          "pressed_annotation_count": 1,
+          "root_sha256": "8155d1a470723c8190773dfac52ed181f1cbe5464b2d3a33ca3c1944f789048c",
+          "tempo_bpm": 90.0,
+          "title": "Six Petites Pièces, Op. 45 No. 3 — Variation I"
+        },
+        {
+          "annotation_count": 38,
+          "id": "mutopia-cc-by-sa-sorf-op45n03-movement-3",
+          "index": 3,
+          "note_count": 124,
+          "pressed_annotation_count": 38,
+          "root_sha256": "15a3e8077f6d9256ba2ef7a8fc3534cb38cf6ce5b7d259f4a0bf1818dfba4d9f",
+          "tempo_bpm": 90.0,
+          "title": "Six Petites Pièces, Op. 45 No. 3 — Variation II"
+        },
+        {
+          "annotation_count": 16,
+          "id": "mutopia-cc-by-sa-sorf-op45n03-movement-4",
+          "index": 4,
+          "note_count": 213,
+          "pressed_annotation_count": 15,
+          "root_sha256": "0501245cedda147c8c41f1ce53567450e51804277e8d44a7c5c30150e22bb936",
+          "tempo_bpm": 90.0,
+          "title": "Six Petites Pièces, Op. 45 No. 3 — Variation III"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf-op45n03.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "988955cd261e8bb8446468d38f39a58c968967a9e6a07cfc9bb0c4ffc7fcc4fd",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O45/sorf-op45n03/sorf-op45n03.ly",
+      "work_id": "mutopia:sorf-op45n03"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2016/04/11-2113)",
+      "group_id": "mutopia:sorf-op45n05",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 29,
+          "id": "mutopia-cc-by-sa-sorf-op45n05",
+          "index": 1,
+          "note_count": 760,
+          "pressed_annotation_count": 29,
+          "root_sha256": "5d7c0f9ad20c237b34dc5a4ef1571b07e2cfcb272ad6ec6d81a71da5a3e7460d",
+          "tempo_bpm": 90.0,
+          "title": "Six Petites Pièces, Op. 45 No. 5"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf-op45n05.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "4d50763aa6a7595aa62e63e239f0062a3810028a7132fee457d9adaea6fcbeb1",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O45/sorf-op45n05/sorf-op45n05.ly",
+      "work_id": "mutopia:sorf-op45n05"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/03/08-1942)",
+      "group_id": "mutopia:sorf-op35-no11",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 64,
+          "id": "mutopia-cc-by-sa-sorf-op35-no11",
+          "index": 1,
+          "note_count": 115,
+          "pressed_annotation_count": 61,
+          "root_sha256": "cf01074a1f60edfe222b3b480577899a6d248eac224211b4d8e97ad32a609907",
+          "tempo_bpm": 90.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 11"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no11.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "50dc7584e15852835ea730cfbaa3dc6dd8ed8255282aee7f4ea2814fa2143f87",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no11/sorf_op35_no11.ly",
+      "work_id": "mutopia:sorf-op35-no11"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/03/23-1945)",
+      "group_id": "mutopia:sorf-op35-no13",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 63,
+          "id": "mutopia-cc-by-sa-sorf-op35-no13",
+          "index": 1,
+          "note_count": 334,
+          "pressed_annotation_count": 61,
+          "root_sha256": "f00ba0f4cb3d0ae4a77d589a1bec28d326a1febf3931edf4333d5f01ed9fae3f",
+          "tempo_bpm": 90.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 13"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no13.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "665771bbda69b3c7943cdacd2a6e3a03a2be017d3e408725dab1908282660d19",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no13/sorf_op35_no13.ly",
+      "work_id": "mutopia:sorf-op35-no13"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/03/28-1946)",
+      "group_id": "mutopia:sorf-op35-no15",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 36,
+          "id": "mutopia-cc-by-sa-sorf-op35-no15",
+          "index": 1,
+          "note_count": 242,
+          "pressed_annotation_count": 36,
+          "root_sha256": "91f5e1c43ce4ee98dc3342abda5b9ca25b5e98c7456b8d372d7ea498ce0b1936",
+          "tempo_bpm": 90.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 15"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no15.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "98ff98d53ca99cbc2c516132b2944872fba82ce7aa738bab5d4b80e5a231e6db",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no15/sorf_op35_no15.ly",
+      "work_id": "mutopia:sorf-op35-no15"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/04/27-1953)",
+      "group_id": "mutopia:sorf-op35-no16",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 182,
+          "id": "mutopia-cc-by-sa-sorf-op35-no16",
+          "index": 1,
+          "note_count": 468,
+          "pressed_annotation_count": 165,
+          "root_sha256": "dad8260d0fa5a1afe2188a5b37369473d2b2ef4fe22981af2324f3cc7439d6d6",
+          "tempo_bpm": 90.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 16"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no16.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "3bf20632307158bf20ec0c9348b9fa5eeff69ea32387568d0dc34abbe989bfc0",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no16/sorf_op35_no16.ly",
+      "work_id": "mutopia:sorf-op35-no16"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/05/24-1954)",
+      "group_id": "mutopia:sorf-op35-no17",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 107,
+          "id": "mutopia-cc-by-sa-sorf-op35-no17",
+          "index": 1,
+          "note_count": 266,
+          "pressed_annotation_count": 100,
+          "root_sha256": "5e797b4684fd5c9fc4732e9dfd310f549ead87d5212b03982d9bf1f4bdda755a",
+          "tempo_bpm": 90.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 17"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no17.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "bdf53de336c46197d966f71a4803fcda256658f67902b74ee01499a308772da0",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no17/sorf_op35_no17.ly",
+      "work_id": "mutopia:sorf-op35-no17"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/07/27-1989)",
+      "group_id": "mutopia:sorf-op35-no18",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 150,
+          "id": "mutopia-cc-by-sa-sorf-op35-no18",
+          "index": 1,
+          "note_count": 308,
+          "pressed_annotation_count": 142,
+          "root_sha256": "2cce41fdb772f9a70363e48765e477cf8d57998d792e7c53e91c27e8155b49b4",
+          "tempo_bpm": 90.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 18"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no18.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "68dbf159013583472f8abdb26f257fef40795ae1c5daa3ce3b722abf15961a59",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no18/sorf_op35_no18.ly",
+      "work_id": "mutopia:sorf-op35-no18"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2014/08/15-1992)",
+      "group_id": "mutopia:sorf-op35-no19",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 72,
+          "id": "mutopia-cc-by-sa-sorf-op35-no19",
+          "index": 1,
+          "note_count": 360,
+          "pressed_annotation_count": 65,
+          "root_sha256": "acf62af5be6d152e1e60a533e5e7df2c991c597c83ef37fc9373b3d0caf9591f",
+          "tempo_bpm": 90.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 19"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no19.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "bfec865e33de29c16d83ed281fa4f2b19abaf84d3adb8d68722173147cd00417",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no19/sorf_op35_no19.ly",
+      "work_id": "mutopia:sorf-op35-no19"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2015/03/25-1998)",
+      "group_id": "mutopia:sorf-op35-no20",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 161,
+          "id": "mutopia-cc-by-sa-sorf-op35-no20",
+          "index": 1,
+          "note_count": 595,
+          "pressed_annotation_count": 149,
+          "root_sha256": "f02e995b8b131cb2cdf86d4255a313b2e20e1c7e2f48d7ef627f847a6e3d2346",
+          "tempo_bpm": 90.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 20"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no20.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "aec4f8a2eaa9d931bd9887a26f04be9223bd5593dcec9b2c5bb92f5036a5fd78",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no20/sorf_op35_no20.ly",
+      "work_id": "mutopia:sorf-op35-no20"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2015/11/16-2071)",
+      "group_id": "mutopia:sorf-op35-no21",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 86,
+          "id": "mutopia-cc-by-sa-sorf-op35-no21",
+          "index": 1,
+          "note_count": 169,
+          "pressed_annotation_count": 80,
+          "root_sha256": "301920ccc6e3e4f3b9b026f98c0c2233af6905839ec336ac85c2c023a19a4c60",
+          "tempo_bpm": 110.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 21"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no21.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "2b9440921a486204b3a11728e6468d02a1df42018652f19018b8af7b246f97cd",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no21/sorf_op35_no21.ly",
+      "work_id": "mutopia:sorf-op35-no21"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2015/12/23-2086)",
+      "group_id": "mutopia:sorf-op35-no23",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 36,
+          "id": "mutopia-cc-by-sa-sorf-op35-no23",
+          "index": 1,
+          "note_count": 212,
+          "pressed_annotation_count": 33,
+          "root_sha256": "d8a8d6378550b019fd7dbd63708191e22afd86d73ca5af289fa0cbd124c5897f",
+          "tempo_bpm": 100.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 23"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no23.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "b7729711eb91ab7e39321785f1e229f62a50f363627a1543bfff927931b922bc",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no23/sorf_op35_no23.ly",
+      "work_id": "mutopia:sorf-op35-no23"
+    },
+    {
+      "composer": "Fernando Sor",
+      "edition": "Glen Larsen, Mutopia Project (Mutopia-2015/12/23-2087)",
+      "group_id": "mutopia:sorf-op35-no24",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "movements": [
+        {
+          "annotation_count": 49,
+          "id": "mutopia-cc-by-sa-sorf-op35-no24",
+          "index": 1,
+          "note_count": 799,
+          "pressed_annotation_count": 47,
+          "root_sha256": "b2429698c7f8814646d55207ba7d56778d2b3ded0f603285cf247645438c5e24",
+          "tempo_bpm": 90.0,
+          "title": "24 Studies for the Guitar, Op. 35 No. 24"
+        }
+      ],
+      "path": "sources/mutopia_cc_by_sa/sorf_op35_no24.ly",
+      "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+      "source_sha256": "bbcbafee6ef919ffa51e81a48a423024853a482bb670c3c4430951d51d10fb00",
+      "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no24/sorf_op35_no24.ly",
+      "work_id": "mutopia:sorf-op35-no24"
+    }
+  ],
+  "schema": "fretsure-mutopia-lilypond-manifest@0.1.0"
+}

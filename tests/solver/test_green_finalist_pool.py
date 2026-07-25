@@ -68,7 +68,7 @@ def test_green_pool_is_canonical_fully_checked_and_hard_capped(
     )
 
 
-def test_public_winner_is_first_green_pool_item_and_signature_is_unchanged() -> None:
+def test_public_winner_is_first_green_pool_item_and_signature_is_versioned() -> None:
     outcome = solver_api._solve_fingering_with_green_pool(
         _notes(),
         STANDARD_TUNING,
@@ -90,6 +90,7 @@ def test_public_winner_is_first_green_pool_item_and_signature_is_unchanged() -> 
         "tempo_bpm",
         "beats_per_bar",
         "beam",
+        "technique_profile_name",
     )
     assert all(
         parameters[name].kind is Parameter.POSITIONAL_OR_KEYWORD
@@ -97,7 +98,7 @@ def test_public_winner_is_first_green_pool_item_and_signature_is_unchanged() -> 
     )
     assert all(
         parameters[name].kind is Parameter.KEYWORD_ONLY
-        for name in ("tempo_bpm", "beats_per_bar", "beam")
+        for name in ("tempo_bpm", "beats_per_bar", "beam", "technique_profile_name")
     )
     assert "_solve_fingering_with_green_pool" not in solver_api.__all__
     assert "_GreenFinalist" not in solver_api.__all__

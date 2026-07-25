@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import subprocess
 import sys
@@ -18,10 +19,13 @@ from pydantic import AnyUrl
 import fretsure.mcp.server as server_module
 from fretsure.application import (
     CheckOptions,
+    DifficultyOptions,
     RenderOptions,
     SolveOptions,
     check_outcome_to_wire,
+    check_tab_difficulty_json,
     check_tab_json,
+    difficulty_outcome_to_wire,
     render_outcome_to_wire,
     render_tab_json,
     solve_outcome_to_wire,
@@ -79,7 +83,7 @@ def _tab_json(wire: dict[str, object]) -> str:
 
 
 @pytest.mark.anyio
-async def test_initialize_lists_only_the_three_honest_tools() -> None:
+async def test_initialize_lists_the_five_honest_tools() -> None:
     async with create_connected_server_and_client_session(create_server()) as session:
         assert session.get_server_capabilities() is not None
         result = await session.list_tools()
@@ -87,10 +91,11 @@ async def test_initialize_lists_only_the_three_honest_tools() -> None:
     tools = {tool.name: tool for tool in result.tools}
     assert set(tools) == {
         "check_playability",
+        "check_difficulty",
         "feasible_fingerings",
         "render_notation",
+        "render_audio",
     }
-    assert "render_audio" not in tools
     assert "bounded" in (tools["feasible_fingerings"].description or "").lower()
     assert "not a guarantee" in (tools["check_playability"].description or "").lower()
     assert all(tool.outputSchema is not None for tool in tools.values())
@@ -130,6 +135,17 @@ async def test_in_memory_tools_match_the_shared_service_exactly() -> None:
                 {"tab_json": tab_json},
             )
         )
+        difficulty_wire = _structured(
+            await session.call_tool(
+                "check_difficulty",
+                {
+                    "tab_json": tab_json,
+                    "tier": "beginner",
+                    "tempo_bpm": 90,
+                    "beats_per_bar": 4,
+                },
+            )
+        )
 
     direct_solve = solve_outcome_to_wire(
         solve_target_json(
@@ -148,13 +164,18 @@ async def test_in_memory_tools_match_the_shared_service_exactly() -> None:
     direct_render = render_outcome_to_wire(
         render_tab_json(tab_json, options=RenderOptions())
     )
+    direct_difficulty = difficulty_outcome_to_wire(
+        check_tab_difficulty_json(tab_json, options=DifficultyOptions())
+    )
 
     assert solve_wire.pop("mcp_version") == MCP_VERSION
     assert check_wire.pop("mcp_version") == MCP_VERSION
     assert render_wire.pop("mcp_version") == MCP_VERSION
+    assert difficulty_wire.pop("mcp_version") == MCP_VERSION
     assert solve_wire == direct_solve
     assert check_wire == direct_check
     assert render_wire == direct_render
+    assert difficulty_wire == direct_difficulty
 
 
 @pytest.mark.anyio
@@ -184,7 +205,7 @@ async def test_bounded_search_response_never_claims_completeness() -> None:
 
 
 @pytest.mark.anyio
-async def test_capability_resource_is_shared_versioned_and_marks_audio_deferred() -> None:
+async def test_capability_resource_is_shared_versioned_and_marks_audio_implemented() -> None:
     async with create_connected_server_and_client_session(create_server()) as session:
         listed = await session.list_resources()
         assert [str(resource.uri) for resource in listed.resources] == [CAPABILITIES_URI]
@@ -196,17 +217,50 @@ async def test_capability_resource_is_shared_versioned_and_marks_audio_deferred(
     assert content.mimeType == "application/json"
     wire = cast(dict[str, object], json.loads(content.text))
     assert wire["mcp_version"] == MCP_VERSION
-    assert wire["service_version"] == "fretsure-service@0.2.0"
+    assert wire["service_version"] == "fretsure-service@0.3.0"
     assert wire["render_formats"] == ["ascii"]
-    assert "render_audio" in cast(list[str], wire["deferred"])
-    assert "render_audio" not in cast(list[str], wire["implemented"])
+    assert "render_audio" not in cast(list[str], wire["deferred"])
+    assert "render_audio" in cast(list[str], wire["implemented"])
     mcp_wire = cast(dict[str, object], wire["mcp"])
     assert mcp_wire["default_transport"] == "stdio"
     assert mcp_wire["tools"] == [
         "check_playability",
+        "check_difficulty",
         "feasible_fingerings",
         "render_notation",
+        "render_audio",
     ]
+    assert cast(dict[str, object], wire["audio"])["export_version"] == (
+        "tab-audio@0.1.0"
+    )
+    assert cast(dict[str, object], wire["audio"])["runtime_version"] == (
+        server_module.fluidsynth_version()
+    )
+
+
+@pytest.mark.anyio
+async def test_audio_tool_returns_mcp_audio_content(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    wav = b"RIFF" + (36).to_bytes(4, "little") + b"WAVE" + b"\x00" * 36
+    monkeypatch.setattr(server_module, "render_wav", lambda _tab, *, tempo_bpm: wav)
+    direct = solve_outcome_to_wire(
+        solve_target_json(_TARGET_JSON, options=SolveOptions())
+    )
+    tab_json = _tab_json(direct)
+
+    async with create_connected_server_and_client_session(create_server()) as session:
+        result = await session.call_tool(
+            "render_audio",
+            {"tab_json": tab_json, "tempo_bpm": 90},
+        )
+
+    assert result.isError is False
+    assert len(result.content) == 1
+    audio = result.content[0]
+    assert audio.type == "audio"
+    assert audio.mimeType == "audio/wav"
+    assert base64.b64decode(audio.data) == wav
 
 
 @pytest.mark.parametrize(
@@ -234,6 +288,16 @@ async def test_capability_resource_is_shared_versioned_and_marks_audio_deferred(
             "render_notation",
             {"tab_json": "{}", "format": "html"},
             "UNSUPPORTED_RENDER_FORMAT",
+        ),
+        (
+            "check_difficulty",
+            {
+                "tab_json": "{}",
+                "tier": "virtuoso",
+                "tempo_bpm": 90,
+                "beats_per_bar": 4,
+            },
+            "UNKNOWN_DIFFICULTY_TIER",
         ),
         (
             "check_playability",
@@ -335,7 +399,7 @@ async def test_unexpected_internal_exception_is_redacted(
 
 
 @pytest.mark.anyio
-async def test_real_stdio_subprocess_handshake_three_tools_and_survival() -> None:
+async def test_real_stdio_subprocess_handshake_five_tools_and_survival() -> None:
     parameters = StdioServerParameters(
         command=sys.executable,
         args=["-m", "fretsure.mcp.cli"],
@@ -352,8 +416,10 @@ async def test_real_stdio_subprocess_handshake_three_tools_and_survival() -> Non
                     tools = await session.list_tools()
                     assert [tool.name for tool in tools.tools] == [
                         "check_playability",
+                        "check_difficulty",
                         "feasible_fingerings",
                         "render_notation",
+                        "render_audio",
                     ]
 
                     invalid = await session.call_tool(

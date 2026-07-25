@@ -1,6 +1,14 @@
 export type Verdict = "GREEN" | "AMBER" | "RED";
 export type FaithfulnessDimension = "melody" | "bass_root" | "harmony";
 export type ScoreFormat = "musicxml" | "mxl" | "midi";
+export type DifficultyTierName = "beginner" | "intermediate" | "advanced";
+export type ArrangementStyleId = "fingerstyle" | "classical" | "jazz" | "rnb";
+export type TechniqueProfileId =
+  | "balanced"
+  | "avoid_barres"
+  | "low_position"
+  | "minimize_shifts";
+export type VoiceRole = "melody" | "bass" | "harmony";
 
 export interface TraceStep {
   trace_schema_version: string;
@@ -105,6 +113,9 @@ export interface ScoreSummary {
 
 export interface ArrangementOptionsWire {
   profile: ProfileIdentity;
+  style: ArrangementStyleId;
+  difficulty_tier: DifficultyTierName;
+  technique_profile: TechniqueProfileId;
   tuning: number[];
   capo: number;
   candidate_count: number;
@@ -113,6 +124,18 @@ export interface ArrangementOptionsWire {
   tempo_override_bpm: number | null;
   source_tempo_bpm: number;
   effective_tempo_bpm: number;
+}
+
+export interface EditableTargetNote {
+  onset: string;
+  duration: string;
+  pitch: number;
+  voice: VoiceRole;
+}
+
+export interface EditableTarget {
+  schema_version: "editable-arrangement-target@0.1.0";
+  notes: EditableTargetNote[];
 }
 
 export interface CanonicalTabNote {
@@ -130,6 +153,34 @@ export interface CanonicalTab {
   notes: CanonicalTabNote[];
 }
 
+export interface VerifiedAlternative {
+  candidate_index: number;
+  tab: CanonicalTab;
+  ascii: string;
+  playability: PlayabilityResult;
+  faithfulness: FaithfulnessResult;
+  work: {
+    model_calls: number;
+    trial_solver_calls: number;
+    proposed_additions: number;
+    accepted_additions: number;
+  };
+  proposal_status:
+    | "LLM_SUCCESS"
+    | "PARSE_VALIDATION_FALLBACK"
+    | "CALL_FAILURE_FALLBACK"
+    | "CONSTANT_LLM_BYPASS";
+  observed_critic: {
+    status:
+      | "LLM_SUCCESS"
+      | "PARSE_VALIDATION_FALLBACK"
+      | "CALL_FAILURE_FALLBACK"
+      | null;
+    overall: number | null;
+    meaning: "machine_observation_not_human_musicality_evidence";
+  };
+}
+
 export interface ArrangementResponse {
   api_version: string;
   service_version: string;
@@ -138,10 +189,12 @@ export interface ArrangementResponse {
   score: ScoreSummary;
   options: ArrangementOptionsWire;
   model: { model_id: string; engine: "offline" | "proxy" };
+  editable_target: EditableTarget | null;
   tab: CanonicalTab | null;
   ascii: string | null;
   playability: PlayabilityResult | null;
   faithfulness: FaithfulnessResult | null;
+  alternatives: VerifiedAlternative[];
   trace: PublicTrace;
   stamps: Record<string, string>;
 }
@@ -152,13 +205,73 @@ export interface EngineCapability {
   model_id: string;
 }
 
+export interface NamedControlCapability<Id extends string> {
+  id: Id;
+  label: string;
+  description: string;
+}
+
+export interface DifficultyTierCapability {
+  name: DifficultyTierName;
+  profile: ProfileIdentity;
+  constraints: {
+    max_simultaneous: number;
+    allow_barre: boolean;
+    max_position: number;
+    max_shifts_per_bar: number;
+  };
+}
+
+export interface DifficultyCheckControls {
+  tier: DifficultyTierName;
+  tempoBpm: number;
+  beatsPerBar: number;
+}
+
+export interface DifficultyCheckResponse {
+  api_version: string;
+  service_version: string;
+  status: "checked";
+  options: {
+    tier: DifficultyTierName;
+    tempo_bpm: number;
+    beats_per_bar: number;
+  };
+  tab: CanonicalTab;
+  tier: DifficultyTierCapability;
+  difficulty: {
+    checker_version: string;
+    meets: boolean;
+    playable: Verdict;
+    tier_violations: string[];
+  };
+  published_grade: {
+    model_version: string;
+    model_sha256: string;
+    grade_system: string;
+    estimated_grade: number;
+    likely_interval: { lower: number; upper: number };
+    band: "foundational" | "intermediate" | "advanced";
+    confidence: "low";
+    burden_percentile: number;
+    feature_percentiles: Record<string, number>;
+    training_scope: string;
+    meaning: "corpus_calibrated_estimate_not_a_playability_guarantee";
+  };
+  stamps: Record<string, string>;
+}
+
 export interface CapabilitiesResponse {
   api_version: string;
   package_version: string;
   service_version: string;
   trace_schema_version: string;
+  profile_registry_version: string;
   engines: EngineCapability[];
   profiles: ProfileIdentity[];
+  arrangement_styles: Array<NamedControlCapability<ArrangementStyleId>>;
+  technique_profiles: Array<NamedControlCapability<TechniqueProfileId>>;
+  difficulty_tiers: DifficultyTierCapability[];
   inputs: {
     score_suffixes: string[];
     score_input: {
@@ -173,6 +286,9 @@ export interface CapabilitiesResponse {
     arrange: {
       defaults: {
         profile: string;
+        style: ArrangementStyleId;
+        difficulty_tier: DifficultyTierName;
+        technique_profile: TechniqueProfileId;
         n: number;
         max_iters: number;
         use_critic: boolean;
@@ -183,10 +299,28 @@ export interface CapabilitiesResponse {
       max_iters: { min: number; max: number };
       tempo_bpm: { min: number; max: number; nullable: true };
     };
+    difficulty: {
+      defaults: {
+        tier: DifficultyTierName;
+        tempo_bpm: number;
+        beats_per_bar: number;
+      };
+      tier: { values: DifficultyTierName[] };
+      tempo_bpm: { min: number; max: number };
+      beats_per_bar: { min: number; max: number };
+    };
     [key: string]: unknown;
   };
   implemented: string[];
   deferred: string[];
+  audio: {
+    available: boolean;
+    renderer: "FluidSynth";
+    runtime_version: string | null;
+    export_version: string;
+    sample_rate_hz: number;
+    media_type: "audio/wav";
+  };
   stamps: Record<string, string>;
   [key: string]: unknown;
 }
@@ -194,10 +328,75 @@ export interface CapabilitiesResponse {
 export interface ArrangeControls {
   engine: "offline" | "proxy";
   profile: string;
+  style: ArrangementStyleId;
+  difficultyTier: DifficultyTierName;
+  techniqueProfile: TechniqueProfileId;
   n: number;
   maxIters: number;
   useCritic: boolean;
   tempoBpm: number | null;
+}
+
+export interface SectionSelection {
+  startMeasure: number;
+  endMeasure: number;
+  lockedVoices: VoiceRole[];
+}
+
+export interface SectionRegenerationResponse {
+  api_version: string;
+  service_version: string;
+  status: "accepted" | "preserved" | "unchanged";
+  selection: {
+    start_measure: number;
+    end_measure: number;
+    locked_voices: VoiceRole[];
+  };
+  options: {
+    profile: ProfileIdentity;
+    style: ArrangementStyleId;
+    difficulty_tier: DifficultyTierName;
+    technique_profile: TechniqueProfileId;
+    tempo_bpm: number | null;
+  };
+  model: { model_id: string; engine: "offline" | "proxy" };
+  editable_target: EditableTarget;
+  tab: CanonicalTab;
+  ascii: string;
+  playability: PlayabilityResult;
+  faithfulness: FaithfulnessResult;
+  revision: {
+    schema_version: "section-regeneration@0.1.0";
+    proposal_status: string | null;
+    model_calls: 0 | 1;
+    reason: string | null;
+  };
+  stamps: Record<string, string>;
+}
+
+export interface FingeringEditResponse {
+  api_version: string;
+  service_version: string;
+  status: "applied" | "rejected" | "unchanged";
+  options: {
+    profile: ProfileIdentity;
+    tempo_bpm: number;
+    beats_per_bar: number;
+  };
+  tab: CanonicalTab;
+  ascii: string;
+  playability: PlayabilityResult;
+  attempted_playability: PlayabilityResult;
+  edit: {
+    note_index: number;
+    onset: string;
+    string: number;
+    fret: number;
+    before_finger: number;
+    requested_finger: number;
+    reason: string | null;
+  };
+  stamps: Record<string, string>;
 }
 
 export interface APIProblem {

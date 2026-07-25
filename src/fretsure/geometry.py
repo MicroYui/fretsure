@@ -61,10 +61,18 @@ def euclid(a: tuple[float, float], b: tuple[float, float]) -> float:
 def d_max(i: int, j: int, hand_span_mm: float) -> float:
     """Max fingertip distance allowed between left-hand fingers ``i`` and ``j``.
 
-    Fingers 1..4 span 3 gaps that together cover the full hand span, so
-    ``d_max = (|i-j|/3) * hand_span``. Same finger -> 0 (barre handled elsewhere).
+    Reach does not grow linearly with the printed finger-number gap.  The old
+    ``gap / 3`` placeholder rejected ordinary first-position C and F shapes:
+    its adjacent-finger allowance was only one third of full 1--4 span.  The
+    monotone v2 calibration uses 0%, 50%, 90%, and 100% of the profile span for
+    gaps 0..3.  These conservative landmarks admit canonical open-position
+    shapes for the median profile while preserving profile-size ordering.
+    Same-finger geometry remains a barre and is handled separately.
     """
-    return (abs(i - j) / 3.0) * hand_span_mm
+
+    gap = abs(i - j)
+    factors = (0.0, 0.5, 0.9, 1.0)
+    return factors[min(gap, 3)] * hand_span_mm
 
 
 def open_pitch(string: int, tuning: tuple[int, ...], capo: int) -> int:

@@ -37,6 +37,7 @@ from fretsure.oracle.input import (
 )
 from fretsure.oracle.profiles import Profile
 from fretsure.solver.api import Infeasible
+from fretsure.solver.technique import DEFAULT_TECHNIQUE_PROFILE
 from fretsure.tab import Tab
 
 _SYSTEM = (
@@ -192,6 +193,7 @@ def repair(
     *,
     tempo_bpm: float = 90.0,
     beats_per_bar: int = 4,
+    technique_profile_name: str = DEFAULT_TECHNIQUE_PROFILE,
     max_iters: int = 8,
     candidate_index: int | None = None,
     call_scope_factory: ModelCallScopeFactory | None = None,
@@ -219,6 +221,7 @@ def repair(
             profile,
             tempo_bpm=tempo_bpm,
             beats_per_bar=beats_per_bar,
+            technique_profile_name=technique_profile_name,
         )
         solve_calls += 1
         if iterations == 0:

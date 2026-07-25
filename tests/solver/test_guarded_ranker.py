@@ -19,9 +19,7 @@ def test_experimental_model_constants_match_audited_manifest() -> None:
         "b6cc57b0b55ed55f959d827e46276371e87820938c5678adf860ffa60f845315"
     )
     assert ranker.FINGERING_RANKER_SOURCE_SOLVER_VERSION == "fingering-solver@0.3.0"
-    assert hashlib.sha256(manifest_bytes).hexdigest() == (
-        ranker.FINGERING_RANKER_MANIFEST_SHA256
-    )
+    assert hashlib.sha256(manifest_bytes).hexdigest() == (ranker.FINGERING_RANKER_MANIFEST_SHA256)
     assert manifest["ranker_version"] == ranker.FINGERING_RANKER_VERSION
     assert manifest["deployment_status"] == "experimental_offline_only"
     assert manifest["feature_schema"] == ranker.FINGERING_RANKER_FEATURE_SCHEMA
@@ -46,14 +44,22 @@ def test_experimental_model_constants_match_audited_manifest() -> None:
     assert tuple(feature["scale"] for feature in manifest["features"]) == (
         ranker.FINGERING_RANKER_FEATURE_SCALES_TEXT
     )
-    assert tuple(
-        feature["scaled_nonnegative_weight"] for feature in manifest["features"]
-    ) == ranker.FINGERING_RANKER_SCALED_WEIGHTS_TEXT
+    assert (
+        tuple(feature["scaled_nonnegative_weight"] for feature in manifest["features"])
+        == ranker.FINGERING_RANKER_SCALED_WEIGHTS_TEXT
+    )
 
 
 def test_relative_incumbent_guard_rejects_model_preferred_higher_fret() -> None:
-    legacy = QualityCost(5, Fraction(10_000), 100, 1_000_000, 100, 100)
-    higher_but_otherwise_light = QualityCost(6, Fraction(0), 0, 0, 0, 0)
+    legacy = QualityCost(
+        max_fret=5,
+        fret_exposure=Fraction(10_000),
+        shift_count=100,
+        shift_distance_um=1_000_000,
+        finger_load=100,
+        string_crossings=100,
+    )
+    higher_but_otherwise_light = QualityCost(max_fret=6)
     assert ranker._model_score(higher_but_otherwise_light) < ranker._model_score(legacy)
 
     selected = ranker.select_guarded_green_index(
@@ -65,14 +71,21 @@ def test_relative_incumbent_guard_rejects_model_preferred_higher_fret() -> None:
 
 
 def test_pareto_dominated_candidate_cannot_win_with_zero_weight_tie() -> None:
-    frontier = QualityCost(5, Fraction(10), 1, 100, 5, 1)
+    frontier = QualityCost(
+        max_fret=5,
+        fret_exposure=Fraction(10),
+        shift_count=1,
+        shift_distance_um=100,
+        finger_load=5,
+        string_crossings=1,
+    )
     dominated_only_on_zero_weight_feature = QualityCost(
-        5,
-        Fraction(10),
-        1,
-        100,
-        5,
-        2,
+        max_fret=5,
+        fret_exposure=Fraction(10),
+        shift_count=1,
+        shift_distance_um=100,
+        finger_load=5,
+        string_crossings=2,
     )
     assert ranker._model_score(frontier) == ranker._model_score(
         dominated_only_on_zero_weight_feature
@@ -88,14 +101,32 @@ def test_pareto_dominated_candidate_cannot_win_with_zero_weight_tie() -> None:
 
 def test_guarded_ranker_is_stable_across_repeated_selections() -> None:
     qualities = (
-        QualityCost(5, Fraction(10), 2, 100, 8, 1),
-        QualityCost(5, Fraction(8), 3, 120, 7, 1),
-        QualityCost(5, Fraction(9), 2, 90, 9, 2),
+        QualityCost(
+            max_fret=5,
+            fret_exposure=Fraction(10),
+            shift_count=2,
+            shift_distance_um=100,
+            finger_load=8,
+            string_crossings=1,
+        ),
+        QualityCost(
+            max_fret=5,
+            fret_exposure=Fraction(8),
+            shift_count=3,
+            shift_distance_um=120,
+            finger_load=7,
+            string_crossings=1,
+        ),
+        QualityCost(
+            max_fret=5,
+            fret_exposure=Fraction(9),
+            shift_count=2,
+            shift_distance_um=90,
+            finger_load=9,
+            string_crossings=2,
+        ),
     )
 
-    selections = {
-        ranker.select_guarded_green_index(qualities, (7, 8, 9))
-        for _ in range(100)
-    }
+    selections = {ranker.select_guarded_green_index(qualities, (7, 8, 9)) for _ in range(100)}
 
     assert len(selections) == 1

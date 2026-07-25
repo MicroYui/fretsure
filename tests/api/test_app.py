@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import json
 import stat
@@ -24,20 +25,24 @@ from fretsure.application import (
     ApplicationError,
     ArrangeOptions,
     CheckOptions,
+    DifficultyOptions,
     SolveOptions,
     arrange_outcome_to_wire,
     arrange_score_bytes,
     check_outcome_to_wire,
+    check_tab_difficulty_json,
     check_tab_json,
+    difficulty_outcome_to_wire,
     solve_target_json,
 )
+from fretsure.audio import AudioExportCode, AudioExportError
 from fretsure.importers import (
     DEFAULT_LIMITS,
     IMPORTER_VERSION,
     MIDI_IMPORTER_VERSION,
     SCORE_INPUT_VERSION,
 )
-from fretsure.llm.client import CONSTANT_LLM_MODEL_ID, ConstantLLM
+from fretsure.llm.client import CONSTANT_LLM_MODEL_ID, ConstantLLM, FakeLLM
 from fretsure.render.guitar_pro import render_guitar_pro
 from fretsure.render.musicxml_tab import render_musicxml_tab
 from fretsure.render.pdf_tab import render_tab_pdf
@@ -57,6 +62,7 @@ TAB_TEXT_MEDIA_TYPE = "text/plain; charset=utf-8"
 MUSICXML_TAB_MEDIA_TYPE = "application/vnd.recordare.musicxml+xml"
 GUITAR_PRO_MEDIA_TYPE = "application/octet-stream"
 PDF_MEDIA_TYPE = "application/pdf"
+AUDIO_MEDIA_TYPE = "audio/wav"
 TEST_BASE_URL = "http://127.0.0.1"
 MINIMAL_MIDI = bytes.fromhex(
     "4d546864000000060000000101e0"  # format 0, one track, PPQN 480
@@ -151,8 +157,7 @@ def _arrangement_request(client: TestClient) -> Response:
 
 def _valid_tab_json() -> str:
     solved = solve_target_json(
-        '{"notes":[{"onset":"0/1","duration":"1/1",'
-        '"pitch":60,"voice":"melody"}]}',
+        '{"notes":[{"onset":"0/1","duration":"1/1","pitch":60,"voice":"melody"}]}',
         options=SolveOptions(),
     )
     assert solved.tab is not None
@@ -193,7 +198,12 @@ def test_health_is_liveness_only_and_has_security_headers(client: TestClient) ->
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["x-frame-options"] == "DENY"
-    assert "object-src 'none'" in response.headers["content-security-policy"]
+    content_security_policy = response.headers["content-security-policy"]
+    assert "object-src 'none'" in content_security_policy
+    assert "script-src 'self'" in content_security_policy
+    assert "style-src-elem 'self' 'sha256-" in content_security_policy
+    assert content_security_policy.count("'sha256-") == 2
+    assert "style-src-attr 'unsafe-inline'" in content_security_policy
 
 
 def test_local_service_rejects_dns_rebinding_host_and_cross_origin_write(
@@ -241,15 +251,16 @@ def test_arrangement_http_defaults_match_the_evidence_backed_product_baseline(
     assert options["candidate_count"] == 1
     assert options["max_repair_iterations"] == 0
     assert options["critic_enabled"] is False
+    assert options["difficulty_tier"] == "intermediate"
 
 
 def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> None:
     response = client.get("/api/v1/capabilities")
     assert response.status_code == 200
     body = response.json()
-    assert body["api_version"] == API_VERSION == "fretsure-api@0.2.0"
-    assert body["service_version"] == "fretsure-service@0.2.0"
-    assert body["trace_schema_version"] == "agent-trace@0.2.0"
+    assert body["api_version"] == API_VERSION == "fretsure-api@0.3.0"
+    assert body["service_version"] == "fretsure-service@0.3.0"
+    assert body["trace_schema_version"] == "agent-trace@0.3.0"
     assert body["package_version"] == "0.6.0"
     assert "importer_version" not in body["stamps"]
     assert body["stamps"]["score_input_version"] == SCORE_INPUT_VERSION
@@ -259,8 +270,8 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
     assert body["inputs"]["score_input"] == {
         "router_version": "score-input@0.1.0",
         "format_importers": {
-            "musicxml": "musicxml@0.3.0",
-            "mxl": "musicxml@0.3.0",
+            "musicxml": "musicxml@0.4.0",
+            "mxl": "musicxml@0.4.0",
             "midi": "midi@0.1.0",
         },
     }
@@ -273,12 +284,47 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
     }
     assert body["controls"]["arrange"]["defaults"] == {
         "profile": "median",
+        "style": "fingerstyle",
+        "difficulty_tier": "intermediate",
+        "technique_profile": "balanced",
         "n": 1,
         "max_iters": 0,
         "use_critic": False,
         "tempo_bpm": None,
         "engine": "offline",
     }
+    assert [profile["name"] for profile in body["profiles"]] == [
+        "small",
+        "median",
+        "large",
+    ]
+    assert [style["id"] for style in body["arrangement_styles"]] == [
+        "fingerstyle",
+        "classical",
+        "jazz",
+        "rnb",
+    ]
+    assert [profile["id"] for profile in body["technique_profiles"]] == [
+        "balanced",
+        "avoid_barres",
+        "low_position",
+        "minimize_shifts",
+    ]
+    assert [tier["name"] for tier in body["difficulty_tiers"]] == [
+        "beginner",
+        "intermediate",
+        "advanced",
+    ]
+    assert body["controls"]["difficulty"]["defaults"] == {
+        "tier": "beginner",
+        "tempo_bpm": 90.0,
+        "beats_per_bar": 4,
+    }
+    assert body["controls"]["difficulty"]["tier"]["values"] == [
+        "beginner",
+        "intermediate",
+        "advanced",
+    ]
     assert body["score_inputs"]["musicxml"]["max_body_bytes"] == 10 * 1024 * 1024
     assert body["score_inputs"]["mxl"]["max_body_bytes"] == 20 * 1024 * 1024
     assert body["score_inputs"]["midi"] == {
@@ -293,20 +339,33 @@ def test_capabilities_are_the_api_configuration_truth(client: TestClient) -> Non
         "requires_startup_permission": False,
     }
     assert body["engines"][1]["available"] is False
-    assert "render_audio" in body["deferred"]
-    assert "render_audio" not in body["implemented"]
+    assert "render_audio" not in body["deferred"]
+    assert "render_audio" in body["implemented"]
     assert "midi_input" in body["implemented"]
     assert "render_midi" in body["implemented"]
     assert "render_tab_text" in body["implemented"]
     assert "render_musicxml_tab" in body["implemented"]
     assert "render_guitar_pro_5" in body["implemented"]
     assert "render_pdf_tab" in body["implemented"]
+    assert "check_difficulty" in body["implemented"]
+    assert body["http"]["difficulty_check"] == "/api/v1/difficulty/check"
+    assert body["http"]["regenerate_section"] == ("/api/v1/arrangements/regenerate-section")
+    assert body["http"]["left_hand_fingering_edit"] == ("/api/v1/fingering/left-hand")
     assert body["http"]["midi_export"] == "/api/v1/exports/midi"
+    assert body["http"]["audio_export"] == "/api/v1/exports/audio"
     assert body["http"]["tab_text_export"] == "/api/v1/exports/tab-text"
     assert body["http"]["musicxml_tab_export"] == "/api/v1/exports/musicxml-tab"
     assert body["http"]["guitar_pro_export"] == "/api/v1/exports/guitar-pro"
     assert body["http"]["pdf_tab_export"] == "/api/v1/exports/pdf-tab"
     assert body["http"]["multipart_uploads"] is False
+    assert body["audio"] == {
+        "available": api_module.fluidsynth_available(),
+        "renderer": "FluidSynth",
+        "runtime_version": api_module.fluidsynth_version(),
+        "export_version": "tab-audio@0.1.0",
+        "sample_rate_hz": 44_100,
+        "media_type": AUDIO_MEDIA_TYPE,
+    }
 
 
 def test_arrangement_endpoint_matches_application_service(client: TestClient) -> None:
@@ -335,6 +394,94 @@ def test_arrangement_response_is_byte_deterministic(client: TestClient) -> None:
     second = _arrangement_request(client)
     assert first.status_code == second.status_code == 200
     assert first.content == second.content
+
+
+def test_section_regeneration_endpoint_returns_accepted_checked_checkpoint(
+    static_root: Path,
+) -> None:
+    baseline = arrange_score_bytes(
+        MINIMAL_MIDI,
+        filename="minimal.mid",
+        options=ArrangeOptions(),
+        llm=ConstantLLM(),
+    )
+    baseline_wire = arrange_outcome_to_wire(baseline)
+    assert baseline_wire["editable_target"] is not None
+    assert baseline_wire["tab"] is not None
+    reply = json.dumps(
+        {
+            "notes": [
+                {"onset": "0", "duration": "1", "pitch": 60, "voice": "melody"},
+                {"onset": "0", "duration": "1", "pitch": 52, "voice": "harmony"},
+            ]
+        }
+    )
+    app = create_app(
+        offline_factory=lambda: FakeLLM([reply]),
+        offline_model_id="fake-scripted",
+        static_root=static_root,
+    )
+    document = {
+        "source": {
+            "filename": "minimal.mid",
+            "base64": base64.b64encode(MINIMAL_MIDI).decode("ascii"),
+        },
+        "baseline": {
+            "editable_target": baseline_wire["editable_target"],
+            "tab": baseline_wire["tab"],
+        },
+        "selection": {
+            "start_measure": 1,
+            "end_measure": 1,
+            "locked_voices": [],
+        },
+        "options": {
+            "profile": "median",
+            "style": "fingerstyle",
+            "difficulty_tier": "intermediate",
+            "technique_profile": "balanced",
+            "tempo_bpm": None,
+        },
+    }
+
+    with TestClient(app, base_url=TEST_BASE_URL, raise_server_exceptions=False) as local:
+        response = local.post(
+            "/api/v1/arrangements/regenerate-section?engine=offline",
+            json=document,
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "accepted"
+    assert body["model"] == {"model_id": "fake-scripted", "engine": "offline"}
+    assert body["revision"]["model_calls"] == 1
+    assert body["playability"]["verdict"] == "GREEN"
+    assert body["faithfulness"]["passed"] is True
+
+
+def test_left_hand_fingering_endpoint_is_transactional(client: TestClient) -> None:
+    arranged = _arrangement_request(client)
+    assert arranged.status_code == 200
+    tab = arranged.json()["tab"]
+
+    applied = client.post(
+        "/api/v1/fingering/left-hand",
+        params={"note_index": 0, "left_finger": 4},
+        json=tab,
+    )
+    rejected = client.post(
+        "/api/v1/fingering/left-hand",
+        params={"note_index": 0, "left_finger": 1},
+        json=tab,
+    )
+
+    assert applied.status_code == rejected.status_code == 200
+    assert applied.json()["status"] == "applied"
+    assert applied.json()["tab"]["notes"][0]["left_finger"] == 4
+    assert applied.json()["playability"]["verdict"] == "GREEN"
+    assert rejected.json()["status"] == "rejected"
+    assert rejected.json()["tab"] == tab
+    assert rejected.json()["attempted_playability"]["verdict"] == "RED"
 
 
 @pytest.mark.parametrize(
@@ -472,6 +619,47 @@ def test_oracle_endpoint_matches_application_service(client: TestClient) -> None
     )
 
 
+def test_difficulty_endpoint_matches_application_service(client: TestClient) -> None:
+    payload = _valid_tab_json()
+    response = client.post(
+        "/api/v1/difficulty/check?tier=beginner&tempo_bpm=92&beats_per_bar=3",
+        content=payload,
+        headers={"content-type": "application/json; charset=utf-8"},
+    )
+    options = DifficultyOptions(
+        tier="beginner",
+        tempo_bpm=92,
+        beats_per_bar=3,
+    )
+    expected = {
+        "api_version": API_VERSION,
+        **difficulty_outcome_to_wire(check_tab_difficulty_json(payload, options=options)),
+    }
+
+    assert response.status_code == 200, response.text
+    assert response.json() == expected
+    assert response.json()["difficulty"]["checker_version"] == "difficulty@0.1.0"
+
+
+def test_difficulty_endpoint_rejects_unknown_tier_and_invalid_tab(
+    client: TestClient,
+) -> None:
+    unknown = client.post(
+        "/api/v1/difficulty/check?tier=virtuoso",
+        content=_valid_tab_json(),
+        headers={"content-type": "application/json"},
+    )
+    body = _problem(unknown, 422, "INVALID_OPTIONS")
+    assert body["diagnostics"][0]["code"] == "UNKNOWN_DIFFICULTY_TIER"
+
+    invalid = client.post(
+        "/api/v1/difficulty/check",
+        content='{"tuning":[],"capo":0,"notes":[]}',
+        headers={"content-type": "application/json"},
+    )
+    _problem(invalid, 422, "TAB_INPUT_REJECTED")
+
+
 def test_midi_export_endpoint_returns_deterministic_download(client: TestClient) -> None:
     payload = _valid_tab_json()
 
@@ -516,6 +704,55 @@ def test_midi_export_rejects_invalid_tab_and_scales_supported_slow_tempo(
     )
     assert slow.status_code == 200
     assert b"\x00\xff\x51\x03\xe4\xe1\xc0" in slow.content
+
+
+def test_audio_export_returns_real_wav_download(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    wav = b"RIFF" + (36).to_bytes(4, "little") + b"WAVE" + b"\x00" * 36
+    calls: list[float] = []
+
+    def render(_tab: object, *, tempo_bpm: float) -> bytes:
+        calls.append(tempo_bpm)
+        return wav
+
+    monkeypatch.setattr(api_module, "render_wav", render)
+    response = client.post(
+        "/api/v1/exports/audio?tempo_bpm=96",
+        content=_valid_tab_json(),
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 200
+    assert response.content == wav
+    assert response.headers["content-type"] == AUDIO_MEDIA_TYPE
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="fretsure-arrangement.wav"'
+    )
+    assert calls == [96.0]
+
+
+def test_audio_export_reports_missing_synthesizer_without_runtime_details(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unavailable(_tab: object, *, tempo_bpm: float) -> bytes:
+        del tempo_bpm
+        raise AudioExportError(
+            AudioExportCode.SYNTHESIZER_UNAVAILABLE,
+            "/private/runtime detail",
+        )
+
+    monkeypatch.setattr(api_module, "render_wav", unavailable)
+    response = client.post(
+        "/api/v1/exports/audio",
+        content=_valid_tab_json(),
+        headers={"content-type": "application/json"},
+    )
+
+    _problem(response, 503, "AUDIO_RENDERER_UNAVAILABLE")
+    assert "/private" not in response.text
 
 
 def test_tab_text_export_is_direct_deterministic_fingered_download(
@@ -763,9 +1000,7 @@ def test_missing_content_type_is_415(client: TestClient) -> None:
         "filename=score.xml&engine=custom-model",
     ],
 )
-def test_invalid_query_controls_fail_before_body_semantics(
-    client: TestClient, query: str
-) -> None:
+def test_invalid_query_controls_fail_before_body_semantics(client: TestClient, query: str) -> None:
     response = client.post(
         f"/api/v1/arrangements?{query}",
         content=b"not XML",
@@ -871,9 +1106,7 @@ def test_unconfigured_proxy_is_not_advertised_or_allowed_before_body_read(
             headers={"content-type": XML_MEDIA_TYPE},
         )
     proxy = next(
-        engine
-        for engine in capabilities_response.json()["engines"]
-        if engine["id"] == "proxy"
+        engine for engine in capabilities_response.json()["engines"] if engine["id"] == "proxy"
     )
     assert proxy["enabled"] is True
     assert proxy["available"] is False
@@ -928,9 +1161,7 @@ def test_engine_initialization_and_transport_failures_are_redacted(
         proxy_factory=broken_factory,
         static_root=static_root,
     )
-    with TestClient(
-        init_app, base_url=TEST_BASE_URL, raise_server_exceptions=False
-    ) as local:
+    with TestClient(init_app, base_url=TEST_BASE_URL, raise_server_exceptions=False) as local:
         init_response = local.post(
             f"/api/v1/arrangements?filename={BASIC.name}&engine=proxy",
             content=BASIC.read_bytes(),
@@ -949,9 +1180,7 @@ def test_engine_initialization_and_transport_failures_are_redacted(
         proxy_model_id="test-proxy",
         static_root=static_root,
     )
-    with TestClient(
-        transport_app, base_url=TEST_BASE_URL, raise_server_exceptions=False
-    ) as local:
+    with TestClient(transport_app, base_url=TEST_BASE_URL, raise_server_exceptions=False) as local:
         transport_response = local.post(
             f"/api/v1/arrangements?filename={BASIC.name}&engine=proxy&n=1&max_iters=0",
             content=BASIC.read_bytes(),
@@ -965,15 +1194,16 @@ def test_engine_initialization_and_transport_failures_are_redacted(
 def test_default_proxy_factory_uses_product_request_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    calls: list[tuple[str, float]] = []
+    calls: list[tuple[str, float, int]] = []
     sentinel = _NamedConstantLLM("gpt-5.6-sol")
 
     def fake_proxy_llm(
         model: str,
         *,
         request_timeout_seconds: float,
+        max_attempts: int,
     ) -> _NamedConstantLLM:
-        calls.append((model, request_timeout_seconds))
+        calls.append((model, request_timeout_seconds, max_attempts))
         return sentinel
 
     monkeypatch.setattr(api_module, "ProxyLLM", fake_proxy_llm)
@@ -981,7 +1211,7 @@ def test_default_proxy_factory_uses_product_request_timeout(
     built = api_module._default_proxy_factory("gpt-5.6-sol")()
 
     assert built is sentinel
-    assert calls == [("gpt-5.6-sol", api_module.API_PROXY_REQUEST_TIMEOUT_SECONDS)]
+    assert calls == [("gpt-5.6-sol", api_module.API_PROXY_REQUEST_TIMEOUT_SECONDS, 1)]
     assert api_module.API_PROXY_REQUEST_TIMEOUT_SECONDS == 300.0
 
 
@@ -1098,8 +1328,7 @@ def test_offline_constant_identity_keeps_large_score_direct_fallback(
     )
     with TestClient(app, base_url=TEST_BASE_URL, raise_server_exceptions=False) as local:
         response = local.post(
-            f"/api/v1/arrangements?filename={LONG.name}&n=1&max_iters=0"
-            "&use_critic=false",
+            f"/api/v1/arrangements?filename={LONG.name}&n=1&max_iters=0&use_critic=false",
             content=LONG.read_bytes(),
             headers={"content-type": XML_MEDIA_TYPE},
         )
@@ -1256,38 +1485,38 @@ def test_openapi_documents_only_real_raw_body_endpoints(client: TestClient) -> N
     assert response.status_code == 200
     document = response.json()
     assert "/api/v1/arrangements" in document["paths"]
+    assert "/api/v1/arrangements/regenerate-section" in document["paths"]
+    assert "/api/v1/fingering/left-hand" in document["paths"]
     assert "/api/v1/oracle/check" in document["paths"]
+    assert "/api/v1/difficulty/check" in document["paths"]
     assert "/api/v1/exports/midi" in document["paths"]
+    assert "/api/v1/exports/audio" in document["paths"]
     assert "/api/v1/exports/tab-text" in document["paths"]
     assert "/api/v1/exports/musicxml-tab" in document["paths"]
     assert "/api/v1/exports/guitar-pro" in document["paths"]
     assert "/api/v1/exports/pdf-tab" in document["paths"]
-    capabilities_schema = document["paths"]["/api/v1/capabilities"]["get"]["responses"][
-        "200"
-    ]["content"]["application/json"]["schema"]
+    capabilities_schema = document["paths"]["/api/v1/capabilities"]["get"]["responses"]["200"][
+        "content"
+    ]["application/json"]["schema"]
     assert capabilities_schema["additionalProperties"] is False
     assert set(capabilities_schema["required"]) >= {"inputs", "score_inputs", "stamps"}
-    score_input_schema = capabilities_schema["properties"]["inputs"]["properties"][
-        "score_input"
-    ]
-    assert score_input_schema["properties"]["router_version"]["const"] == (
-        "score-input@0.1.0"
-    )
+    assert set(capabilities_schema["required"]) >= {
+        "arrangement_styles",
+        "technique_profiles",
+    }
+    score_input_schema = capabilities_schema["properties"]["inputs"]["properties"]["score_input"]
+    assert score_input_schema["properties"]["router_version"]["const"] == ("score-input@0.1.0")
     assert score_input_schema["properties"]["format_importers"]["properties"] == {
-        "musicxml": {"type": "string", "const": "musicxml@0.3.0"},
-        "mxl": {"type": "string", "const": "musicxml@0.3.0"},
+        "musicxml": {"type": "string", "const": "musicxml@0.4.0"},
+        "mxl": {"type": "string", "const": "musicxml@0.4.0"},
         "midi": {"type": "string", "const": "midi@0.1.0"},
     }
-    midi_capability_schema = capabilities_schema["properties"]["score_inputs"][
-        "properties"
-    ]["midi"]
+    midi_capability_schema = capabilities_schema["properties"]["score_inputs"]["properties"]["midi"]
     assert midi_capability_schema["properties"]["suffixes"]["const"] == [
         ".mid",
         ".midi",
     ]
-    assert midi_capability_schema["properties"]["media_types"]["const"] == [
-        MIDI_MEDIA_TYPE
-    ]
+    assert midi_capability_schema["properties"]["media_types"]["const"] == [MIDI_MEDIA_TYPE]
     assert midi_capability_schema["properties"]["max_body_bytes"]["const"] == (
         DEFAULT_LIMITS.max_midi_bytes
     )
@@ -1306,9 +1535,21 @@ def test_openapi_documents_only_real_raw_body_endpoints(client: TestClient) -> N
         item for item in operation["parameters"] if item["name"] == "use_critic"
     )
     assert critic_parameter["schema"]["default"] is False
-    arrangement_schema = operation["responses"]["200"]["content"]["application/json"][
-        "schema"
-    ]
+    assert {item["name"] for item in operation["parameters"]} >= {
+        "profile",
+        "style",
+        "difficulty_tier",
+        "technique_profile",
+    }
+    difficulty_parameter = next(
+        item for item in operation["parameters"] if item["name"] == "difficulty_tier"
+    )
+    assert difficulty_parameter["schema"] == {
+        "type": "string",
+        "enum": ["beginner", "intermediate", "advanced"],
+        "default": "intermediate",
+    }
+    arrangement_schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
     assert arrangement_schema["properties"]["status"]["enum"] == [
         "tab_produced",
         "no_fingering_within_budget",
@@ -1317,12 +1558,29 @@ def test_openapi_documents_only_real_raw_body_endpoints(client: TestClient) -> N
         "source",
         "playability",
         "faithfulness",
+        "alternatives",
         "trace",
         "stamps",
+        "editable_target",
     }
+    section_revision = document["paths"]["/api/v1/arrangements/regenerate-section"]["post"]
+    assert set(section_revision["requestBody"]["content"]) == {"application/json"}
+    fingering_edit = document["paths"]["/api/v1/fingering/left-hand"]["post"]
+    assert set(fingering_edit["requestBody"]["content"]) == {"application/json"}
     midi_export = document["paths"]["/api/v1/exports/midi"]["post"]
     assert set(midi_export["requestBody"]["content"]) == {"application/json"}
     assert "audio/midi" in midi_export["responses"]["200"]["content"]
+    audio_export = document["paths"]["/api/v1/exports/audio"]["post"]
+    assert set(audio_export["requestBody"]["content"]) == {"application/json"}
+    assert AUDIO_MEDIA_TYPE in audio_export["responses"]["200"]["content"]
+    difficulty_check = document["paths"]["/api/v1/difficulty/check"]["post"]
+    tier_parameter = next(item for item in difficulty_check["parameters"] if item["name"] == "tier")
+    assert tier_parameter["schema"]["enum"] == [
+        "beginner",
+        "intermediate",
+        "advanced",
+    ]
+    assert set(difficulty_check["requestBody"]["content"]) == {"application/json"}
     tab_text_export = document["paths"]["/api/v1/exports/tab-text"]["post"]
     assert set(tab_text_export["requestBody"]["content"]) == {"application/json"}
     assert "text/plain" in tab_text_export["responses"]["200"]["content"]
@@ -1376,9 +1634,31 @@ def test_openapi_documents_only_real_raw_body_endpoints(client: TestClient) -> N
         "type": "string",
         "const": "fidelity@0.3.0",
     }
-    location_schema = arrangement_schema["properties"]["source"]["properties"][
-        "warnings"
-    ]["items"]["properties"]["location"]
+    alternative_schema = arrangement_schema["properties"]["alternatives"]["items"]
+    assert alternative_schema["additionalProperties"] is False
+    assert set(alternative_schema["required"]) == {
+        "candidate_index",
+        "tab",
+        "ascii",
+        "playability",
+        "faithfulness",
+        "work",
+        "proposal_status",
+        "observed_critic",
+    }
+    assert alternative_schema["properties"]["work"]["required"] == [
+        "model_calls",
+        "trial_solver_calls",
+        "proposed_additions",
+        "accepted_additions",
+    ]
+    assert (
+        alternative_schema["properties"]["observed_critic"]["properties"]["meaning"]["const"]
+        == "machine_observation_not_human_musicality_evidence"
+    )
+    location_schema = arrangement_schema["properties"]["source"]["properties"]["warnings"]["items"][
+        "properties"
+    ]["location"]
     assert location_schema["additionalProperties"] is False
     assert location_schema["required"] == [
         "part_id",
@@ -1402,12 +1682,11 @@ def test_openapi_documents_only_real_raw_body_endpoints(client: TestClient) -> N
         "minimum": 1,
         "maximum": 16,
     }
-    check_schema = document["paths"]["/api/v1/oracle/check"]["post"]["responses"]["200"][
-        "content"
-    ]["application/json"]["schema"]
+    check_schema = document["paths"]["/api/v1/oracle/check"]["post"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
     assert check_schema["properties"]["status"]["const"] == "checked"
-    assert "render_audio" not in response.text
-    assert "/api/v1/render_audio" not in document["paths"]
+    assert document["paths"].get("/api/v1/render_audio") is None
 
 
 def test_static_files_and_spa_fallback_do_not_swallow_reserved_paths(
@@ -1424,9 +1703,7 @@ def test_static_files_and_spa_fallback_do_not_swallow_reserved_paths(
     assert "FRETSURE_TEST" in asset.text
     assert root.headers["cache-control"] == "no-store"
     assert asset.headers["cache-control"] == "no-cache"
-    assert hashed_asset.headers["cache-control"] == (
-        "public, max-age=31536000, immutable"
-    )
+    assert hashed_asset.headers["cache-control"] == ("public, max-age=31536000, immutable")
 
     missing_asset = client.get("/assets/missing-abcdefgh.js")
     _problem(missing_asset, 404, "NOT_FOUND")
@@ -1466,9 +1743,7 @@ def test_packaged_web_build_serves_real_assets_examples_fonts_and_licenses() -> 
         assert response.status_code == 200
         assert response.headers["content-type"].startswith(media_prefix)
         assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
-    assert example.headers["content-type"].startswith(
-        "application/vnd.recordare.musicxml+xml"
-    )
+    assert example.headers["content-type"].startswith("application/vnd.recordare.musicxml+xml")
     assert favicon.headers["content-type"].startswith("image/svg+xml")
     assert license_text.headers["content-type"].startswith("text/plain")
     assert "SIL OPEN FONT LICENSE Version 1.1" in license_text.text
@@ -1478,9 +1753,7 @@ def test_packaged_musicxml_media_type_does_not_depend_on_platform_mimetypes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr("starlette.responses.guess_type", lambda _path: (None, None))
-    with TestClient(
-        create_app(), base_url=TEST_BASE_URL, raise_server_exceptions=False
-    ) as local:
+    with TestClient(create_app(), base_url=TEST_BASE_URL, raise_server_exceptions=False) as local:
         example = local.get("/examples/fretsure-etude.musicxml")
 
     assert example.status_code == 200

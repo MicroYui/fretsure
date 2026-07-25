@@ -1,10 +1,12 @@
 # Fretsure Web、HTTP API 与 MCP
 
 本页描述 package `0.6.0` 的本地互操作面：router=`score-input@0.1.0`，importers=
-`musicxml@0.3.0` / `midi@0.1.0`，service=`fretsure-service@0.2.0`、
-API=`fretsure-api@0.2.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.2.0`、
-trace=`agent-trace@0.2.0`，faithfulness=`fidelity@0.3.0`。这里的 `GREEN` 始终是
-`oracle@0.2.0` + 指定 profile 下的版本化模型证据，不是真人保证；faithfulness 是另一道独立门。
+`musicxml@0.4.0` / `midi@0.1.0`，service=`fretsure-service@0.3.0`、
+API=`fretsure-api@0.3.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.3.0`、
+trace=`agent-trace@0.3.0`，faithfulness=`fidelity@0.3.0`、fingering=
+`fingering-solver@0.6.0`、score solver=`score-solver@0.4.0`、公开谱排序=
+`published-fingering-ranker@0.1.0`、出版分级=`published-grade-estimator@0.1.0`。这里的 `GREEN` 始终是
+`oracle@0.3.0` + 指定 profile 下的版本化模型证据，不是真人保证；faithfulness 是另一道独立门。
 
 ## 本地 Web 与 API
 
@@ -16,14 +18,20 @@ uv run fretsure-serve
 ```
 
 默认只监听 `127.0.0.1:8000`。浏览器打开 `http://127.0.0.1:8000/`。Web 可上传当前受限
-MusicXML lead-sheet 子集的 `.musicxml` / `.xml`、严格 `.mxl` container，以及 melody-only strict
+MusicXML lead-sheet 子集、严格可确定缩编的双谱表钢琴谱的 `.musicxml` / `.xml`、严格 `.mxl`
+container，以及 melody-only strict
 SMF 的 `.mid` / `.midi`；也可加载页面内的
 CC0 示例。MusicXML 4.0 traditional key 合法省略 `<mode>` 时保留
 `key-signature:fifths=N;mode=unprovided` 并发 `KEY_MODE_UNPROVIDED`，不会猜 major/minor；MusicXML
 3.1 省略 mode 仍拒绝。MIDI 不猜 track role、bass/chord/key/quantization；缺失的 bass-root/harmony
 faithfulness 显示为 N/A。上传是原始 request body，不使用 multipart、临时文件或路径回读。
 首版 MIDI 纵切只复用现有上传面、provenance/证据卡、warning 与 N/A 展示，不新增 track mapper、
-时间轴、琴颈动画或独立视觉 gate。
+时间轴或 track mapper。Plan 6B 在结果页增加 AlphaTab 1.8.4 五线谱+六线谱、本地 Sonivox 播放、
+同步六弦指板、difficulty 检查、trial checkpoint、verified alternatives、Demo Lab 实时记分卡与本地个人库。
+Plan 7A 继续使用同一工作台，增加版本化编配风格、player hand profile、GREEN-pool 技巧偏好、带声部锁
+的局部重生成、事务式左手指号修改和匿名本地偏好证据。难度档与固定谱面的指号仍是两条独立控制轴。
+Plan 7B 在 balanced 默认模式的完整 GREEN pool 内增加公开专家谱监督排序，并在 difficulty 响应中增加
+独立、低置信度的 Delcamp/Eric Crouch 出版分级估计；两者均带版本和模型 hash，不改变 Oracle 或 hard tier。
 
 安装包用户可安装完整的本地服务组合：
 
@@ -38,11 +46,20 @@ fretsure-serve
 ### HTTP 端点
 
 - `GET /healthz`：只表示进程存活。
-- `GET /api/v1/capabilities`：版本、输入格式/上限、engine availability、profile 和控制范围的配置真源。
+- `GET /api/v1/capabilities`：版本、输入格式/上限、engine availability、player profile、编配风格、
+  技巧偏好和控制范围的配置真源。
 - `POST /api/v1/arrangements?filename=...`：raw MusicXML/MXL/MIDI；控制项为 `engine`、`n`、
-  `max_iters`、`use_critic`、`tempo_bpm`。
+  `profile`、`style`、`difficulty_tier`、`technique_profile`、`max_iters`、`use_critic`、`tempo_bpm`。
+- `POST /api/v1/arrangements/regenerate-section?engine=...`：JSON 携带原始 source bytes、当前
+  `editable_target`/Tab checkpoint、1–32 小节范围与 melody/bass/harmony locks。离线为 0 模型调用，
+  proxy 最多 1 次；非 GREEN 或 faithfulness 不通过时返回 preserved checkpoint。
+- `POST /api/v1/fingering/left-hand?note_index=...&left_finger=...`：只修改一个已按下音的左手 1–4 指号，
+  对完整 Tab 重跑 Oracle；失败时返回原 Tab 和 attempted verdict。
 - `POST /api/v1/oracle/check`：raw canonical Tab JSON。
+- `POST /api/v1/difficulty/check?tier=...`：用版本化 hard tier 检查同一 canonical Tab，同时返回独立的
+  出版分级估计、±1 区间、低置信度、训练范围和模型 provenance。
 - `POST /api/v1/exports/midi?tempo_bpm=...`：raw canonical Tab JSON，返回可下载的 `audio/midi`。
+- `POST /api/v1/exports/audio?tempo_bpm=...`：从同一确定性 MIDI 通过 FluidSynth 返回 WAV。
 - `POST /api/v1/exports/tab-text`：raw canonical Tab JSON，返回可下载的 UTF-8 `.txt` 吉他六线谱与
   逐音指法表。
 - `POST /api/v1/exports/musicxml-tab?tempo_bpm=...`：返回可继续编辑的 MusicXML 4.0 吉他 TAB。
@@ -84,6 +101,12 @@ curl --fail-with-body \
 curl --fail-with-body \
   -H 'Content-Type: application/json' \
   --data-binary @arranged-tab.json \
+  -o fretsure-arrangement.wav \
+  'http://127.0.0.1:8000/api/v1/exports/audio?tempo_bpm=96'
+
+curl --fail-with-body \
+  -H 'Content-Type: application/json' \
+  --data-binary @arranged-tab.json \
   -o fretsure-guitar-tablature.txt \
   'http://127.0.0.1:8000/api/v1/exports/tab-text'
 
@@ -106,9 +129,10 @@ curl --fail-with-body \
   'http://127.0.0.1:8000/api/v1/exports/pdf-tab?tempo_bpm=96'
 ```
 
-Web 结果页中的 MusicXML TAB 与 GP5 是可编辑交换文件；PDF 是打印谱；MIDI 是试听/播放器输入；
-ASCII `.txt` 便于快速核对；canonical Tab JSON 是机器可读的精确结果，适合归档、重放或继续交给 API。
-这些导出都直接读取同一份 canonical Tab，MIDI 不能代替 canonical Tab 或指法谱。
+Web 结果页中的 MusicXML TAB、GP5 与浏览器生成的原生 GP7+ `.gp` 是可编辑交换文件；PDF 是打印谱；
+MIDI 是符号演奏文件，WAV 是带 FluidSynth runtime stamp 的合成试听；ASCII `.txt` 便于快速核对；
+canonical Tab JSON 是机器可读的精确结果，适合归档、重放或继续交给 API。这些导出都直接读取同一份
+canonical Tab，音频和 MIDI 都不能代替 canonical Tab、真人演奏证据或指法谱。
 
 MIDI 导出是确定性的 format-0 SMF：480 PPQN、单轨、单 MIDI channel、General MIDI 尼龙弦吉他音色。
 同一 onset 的和弦音保留在同一 tick；同 tick 先写 note-off 再写 note-on，以正确重奏重复音。它是符号
@@ -132,9 +156,11 @@ PDF 使用 A4 矢量几何分页，包含 tempo/tuning/capo、小节与节拍、
 pdfplumber（MIT）和 pypdf（BSD）只用于 `dev` 测试，依赖版本均由 `uv.lock` 固定，仓库不复制其源码。
 
 成功结果明确区分 `tab_produced` 与 `no_fingering_within_budget`，并返回 source provenance、import
-warnings、独立 playability / availability-aware faithfulness、ASCII tab、`agent-trace@0.2.0` replay rows
-和全部版本 stamps；score capabilities 盖 `score-input@0.1.0` 的 format→importer registry，arrangement
-结果同时盖 router 与实际 `musicxml@0.3.0` / `midi@0.1.0`，纯 Tab check/solve/render
+warnings、独立 playability / availability-aware faithfulness、ASCII tab、`agent-trace@0.3.0` replay rows
+和全部版本 stamps；difficulty 响应另盖 published-grade version/hash，所有基础响应盖
+published-fingering ranker version/hash/feature schema。score capabilities 盖 `score-input@0.1.0` 的
+format→importer registry，arrangement
+结果同时盖 router 与实际 `musicxml@0.4.0` / `midi@0.1.0`，纯 Tab check/solve/render
 不冒充经过 importer。失败使用
 `application/problem+json`，不会返回 provider exception、traceback、secret 或任意本机路径。
 
@@ -176,12 +202,14 @@ uv run fretsure-mcp
 stdout 只承载 MCP protocol。server initialize identity 是 `Fretsure` / `fretsure-mcp@0.2.0`，提供：
 
 - `check_playability`：复用 application/core 的 strict Tab JSON checker。
+- `check_difficulty`：对 strict Tab JSON 运行同一版本化 tier checker。
 - `feasible_fingerings`：严格 `target-input@0.1.0` 的有界搜索；最多一个解，永远返回
   `search_complete=false`，未找到不等于不可解证明。
 - `render_notation`：Plan 6A 只支持 `ascii`。
+- `render_audio`：通过 FluidSynth 返回 `audio/wav` MCP 内容，并附版本、采样率和字节数 metadata。
 - `fretsure://capabilities`：版本、资源上限与 deferred 能力。
 
-没有 `render_audio`，也没有远程 URL 导入。
+没有远程 URL 导入；`render_audio` 是机器合成预览，不是人类演奏证据。
 
 已通过官方 in-memory session 和真实 stdio subprocess 的 initialize/list/call/invalid-call-survival
 验证。下面是 Claude Desktop / Cursor 兼容的配置格式；本阶段未把“写过配置”冒充成在用户本机 GUI 中
@@ -205,8 +233,15 @@ stdout 只承载 MCP protocol。server initialize identity 是 `Fretsure` / `fre
 
 若已安装 wheel，可把 `command` 换成该虚拟环境中 `fretsure-mcp` 的绝对路径，并删除 `args`。
 
-## Plan 6A 之后仍未实现
+## Plan 7A 边界
 
-通用多轨/角色映射 MIDI 输入、AlphaTab、音频/FluidSynth、播放同步、真实琴颈动画、
-原生 GP7 `.gp`、WebSocket/SSE、live A/B、
-live leaderboard、账户/数据库/云部署、真人 calibration 与完整 Plan 6 money moment 均保持 open。
+已实现 AlphaTab、播放同步、同步指板、FluidSynth、原生 GP7、本地 verified A/B 与本地个人库，并补齐
+风格/难度/手型/技巧控制、局部重生成、手动指号和本地反馈。难度档进入生成目标并由独立 checker
+复核，但不参与固定谱面的指号选择。评分、A/B 和指号修订只有
+`local_preference_evidence_not_model_training` 语义；它们不会让远程 API 模型自动后训练。通用多轨/角色
+映射 MIDI 输入、WebSocket/SSE、公共 live leaderboard、账户/远程数据库/云部署仍不属于本计划。
+
+Plan 6B 的真实代理与匿名真人结果为有限的 `PARTIAL`；Plan 7A 没有新增真实代理调用或代表性真人校准。
+因此不能把模型内 GREEN、tier、风格标签、player profile 或 critic metadata 宣称为普适真人可弹性、
+难度校准、地道风格或 musicality 结论。当前证据见
+[`PLAN7A_ACCEPTANCE.md`](PLAN7A_ACCEPTANCE.md)。

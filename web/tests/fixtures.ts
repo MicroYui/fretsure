@@ -1,20 +1,110 @@
-import type { ArrangementResponse, CapabilitiesResponse } from "../src/types";
+import type {
+  ArrangementResponse,
+  CapabilitiesResponse,
+  DifficultyCheckResponse,
+} from "../src/types";
+
+export const publishedGrade: DifficultyCheckResponse["published_grade"] = {
+  model_version: "published-grade-estimator@0.1.0",
+  model_sha256: "a3bb39aaf5f881513ed0141d20b3e3776c8b38357dd11351681c38701dddf16a",
+  grade_system: "Delcamp/Eric Crouch 1–10",
+  estimated_grade: 5,
+  likely_interval: { lower: 4, upper: 6 },
+  band: "foundational",
+  confidence: "low",
+  burden_percentile: 32.4,
+  feature_percentiles: { midi_max: 30.1, max_chord_stack: 34.7 },
+  training_scope: "427 attributed classical-guitar scores; one curator; composer-confounded",
+  meaning: "corpus_calibrated_estimate_not_a_playability_guarantee",
+};
 
 export const capabilities: CapabilitiesResponse = {
-  api_version: "fretsure-api@0.2.0",
+  api_version: "fretsure-api@0.3.0",
   package_version: "0.6.0",
-  service_version: "fretsure-service@0.2.0",
-  trace_schema_version: "agent-trace@0.2.0",
+  service_version: "fretsure-service@0.3.0",
+  trace_schema_version: "agent-trace@0.3.0",
+  profile_registry_version: "profile-registry@0.2.0",
   engines: [
     { id: "offline", available: true, model_id: "constant-stub" },
     { id: "proxy", available: true, model_id: "gpt-5.6-sol" },
   ],
   profiles: [
     {
+      name: "small",
+      version: "small@0.1",
+      fingerprint: "small123",
+      calibration_status: "placeholder_pending_human_calibration",
+    },
+    {
       name: "median",
       version: "median@0.1",
       fingerprint: "abc123",
       calibration_status: "placeholder_pending_human_calibration",
+    },
+    {
+      name: "large",
+      version: "large@0.1",
+      fingerprint: "large123",
+      calibration_status: "placeholder_pending_human_calibration",
+    },
+  ],
+  arrangement_styles: [
+    { id: "fingerstyle", label: "Fingerstyle", description: "Balanced solo texture." },
+    { id: "classical", label: "Classical", description: "Measured voice leading." },
+    { id: "jazz", label: "Jazz", description: "Shell colors and syncopation." },
+    { id: "rnb", label: "R&B", description: "Spacious pocket." },
+  ],
+  technique_profiles: [
+    { id: "balanced", label: "Balanced", description: "General ergonomic ordering." },
+    { id: "avoid_barres", label: "Avoid barres", description: "Less barre burden." },
+    { id: "low_position", label: "Low position", description: "Prefer lower frets." },
+    { id: "minimize_shifts", label: "Fewer shifts", description: "Reduce position changes." },
+  ],
+  difficulty_tiers: [
+    {
+      name: "beginner",
+      profile: {
+        name: "beginner",
+        version: "beginner@0.1",
+        fingerprint: "beginner-fingerprint",
+        calibration_status: "placeholder_pending_human_calibration",
+      },
+      constraints: {
+        max_simultaneous: 2,
+        allow_barre: false,
+        max_position: 5,
+        max_shifts_per_bar: 2,
+      },
+    },
+    {
+      name: "intermediate",
+      profile: {
+        name: "intermediate",
+        version: "intermediate@0.1",
+        fingerprint: "intermediate-fingerprint",
+        calibration_status: "placeholder_pending_human_calibration",
+      },
+      constraints: {
+        max_simultaneous: 3,
+        allow_barre: true,
+        max_position: 9,
+        max_shifts_per_bar: 4,
+      },
+    },
+    {
+      name: "advanced",
+      profile: {
+        name: "advanced",
+        version: "advanced@0.1",
+        fingerprint: "advanced-fingerprint",
+        calibration_status: "placeholder_pending_human_calibration",
+      },
+      constraints: {
+        max_simultaneous: 4,
+        allow_barre: true,
+        max_position: 19,
+        max_shifts_per_bar: 99,
+      },
     },
   ],
   inputs: {
@@ -22,8 +112,8 @@ export const capabilities: CapabilitiesResponse = {
     score_input: {
       router_version: "score-input@0.1.0",
       format_importers: {
-        musicxml: "musicxml@0.3.0",
-        mxl: "musicxml@0.3.0",
+        musicxml: "musicxml@0.4.0",
+        mxl: "musicxml@0.4.0",
         midi: "midi@0.1.0",
       },
     },
@@ -34,6 +124,9 @@ export const capabilities: CapabilitiesResponse = {
     arrange: {
       defaults: {
         profile: "median",
+        style: "fingerstyle",
+        difficulty_tier: "intermediate",
+        technique_profile: "balanced",
         n: 1,
         max_iters: 0,
         use_critic: false,
@@ -44,21 +137,52 @@ export const capabilities: CapabilitiesResponse = {
       max_iters: { min: 0, max: 16 },
       tempo_bpm: { min: 1, max: 1000, nullable: true },
     },
+    difficulty: {
+      defaults: { tier: "beginner", tempo_bpm: 90, beats_per_bar: 4 },
+      tier: { values: ["beginner", "intermediate", "advanced"] },
+      tempo_bpm: { min: 1, max: 1000 },
+      beats_per_bar: { min: 1, max: 128 },
+    },
   },
-  implemented: ["arrange_score_bytes"],
-  deferred: ["render_audio"],
+  implemented: ["arrange_score_bytes", "render_audio"],
+  deferred: [],
+  audio: {
+    available: true,
+    renderer: "FluidSynth",
+    runtime_version: "2.5.6",
+    export_version: "tab-audio@0.1.0",
+    sample_rate_hz: 44100,
+    media_type: "audio/wav",
+  },
   stamps: {
     package_version: "0.6.0",
-    service_version: "fretsure-service@0.2.0",
+    service_version: "fretsure-service@0.3.0",
+    profile_registry_version: "profile-registry@0.2.0",
+    arrangement_style_registry_version: "arrangement-style-registry@0.2.0",
+    arrangement_style_profile_version: "guitarset-style-profiles@0.1.0",
+    arrangement_style_profile_sha256:
+      "c1a57bb1aa4599594db83f5fb9074e96b53be83a03d1e306e38ea5cae7df342d",
+    technique_profile_registry_version: "technique-profile-registry@0.1.0",
     score_input_version: "score-input@0.1.0",
+    oracle_checker_version: "oracle@0.3.0",
     fidelity_checker_version: "fidelity@0.3.0",
-    trace_schema_version: "agent-trace@0.2.0",
+    difficulty_checker_version: "difficulty@0.1.0",
+    fingering_solver_version: "fingering-solver@0.6.0",
+    score_solver_version: "score-solver@0.4.0",
+    left_hand_model_version: "left-hand-ergonomics@0.1.0",
+    published_fingering_ranker_version: "published-fingering-ranker@0.1.0",
+    published_fingering_model_sha256:
+      "10bd1f9c2751417c5ef3a5f360da5696f736cc24db838857b9d2dd058b6cfed0",
+    published_fingering_feature_schema: "published-fingering-features@0.1.0",
+    editable_target_schema_version: "editable-arrangement-target@0.1.0",
+    section_regeneration_version: "section-regeneration@0.1.0",
+    trace_schema_version: "agent-trace@0.3.0",
   },
 };
 
 export const arrangement: ArrangementResponse = {
-  api_version: "fretsure-api@0.2.0",
-  service_version: "fretsure-service@0.2.0",
+  api_version: "fretsure-api@0.3.0",
+  service_version: "fretsure-service@0.3.0",
   status: "tab_produced",
   source: {
     filename: "example.musicxml",
@@ -67,7 +191,7 @@ export const arrangement: ArrangementResponse = {
     root_member: null,
     root_sha256: "a".repeat(64),
     container_version: null,
-    importer_version: "musicxml@0.3.0",
+    importer_version: "musicxml@0.4.0",
     warnings: [],
   },
   score: {
@@ -83,7 +207,10 @@ export const arrangement: ArrangementResponse = {
     rights_or_license: "CC0",
   },
   options: {
-    profile: capabilities.profiles[0],
+    profile: capabilities.profiles[1],
+    style: "fingerstyle",
+    difficulty_tier: "intermediate",
+    technique_profile: "balanced",
     tuning: [40, 45, 50, 55, 59, 64],
     capo: 0,
     candidate_count: 1,
@@ -94,13 +221,17 @@ export const arrangement: ArrangementResponse = {
     effective_tempo_bpm: 90,
   },
   model: { model_id: "constant-stub", engine: "offline" },
+  editable_target: {
+    schema_version: "editable-arrangement-target@0.1.0",
+    notes: [{ onset: "0/1", duration: "1/1", pitch: 60, voice: "melody" }],
+  },
   tab: { tuning: [40, 45, 50, 55, 59, 64], capo: 0, notes: [] },
   ascii: "e|--0--|\nB|--1--|\nG|--0--|\nD|--2--|\nA|--3--|\nE|-----|",
   playability: {
     verdict: "GREEN",
     meaning: "versioned_model_relative_not_a_real_player_guarantee",
     diagnostics: [],
-    checker_version: "oracle@0.2.0",
+    checker_version: "oracle@0.3.0",
     profile_version: "median@0.1",
     profile_fingerprint: "abc123",
     input_schema_version: "tab-input@0.2.0",
@@ -114,21 +245,22 @@ export const arrangement: ArrangementResponse = {
     passed: true,
     checker_version: "fidelity@0.3.0",
   },
+  alternatives: [],
   trace: {
-    schema_version: "agent-trace@0.2.0",
+    schema_version: "agent-trace@0.3.0",
     steps: [
       {
-        trace_schema_version: "agent-trace@0.2.0",
+        trace_schema_version: "agent-trace@0.3.0",
         seq: 0,
         kind: "PLAN",
         event: "PIPELINE_CONFIGURED",
         candidate_index: null,
         iteration: null,
         detail: "Configured a bounded pipeline.",
-        data: { checker_version: "oracle@0.2.0" },
+        data: { checker_version: "oracle@0.3.0" },
       },
       {
-        trace_schema_version: "agent-trace@0.2.0",
+        trace_schema_version: "agent-trace@0.3.0",
         seq: 1,
         kind: "ORACLE",
         event: "PLAYABILITY_CHECKED",
@@ -138,7 +270,7 @@ export const arrangement: ArrangementResponse = {
         data: { verdict: "GREEN" },
       },
       {
-        trace_schema_version: "agent-trace@0.2.0",
+        trace_schema_version: "agent-trace@0.3.0",
         seq: 2,
         kind: "SELECT",
         event: "CANDIDATE_SELECTED",
@@ -168,17 +300,31 @@ export const arrangement: ArrangementResponse = {
   },
   stamps: {
     package_version: "0.6.0",
-    service_version: "fretsure-service@0.2.0",
+    service_version: "fretsure-service@0.3.0",
     score_input_version: "score-input@0.1.0",
-    profile_registry_version: "profile-registry@0.1.0",
+    profile_registry_version: "profile-registry@0.2.0",
+    arrangement_style_registry_version: "arrangement-style-registry@0.2.0",
+    arrangement_style_profile_version: "guitarset-style-profiles@0.1.0",
+    arrangement_style_profile_sha256:
+      "c1a57bb1aa4599594db83f5fb9074e96b53be83a03d1e306e38ea5cae7df342d",
+    technique_profile_registry_version: "technique-profile-registry@0.1.0",
     profile_version: "median@0.1",
     profile_fingerprint: "abc123",
-    oracle_checker_version: "oracle@0.2.0",
+    oracle_checker_version: "oracle@0.3.0",
     oracle_input_schema_version: "tab-input@0.2.0",
     fidelity_checker_version: "fidelity@0.3.0",
+    fingering_solver_version: "fingering-solver@0.6.0",
+    score_solver_version: "score-solver@0.4.0",
+    left_hand_model_version: "left-hand-ergonomics@0.1.0",
+    published_fingering_ranker_version: "published-fingering-ranker@0.1.0",
+    published_fingering_model_sha256:
+      "10bd1f9c2751417c5ef3a5f360da5696f736cc24db838857b9d2dd058b6cfed0",
+    published_fingering_feature_schema: "published-fingering-features@0.1.0",
     target_input_schema_version: "target-input@0.1.0",
-    trace_schema_version: "agent-trace@0.2.0",
-    importer_version: "musicxml@0.3.0",
+    editable_target_schema_version: "editable-arrangement-target@0.1.0",
+    section_regeneration_version: "section-regeneration@0.1.0",
+    trace_schema_version: "agent-trace@0.3.0",
+    importer_version: "musicxml@0.4.0",
     model_id: "constant-stub",
   },
 };
@@ -210,7 +356,7 @@ export const producerXmlArrangement: ArrangementResponse = {
     root_member: null,
     root_sha256: "8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386",
     container_version: null,
-    importer_version: "musicxml@0.3.0",
+    importer_version: "musicxml@0.4.0",
     warnings: [keyModeUnprovidedWarning],
   },
   score: {
@@ -223,7 +369,7 @@ export const producerXmlArrangement: ArrangementResponse = {
     voice_counts: { melody: 4, bass: 0, harmony: 0 },
     chord_count: 1,
     source_description:
-      "filename=musescore-4.7.4.musicxml;format=musicxml;sha256=8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386;root_sha256=8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386;importer=musicxml@0.3.0",
+      "filename=musescore-4.7.4.musicxml;format=musicxml;sha256=8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386;root_sha256=8aa3f622429dee2dda26ca91c87237470d60c4c02fb996bd9171c9238cd77386;importer=musicxml@0.4.0",
     rights_or_license: "CC0-1.0",
   },
   options: {
@@ -245,7 +391,7 @@ export const producerMxlArrangement: ArrangementResponse = {
     root_member: "score.xml",
     root_sha256: "e6af1f610580baa3c6a588d738a7aeb690cfd19f684a1dbaa6cc1d91c681a39f",
     container_version: "mxl-container@0.1.0",
-    importer_version: "musicxml@0.3.0",
+    importer_version: "musicxml@0.4.0",
     warnings: [
       {
         code: "MXL_ROOTFILE_MEDIA_TYPE_UNPROVIDED",
@@ -276,7 +422,7 @@ export const producerMxlArrangement: ArrangementResponse = {
     voice_counts: { melody: 4, bass: 0, harmony: 0 },
     chord_count: 2,
     source_description:
-      "filename=musescore-4.7.4-roundtrip-supported_basic.mxl;format=mxl;sha256=9fbca0cd86c4110a24a51c46a7982859a3d39e1cadfb50d5ad31a479fafe0cc1;root_sha256=e6af1f610580baa3c6a588d738a7aeb690cfd19f684a1dbaa6cc1d91c681a39f;root_member=score.xml;importer=musicxml@0.3.0;container=mxl-container@0.1.0",
+      "filename=musescore-4.7.4-roundtrip-supported_basic.mxl;format=mxl;sha256=9fbca0cd86c4110a24a51c46a7982859a3d39e1cadfb50d5ad31a479fafe0cc1;root_sha256=e6af1f610580baa3c6a588d738a7aeb690cfd19f684a1dbaa6cc1d91c681a39f;root_member=score.xml;importer=musicxml@0.4.0;container=mxl-container@0.1.0",
     rights_or_license: "CC0-1.0",
   },
   options: {
@@ -345,11 +491,11 @@ export const midiArrangement: ArrangementResponse = {
     checker_version: "fidelity@0.3.0",
   },
   trace: {
-    schema_version: "agent-trace@0.2.0",
+    schema_version: "agent-trace@0.3.0",
     steps: [
       ...arrangement.trace.steps.filter((step) => step.event !== "CANDIDATE_SELECTED"),
       {
-        trace_schema_version: "agent-trace@0.2.0",
+        trace_schema_version: "agent-trace@0.3.0",
         seq: arrangement.trace.steps.length - 1,
         kind: "SELECT",
         event: "CANDIDATE_SELECTED",

@@ -63,18 +63,22 @@ def test_arrangement_wire_has_the_frozen_top_level_shape(
         "score",
         "options",
         "model",
+        "editable_target",
         "tab",
         "ascii",
         "playability",
         "faithfulness",
+        "alternatives",
         "trace",
         "stamps",
     }
     assert arranged_wire["status"] == "tab_produced"
+    assert arranged_wire["editable_target"] is not None
     assert arranged_wire["tab"] is not None
     assert arranged_wire["ascii"] is not None
     assert arranged_wire["playability"] is not None
     assert arranged_wire["faithfulness"] is not None
+    assert arranged_wire["alternatives"] == []
 
 
 def test_faithfulness_wire_freezes_availability_and_nullable_scores(
@@ -129,9 +133,7 @@ def test_trace_binding_requires_the_exact_selected_data_contract(mutation: str) 
         llm=ConstantLLM("noop"),
     )
     document = json.loads(outcome.trace_document_json)
-    selected = next(
-        step for step in document["steps"] if step["event"] == "CANDIDATE_SELECTED"
-    )
+    selected = next(step for step in document["steps"] if step["event"] == "CANDIDATE_SELECTED")
     if mutation == "missing-nullable":
         selected["data"].pop("bass_root_accuracy")
     else:
@@ -182,16 +184,30 @@ def test_arrangement_wire_stamps_actual_model_and_all_public_contracts(
 ) -> None:
     stamps = arranged_wire["stamps"]
     assert isinstance(stamps, dict)
-    assert stamps["service_version"] == "fretsure-service@0.2.0"
+    assert stamps["service_version"] == "fretsure-service@0.3.0"
     assert stamps["score_input_version"] == "score-input@0.1.0"
     assert stamps["model_id"] == "constant-stub"
-    assert stamps["oracle_checker_version"] == "oracle@0.2.0"
+    assert stamps["oracle_checker_version"] == "oracle@0.3.0"
     assert stamps["oracle_input_schema_version"] == "tab-input@0.2.0"
     assert stamps["fidelity_checker_version"] == "fidelity@0.3.0"
+    assert stamps["fingering_solver_version"] == "fingering-solver@0.6.0"
+    assert stamps["score_solver_version"] == "score-solver@0.4.0"
+    assert stamps["left_hand_model_version"] == "left-hand-ergonomics@0.1.0"
+    assert stamps["arrangement_style_registry_version"] == (
+        "arrangement-style-registry@0.2.0"
+    )
+    assert stamps["arrangement_style_profile_version"] == (
+        "guitarset-style-profiles@0.1.0"
+    )
+    assert stamps["arrangement_style_profile_sha256"] == (
+        "c1a57bb1aa4599594db83f5fb9074e96b53be83a03d1e306e38ea5cae7df342d"
+    )
     assert stamps["target_input_schema_version"] == "target-input@0.1.0"
-    assert stamps["trace_schema_version"] == "agent-trace@0.2.0"
+    assert stamps["editable_target_schema_version"] == "editable-arrangement-target@0.1.0"
+    assert stamps["section_regeneration_version"] == "section-regeneration@0.1.0"
+    assert stamps["trace_schema_version"] == "agent-trace@0.3.0"
     assert stamps["package_version"] == fretsure.__version__ == "0.6.0"
-    assert stamps["importer_version"] == "musicxml@0.3.0"
+    assert stamps["importer_version"] == "musicxml@0.4.0"
     assert len(str(stamps["profile_fingerprint"])) == 64
 
 
@@ -200,7 +216,7 @@ def test_arrangement_trace_uses_public_versioned_rows_not_jsonl_reparse(
 ) -> None:
     trace = arranged_wire["trace"]
     assert isinstance(trace, dict)
-    assert trace["schema_version"] == "agent-trace@0.2.0"
+    assert trace["schema_version"] == "agent-trace@0.3.0"
     steps = trace["steps"]
     assert isinstance(steps, list) and steps
     assert list(steps[0]) == sorted(steps[0])
@@ -236,8 +252,7 @@ def test_wire_serialization_is_deterministic(
 
 def test_check_solve_and_render_wires_share_canonical_tab() -> None:
     solve = solve_target_json(
-        '{"notes":[{"onset":"0/1","duration":"1/1",'
-        '"pitch":60,"voice":"melody"}]}',
+        '{"notes":[{"onset":"0/1","duration":"1/1","pitch":60,"voice":"melody"}]}',
         options=SolveOptions(),
     )
     solve_wire = solve_outcome_to_wire(solve)
@@ -283,14 +298,25 @@ def test_not_found_wire_never_exposes_free_form_solver_reason(
 
 def test_capabilities_wire_is_transport_neutral_and_honest() -> None:
     wire = capabilities_to_wire(capabilities())
-    assert wire["service_version"] == "fretsure-service@0.2.0"
-    assert wire["profiles"] == [
-        {
-            "name": "median",
-            "version": "median@0.1",
-            "fingerprint": wire["profiles"][0]["fingerprint"],  # type: ignore[index]
-            "calibration_status": "placeholder_pending_human_calibration",
-        }
+    assert wire["service_version"] == "fretsure-service@0.3.0"
+    profiles = wire["profiles"]
+    assert isinstance(profiles, list)
+    assert [profile["name"] for profile in profiles] == ["small", "median", "large"]
+    assert all(
+        profile["calibration_status"] == "placeholder_pending_human_calibration"
+        for profile in profiles
+    )
+    assert [style["id"] for style in wire["arrangement_styles"]] == [
+        "fingerstyle",
+        "classical",
+        "jazz",
+        "rnb",
+    ]
+    assert [profile["id"] for profile in wire["technique_profiles"]] == [
+        "balanced",
+        "avoid_barres",
+        "low_position",
+        "minimize_shifts",
     ]
     inputs = wire["inputs"]
     assert isinstance(inputs, dict)
@@ -306,8 +332,8 @@ def test_capabilities_wire_is_transport_neutral_and_honest() -> None:
     assert inputs["score_input"] == {
         "router_version": "score-input@0.1.0",
         "format_importers": {
-            "musicxml": "musicxml@0.3.0",
-            "mxl": "musicxml@0.3.0",
+            "musicxml": "musicxml@0.4.0",
+            "mxl": "musicxml@0.4.0",
             "midi": "midi@0.1.0",
         },
     }
@@ -315,16 +341,29 @@ def test_capabilities_wire_is_transport_neutral_and_honest() -> None:
     assert isinstance(controls, dict)
     assert controls["arrange"]["defaults"] == {
         "profile": "median",
+        "style": "fingerstyle",
+        "difficulty_tier": "intermediate",
+        "technique_profile": "balanced",
         "n": 1,
         "max_iters": 0,
         "use_critic": False,
         "tempo_bpm": None,
     }
-    assert "render_audio" in wire["deferred"]  # type: ignore[operator]
-    assert "render_audio" not in wire["implemented"]  # type: ignore[operator]
+    assert "render_audio" not in wire["deferred"]  # type: ignore[operator]
+    assert "render_audio" in wire["implemented"]  # type: ignore[operator]
+    assert "alphatab" in wire["implemented"]  # type: ignore[operator]
+    assert "animated_fretboard" in wire["implemented"]  # type: ignore[operator]
+    assert "live_ab" in wire["implemented"]  # type: ignore[operator]
+    assert "render_guitar_pro_7" in wire["implemented"]  # type: ignore[operator]
+    assert "live_leaderboard" in wire["deferred"]  # type: ignore[operator]
     assert wire["stamps"]["package_version"] == "0.6.0"  # type: ignore[index]
     assert wire["stamps"]["score_input_version"] == "score-input@0.1.0"  # type: ignore[index]
-    assert wire["stamps"]["fingering_solver_version"] == "fingering-solver@0.3.0"  # type: ignore[index]
+    assert wire["stamps"]["fingering_solver_version"] == "fingering-solver@0.6.0"  # type: ignore[index]
+    assert wire["stamps"]["score_solver_version"] == "score-solver@0.4.0"  # type: ignore[index]
+    assert wire["stamps"]["left_hand_model_version"] == "left-hand-ergonomics@0.1.0"  # type: ignore[index]
+    assert wire["stamps"]["arrangement_style_profile_version"] == (  # type: ignore[index]
+        "guitarset-style-profiles@0.1.0"
+    )
     assert "importer_version" not in wire["stamps"]  # type: ignore[operator]
 
 
@@ -382,7 +421,7 @@ def test_arrangement_serializer_accepts_only_the_importer_for_source_format() ->
     assert wire["stamps"]["score_input_version"] == "score-input@0.1.0"  # type: ignore[index]
     assert wire["stamps"]["importer_version"] == "midi@0.1.0"  # type: ignore[index]
 
-    object.__setattr__(outcome.imported, "importer_version", "musicxml@0.3.0")
+    object.__setattr__(outcome.imported, "importer_version", "musicxml@0.4.0")
     with pytest.raises(ApplicationError) as caught:
         arrange_outcome_to_wire(outcome)
     assert caught.value.path == "source.importer_version"
@@ -432,7 +471,7 @@ def test_application_error_wire_contains_only_stable_fields() -> None:
     )
     wire = application_error_to_wire(error)
     assert wire == {
-        "service_version": "fretsure-service@0.2.0",
+        "service_version": "fretsure-service@0.3.0",
         "code": "TARGET_INPUT_REJECTED",
         "path": "target_json",
         "detail": "target JSON was rejected by the public input contract",

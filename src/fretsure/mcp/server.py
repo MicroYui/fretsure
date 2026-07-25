@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -9,7 +10,7 @@ from typing import Annotated, Any, NoReturn, cast
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
-from mcp.types import ContentBlock, ToolAnnotations
+from mcp.types import AudioContent, ContentBlock, ToolAnnotations
 from mcp.types import Tool as MCPTool
 from pydantic import PlainValidator, WithJsonSchema
 
@@ -18,17 +19,29 @@ from fretsure.application import (
     ApplicationDiagnostic,
     ApplicationError,
     CheckOptions,
+    DifficultyOptions,
     RenderOptions,
     SolveOptions,
     application_error_to_wire,
     capabilities,
     capabilities_to_wire,
     check_outcome_to_wire,
+    check_tab_difficulty_json,
     check_tab_json,
+    difficulty_outcome_to_wire,
     render_outcome_to_wire,
     render_tab_json,
     solve_outcome_to_wire,
     solve_target_json,
+)
+from fretsure.audio import (
+    AUDIO_EXPORT_VERSION,
+    AUDIO_SAMPLE_RATE,
+    AudioExportCode,
+    AudioExportError,
+    fluidsynth_available,
+    fluidsynth_version,
+    render_wav,
 )
 
 MCP_VERSION = "fretsure-mcp@0.2.0"
@@ -36,8 +49,10 @@ CAPABILITIES_URI = "fretsure://capabilities"
 
 _TOOL_NAMES = (
     "check_playability",
+    "check_difficulty",
     "feasible_fingerings",
     "render_notation",
+    "render_audio",
 )
 
 
@@ -93,6 +108,9 @@ _ARGUMENT_CONTRACTS = {
     "check_playability": _ArgumentContract(
         frozenset({"tab_json", "profile", "tempo_bpm", "beats_per_bar"})
     ),
+    "check_difficulty": _ArgumentContract(
+        frozenset({"tab_json", "tier", "tempo_bpm", "beats_per_bar"})
+    ),
     "feasible_fingerings": _ArgumentContract(
         frozenset(
             {
@@ -109,6 +127,7 @@ _ARGUMENT_CONTRACTS = {
         frozenset({"tab_json"}),
         frozenset({"format"}),
     ),
+    "render_audio": _ArgumentContract(frozenset({"tab_json", "tempo_bpm"})),
 }
 
 
@@ -271,6 +290,36 @@ def create_server() -> FretsureFastMCP:
             _raise_internal_error()
 
     @server.tool(
+        name="check_difficulty",
+        description=(
+            "Check strict canonical Tab JSON against a named, versioned difficulty "
+            "tier. A tier passes only when both its geometry and overlay constraints pass."
+        ),
+        annotations=_READ_ONLY,
+        structured_output=True,
+    )
+    def check_difficulty_tool(
+        tab_json: _RawString,
+        tier: _RawString,
+        tempo_bpm: _RawNumber,
+        beats_per_bar: _RawInteger,
+    ) -> dict[str, object]:
+        try:
+            outcome = check_tab_difficulty_json(
+                tab_json,
+                options=DifficultyOptions(
+                    tier=tier,
+                    tempo_bpm=cast(float, tempo_bpm),
+                    beats_per_bar=cast(int, beats_per_bar),
+                ),
+            )
+            return _mcp_wire(difficulty_outcome_to_wire(outcome))
+        except ApplicationError as error:
+            _raise_application_error(error)
+        except Exception:
+            _raise_internal_error()
+
+    @server.tool(
         name="feasible_fingerings",
         description=(
             "Return at most one checked non-RED fingering from a bounded search over "
@@ -320,8 +369,7 @@ def create_server() -> FretsureFastMCP:
     @server.tool(
         name="render_notation",
         description=(
-            "Render strict canonical Tab JSON as deterministic ASCII notation. "
-            "Plan 6A does not provide audio rendering."
+            "Render strict canonical Tab JSON as deterministic ASCII notation."
         ),
         annotations=_READ_ONLY,
         structured_output=True,
@@ -338,6 +386,59 @@ def create_server() -> FretsureFastMCP:
             return _mcp_wire(render_outcome_to_wire(outcome))
         except ApplicationError as error:
             _raise_application_error(error)
+        except Exception:
+            _raise_internal_error()
+
+    @server.tool(
+        name="render_audio",
+        description=(
+            "Render strict canonical Tab JSON as WAV audio through FluidSynth. "
+            "The result is a synthesized preview, not evidence of human performance."
+        ),
+        annotations=_READ_ONLY,
+    )
+    def render_audio_tool(
+        tab_json: _RawString,
+        tempo_bpm: _RawNumber,
+    ) -> AudioContent:
+        try:
+            normalized_tempo = cast(float, tempo_bpm)
+            outcome = check_tab_json(
+                tab_json,
+                options=CheckOptions(tempo_bpm=normalized_tempo),
+            )
+            wav = render_wav(outcome.tab, tempo_bpm=normalized_tempo)
+            return AudioContent(
+                type="audio",
+                data=base64.b64encode(wav).decode("ascii"),
+                mimeType="audio/wav",
+                _meta={
+                    "mcp_version": MCP_VERSION,
+                    "audio_export_version": AUDIO_EXPORT_VERSION,
+                    "fluidsynth_version": fluidsynth_version(),
+                    "sample_rate_hz": AUDIO_SAMPLE_RATE,
+                    "byte_count": len(wav),
+                },
+            )
+        except ApplicationError as error:
+            _raise_application_error(error)
+        except AudioExportError as error:
+            code = (
+                "AUDIO_RENDERER_UNAVAILABLE"
+                if error.code is AudioExportCode.SYNTHESIZER_UNAVAILABLE
+                else "AUDIO_RENDER_FAILED"
+            )
+            raise ToolError(
+                _canonical_json(
+                    {
+                        "mcp_version": MCP_VERSION,
+                        "error": {
+                            "code": code,
+                            "detail": "the audio tool could not render this request",
+                        },
+                    }
+                )
+            ) from None
         except Exception:
             _raise_internal_error()
 
@@ -358,6 +459,14 @@ def create_server() -> FretsureFastMCP:
                 "default_transport": "stdio",
                 "tools": list(_TOOL_NAMES),
                 "capability_resource": CAPABILITIES_URI,
+            }
+            value["audio"] = {
+                "available": fluidsynth_available(),
+                "renderer": "FluidSynth",
+                "runtime_version": fluidsynth_version(),
+                "export_version": AUDIO_EXPORT_VERSION,
+                "sample_rate_hz": AUDIO_SAMPLE_RATE,
+                "media_type": "audio/wav",
             }
             return _canonical_json(value)
         except Exception:

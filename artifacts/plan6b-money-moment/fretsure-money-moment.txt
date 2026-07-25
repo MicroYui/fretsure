@@ -1,0 +1,39 @@
+Fretsure guitar tablature export
+Format: tab-text@0.1.0
+Source: canonical Tab JSON (direct export; not derived from MIDI)
+Timing unit: quarter-note beats; fractions are exact
+String mapping: canonical 0..5 (low to high) = guitar strings 6..1
+Tuning MIDI (canonical strings 0..5): 40 45 50 55 59 64
+Capo fret: 0
+
+Six-line tablature (high e to low E):
+e|12-15-17-15-13-17-15-13-15----13-10-12-10--8-12-|
+B|---------------------------15-------------------|
+G|-------------------------------------------0----|
+D|------------------------------------------------|
+A|------------------15----------------------------|
+E|------------------------------------------------|
+
+Canonical fingering table (original Tab note order):
+note_index	onset	duration	guitar_string	canonical_string	fret	left_finger	right_finger
+0	0/1	1/1	1	5	12	1	a
+1	1/1	1/1	1	5	15	1	a
+2	2/1	1/1	1	5	17	1	a
+3	3/1	1/1	1	5	15	1	a
+4	4/1	1/1	1	5	13	1	a
+5	5/1	1/1	1	5	17	1	a
+6	6/1	1/1	5	1	15	1	i
+7	6/1	1/1	1	5	15	1	a
+8	7/1	1/1	1	5	13	1	a
+9	8/1	1/1	1	5	15	1	a
+10	9/1	1/1	2	4	15	1	a
+11	10/1	1/1	1	5	13	1	a
+12	11/1	1/1	1	5	10	1	a
+13	12/1	1/1	1	5	12	1	a
+14	13/1	1/1	1	5	10	1	a
+15	14/1	1/1	3	3	0	0	i
+16	14/1	1/1	1	5	8	1	a
+17	15/1	1/1	1	5	12	1	a
+
+Left finger: 0=open, 1=index, 2=middle, 3=ring, 4=little
+Right finger: p=thumb, i=index, m=middle, a=ring

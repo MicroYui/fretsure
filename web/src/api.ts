@@ -1,11 +1,22 @@
 import type {
   APIProblem,
   ArrangeControls,
+  ArrangementStyleId,
   ArrangementResponse,
   CanonicalTab,
   CapabilitiesResponse,
+  DifficultyCheckControls,
+  DifficultyCheckResponse,
+  DifficultyTierCapability,
+  DifficultyTierName,
+  EditableTarget,
   FaithfulnessDimension,
+  FingeringEditResponse,
   ScoreFormat,
+  SectionRegenerationResponse,
+  SectionSelection,
+  TechniqueProfileId,
+  VerifiedAlternative,
 } from "./types";
 
 export class FretsureAPIError extends Error {
@@ -18,16 +29,44 @@ export class FretsureAPIError extends Error {
   }
 }
 
-const CURRENT_API_VERSION = "fretsure-api@0.2.0";
+const CURRENT_API_VERSION = "fretsure-api@0.3.0";
 const CURRENT_PACKAGE_VERSION = "0.6.0";
-const CURRENT_SERVICE_VERSION = "fretsure-service@0.2.0";
+const CURRENT_SERVICE_VERSION = "fretsure-service@0.3.0";
 const CURRENT_SCORE_INPUT_VERSION = "score-input@0.1.0";
 const CURRENT_FIDELITY_VERSION = "fidelity@0.3.0";
-const CURRENT_TRACE_VERSION = "agent-trace@0.2.0";
+const CURRENT_DIFFICULTY_VERSION = "difficulty@0.1.0";
+const CURRENT_TRACE_VERSION = "agent-trace@0.3.0";
+const CURRENT_ORACLE_VERSION = "oracle@0.3.0";
+const CURRENT_FINGERING_SOLVER_VERSION = "fingering-solver@0.6.0";
+const CURRENT_SCORE_SOLVER_VERSION = "score-solver@0.4.0";
+const CURRENT_LEFT_HAND_MODEL_VERSION = "left-hand-ergonomics@0.1.0";
+const CURRENT_PUBLISHED_FINGERING_RANKER_VERSION = "published-fingering-ranker@0.1.0";
+const CURRENT_PUBLISHED_FINGERING_FEATURE_SCHEMA = "published-fingering-features@0.1.0";
+const CURRENT_PUBLISHED_FINGERING_MODEL_SHA256 =
+  "10bd1f9c2751417c5ef3a5f360da5696f736cc24db838857b9d2dd058b6cfed0";
+const CURRENT_PUBLISHED_GRADE_VERSION = "published-grade-estimator@0.1.0";
+const CURRENT_PUBLISHED_GRADE_MODEL_SHA256 =
+  "a3bb39aaf5f881513ed0141d20b3e3776c8b38357dd11351681c38701dddf16a";
+const CURRENT_PROFILE_REGISTRY_VERSION = "profile-registry@0.2.0";
+const CURRENT_STYLE_REGISTRY_VERSION = "arrangement-style-registry@0.2.0";
+const CURRENT_STYLE_PROFILE_VERSION = "guitarset-style-profiles@0.1.0";
+const CURRENT_STYLE_PROFILE_SHA256 =
+  "c1a57bb1aa4599594db83f5fb9074e96b53be83a03d1e306e38ea5cae7df342d";
+const CURRENT_TECHNIQUE_REGISTRY_VERSION = "technique-profile-registry@0.1.0";
+const CURRENT_EDITABLE_TARGET_VERSION = "editable-arrangement-target@0.1.0";
+const CURRENT_SECTION_REGENERATION_VERSION = "section-regeneration@0.1.0";
+const DIFFICULTY_TIERS = ["beginner", "intermediate", "advanced"] as const;
+const ARRANGEMENT_STYLES = ["fingerstyle", "classical", "jazz", "rnb"] as const;
+const TECHNIQUE_PROFILES = [
+  "balanced",
+  "avoid_barres",
+  "low_position",
+  "minimize_shifts",
+] as const;
 const SCORE_SUFFIXES = [".musicxml", ".xml", ".mxl", ".mid", ".midi"] as const;
 const FORMAT_IMPORTERS: Readonly<Record<ScoreFormat, string>> = {
-  musicxml: "musicxml@0.3.0",
-  mxl: "musicxml@0.3.0",
+  musicxml: "musicxml@0.4.0",
+  mxl: "musicxml@0.4.0",
   midi: "midi@0.1.0",
 };
 
@@ -69,6 +108,15 @@ function isStringArray(value: unknown): value is string[] {
 
 function isStringRecord(value: unknown): value is Record<string, string> {
   return isRecord(value) && Object.values(value).every(isString);
+}
+
+function isPercentileRecord(value: unknown): value is Record<string, number> {
+  return (
+    isRecord(value) &&
+    Object.values(value).every(
+      (item) => isFiniteNumber(item) && item >= 0 && item <= 100,
+    )
+  );
 }
 
 function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
@@ -150,6 +198,95 @@ function isPositiveNumberRange(
   );
 }
 
+function isAudioCapability(
+  value: unknown,
+): value is CapabilitiesResponse["audio"] {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, [
+      "available",
+      "renderer",
+      "runtime_version",
+      "export_version",
+      "sample_rate_hz",
+      "media_type",
+    ]) &&
+    typeof value.available === "boolean" &&
+    value.renderer === "FluidSynth" &&
+    (value.runtime_version === null || isNonEmptyString(value.runtime_version)) &&
+    isNonEmptyString(value.export_version) &&
+    isIntegerAtLeast(value.sample_rate_hz, 1) &&
+    value.media_type === "audio/wav"
+  );
+}
+
+function isDifficultyTierName(value: unknown): value is DifficultyTierName {
+  return value === "beginner" || value === "intermediate" || value === "advanced";
+}
+
+function isArrangementStyle(value: unknown): value is ArrangementStyleId {
+  return ARRANGEMENT_STYLES.some((style) => style === value);
+}
+
+function isTechniqueProfile(value: unknown): value is TechniqueProfileId {
+  return TECHNIQUE_PROFILES.some((profile) => profile === value);
+}
+
+function isNamedControlCapability(
+  value: unknown,
+  idGuard: (id: unknown) => boolean,
+): boolean {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ["id", "label", "description"]) &&
+    idGuard(value.id) &&
+    isNonEmptyString(value.label) &&
+    isNonEmptyString(value.description)
+  );
+}
+
+function isDifficultyTierCapability(value: unknown): value is DifficultyTierCapability {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ["name", "profile", "constraints"]) &&
+    isDifficultyTierName(value.name) &&
+    isProfileIdentity(value.profile) &&
+    value.profile.name === value.name &&
+    isRecord(value.constraints) &&
+    hasExactKeys(value.constraints, [
+      "max_simultaneous",
+      "allow_barre",
+      "max_position",
+      "max_shifts_per_bar",
+    ]) &&
+    isIntegerAtLeast(value.constraints.max_simultaneous, 1) &&
+    value.constraints.max_simultaneous <= 6 &&
+    typeof value.constraints.allow_barre === "boolean" &&
+    isIntegerAtLeast(value.constraints.max_position, 0) &&
+    isIntegerAtLeast(value.constraints.max_shifts_per_bar, 0)
+  );
+}
+
+function isDifficultyControls(
+  value: unknown,
+): value is CapabilitiesResponse["controls"]["difficulty"] {
+  return (
+    isRecord(value) &&
+    isRecord(value.defaults) &&
+    isDifficultyTierName(value.defaults.tier) &&
+    isPositiveNumber(value.defaults.tempo_bpm) &&
+    isIntegerAtLeast(value.defaults.beats_per_bar, 1) &&
+    isRecord(value.tier) &&
+    isStringArray(value.tier.values) &&
+    arraysEqual(value.tier.values, DIFFICULTY_TIERS) &&
+    isRecord(value.tempo_bpm) &&
+    isPositiveNumber(value.tempo_bpm.min) &&
+    isPositiveNumber(value.tempo_bpm.max) &&
+    value.tempo_bpm.min <= value.tempo_bpm.max &&
+    isIntegerRange(value.beats_per_bar, 1)
+  );
+}
+
 function isCapabilities(value: unknown): value is CapabilitiesResponse {
   if (
     !isRecord(value) ||
@@ -157,12 +294,24 @@ function isCapabilities(value: unknown): value is CapabilitiesResponse {
     value.package_version !== CURRENT_PACKAGE_VERSION ||
     value.service_version !== CURRENT_SERVICE_VERSION ||
     value.trace_schema_version !== CURRENT_TRACE_VERSION ||
+    value.profile_registry_version !== CURRENT_PROFILE_REGISTRY_VERSION ||
     !Array.isArray(value.engines) ||
     value.engines.length !== 2 ||
     !value.engines.every(isEngineCapability) ||
     !Array.isArray(value.profiles) ||
     value.profiles.length === 0 ||
     !value.profiles.every(isProfileIdentity) ||
+    !Array.isArray(value.arrangement_styles) ||
+    !value.arrangement_styles.every((item) =>
+      isNamedControlCapability(item, isArrangementStyle),
+    ) ||
+    !Array.isArray(value.technique_profiles) ||
+    !value.technique_profiles.every((item) =>
+      isNamedControlCapability(item, isTechniqueProfile),
+    ) ||
+    !Array.isArray(value.difficulty_tiers) ||
+    value.difficulty_tiers.length !== DIFFICULTY_TIERS.length ||
+    !value.difficulty_tiers.every(isDifficultyTierCapability) ||
     !isRecord(value.inputs) ||
     !isStringArray(value.inputs.score_suffixes) ||
     !arraysEqual(value.inputs.score_suffixes, SCORE_SUFFIXES) ||
@@ -173,8 +322,10 @@ function isCapabilities(value: unknown): value is CapabilitiesResponse {
     !isIntegerRange(value.controls.arrange.n, 1) ||
     !isIntegerRange(value.controls.arrange.max_iters, 0) ||
     !isPositiveNumberRange(value.controls.arrange.tempo_bpm) ||
+    !isDifficultyControls(value.controls.difficulty) ||
     !isStringArray(value.implemented) ||
     !isStringArray(value.deferred) ||
+    !isAudioCapability(value.audio) ||
     !isStringRecord(value.stamps)
   ) {
     return false;
@@ -184,6 +335,9 @@ function isCapabilities(value: unknown): value is CapabilitiesResponse {
   const profiles = value.profiles as CapabilitiesResponse["profiles"];
   const engineIds = engines.map((engine) => engine.id);
   const profileNames = profiles.map((profile) => profile.name);
+  const styleIds = value.arrangement_styles.map((style) => style.id);
+  const techniqueIds = value.technique_profiles.map((profile) => profile.id);
+  const tierNames = value.difficulty_tiers.map((tier) => tier.name);
   const defaults = value.controls.arrange.defaults;
   const stamps = value.stamps;
   const candidateRange = value.controls.arrange.n as { min: number; max: number };
@@ -194,14 +348,72 @@ function isCapabilities(value: unknown): value is CapabilitiesResponse {
     !engineIds.includes("offline") ||
     !engineIds.includes("proxy") ||
     !hasUniqueStrings(profileNames) ||
+    !arraysEqual(styleIds, ARRANGEMENT_STYLES) ||
+    !arraysEqual(techniqueIds, TECHNIQUE_PROFILES) ||
+    !arraysEqual(tierNames, DIFFICULTY_TIERS) ||
     !hasUniqueStrings(value.inputs.score_suffixes) ||
     !requiredStampMatches(stamps, "package_version", CURRENT_PACKAGE_VERSION) ||
     !requiredStampMatches(stamps, "service_version", CURRENT_SERVICE_VERSION) ||
+    !requiredStampMatches(
+      stamps,
+      "profile_registry_version",
+      CURRENT_PROFILE_REGISTRY_VERSION,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "arrangement_style_registry_version",
+      CURRENT_STYLE_REGISTRY_VERSION,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "arrangement_style_profile_version",
+      CURRENT_STYLE_PROFILE_VERSION,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "arrangement_style_profile_sha256",
+      CURRENT_STYLE_PROFILE_SHA256,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "technique_profile_registry_version",
+      CURRENT_TECHNIQUE_REGISTRY_VERSION,
+    ) ||
     !requiredStampMatches(stamps, "score_input_version", CURRENT_SCORE_INPUT_VERSION) ||
+    !requiredStampMatches(stamps, "oracle_checker_version", CURRENT_ORACLE_VERSION) ||
     !requiredStampMatches(stamps, "fidelity_checker_version", CURRENT_FIDELITY_VERSION) ||
+    !requiredStampMatches(stamps, "difficulty_checker_version", CURRENT_DIFFICULTY_VERSION) ||
+    !requiredStampMatches(
+      stamps,
+      "fingering_solver_version",
+      CURRENT_FINGERING_SOLVER_VERSION,
+    ) ||
+    !requiredStampMatches(stamps, "score_solver_version", CURRENT_SCORE_SOLVER_VERSION) ||
+    !requiredStampMatches(stamps, "left_hand_model_version", CURRENT_LEFT_HAND_MODEL_VERSION) ||
+    !requiredStampMatches(
+      stamps,
+      "published_fingering_ranker_version",
+      CURRENT_PUBLISHED_FINGERING_RANKER_VERSION,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "published_fingering_model_sha256",
+      CURRENT_PUBLISHED_FINGERING_MODEL_SHA256,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "published_fingering_feature_schema",
+      CURRENT_PUBLISHED_FINGERING_FEATURE_SCHEMA,
+    ) ||
     !requiredStampMatches(stamps, "trace_schema_version", CURRENT_TRACE_VERSION) ||
     !isNonEmptyString(defaults.profile) ||
     !profileNames.includes(defaults.profile) ||
+    !isArrangementStyle(defaults.style) ||
+    !styleIds.includes(defaults.style) ||
+    !isDifficultyTierName(defaults.difficulty_tier) ||
+    !tierNames.includes(defaults.difficulty_tier) ||
+    !isTechniqueProfile(defaults.technique_profile) ||
+    !techniqueIds.includes(defaults.technique_profile) ||
     !isIntegerAtLeast(defaults.n, 1) ||
     defaults.n < candidateRange.min ||
     defaults.n > candidateRange.max ||
@@ -281,12 +493,45 @@ const ARRANGEMENT_KEYS = [
   "score",
   "options",
   "model",
+  "editable_target",
   "tab",
   "ascii",
   "playability",
   "faithfulness",
+  "alternatives",
   "trace",
   "stamps",
+] as const;
+const DIFFICULTY_RESPONSE_KEYS = [
+  "api_version",
+  "service_version",
+  "status",
+  "options",
+  "tab",
+  "tier",
+  "difficulty",
+  "published_grade",
+  "stamps",
+] as const;
+const DIFFICULTY_OPTIONS_KEYS = ["tier", "tempo_bpm", "beats_per_bar"] as const;
+const DIFFICULTY_RESULT_KEYS = [
+  "checker_version",
+  "meets",
+  "playable",
+  "tier_violations",
+] as const;
+const PUBLISHED_GRADE_KEYS = [
+  "model_version",
+  "model_sha256",
+  "grade_system",
+  "estimated_grade",
+  "likely_interval",
+  "band",
+  "confidence",
+  "burden_percentile",
+  "feature_percentiles",
+  "training_scope",
+  "meaning",
 ] as const;
 const MODEL_KEYS = ["model_id", "engine"] as const;
 const TAB_KEYS = ["tuning", "capo", "notes"] as const;
@@ -307,6 +552,23 @@ const FAITHFULNESS_KEYS = [
   "passed",
   "checker_version",
 ] as const;
+const ALTERNATIVE_KEYS = [
+  "candidate_index",
+  "tab",
+  "ascii",
+  "playability",
+  "faithfulness",
+  "work",
+  "proposal_status",
+  "observed_critic",
+] as const;
+const ALTERNATIVE_WORK_KEYS = [
+  "model_calls",
+  "trial_solver_calls",
+  "proposed_additions",
+  "accepted_additions",
+] as const;
+const OBSERVED_CRITIC_KEYS = ["status", "overall", "meaning"] as const;
 const CANDIDATE_SELECTED_KEYS = [
   "winner_candidate_index",
   "candidates_considered",
@@ -358,12 +620,24 @@ const REQUIRED_ARRANGEMENT_STAMPS = [
   "service_version",
   "score_input_version",
   "profile_registry_version",
+  "arrangement_style_registry_version",
+  "arrangement_style_profile_version",
+  "arrangement_style_profile_sha256",
+  "technique_profile_registry_version",
   "profile_version",
   "profile_fingerprint",
   "oracle_checker_version",
   "oracle_input_schema_version",
   "fidelity_checker_version",
+  "fingering_solver_version",
+  "score_solver_version",
+  "left_hand_model_version",
+  "published_fingering_ranker_version",
+  "published_fingering_model_sha256",
+  "published_fingering_feature_schema",
   "target_input_schema_version",
+  "editable_target_schema_version",
+  "section_regeneration_version",
   "trace_schema_version",
   "importer_version",
   "model_id",
@@ -446,6 +720,9 @@ function isArrangementOptions(value: unknown): boolean {
   return (
     isRecord(value) &&
     isProfileIdentity(value.profile) &&
+    isArrangementStyle(value.style) &&
+    isDifficultyTierName(value.difficulty_tier) &&
+    isTechniqueProfile(value.technique_profile) &&
     Array.isArray(value.tuning) &&
     value.tuning.length > 0 &&
     value.tuning.every((pitch) => isIntegerAtLeast(pitch, 0)) &&
@@ -456,6 +733,28 @@ function isArrangementOptions(value: unknown): boolean {
     (value.tempo_override_bpm === null || isPositiveNumber(value.tempo_override_bpm)) &&
     isPositiveNumber(value.source_tempo_bpm) &&
     isPositiveNumber(value.effective_tempo_bpm)
+  );
+}
+
+function isEditableTarget(value: unknown): value is EditableTarget {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ["schema_version", "notes"]) &&
+    value.schema_version === CURRENT_EDITABLE_TARGET_VERSION &&
+    Array.isArray(value.notes) &&
+    value.notes.every(
+      (note) =>
+        isRecord(note) &&
+        hasExactKeys(note, ["onset", "duration", "pitch", "voice"]) &&
+        isString(note.onset) &&
+        FRACTION.test(note.onset) &&
+        isString(note.duration) &&
+        FRACTION.test(note.duration) &&
+        note.duration !== "0/1" &&
+        isIntegerAtLeast(note.pitch, 0) &&
+        note.pitch <= 127 &&
+        (note.voice === "melody" || note.voice === "bass" || note.voice === "harmony"),
+    )
   );
 }
 
@@ -554,6 +853,54 @@ function isFaithfulness(value: unknown): boolean {
   );
 }
 
+export function isVerifiedAlternative(value: unknown): value is VerifiedAlternative {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ALTERNATIVE_KEYS) ||
+    !isIntegerAtLeast(value.candidate_index, 0) ||
+    !isCanonicalTab(value.tab) ||
+    !isNonEmptyString(value.ascii) ||
+    !isPlayability(value.playability) ||
+    (value.playability as Record<string, unknown>).verdict !== "GREEN" ||
+    !isFaithfulness(value.faithfulness)
+  ) {
+    return false;
+  }
+  const work = value.work;
+  if (
+    !isRecord(work) ||
+    !hasExactKeys(work, ALTERNATIVE_WORK_KEYS) ||
+    !isIntegerAtLeast(work.model_calls, 0) ||
+    !isIntegerAtLeast(work.trial_solver_calls, 0) ||
+    !isIntegerAtLeast(work.proposed_additions, 0) ||
+    !isIntegerAtLeast(work.accepted_additions, 0) ||
+    work.accepted_additions > work.proposed_additions ||
+    !(
+      value.proposal_status === "LLM_SUCCESS" ||
+      value.proposal_status === "PARSE_VALIDATION_FALLBACK" ||
+      value.proposal_status === "CALL_FAILURE_FALLBACK" ||
+      value.proposal_status === "CONSTANT_LLM_BYPASS"
+    )
+  ) {
+    return false;
+  }
+  const critic = value.observed_critic;
+  if (
+    !isRecord(critic) ||
+    !hasExactKeys(critic, OBSERVED_CRITIC_KEYS) ||
+    critic.meaning !== "machine_observation_not_human_musicality_evidence"
+  ) {
+    return false;
+  }
+  if (critic.status === null) return critic.overall === null;
+  return (
+    (critic.status === "LLM_SUCCESS" ||
+      critic.status === "PARSE_VALIDATION_FALLBACK" ||
+      critic.status === "CALL_FAILURE_FALLBACK") &&
+    isUnitInterval(critic.overall)
+  );
+}
+
 function isPublicTrace(value: unknown): boolean {
   if (
     !isRecord(value) ||
@@ -635,7 +982,7 @@ function requiredStampMatches(
   return isNonEmptyString(stamps[key]) && stamps[key] === expected;
 }
 
-function isArrangement(value: unknown): value is ArrangementResponse {
+export function isArrangement(value: unknown): value is ArrangementResponse {
   if (
     !isRecord(value) ||
     !hasExactKeys(value, ARRANGEMENT_KEYS) ||
@@ -649,6 +996,8 @@ function isArrangement(value: unknown): value is ArrangementResponse {
     !hasExactKeys(value.model, MODEL_KEYS) ||
     !isNonEmptyString(value.model.model_id) ||
     (value.model.engine !== "offline" && value.model.engine !== "proxy") ||
+    !Array.isArray(value.alternatives) ||
+    !value.alternatives.every(isVerifiedAlternative) ||
     !isPublicTrace(value.trace) ||
     !isStringRecord(value.stamps)
   ) {
@@ -657,15 +1006,27 @@ function isArrangement(value: unknown): value is ArrangementResponse {
 
   const produced = value.status === "tab_produced";
   const productOutputsAgree = produced
-    ? isCanonicalTab(value.tab) &&
+    ? isEditableTarget(value.editable_target) &&
+      isCanonicalTab(value.tab) &&
       isNonEmptyString(value.ascii) &&
       isPlayability(value.playability) &&
       isFaithfulness(value.faithfulness)
-    : value.tab === null &&
+    : value.editable_target === null &&
+      value.tab === null &&
       value.ascii === null &&
       value.playability === null &&
       value.faithfulness === null;
   if (!productOutputsAgree) return false;
+
+  const candidateIndices = value.alternatives.map((item) => item.candidate_index);
+  if (
+    value.alternatives.length >
+      ((value.options as Record<string, unknown>).candidate_count as number) ||
+    new Set(candidateIndices).size !== candidateIndices.length ||
+    (!produced && value.alternatives.length > 0)
+  ) {
+    return false;
+  }
 
   const source = value.source as Record<string, unknown>;
   const options = value.options as Record<string, unknown>;
@@ -674,14 +1035,75 @@ function isArrangement(value: unknown): value is ArrangementResponse {
   const trace = value.trace as Record<string, unknown>;
   const publicTrace = value.trace as ArrangementResponse["trace"];
   const stamps = value.stamps;
+  const locallyRevised =
+    stamps.local_checkpoint_origin === CURRENT_SECTION_REGENERATION_VERSION ||
+    stamps.local_checkpoint_origin === "left-hand-fingering-edit@0.1.0";
   const sourceFormat = source.format as ScoreFormat;
   if (
     !REQUIRED_ARRANGEMENT_STAMPS.every((key) => isNonEmptyString(stamps[key])) ||
     !requiredStampMatches(stamps, "package_version", CURRENT_PACKAGE_VERSION) ||
     !requiredStampMatches(stamps, "service_version", CURRENT_SERVICE_VERSION) ||
+    !requiredStampMatches(
+      stamps,
+      "profile_registry_version",
+      CURRENT_PROFILE_REGISTRY_VERSION,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "arrangement_style_registry_version",
+      CURRENT_STYLE_REGISTRY_VERSION,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "arrangement_style_profile_version",
+      CURRENT_STYLE_PROFILE_VERSION,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "arrangement_style_profile_sha256",
+      CURRENT_STYLE_PROFILE_SHA256,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "technique_profile_registry_version",
+      CURRENT_TECHNIQUE_REGISTRY_VERSION,
+    ) ||
     !requiredStampMatches(stamps, "score_input_version", CURRENT_SCORE_INPUT_VERSION) ||
+    !requiredStampMatches(stamps, "oracle_checker_version", CURRENT_ORACLE_VERSION) ||
     !requiredStampMatches(stamps, "fidelity_checker_version", CURRENT_FIDELITY_VERSION) ||
+    !requiredStampMatches(
+      stamps,
+      "fingering_solver_version",
+      CURRENT_FINGERING_SOLVER_VERSION,
+    ) ||
+    !requiredStampMatches(stamps, "score_solver_version", CURRENT_SCORE_SOLVER_VERSION) ||
+    !requiredStampMatches(stamps, "left_hand_model_version", CURRENT_LEFT_HAND_MODEL_VERSION) ||
+    !requiredStampMatches(
+      stamps,
+      "published_fingering_ranker_version",
+      CURRENT_PUBLISHED_FINGERING_RANKER_VERSION,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "published_fingering_model_sha256",
+      CURRENT_PUBLISHED_FINGERING_MODEL_SHA256,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "published_fingering_feature_schema",
+      CURRENT_PUBLISHED_FINGERING_FEATURE_SCHEMA,
+    ) ||
     !requiredStampMatches(stamps, "trace_schema_version", CURRENT_TRACE_VERSION) ||
+    !requiredStampMatches(
+      stamps,
+      "editable_target_schema_version",
+      CURRENT_EDITABLE_TARGET_VERSION,
+    ) ||
+    !requiredStampMatches(
+      stamps,
+      "section_regeneration_version",
+      CURRENT_SECTION_REGENERATION_VERSION,
+    ) ||
     trace.schema_version !== CURRENT_TRACE_VERSION ||
     !requiredStampMatches(stamps, "importer_version", source.importer_version as string) ||
     source.importer_version !== FORMAT_IMPORTERS[sourceFormat] ||
@@ -700,7 +1122,7 @@ function isArrangement(value: unknown): value is ArrangementResponse {
       playability.checker_version !== stamps.oracle_checker_version ||
       playability.input_schema_version !== stamps.oracle_input_schema_version ||
       faithfulness.checker_version !== stamps.fidelity_checker_version ||
-      !candidateSelectionMatchesGates(publicTrace, playability, faithfulness)
+      (!locallyRevised && !candidateSelectionMatchesGates(publicTrace, playability, faithfulness))
     ) {
       return false;
     }
@@ -708,6 +1130,211 @@ function isArrangement(value: unknown): value is ArrangementResponse {
     return false;
   }
   return true;
+}
+
+function isDifficultyCheck(value: unknown): value is DifficultyCheckResponse {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, DIFFICULTY_RESPONSE_KEYS) ||
+    value.api_version !== CURRENT_API_VERSION ||
+    value.service_version !== CURRENT_SERVICE_VERSION ||
+    value.status !== "checked" ||
+    !isRecord(value.options) ||
+    !hasExactKeys(value.options, DIFFICULTY_OPTIONS_KEYS) ||
+    !isDifficultyTierName(value.options.tier) ||
+    !isPositiveNumber(value.options.tempo_bpm) ||
+    !isIntegerAtLeast(value.options.beats_per_bar, 1) ||
+    !isCanonicalTab(value.tab) ||
+    !isDifficultyTierCapability(value.tier) ||
+    !isRecord(value.difficulty) ||
+    !hasExactKeys(value.difficulty, DIFFICULTY_RESULT_KEYS) ||
+    value.difficulty.checker_version !== CURRENT_DIFFICULTY_VERSION ||
+    typeof value.difficulty.meets !== "boolean" ||
+    (value.difficulty.playable !== "GREEN" &&
+      value.difficulty.playable !== "AMBER" &&
+      value.difficulty.playable !== "RED") ||
+    !isStringArray(value.difficulty.tier_violations) ||
+    !isRecord(value.published_grade) ||
+    !hasExactKeys(value.published_grade, PUBLISHED_GRADE_KEYS) ||
+    value.published_grade.model_version !== CURRENT_PUBLISHED_GRADE_VERSION ||
+    value.published_grade.model_sha256 !== CURRENT_PUBLISHED_GRADE_MODEL_SHA256 ||
+    !isNonEmptyString(value.published_grade.grade_system) ||
+    !isIntegerAtLeast(value.published_grade.estimated_grade, 1) ||
+    value.published_grade.estimated_grade > 10 ||
+    !isRecord(value.published_grade.likely_interval) ||
+    !hasExactKeys(value.published_grade.likely_interval, ["lower", "upper"]) ||
+    !isIntegerAtLeast(value.published_grade.likely_interval.lower, 1) ||
+    value.published_grade.likely_interval.lower > value.published_grade.estimated_grade ||
+    !isIntegerAtLeast(value.published_grade.likely_interval.upper, 1) ||
+    value.published_grade.likely_interval.upper < value.published_grade.estimated_grade ||
+    value.published_grade.likely_interval.upper > 10 ||
+    (value.published_grade.band !== "foundational" &&
+      value.published_grade.band !== "intermediate" &&
+      value.published_grade.band !== "advanced") ||
+    value.published_grade.confidence !== "low" ||
+    !isFiniteNumber(value.published_grade.burden_percentile) ||
+    value.published_grade.burden_percentile < 0 ||
+    value.published_grade.burden_percentile > 100 ||
+    !isPercentileRecord(value.published_grade.feature_percentiles) ||
+    !isNonEmptyString(value.published_grade.training_scope) ||
+    value.published_grade.meaning !==
+      "corpus_calibrated_estimate_not_a_playability_guarantee" ||
+    !isStringRecord(value.stamps)
+  ) {
+    return false;
+  }
+
+  return (
+    value.options.tier === value.tier.name &&
+    requiredStampMatches(
+      value.stamps,
+      "difficulty_checker_version",
+      CURRENT_DIFFICULTY_VERSION,
+    ) &&
+    requiredStampMatches(value.stamps, "profile_version", value.tier.profile.version) &&
+    requiredStampMatches(
+      value.stamps,
+      "profile_fingerprint",
+      value.tier.profile.fingerprint,
+    ) &&
+    requiredStampMatches(
+      value.stamps,
+      "published_grade_estimator_version",
+      CURRENT_PUBLISHED_GRADE_VERSION,
+    ) &&
+    requiredStampMatches(
+      value.stamps,
+      "published_grade_model_sha256",
+      CURRENT_PUBLISHED_GRADE_MODEL_SHA256,
+    )
+  );
+}
+
+function isSectionRegeneration(
+  value: unknown,
+): value is SectionRegenerationResponse {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [
+      "api_version",
+      "service_version",
+      "status",
+      "selection",
+      "options",
+      "model",
+      "editable_target",
+      "tab",
+      "ascii",
+      "playability",
+      "faithfulness",
+      "revision",
+      "stamps",
+    ]) ||
+    value.api_version !== CURRENT_API_VERSION ||
+    value.service_version !== CURRENT_SERVICE_VERSION ||
+    (value.status !== "accepted" &&
+      value.status !== "preserved" &&
+      value.status !== "unchanged") ||
+    !isRecord(value.selection) ||
+    !hasExactKeys(value.selection, ["start_measure", "end_measure", "locked_voices"]) ||
+    !isIntegerAtLeast(value.selection.start_measure, 1) ||
+    !isIntegerAtLeast(value.selection.end_measure, value.selection.start_measure) ||
+    !Array.isArray(value.selection.locked_voices) ||
+    !value.selection.locked_voices.every(
+      (voice) => voice === "melody" || voice === "bass" || voice === "harmony",
+    ) ||
+    !isRecord(value.options) ||
+    !hasExactKeys(value.options, [
+      "profile",
+      "style",
+      "difficulty_tier",
+      "technique_profile",
+      "tempo_bpm",
+    ]) ||
+    !isProfileIdentity(value.options.profile) ||
+    !isArrangementStyle(value.options.style) ||
+    !isDifficultyTierName(value.options.difficulty_tier) ||
+    !isTechniqueProfile(value.options.technique_profile) ||
+    !(value.options.tempo_bpm === null || isPositiveNumber(value.options.tempo_bpm)) ||
+    !isRecord(value.model) ||
+    !hasExactKeys(value.model, MODEL_KEYS) ||
+    !isNonEmptyString(value.model.model_id) ||
+    (value.model.engine !== "offline" && value.model.engine !== "proxy") ||
+    !isEditableTarget(value.editable_target) ||
+    !isCanonicalTab(value.tab) ||
+    !isNonEmptyString(value.ascii) ||
+    !isPlayability(value.playability) ||
+    !isFaithfulness(value.faithfulness) ||
+    !isRecord(value.revision) ||
+    !hasExactKeys(value.revision, [
+      "schema_version",
+      "proposal_status",
+      "model_calls",
+      "reason",
+    ]) ||
+    value.revision.schema_version !== CURRENT_SECTION_REGENERATION_VERSION ||
+    !(value.revision.proposal_status === null || isNonEmptyString(value.revision.proposal_status)) ||
+    !(value.revision.model_calls === 0 || value.revision.model_calls === 1) ||
+    !isNullableString(value.revision.reason) ||
+    !isStringRecord(value.stamps)
+  ) {
+    return false;
+  }
+  return (
+    value.status !== "accepted" ||
+    (value.playability as Record<string, unknown>).verdict === "GREEN"
+  );
+}
+
+function isFingeringEdit(value: unknown): value is FingeringEditResponse {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, [
+      "api_version",
+      "service_version",
+      "status",
+      "options",
+      "tab",
+      "ascii",
+      "playability",
+      "attempted_playability",
+      "edit",
+      "stamps",
+    ]) &&
+    value.api_version === CURRENT_API_VERSION &&
+    value.service_version === CURRENT_SERVICE_VERSION &&
+    (value.status === "applied" || value.status === "rejected" || value.status === "unchanged") &&
+    isRecord(value.options) &&
+    hasExactKeys(value.options, ["profile", "tempo_bpm", "beats_per_bar"]) &&
+    isProfileIdentity(value.options.profile) &&
+    isPositiveNumber(value.options.tempo_bpm) &&
+    isIntegerAtLeast(value.options.beats_per_bar, 1) &&
+    isCanonicalTab(value.tab) &&
+    isNonEmptyString(value.ascii) &&
+    isPlayability(value.playability) &&
+    isPlayability(value.attempted_playability) &&
+    isRecord(value.edit) &&
+    hasExactKeys(value.edit, [
+      "note_index",
+      "onset",
+      "string",
+      "fret",
+      "before_finger",
+      "requested_finger",
+      "reason",
+    ]) &&
+    isIntegerAtLeast(value.edit.note_index, 0) &&
+    isString(value.edit.onset) &&
+    FRACTION.test(value.edit.onset) &&
+    isIntegerAtLeast(value.edit.string, 0) &&
+    isIntegerAtLeast(value.edit.fret, 1) &&
+    isIntegerAtLeast(value.edit.before_finger, 1) &&
+    value.edit.before_finger <= 4 &&
+    isIntegerAtLeast(value.edit.requested_finger, 1) &&
+    value.edit.requested_finger <= 4 &&
+    isNullableString(value.edit.reason) &&
+    isStringRecord(value.stamps)
+  );
 }
 
 function isProblem(value: unknown): value is APIProblem {
@@ -754,6 +1381,26 @@ function assertArrangement(value: unknown): asserts value is ArrangementResponse
   }
 }
 
+function assertDifficultyCheck(value: unknown): asserts value is DifficultyCheckResponse {
+  if (!isDifficultyCheck(value)) {
+    throw new Error("Fretsure returned an incompatible difficulty document.");
+  }
+}
+
+function assertSectionRegeneration(
+  value: unknown,
+): asserts value is SectionRegenerationResponse {
+  if (!isSectionRegeneration(value)) {
+    throw new Error("Fretsure returned an incompatible section revision document.");
+  }
+}
+
+function assertFingeringEdit(value: unknown): asserts value is FingeringEditResponse {
+  if (!isFingeringEdit(value)) {
+    throw new Error("Fretsure returned an incompatible fingering edit document.");
+  }
+}
+
 export async function getCapabilities(signal?: AbortSignal): Promise<CapabilitiesResponse> {
   const payload = await requestJSON("/api/v1/capabilities", { signal });
   assertCapabilities(payload);
@@ -775,6 +1422,10 @@ export async function arrangeScore(
   const query = new URLSearchParams({
     filename: file.name,
     engine: controls.engine,
+    profile: controls.profile,
+    style: controls.style,
+    difficulty_tier: controls.difficultyTier,
+    technique_profile: controls.techniqueProfile,
     n: String(controls.n),
     max_iters: String(controls.maxIters),
     use_critic: controls.useCritic ? "true" : "false",
@@ -789,9 +1440,111 @@ export async function arrangeScore(
     signal,
   });
   assertArrangement(payload);
-  if (payload.model.engine !== controls.engine) {
+  if (
+    payload.model.engine !== controls.engine ||
+    payload.options.profile.name !== controls.profile ||
+    payload.options.style !== controls.style ||
+    payload.options.difficulty_tier !== controls.difficultyTier ||
+    payload.options.technique_profile !== controls.techniqueProfile
+  ) {
     throw new Error("Fretsure returned an incompatible arrangement document.");
   }
+  return payload;
+}
+
+async function fileBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const chunks: string[] = [];
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    chunks.push(String.fromCharCode(...bytes.subarray(offset, offset + chunkSize)));
+  }
+  return btoa(chunks.join(""));
+}
+
+export async function regenerateSection(
+  file: File,
+  result: ArrangementResponse,
+  selection: SectionSelection,
+  signal?: AbortSignal,
+): Promise<SectionRegenerationResponse> {
+  if (!result.editable_target || !result.tab) {
+    throw new Error("The selected checkpoint cannot be revised.");
+  }
+  if (signal?.aborted) throw new DOMException("The request was aborted.", "AbortError");
+  const document = {
+    source: { filename: file.name, base64: await fileBase64(file) },
+    baseline: { editable_target: result.editable_target, tab: result.tab },
+    selection: {
+      start_measure: selection.startMeasure,
+      end_measure: selection.endMeasure,
+      locked_voices: selection.lockedVoices,
+    },
+    options: {
+      profile: result.options.profile.name,
+      style: result.options.style,
+      difficulty_tier: result.options.difficulty_tier,
+      technique_profile: result.options.technique_profile,
+      tempo_bpm: result.options.tempo_override_bpm,
+    },
+  };
+  const query = new URLSearchParams({ engine: result.model.engine });
+  const payload = await requestJSON(
+    `/api/v1/arrangements/regenerate-section?${query.toString()}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(document),
+      signal,
+    },
+  );
+  assertSectionRegeneration(payload);
+  return payload;
+}
+
+export async function editLeftFinger(
+  tab: CanonicalTab,
+  noteIndex: number,
+  leftFinger: number,
+  profile: string,
+  tempoBpm: number,
+  beatsPerBar: number,
+  signal?: AbortSignal,
+): Promise<FingeringEditResponse> {
+  const query = new URLSearchParams({
+    note_index: String(noteIndex),
+    left_finger: String(leftFinger),
+    profile,
+    tempo_bpm: String(tempoBpm),
+    beats_per_bar: String(beatsPerBar),
+  });
+  const payload = await requestJSON(`/api/v1/fingering/left-hand?${query.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: canonicalTabJSON(tab),
+    signal,
+  });
+  assertFingeringEdit(payload);
+  return payload;
+}
+
+export async function checkDifficulty(
+  tab: CanonicalTab,
+  controls: DifficultyCheckControls,
+  signal?: AbortSignal,
+): Promise<DifficultyCheckResponse> {
+  const query = new URLSearchParams({
+    tier: controls.tier,
+    tempo_bpm: String(controls.tempoBpm),
+    beats_per_bar: String(controls.beatsPerBar),
+  });
+  const payload = await requestJSON(`/api/v1/difficulty/check?${query.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: canonicalTabJSON(tab),
+    signal,
+  });
+  assertDifficultyCheck(payload);
   return payload;
 }
 
@@ -853,6 +1606,43 @@ export async function exportMidi(
     filename: attachmentFilename(
       response.headers.get("content-disposition"),
       "fretsure-arrangement.mid",
+    ),
+  };
+}
+
+export async function exportAudio(
+  tab: CanonicalTab,
+  tempoBpm: number,
+  signal?: AbortSignal,
+): Promise<DownloadAsset> {
+  const query = new URLSearchParams({ tempo_bpm: String(tempoBpm) });
+  const response = await fetch(`/api/v1/exports/audio?${query.toString()}`, {
+    method: "POST",
+    headers: {
+      Accept: "audio/wav",
+      "Content-Type": "application/json",
+    },
+    body: canonicalTabJSON(tab),
+    signal,
+  });
+  if (!response.ok) {
+    const payload = await decodeJSON(response);
+    if (isProblem(payload)) throw new FretsureAPIError(payload);
+    throw new Error(`Fretsure audio export failed with HTTP ${response.status}.`);
+  }
+  const contentType = response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+  if (contentType !== "audio/wav") {
+    throw new Error("Fretsure returned an incompatible audio export.");
+  }
+  const blob = await response.blob();
+  if (blob.size < 44) {
+    throw new Error("Fretsure returned an invalid audio export.");
+  }
+  return {
+    blob,
+    filename: attachmentFilename(
+      response.headers.get("content-disposition"),
+      "fretsure-arrangement.wav",
     ),
   };
 }
@@ -972,6 +1762,19 @@ export function exportGuitarPro(
     },
     signal,
   );
+}
+
+export async function exportGuitarPro7(
+  tab: CanonicalTab,
+  tempoBpm: number,
+  signal?: AbortSignal,
+): Promise<DownloadAsset> {
+  const musicXml = await exportMusicXMLTab(tab, tempoBpm, signal);
+  const { musicXmlBlobToGp7 } = await import("./alphatab");
+  return {
+    blob: await musicXmlBlobToGp7(musicXml.blob),
+    filename: "fretsure-guitar-tab.gp",
+  };
 }
 
 export function exportPdfTab(

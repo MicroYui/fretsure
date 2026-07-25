@@ -321,12 +321,15 @@ def main() -> int:
             "service,score,agent",
             f"""
             from pathlib import Path
+            import opentelemetry.trace
             from fretsure.application import (
                 ArrangeOptions,
                 arrange_outcome_to_wire,
                 arrange_score_bytes,
             )
             from fretsure.llm.client import ConstantLLM
+
+            assert opentelemetry.trace.get_tracer("fretsure-wheel-smoke") is not None
 
             score = Path({str(producer_midi)!r})
             outcome = arrange_score_bytes(
@@ -373,7 +376,7 @@ def main() -> int:
             xml = import_score(Path({str(producer_xml)!r}))
             midi = import_score(Path({str(producer_midi)!r}))
             assert isinstance(xml, ImportSuccess) and isinstance(midi, ImportSuccess)
-            assert xml.importer_version == "musicxml@0.3.0"
+            assert xml.importer_version == "musicxml@0.4.0"
             assert midi.importer_version == "midi@0.1.0"
             assert SCORE_INPUT_VERSION == "score-input@0.1.0"
             """,

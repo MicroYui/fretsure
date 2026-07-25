@@ -33,11 +33,11 @@ def test_source_tempo_is_the_default_effective_tempo(monkeypatch: pytest.MonkeyP
         seen_controls.append((kwargs["n"], kwargs["max_iters"], kwargs["use_critic"]))
         return ArrangeResult(None, None, None, None, Trace(), 0)
 
-    def fail_incremental(*args: object, **kwargs: object) -> ArrangeResult:
+    def fail_incremental(*args: object, **kwargs: object) -> object:
         raise AssertionError("the default pipeline must preserve the frozen legacy policy")
 
     monkeypatch.setattr("fretsure.pipeline.arrange", fake_arrange)
-    monkeypatch.setattr("fretsure.pipeline.arrange_incremental", fail_incremental)
+    monkeypatch.setattr("fretsure.pipeline.arrange_incremental_pool", fail_incremental)
 
     result = run_pipeline(ir, ConstantLLM(), options=PipelineOptions())
 
@@ -55,12 +55,23 @@ def test_incremental_product_policy_is_explicit_and_uses_its_own_trial_budget(
     def fail_legacy(*args: object, **kwargs: object) -> ArrangeResult:
         raise AssertionError("legacy arranger must not run for the incremental product policy")
 
-    def fake_incremental(*args: object, **kwargs: object) -> ArrangeResult:
+    class FakePool:
+        requested_candidates = 2
+        candidates: tuple[object, ...] = ()
+
+    pool = FakePool()
+
+    def fake_incremental(*args: object, **kwargs: object) -> object:
         seen_controls.append((kwargs["n"], kwargs["max_iters"], kwargs["use_critic"]))
+        return pool
+
+    def fake_best(*args: object, **kwargs: object) -> ArrangeResult:
+        assert args[0] is pool
         return ArrangeResult(None, None, None, None, Trace(), 0)
 
     monkeypatch.setattr("fretsure.pipeline.arrange", fail_legacy)
-    monkeypatch.setattr("fretsure.pipeline.arrange_incremental", fake_incremental)
+    monkeypatch.setattr("fretsure.pipeline.arrange_incremental_pool", fake_incremental)
+    monkeypatch.setattr("fretsure.pipeline.best_of_incremental_pool", fake_best)
 
     run_pipeline(
         sample_ir(bars=1),
@@ -101,6 +112,41 @@ def test_explicit_tempo_override_reaches_arrange_goal(monkeypatch: pytest.Monkey
     assert seen[0].tempo_bpm == 72.0
     assert result.source_tempo_bpm == ir.meta.tempo_bpm
     assert result.effective_tempo_bpm == 72.0
+
+
+def test_score_difficulty_target_reaches_arrange_goal_and_trace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[ArrangeGoal] = []
+
+    def fake_arrange(*args: object, **kwargs: object) -> ArrangeResult:
+        seen.append(args[1])  # type: ignore[arg-type]
+        return ArrangeResult(None, None, None, None, Trace(), 0)
+
+    monkeypatch.setattr("fretsure.pipeline.arrange", fake_arrange)
+    result = run_pipeline(
+        sample_ir(bars=1),
+        ConstantLLM(),
+        options=PipelineOptions(difficulty_tier="advanced"),
+    )
+
+    assert seen[0].tier == "advanced"
+    assert result.trace.steps[0].data["difficulty_tier"] == "advanced"
+
+
+def test_pipeline_rejects_unknown_score_difficulty_before_arranging(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def must_not_arrange(*args: object, **kwargs: object) -> ArrangeResult:
+        raise AssertionError("invalid difficulty reached arranger")
+
+    monkeypatch.setattr("fretsure.pipeline.arrange", must_not_arrange)
+    with pytest.raises(ValueError, match="difficulty tier"):
+        run_pipeline(
+            sample_ir(bars=1),
+            ConstantLLM(),
+            options=PipelineOptions(difficulty_tier="virtuoso"),
+        )
 
 
 def test_pipeline_uses_one_detached_profile_for_execution_and_trace(
@@ -362,7 +408,7 @@ def test_pipeline_offline_result_contains_tab_ascii_gate_and_trace() -> None:
         == result.arrangement.oracle.profile_fingerprint
     )
     first_jsonl_row = json.loads(result.trace.to_jsonl().splitlines()[0])
-    assert first_jsonl_row["trace_schema_version"] == "agent-trace@0.2.0"
+    assert first_jsonl_row["trace_schema_version"] == "agent-trace@0.3.0"
     assert first_jsonl_row["seq"] == 0
     assert first_jsonl_row["data"]["llm_model_id"] == "constant-stub"
     assert first_jsonl_row["data"]["checker_version"] == CHECKER_VERSION

@@ -32,7 +32,7 @@ from fretsure.oracle.predicates import (
 from fretsure.oracle.profiles import Profile, optimistic, pessimistic
 from fretsure.tab import Tab
 
-CHECKER_VERSION = "oracle@0.2.0"
+CHECKER_VERSION = "oracle@0.3.0"
 
 
 @dataclass(frozen=True)
@@ -77,9 +77,7 @@ def check_playability(
         beats_per_bar=beats_per_bar,
     )
     fails_optimistic = bool(
-        _all_diagnostics(
-            tab, optimistic(profile), tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar
-        )
+        _all_diagnostics(tab, optimistic(profile), tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar)
     )
     if fails_optimistic:
         verdict: Verdict = "RED"
@@ -94,9 +92,7 @@ def check_playability(
         )
         verdict = "AMBER" if fails_pessimistic else "GREEN"
 
-    diagnostics = _all_diagnostics(
-        tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar
-    )
+    diagnostics = _all_diagnostics(tab, profile, tempo_bpm=tempo_bpm, beats_per_bar=beats_per_bar)
     return OracleResult(
         verdict=verdict,
         diagnostics=tuple(diagnostics),
@@ -107,9 +103,7 @@ def check_playability(
     )
 
 
-def _any_violation(
-    tab: Tab, profile: Profile, *, tempo_bpm: float, beats_per_bar: int
-) -> bool:
+def _any_violation(tab: Tab, profile: Profile, *, tempo_bpm: float, beats_per_bar: int) -> bool:
     """True if any predicate flags a violation, short-circuiting on the first
     (cheap, profile-independent predicates first). Same predicate set as
     _all_diagnostics — no parallel logic."""

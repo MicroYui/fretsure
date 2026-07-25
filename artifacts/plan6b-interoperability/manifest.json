@@ -1,0 +1,80 @@
+{
+  "audio_runtime": {
+    "renderer": "FluidSynth",
+    "runtime_version": "2.5.6"
+  },
+  "checkpoint": {
+    "model_id": "constant-stub",
+    "oracle_verdict": "GREEN",
+    "source_sha256": "a57887bc0373babb8029ef0316e4f6ab91e980576bf67273dabecdd626126984",
+    "tab_sha256": "b542a7dcc30801e6419411fe524c7f78ca2219c6bf2a402affc0cfcfe48d6a07",
+    "tempo_bpm": 96
+  },
+  "desktop_receipts": {
+    "gp5": {
+      "application": "MuseScore Studio 4.7.4 (260706075)",
+      "opened_at": "2026-07-24T12:08:04+08:00",
+      "status": "PASS",
+      "visible_score": true
+    },
+    "gp7": {
+      "application": "MuseScore Studio 4.7.4 (260706075)",
+      "opened_at": "2026-07-24T12:08:04+08:00",
+      "status": "PASS",
+      "visible_score": true
+    },
+    "musicxml": {
+      "application": "MuseScore Studio 4.7.4 (260706075)",
+      "opened_at": "2026-07-24T12:08:04+08:00",
+      "playback_control_exercised": true,
+      "status": "PASS",
+      "visible_score": true
+    }
+  },
+  "files": {
+    "gp5": {
+      "bytes": 1676,
+      "filename": "fretsure-acceptance.gp5",
+      "sha256": "ff23b0dc2cbac809264a386df8dc0069e39fcdb4b19f0e3d4fa583e25463c2d5",
+      "structural_check": "PASS"
+    },
+    "midi": {
+      "bytes": 115,
+      "filename": "fretsure-acceptance.mid",
+      "sha256": "0d2497eced5e57083bc75016bdafe7119f273104bd4114cf5a1bd3a776c213ec",
+      "structural_check": "PASS"
+    },
+    "musicxml": {
+      "bytes": 7264,
+      "filename": "fretsure-acceptance.musicxml",
+      "sha256": "17d42e789f04da5c6971f502e4a727d835b521622eac374051def6f1c4cb4cd9",
+      "structural_check": "PASS"
+    },
+    "pdf": {
+      "bytes": 3770,
+      "filename": "fretsure-acceptance.pdf",
+      "sha256": "a467525323996af789b4f88869d3d9acf9b3d8f214c1261d9178e412fd0d07f7",
+      "structural_check": "PASS"
+    },
+    "tab_json": {
+      "bytes": 841,
+      "filename": "fretsure-acceptance.tab.json",
+      "sha256": "b542a7dcc30801e6419411fe524c7f78ca2219c6bf2a402affc0cfcfe48d6a07",
+      "structural_check": "PASS"
+    },
+    "wav": {
+      "bytes": 1299244,
+      "filename": "fretsure-acceptance.wav",
+      "sha256": "cfd2cd2998a09045005e41431ca8a4254d517027a69e4351a47d0a3a3d85d8d7",
+      "structural_check": "PASS"
+    },
+    "gp7": {
+      "filename": "fretsure-acceptance.gp",
+      "bytes": 3224,
+      "sha256": "27d7ae6348fd35c28f4f320eee356612a9c87f82ace2816b252518846fff5260",
+      "structural_check": "PASS"
+    }
+  },
+  "human_guitarist_receipt": "PENDING",
+  "schema_version": "plan6b-interoperability-manifest@0.1.0"
+}

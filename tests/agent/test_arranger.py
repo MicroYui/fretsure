@@ -155,9 +155,7 @@ def test_overdense_proposal_falls_back_before_repair() -> None:
 
     assert proposal_target_note_limit(_leadsheet()) == 3
     assert outcome.status is ProposalStatus.PARSE_VALIDATION_FALLBACK
-    assert outcome.target == propose_arrangement(
-        _leadsheet(), ArrangeGoal(), ConstantLLM("noop")
-    )
+    assert outcome.target == propose_arrangement(_leadsheet(), ArrangeGoal(), ConstantLLM("noop"))
 
 
 def test_prompt_contains_every_melody_duration_and_chord_without_truncation() -> None:
@@ -213,10 +211,7 @@ def test_incremental_guidance_is_product_only_and_matches_acceptance_gates() -> 
 
 def test_incremental_guidance_requires_harmony_for_long_chorded_piece() -> None:
     melody = tuple(Note(F(onset), F(1), 64, "melody") for onset in range(16))
-    chords = tuple(
-        ChordSymbol(F(bar * 4), "C", frozenset({0, 4, 7}), 0)
-        for bar in range(4)
-    )
+    chords = tuple(ChordSymbol(F(bar * 4), "C", frozenset({0, 4, 7}), 0) for bar in range(4))
     ir = MusicIR(
         melody,
         chords,
@@ -285,6 +280,17 @@ def test_public_source_context_and_token_policy_preserve_proposal_request_bytes(
     )
 
 
+def test_generation_difficulty_is_bound_to_proxy_prompt_and_validated_before_call() -> None:
+    llm = FakeLLM([_VALID])
+    propose_arrangement(_leadsheet(), ArrangeGoal(tier="advanced"), llm)
+    assert "Goal: fingerstyle, advanced difficulty." in llm.calls[0]["user"]
+
+    rejected = FakeLLM([_VALID])
+    with pytest.raises(ValueError, match="difficulty tier"):
+        propose_arrangement(_leadsheet(), ArrangeGoal(tier="virtuoso"), rejected)
+    assert rejected.calls == []
+
+
 @pytest.mark.parametrize(
     "filename",
     [
@@ -349,8 +355,7 @@ def test_deterministic_proposer_keeps_structural_validation() -> None:
 
 def test_real_llm_path_rejects_unrepresentable_input_instead_of_truncating() -> None:
     notes = tuple(
-        Note(F(i), F(1), 60 + (i % 12), "melody")
-        for i in range(MAX_COMPACT_SOURCE_EVENTS + 1)
+        Note(F(i), F(1), 60 + (i % 12), "melody") for i in range(MAX_COMPACT_SOURCE_EVENTS + 1)
     )
     ir = MusicIR(notes, (), _meta())
     llm = FakeLLM([_VALID])
@@ -374,8 +379,7 @@ def test_capacity_check_rejects_hostile_notes_before_len_hook() -> None:
 
 def test_deterministic_path_supports_input_beyond_real_llm_single_call_capacity() -> None:
     notes = tuple(
-        Note(F(i), F(1), 60 + (i % 12), "melody")
-        for i in range(MAX_COMPACT_SOURCE_EVENTS + 1)
+        Note(F(i), F(1), 60 + (i % 12), "melody") for i in range(MAX_COMPACT_SOURCE_EVENTS + 1)
     )
     ir = MusicIR(notes, (), _meta())
     assert propose_arrangement(ir, ArrangeGoal(), ConstantLLM("noop")) == notes
@@ -412,16 +416,12 @@ def test_lossless_single_call_protocol_and_budget_boundaries(
 @pytest.mark.parametrize("event_count", [170, 198, 443, 495])
 def test_compact_long_score_response_is_lossless_and_strict(event_count: int) -> None:
     source = MusicIR(
-        tuple(
-            Note(F(index), F(1), 60 + index % 12, "melody")
-            for index in range(event_count)
-        ),
+        tuple(Note(F(index), F(1), 60 + index % 12, "melody") for index in range(event_count)),
         (),
         _meta(),
     )
     expected = tuple(
-        Note(F(index, 2), F(1, 2), 60 + index % 12, "melody")
-        for index in range(event_count)
+        Note(F(index, 2), F(1, 2), 60 + index % 12, "melody") for index in range(event_count)
     )
     reply = json.dumps(
         {

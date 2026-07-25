@@ -49,9 +49,19 @@ from fretsure.solver.cost import (
 )
 from fretsure.solver.frames import FrameConfig
 from fretsure.solver.frames import frame_configs as _frame_configs
+from fretsure.solver.left_hand import advance_left_hand
+from fretsure.solver.score_supervision import (
+    PUBLISHED_FINGERING_MIN_ONSETS,
+    select_score_supervised_green_index,
+)
+from fretsure.solver.technique import (
+    DEFAULT_TECHNIQUE_PROFILE,
+    technique_profile,
+    technique_quality_key,
+)
 from fretsure.tab import RightFinger, Tab, TabNote
 
-FINGERING_SOLVER_VERSION = "fingering-solver@0.3.0"
+FINGERING_SOLVER_VERSION = "fingering-solver@0.6.0"
 
 
 class InfeasibleCode(StrEnum):
@@ -83,6 +93,7 @@ class _GreenFinalist:
     tab: Tab
     quality: QualityCost
     stable_rank: int
+    continuation: _SolverContinuation
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,6 +102,7 @@ class _FingeringSearchOutcome:
 
     result: Tab | Infeasible
     green_pool: tuple[_GreenFinalist, ...]
+    continuation: _SolverContinuation | None
 
 
 _RIGHT_ORDER: tuple[RightFinger, ...] = ("p", "i", "m", "a")
@@ -118,9 +130,21 @@ class _IncrementalOracleState:
 
 
 @dataclass(frozen=True, slots=True)
+class _SolverContinuation:
+    """Finite search state carried across a safe long-score segment seam."""
+
+    hand_window: HandWindow | None
+    left_position: int | None
+    last_cfg: FrameConfig | None
+    oracle: _IncrementalOracleState
+    pessimistic_oracle: _IncrementalOracleState | None
+
+
+@dataclass(frozen=True, slots=True)
 class _State:
     quality: QualityCost
     hand_window: HandWindow | None
+    left_position: int | None
     parent: _State | None
     added: tuple[TabNote, ...]
     note_count: int
@@ -156,13 +180,51 @@ def _reconstruct_notes(state: _State) -> tuple[TabNote, ...]:
     return notes
 
 
+def _remap_continuation_oracle(
+    value: _IncrementalOracleState,
+) -> _IncrementalOracleState:
+    """Move prior note ids into a negative namespace before the next segment."""
+
+    ids = {index for index, _note in value.active}
+    if value.shift is not None:
+        ids.update(value.shift.active_note_ids)
+    remap = {index: -(offset + 1) for offset, index in enumerate(sorted(ids))}
+    active = tuple((remap[index], note) for index, note in value.active)
+    shift = value.shift
+    if shift is not None:
+        shift = _ShiftOracleState(
+            shift.center,
+            frozenset(remap[index] for index in shift.active_note_ids),
+            shift.latest_release,
+        )
+    return _IncrementalOracleState(active, value.right_last_used, shift)
+
+
+def _continuation_from_state(state: _State) -> _SolverContinuation:
+    return _SolverContinuation(
+        state.hand_window,
+        state.left_position,
+        state.last_cfg,
+        _remap_continuation_oracle(state.oracle),
+        (
+            None
+            if state.pessimistic_oracle is None
+            else _remap_continuation_oracle(state.pessimistic_oracle)
+        ),
+    )
+
+
 def _frame_geometry(config: FrameConfig | None) -> tuple[tuple[int, int], ...]:
     if config is None:
         return ()
     return tuple((placement.string, placement.fret) for placement in config.placements)
 
 
-_DiversityKey = tuple[tuple[tuple[int, int], ...], HandWindow | None]
+_DiversityKey = tuple[
+    tuple[tuple[int, int], ...],
+    HandWindow | None,
+    int | None,
+]
 
 
 def _state_diversity_key(
@@ -173,7 +235,11 @@ def _state_diversity_key(
     # The complete propagated interval is future-relevant even while a fretted
     # shape sounds: different prior paths can reach different subsets of the
     # same current shape.  Keep those bands in separate bounded diversity groups.
-    return (_frame_geometry(state.last_cfg), state.hand_window)
+    return (
+        _frame_geometry(state.last_cfg),
+        state.hand_window,
+        state.left_position,
+    )
 
 
 def _select_diverse_partition(states: list[_State], limit: int) -> list[_State]:
@@ -189,9 +255,7 @@ def _select_diverse_partition(states: list[_State], limit: int) -> list[_State]:
     seen_left: dict[_DiversityKey, set[tuple[tuple[int, int, int], ...]]] = {
         geometry: set() for geometry in groups
     }
-    seen_right: dict[_DiversityKey, set[_RightHistory]] = {
-        geometry: set() for geometry in groups
-    }
+    seen_right: dict[_DiversityKey, set[_RightHistory]] = {geometry: set() for geometry in groups}
 
     def left_key(state: _State) -> tuple[tuple[int, int, int], ...]:
         return tuple(
@@ -275,9 +339,7 @@ def _select_diverse_states(states: list[_State], limit: int) -> list[_State]:
     has a possible GREEN completion.
     """
 
-    green_possible = [
-        state for state in states if state.pessimistic_oracle is not None
-    ]
+    green_possible = [state for state in states if state.pessimistic_oracle is not None]
     if len(green_possible) >= limit:
         return _select_diverse_partition(green_possible, limit)
 
@@ -285,9 +347,7 @@ def _select_diverse_states(states: list[_State], limit: int) -> list[_State]:
         green_possible,
         len(green_possible),
     )
-    amber_fallbacks = [
-        state for state in states if state.pessimistic_oracle is None
-    ]
+    amber_fallbacks = [state for state in states if state.pessimistic_oracle is None]
     selected_amber = _select_diverse_partition(
         amber_fallbacks,
         limit - len(selected_green),
@@ -432,6 +492,7 @@ def _solve_fingering_with_green_pool(
     beats_per_bar: int = 4,
     beam: int = 16,
     _collect_full_green_pool: bool = True,
+    _initial_continuation: _SolverContinuation | None = None,
 ) -> _FingeringSearchOutcome:
     """Run the bounded search and optionally retain all checked GREEN finalists.
 
@@ -461,6 +522,7 @@ def _solve_fingering_with_green_pool(
                 pitches=(),
             ),
             (),
+            None,
         )
 
     empty_oracle_state = _IncrementalOracleState(
@@ -468,17 +530,19 @@ def _solve_fingering_with_green_pool(
         (None, None, None, None),
         None,
     )
+    initial = _initial_continuation
     states: list[_State] = [
         _State(
             QualityCost(),
-            None,
+            None if initial is None else initial.hand_window,
+            None if initial is None else initial.left_position,
             None,
             (),
             0,
             0,
-            None,
-            empty_oracle_state,
-            empty_oracle_state,
+            None if initial is None else initial.last_cfg,
+            empty_oracle_state if initial is None else initial.oracle,
+            (empty_oracle_state if initial is None else initial.pessimistic_oracle),
         )
     ]
     next_state_rank = 1
@@ -503,6 +567,7 @@ def _solve_fingering_with_green_pool(
                     pitches=pitches,
                 ),
                 (),
+                None,
             )
         for pitch in pitches:
             if not candidates(pitch, tuning, capo, profile.max_fret):
@@ -514,6 +579,7 @@ def _solve_fingering_with_green_pool(
                         pitches=(pitch,),
                     ),
                     (),
+                    None,
                 )
         cacheable = pitch_frame_counts[pitches] > 1
         cfgs = config_cache.get(pitches) if cacheable else None
@@ -538,6 +604,7 @@ def _solve_fingering_with_green_pool(
                     pitches=pitches,
                 ),
                 (),
+                None,
             )
 
         extended: list[_State] = []
@@ -582,23 +649,53 @@ def _solve_fingering_with_green_pool(
                     state.hand_window,
                     current_window,
                 )
+                left_hand = advance_left_hand(
+                    state.left_position,
+                    (note for _, note in oracle_state.active),
+                    state.last_cfg,
+                    cfg,
+                )
                 frame_max_fret = max(
                     (placement.fret for placement in cfg.placements),
                     default=0,
                 )
                 quality = QualityCost(
-                    max(state.quality.max_fret, frame_max_fret),
-                    state.quality.fret_exposure + config_fret_exposure(cfg, durs),
-                    state.quality.shift_count + int(shifted),
-                    state.quality.shift_distance_um + shift_distance,
-                    state.quality.finger_load + config_finger_load(cfg),
-                    state.quality.string_crossings
-                    + string_crossing_distance(state.last_cfg, cfg),
+                    awkward_fingering_events=(
+                        state.quality.awkward_fingering_events + left_hand.awkward_events
+                    ),
+                    left_hand_effort=(state.quality.left_hand_effort + left_hand.effort),
+                    refingering_count=(state.quality.refingering_count + left_hand.refingerings),
+                    barre_burden=(state.quality.barre_burden + left_hand.barre_burden),
+                    finger_crossover_burden=(
+                        state.quality.finger_crossover_burden + left_hand.finger_crossover_burden
+                    ),
+                    fret_height_burden=(
+                        state.quality.fret_height_burden + left_hand.fret_height_burden
+                    ),
+                    position_deviation=(
+                        state.quality.position_deviation + left_hand.position_deviation
+                    ),
+                    position_shift_count=(
+                        state.quality.position_shift_count + left_hand.position_shift_count
+                    ),
+                    position_shift_distance=(
+                        state.quality.position_shift_distance + left_hand.position_shift_distance
+                    ),
+                    max_fret=max(state.quality.max_fret, frame_max_fret),
+                    fret_exposure=(state.quality.fret_exposure + config_fret_exposure(cfg, durs)),
+                    shift_count=state.quality.shift_count + int(shifted),
+                    shift_distance_um=(state.quality.shift_distance_um + shift_distance),
+                    finger_load=(state.quality.finger_load + config_finger_load(cfg)),
+                    string_crossings=(
+                        state.quality.string_crossings
+                        + string_crossing_distance(state.last_cfg, cfg)
+                    ),
                 )
                 extended.append(
                     _State(
                         quality,
                         hand_window,
+                        left_hand.position,
                         state,
                         added,
                         state.note_count + len(added),
@@ -619,6 +716,7 @@ def _solve_fingering_with_green_pool(
                     pitches=pitches,
                 ),
                 (),
+                None,
             )
         states = _select_diverse_states(extended, beam)
 
@@ -626,7 +724,9 @@ def _solve_fingering_with_green_pool(
     # pruning may conservatively return Infeasible, but no discrepancy can leak
     # a RED Tab to the caller.
     first_amber: Tab | None = None
+    first_amber_state: _State | None = None
     green_pool: list[_GreenFinalist] = []
+    first_green_state: _State | None = None
     finalists = sorted(states, key=_state_sort_key)[:MAX_SOLVER_FINAL_CHECKS]
     for state in finalists:
         result = Tab(_reconstruct_notes(state), tuning, capo)
@@ -637,15 +737,39 @@ def _solve_fingering_with_green_pool(
             beats_per_bar=beats_per_bar,
         ).verdict
         if verdict == "GREEN":
-            green_pool.append(_GreenFinalist(result, state.quality, state.rank))
+            green_pool.append(
+                _GreenFinalist(
+                    result,
+                    state.quality,
+                    state.rank,
+                    _continuation_from_state(state),
+                )
+            )
+            if first_green_state is None:
+                first_green_state = state
             if not _collect_full_green_pool:
-                return _FingeringSearchOutcome(result, tuple(green_pool))
+                return _FingeringSearchOutcome(
+                    result,
+                    tuple(green_pool),
+                    _continuation_from_state(state),
+                )
         if verdict == "AMBER" and first_amber is None:
             first_amber = result
+            first_amber_state = state
     if green_pool:
-        return _FingeringSearchOutcome(green_pool[0].tab, tuple(green_pool))
+        assert first_green_state is not None
+        return _FingeringSearchOutcome(
+            green_pool[0].tab,
+            tuple(green_pool),
+            _continuation_from_state(first_green_state),
+        )
     if first_amber is not None:
-        return _FingeringSearchOutcome(first_amber, ())
+        assert first_amber_state is not None
+        return _FingeringSearchOutcome(
+            first_amber,
+            (),
+            _continuation_from_state(first_amber_state),
+        )
 
     final_onset = onsets[-1]
     return _FingeringSearchOutcome(
@@ -656,6 +780,7 @@ def _solve_fingering_with_green_pool(
             pitches=tuple(sorted(note.pitch for note in by_onset[final_onset])),
         ),
         (),
+        None,
     )
 
 
@@ -668,10 +793,27 @@ def solve_fingering(
     tempo_bpm: float = 90.0,
     beats_per_bar: int = 4,
     beam: int = 16,
+    technique_profile_name: str = DEFAULT_TECHNIQUE_PROFILE,
 ) -> Tab | Infeasible:
-    """Return the same canonical winner while keeping diagnostics private."""
+    """Return a certified result, optionally ranking GREEN finalists by technique."""
 
-    return _solve_fingering_with_green_pool(
+    # The onset count below decides whether the full GREEN pool is retained, so
+    # it must not touch caller-supplied objects before the typed contract has
+    # accepted them.  ``_solve_fingering_with_green_pool`` revalidates the
+    # detached snapshot; that repeat is bounded and keeps the single search path.
+    notes, tuning, capo, profile, tempo_bpm, beam = ensure_solver_input(
+        notes,
+        tuning,
+        capo,
+        profile,
+        tempo_bpm=tempo_bpm,
+        beam=beam,
+    )
+    preference = technique_profile(technique_profile_name)
+    use_score_supervision = (
+        len({note.onset for note in notes}) >= PUBLISHED_FINGERING_MIN_ONSETS
+    )
+    outcome = _solve_fingering_with_green_pool(
         notes,
         tuning,
         capo,
@@ -679,8 +821,46 @@ def solve_fingering(
         tempo_bpm=tempo_bpm,
         beats_per_bar=beats_per_bar,
         beam=beam,
-        _collect_full_green_pool=False,
-    ).result
+        _collect_full_green_pool=(
+            use_score_supervision or preference.id != DEFAULT_TECHNIQUE_PROFILE
+        ),
+    )
+    if not outcome.green_pool:
+        return outcome.result
+    if preference.id == DEFAULT_TECHNIQUE_PROFILE:
+        return _select_score_supervised_finalist(outcome.green_pool).tab
+    return _select_technique_finalist(outcome.green_pool, preference.id).tab
+
+
+def _select_score_supervised_finalist(
+    finalists: tuple[_GreenFinalist, ...],
+) -> _GreenFinalist:
+    """Apply published-score supervision only inside the certified GREEN pool."""
+
+    selected = select_score_supervised_green_index(
+        tuple(finalist.tab for finalist in finalists),
+        tuple(finalist.quality for finalist in finalists),
+        tuple(finalist.stable_rank for finalist in finalists),
+    )
+    return finalists[selected]
+
+
+def _select_technique_finalist(
+    finalists: tuple[_GreenFinalist, ...],
+    technique_profile_name: str,
+) -> _GreenFinalist:
+    """Select only within the already fully checked GREEN pool."""
+
+    technique_profile(technique_profile_name)
+    if not finalists:
+        raise ValueError("GREEN finalist pool must not be empty")
+    return min(
+        finalists,
+        key=lambda finalist: (
+            technique_quality_key(finalist.quality, technique_profile_name),
+            finalist.stable_rank,
+        ),
+    )
 
 
 __all__ = [

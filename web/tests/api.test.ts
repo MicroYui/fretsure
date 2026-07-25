@@ -1,20 +1,31 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   arrangeScore,
   canonicalTabJSON,
+  checkDifficulty,
+  exportAudio,
   exportGuitarPro,
+  exportGuitarPro7,
   exportMidi,
   exportMusicXMLTab,
   exportPdfTab,
   exportTabText,
+  editLeftFinger,
   FretsureAPIError,
   getCapabilities,
+  isVerifiedAlternative,
+  isArrangement,
+  regenerateSection,
 } from "../src/api";
 import {
   arrangement,
   capabilities,
   jsonResponse,
   midiArrangement,
+  publishedGrade,
   producerMxlArrangement,
   producerXmlArrangement,
 } from "./fixtures";
@@ -22,6 +33,9 @@ import {
 const controls = {
   engine: "offline" as const,
   profile: "median",
+  style: "fingerstyle" as const,
+  difficultyTier: "intermediate" as const,
+  techniqueProfile: "balanced" as const,
   n: 1,
   maxIters: 0,
   useCritic: false,
@@ -82,6 +96,10 @@ describe("API client", () => {
       (suffix) => suffix !== ".mid",
     );
 
+    const staleDifficulty = structuredClone(capabilities);
+    staleDifficulty.difficulty_tiers[0].profile.version = "beginner@future";
+    staleDifficulty.stamps.difficulty_checker_version = "difficulty@future";
+
     for (const document of [
       invalidDefault,
       duplicateEngine,
@@ -90,16 +108,94 @@ describe("API client", () => {
       missingRouterStamp,
       staleMidiRegistry,
       missingMidiSuffix,
+      staleDifficulty,
     ]) {
       vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(document)));
       await expect(getCapabilities()).rejects.toThrow("incompatible capabilities");
     }
   });
 
+  it("checks the selected difficulty tier with canonical Tab JSON", async () => {
+    const tier = capabilities.difficulty_tiers[0];
+    const document = {
+      api_version: "fretsure-api@0.3.0",
+      service_version: "fretsure-service@0.3.0",
+      status: "checked" as const,
+      options: { tier: "beginner" as const, tempo_bpm: 92, beats_per_bar: 3 },
+      tab: arrangement.tab!,
+      tier,
+      difficulty: {
+        checker_version: "difficulty@0.1.0",
+        meets: true,
+        playable: "GREEN" as const,
+        tier_violations: [],
+      },
+      published_grade: publishedGrade,
+      stamps: {
+        difficulty_checker_version: "difficulty@0.1.0",
+        published_grade_estimator_version: publishedGrade.model_version,
+        published_grade_model_sha256: publishedGrade.model_sha256,
+        profile_version: tier.profile.version,
+        profile_fingerprint: tier.profile.fingerprint,
+      },
+    };
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(document));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      checkDifficulty(arrangement.tab!, {
+        tier: "beginner",
+        tempoBpm: 92,
+        beatsPerBar: 3,
+      }),
+    ).resolves.toEqual(document);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe(
+      "/api/v1/difficulty/check?tier=beginner&tempo_bpm=92&beats_per_bar=3",
+    );
+    expect(init?.method).toBe("POST");
+    expect(init?.body).toBe(canonicalTabJSON(arrangement.tab!));
+  });
+
+  it("rejects difficulty evidence that is not bound to its tier stamp", async () => {
+    const tier = capabilities.difficulty_tiers[0];
+    const document = {
+      api_version: "fretsure-api@0.3.0",
+      service_version: "fretsure-service@0.3.0",
+      status: "checked",
+      options: { tier: "beginner", tempo_bpm: 90, beats_per_bar: 4 },
+      tab: arrangement.tab!,
+      tier,
+      difficulty: {
+        checker_version: "difficulty@0.1.0",
+        meets: true,
+        playable: "GREEN",
+        tier_violations: [],
+      },
+      published_grade: publishedGrade,
+      stamps: {
+        difficulty_checker_version: "difficulty@0.1.0",
+        published_grade_estimator_version: publishedGrade.model_version,
+        published_grade_model_sha256: publishedGrade.model_sha256,
+        profile_version: "wrong-tier@0.1",
+        profile_fingerprint: tier.profile.fingerprint,
+      },
+    };
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(document)));
+
+    await expect(
+      checkDifficulty(arrangement.tab!, {
+        tier: "beginner",
+        tempoBpm: 90,
+        beatsPerBar: 4,
+      }),
+    ).rejects.toThrow("incompatible difficulty");
+  });
+
   it("surfaces application/problem+json without stringifying unknown server data", async () => {
     const problem = {
       type: "about:blank",
-      api_version: "fretsure-api@0.2.0",
+      api_version: "fretsure-api@0.3.0",
       status: 413,
       code: "BODY_LIMIT_EXCEEDED",
       title: "Request body too large",
@@ -110,6 +206,9 @@ describe("API client", () => {
     const request = arrangeScore(new File(["x"], "x.musicxml"), {
       engine: "offline",
       profile: "median",
+      style: "fingerstyle",
+      difficultyTier: "intermediate",
+      techniqueProfile: "balanced",
       n: 1,
       maxIters: 0,
       useCritic: false,
@@ -125,12 +224,212 @@ describe("API client", () => {
       arrangeScore(new File(["x"], "x.mxl"), {
         engine: "offline",
         profile: "median",
+        style: "fingerstyle",
+        difficultyTier: "intermediate",
+        techniqueProfile: "balanced",
         n: 2,
         maxIters: 3,
         useCritic: true,
         tempoBpm: 87.5,
       }),
     ).resolves.toEqual(arrangement);
+  });
+
+  it("sends a measure-scoped revision with source bytes and voice locks", async () => {
+    const document = {
+      api_version: capabilities.api_version,
+      service_version: capabilities.service_version,
+      status: "accepted" as const,
+      selection: {
+        start_measure: 1,
+        end_measure: 1,
+        locked_voices: ["melody" as const],
+      },
+      options: {
+        profile: arrangement.options.profile,
+        style: arrangement.options.style,
+        difficulty_tier: arrangement.options.difficulty_tier,
+        technique_profile: arrangement.options.technique_profile,
+        tempo_bpm: arrangement.options.tempo_override_bpm,
+      },
+      model: arrangement.model,
+      editable_target: arrangement.editable_target!,
+      tab: arrangement.tab!,
+      ascii: arrangement.ascii!,
+      playability: arrangement.playability!,
+      faithfulness: arrangement.faithfulness!,
+      revision: {
+        schema_version: "section-regeneration@0.1.0" as const,
+        proposal_status: "CONSTANT_LLM_BYPASS",
+        model_calls: 0 as const,
+        reason: null,
+      },
+      stamps: arrangement.stamps,
+    };
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(document));
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File(["score"], "section.musicxml");
+
+    await expect(
+      regenerateSection(file, arrangement, {
+        startMeasure: 1,
+        endMeasure: 1,
+        lockedVoices: ["melody"],
+      }),
+    ).resolves.toEqual(document);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe("/api/v1/arrangements/regenerate-section?engine=offline");
+    expect(init?.method).toBe("POST");
+    expect(new Headers(init?.headers).get("content-type")).toBe("application/json");
+    expect(JSON.parse(String(init?.body))).toMatchObject({
+      source: { filename: "section.musicxml", base64: "c2NvcmU=" },
+      selection: {
+        start_measure: 1,
+        end_measure: 1,
+        locked_voices: ["melody"],
+      },
+      options: {
+        profile: "median",
+        style: "fingerstyle",
+        difficulty_tier: "intermediate",
+        technique_profile: "balanced",
+      },
+    });
+  });
+
+  it("submits one manual finger change for a transactional Oracle recheck", async () => {
+    const tab = {
+      ...arrangement.tab!,
+      notes: [
+        {
+          onset: "0/1",
+          duration: "1/1",
+          string: 4,
+          fret: 1,
+          left_finger: 1,
+          right_finger: "i" as const,
+        },
+      ],
+    };
+    const revisedTab = structuredClone(tab);
+    revisedTab.notes[0].left_finger = 2;
+    const document = {
+      api_version: capabilities.api_version,
+      service_version: capabilities.service_version,
+      status: "applied" as const,
+      options: {
+        profile: arrangement.options.profile,
+        tempo_bpm: 90,
+        beats_per_bar: 4,
+      },
+      tab: revisedTab,
+      ascii: arrangement.ascii!,
+      playability: arrangement.playability!,
+      attempted_playability: arrangement.playability!,
+      edit: {
+        note_index: 0,
+        onset: "0/1",
+        string: 4,
+        fret: 1,
+        before_finger: 1,
+        requested_finger: 2,
+        reason: null,
+      },
+      stamps: arrangement.stamps,
+    };
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(document));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(editLeftFinger(tab, 0, 2, "median", 90, 4)).resolves.toEqual(document);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe(
+      "/api/v1/fingering/left-hand?note_index=0&left_finger=2&profile=median&tempo_bpm=90&beats_per_bar=4",
+    );
+    expect(init?.method).toBe("POST");
+    expect(init?.body).toBe(canonicalTabJSON(tab));
+  });
+
+  it("accepts independently checked alternatives with explicit work", async () => {
+    const document = structuredClone(arrangement);
+    document.model.engine = "proxy";
+    document.options.candidate_count = 2;
+    document.alternatives = [
+      {
+        candidate_index: 0,
+        tab: structuredClone(arrangement.tab!),
+        ascii: arrangement.ascii!,
+        playability: structuredClone(arrangement.playability!),
+        faithfulness: structuredClone(arrangement.faithfulness!),
+        work: {
+          model_calls: 1,
+          trial_solver_calls: 2,
+          proposed_additions: 3,
+          accepted_additions: 2,
+        },
+        proposal_status: "LLM_SUCCESS",
+        observed_critic: {
+          status: null,
+          overall: null,
+          meaning: "machine_observation_not_human_musicality_evidence",
+        },
+      },
+    ];
+
+    expect(isVerifiedAlternative(document.alternatives[0])).toBe(true);
+    expect(isArrangement(document)).toBe(true);
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(document)));
+    await expect(
+      arrangeScore(new File(["x"], "x.musicxml"), {
+        ...controls,
+        engine: "proxy",
+        n: 2,
+      }),
+    ).resolves.toEqual(document);
+  });
+
+  it("rejects malformed or cost-free-looking alternatives", async () => {
+    const base = structuredClone(arrangement);
+    base.options.candidate_count = 1;
+    base.alternatives = [
+      {
+        candidate_index: 0,
+        tab: structuredClone(arrangement.tab!),
+        ascii: arrangement.ascii!,
+        playability: structuredClone(arrangement.playability!),
+        faithfulness: structuredClone(arrangement.faithfulness!),
+        work: {
+          model_calls: 1,
+          trial_solver_calls: 1,
+          proposed_additions: 1,
+          accepted_additions: 1,
+        },
+        proposal_status: "LLM_SUCCESS",
+        observed_critic: {
+          status: null,
+          overall: null,
+          meaning: "machine_observation_not_human_musicality_evidence",
+        },
+      },
+    ];
+
+    const impossibleWork = structuredClone(base);
+    impossibleWork.alternatives[0].work.accepted_additions = 2;
+
+    const unboundCritic = structuredClone(base);
+    unboundCritic.alternatives[0].observed_critic.overall = 0.8;
+
+    const unchecked = structuredClone(base);
+    unchecked.alternatives[0].playability.verdict = "AMBER";
+
+    const tooMany = structuredClone(base);
+    tooMany.alternatives.push(structuredClone(tooMany.alternatives[0]));
+    tooMany.alternatives[1].candidate_index = 1;
+
+    for (const document of [impossibleWork, unboundCritic, unchecked, tooMany]) {
+      await expect(requestArrangement(document)).rejects.toThrow("incompatible arrangement");
+    }
   });
 
   it.each([
@@ -206,6 +505,9 @@ describe("API client", () => {
     const mismatchedStamp = structuredClone(arrangement);
     mismatchedStamp.stamps.model_id = "another-model";
 
+    const staleLeftHandModel = structuredClone(arrangement);
+    staleLeftHandModel.stamps.left_hand_model_version = "left-hand-ergonomics@future";
+
     const staleImporter = structuredClone(arrangement);
     staleImporter.source.importer_version = "musicxml@0.2.0";
     staleImporter.stamps.importer_version = "musicxml@0.2.0";
@@ -238,6 +540,7 @@ describe("API client", () => {
       invalidEngine,
       missingStamp,
       mismatchedStamp,
+      staleLeftHandModel,
       staleImporter,
       missingFilename,
       invalidTab,
@@ -249,6 +552,7 @@ describe("API client", () => {
   it("enforces status and product-gate absence consistency", async () => {
     const noFingering = structuredClone(arrangement);
     noFingering.status = "no_fingering_within_budget";
+    noFingering.editable_target = null;
     noFingering.tab = null;
     noFingering.ascii = null;
     noFingering.playability = null;
@@ -367,6 +671,30 @@ describe("API client", () => {
     expect(init?.body).toBe(canonicalTabJSON(arrangement.tab!));
   });
 
+  it("exports canonical Tab as synthesized WAV audio", async () => {
+    const wav = new Uint8Array(48);
+    wav.set(new TextEncoder().encode("RIFF"), 0);
+    wav.set(new TextEncoder().encode("WAVE"), 8);
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(wav, {
+        headers: {
+          "content-disposition": 'attachment; filename="fretsure-arrangement.wav"',
+          "content-type": "audio/wav",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const asset = await exportAudio(arrangement.tab!, 96);
+
+    expect(asset.filename).toBe("fretsure-arrangement.wav");
+    expect(asset.blob.size).toBe(48);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe("/api/v1/exports/audio?tempo_bpm=96");
+    expect(new Headers(init?.headers).get("accept")).toBe("audio/wav");
+    expect(init?.body).toBe(canonicalTabJSON(arrangement.tab!));
+  });
+
   it("exports canonical Tab as a fingered six-line text score", async () => {
     const body = "Six-line tablature (high e to low E):\ne|--0--|\n";
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
@@ -443,6 +771,30 @@ describe("API client", () => {
     expect(init?.method).toBe("POST");
     expect(new Headers(init?.headers).get("accept")).toBe(contentType);
     expect(init?.body).toBe(canonicalTabJSON(arrangement.tab!));
+  });
+
+  it("converts the canonical MusicXML export into native Guitar Pro 7 bytes", async () => {
+    const musicXml = readFileSync(
+      resolve(process.cwd(), "public/examples/fretsure-etude.musicxml"),
+    );
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(musicXml, {
+        headers: {
+          "content-disposition":
+            'attachment; filename="fretsure-guitar-tablature.musicxml"',
+          "content-type": "application/vnd.recordare.musicxml+xml",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const asset = await exportGuitarPro7(arrangement.tab!, 96);
+
+    expect(asset.filename).toBe("fretsure-guitar-tab.gp");
+    expect(asset.blob.size).toBeGreaterThan(100);
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "/api/v1/exports/musicxml-tab?tempo_bpm=96",
+    );
   });
 
   it("serializes downloaded Tab JSON in the canonical field order", () => {

@@ -630,6 +630,18 @@ button {
   text-align: right;
 }
 
+.candidate-control {
+  min-width: 0;
+  text-align: right;
+}
+
+.candidate-control small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
 .policy-value {
   min-width: 0;
   text-align: right;

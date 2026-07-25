@@ -29,12 +29,23 @@ def _to_micrometres(millimetres: float) -> int:
 class QualityCost:
     """Fixed-width, lexicographically ordered path-quality accumulator.
 
-    The field order is the objective order.  There are deliberately no weights
-    or position thresholds: lower maximum position and lower duration-weighted
-    fret exposure win first, followed by discrete shifts, physical shift
-    distance, and small fingering/string-motion tiebreaks.
+    The field order is the objective order.  The first two fields are a
+    dimensionless, versioned left-hand model: avoid severe contracted/extended
+    shapes first, then minimize ergonomic effort.  The following component
+    fields make that decision auditable and break exact effort ties.  Physical
+    geometry and generic placement burden remain deterministic lower-priority
+    objectives; the Oracle is still the hard playability authority.
     """
 
+    awkward_fingering_events: int = 0
+    left_hand_effort: int = 0
+    refingering_count: int = 0
+    barre_burden: int = 0
+    finger_crossover_burden: int = 0
+    fret_height_burden: int = 0
+    position_deviation: int = 0
+    position_shift_count: int = 0
+    position_shift_distance: int = 0
     max_fret: int = 0
     fret_exposure: Fraction = Fraction(0)
     shift_count: int = 0
@@ -144,11 +155,7 @@ def config_finger_load(config: FrameConfig) -> int:
     """Number of distinct fretting fingers required by an attack frame."""
 
     return len(
-        {
-            placement.left_finger
-            for placement in config.placements
-            if placement.left_finger > 0
-        }
+        {placement.left_finger for placement in config.placements if placement.left_finger > 0}
     )
 
 
@@ -191,9 +198,7 @@ def config_base_cost(config: FrameConfig) -> float:
     return fret_sum + 2.0 * fingers_used
 
 
-def transition_cost(
-    prev: FrameConfig, curr: FrameConfig, capo: int, profile: Profile
-) -> float:
+def transition_cost(prev: FrameConfig, curr: FrameConfig, capo: int, profile: Profile) -> float:
     """Legacy centre displacement retained for compatibility and diagnostics."""
     a = config_hand_center(prev, capo, profile)
     b = config_hand_center(curr, capo, profile)

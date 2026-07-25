@@ -237,6 +237,21 @@ def test_proxy_llm_rejects_invalid_explicit_request_timeout_before_environment(
         ProxyLLM(request_timeout_seconds=request_timeout_seconds)  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize("max_attempts", [True, 0, 4, 1.0, "1"])
+def test_proxy_llm_rejects_invalid_max_attempts_before_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    max_attempts: object,
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+
+    with pytest.raises(
+        LLMProxyConfigurationError,
+        match="max_attempts must be an exact integer in 1..3",
+    ):
+        ProxyLLM(max_attempts=max_attempts)  # type: ignore[arg-type]
+
+
 def test_proxy_llm_snapshots_bounded_provider_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -670,6 +685,37 @@ def test_proxy_llm_retries_connection_failures_then_redacts_exhaustion(
         )
     )
     assert "SECRET transport" not in rendered
+
+
+def test_proxy_llm_explicit_single_attempt_never_retries_retryable_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = 0
+    sleeps: list[float] = []
+
+    class FakeMessages:
+        def create(self, **_kwargs: object) -> object:
+            nonlocal calls
+            calls += 1
+            raise _api_status_error(503, None)
+
+    class FakeAnthropic:
+        def __init__(self, **_kwargs: object) -> None:
+            self.messages = FakeMessages()
+
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://127.0.0.1:8317/v1")
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "test-token")
+    monkeypatch.setattr("anthropic.Anthropic", FakeAnthropic)
+    monkeypatch.setattr("fretsure.llm.client.time.sleep", sleeps.append)
+    llm = ProxyLLM(max_attempts=1)
+
+    with pytest.raises(RuntimeError, match="LLM call failed after bounded retries"):
+        llm.complete(system="s", user="u", max_tokens=20)
+
+    assert calls == 1
+    assert sleeps == []
+    assert llm.last_call_metadata is not None
+    assert llm.last_call_metadata.attempts == 1
 
 
 def test_proxy_llm_hard_deadline_bounds_slow_chunks_and_keeps_client_usable(

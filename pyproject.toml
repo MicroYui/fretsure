@@ -39,6 +39,7 @@ score = [
 ]
 service = [
     "fastapi>=0.139,<0.140",
+    "opentelemetry-api>=1.28,<2",
     "pyguitarpro>=0.11,<0.12",
     "reportlab>=4.4,<5",
     "uvicorn[standard]>=0.41,<0.42",
@@ -58,11 +59,15 @@ dev = [
     "httpx>=0.28,<0.29",
     "mcp>=1.28.1,<1.29",
     "music21==10.5.0",
+    "opentelemetry-api>=1.28,<2",
     "pdfplumber>=0.11,<0.12",
     "pyguitarpro>=0.11,<0.12",
     "pypdf>=6,<7",
     "reportlab>=4.4,<5",
     "uvicorn[standard]>=0.41,<0.42",
+]
+telemetry = [
+    "opentelemetry-api>=1.28,<2",
 ]
 
 [project.scripts]
@@ -93,8 +98,13 @@ include = [
     "/.python-version",
     "/CLAUDE.md",
     "/README.md",
+    "/artifacts/plan6b-money-moment/human-guitarist-receipt.json",
+    "/artifacts/plan6b-money-moment/preflight.json",
+    "/artifacts/plan6b-money-moment/unseen-etude.musicxml",
+    "/artifacts/plan6b-interoperability/manifest.json",
     "/data/benchmark",
     "/data/gold",
+    "/data/score_corpus",
     "/docs",
     "/pyproject.toml",
     "/scripts",

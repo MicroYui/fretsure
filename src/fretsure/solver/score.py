@@ -21,17 +21,24 @@ from fretsure.oracle.input import (
     ensure_solver_domain,
 )
 from fretsure.oracle.profiles import Profile
-from fretsure.solver.api import Infeasible, InfeasibleCode, solve_fingering
+from fretsure.solver.api import (
+    Infeasible,
+    InfeasibleCode,
+    _select_score_supervised_finalist,
+    _select_technique_finalist,
+    _solve_fingering_with_green_pool,
+    _SolverContinuation,
+)
+from fretsure.solver.score_supervision import PUBLISHED_FINGERING_MIN_ONSETS
+from fretsure.solver.technique import DEFAULT_TECHNIQUE_PROFILE, technique_profile
 from fretsure.tab import Tab
 
-SCORE_SOLVER_VERSION = "score-solver@0.1.0"
+SCORE_SOLVER_VERSION = "score-solver@0.4.0"
 MAX_SCORE_SOLVER_SEGMENTS = 4
 # Sum of the conservative work estimates for admitted leaf searches. Rejected
 # oversized preflight calls and the final full-history oracle are control work,
 # not additional admitted solver searches.
-MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS = (
-    MAX_SCORE_SOLVER_SEGMENTS * MAX_SOLVER_WORK_UNITS
-)
+MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS = MAX_SCORE_SOLVER_SEGMENTS * MAX_SOLVER_WORK_UNITS
 
 
 def _work_limit_only(error: SolverInputError) -> bool:
@@ -47,9 +54,7 @@ def _split_at_frame(notes: tuple[Note, ...]) -> tuple[tuple[Note, ...], tuple[No
     candidates: list[tuple[Fraction, int, Fraction]] = []
     for index in range(1, len(onsets)):
         boundary = onsets[index]
-        prior_release = max(
-            note.onset + note.duration for note in notes if note.onset < boundary
-        )
+        prior_release = max(note.onset + note.duration for note in notes if note.onset < boundary)
         rest = boundary - prior_release
         candidates.append((rest, -abs(index - target_index), boundary))
     _rest, _distance, boundary = max(candidates)
@@ -70,7 +75,9 @@ def _solve_parts(
     beats_per_bar: int,
     beam: int,
     segment_budget: int,
-) -> tuple[Tab, ...] | Infeasible:
+    technique_profile_name: str,
+    continuation: _SolverContinuation | None = None,
+) -> tuple[tuple[Tab, ...], _SolverContinuation] | Infeasible:
     if segment_budget < 1:
         final_onset = max((note.onset for note in notes), default=None)
         return Infeasible(
@@ -80,7 +87,7 @@ def _solve_parts(
             tuple(sorted(note.pitch for note in notes if note.onset == final_onset)),
         )
     try:
-        solved = solve_fingering(
+        outcome = _solve_fingering_with_green_pool(
             notes,
             tuning,
             capo,
@@ -88,7 +95,25 @@ def _solve_parts(
             tempo_bpm=tempo_bpm,
             beats_per_bar=beats_per_bar,
             beam=beam,
+            _collect_full_green_pool=(
+                len({note.onset for note in notes}) >= PUBLISHED_FINGERING_MIN_ONSETS
+                or technique_profile_name != DEFAULT_TECHNIQUE_PROFILE
+            ),
+            _initial_continuation=continuation,
         )
+        solved = outcome.result
+        next_continuation = outcome.continuation
+        if outcome.green_pool:
+            selected = (
+                _select_score_supervised_finalist(outcome.green_pool)
+                if technique_profile_name == DEFAULT_TECHNIQUE_PROFILE
+                else _select_technique_finalist(
+                    outcome.green_pool,
+                    technique_profile_name,
+                )
+            )
+            solved = selected.tab
+            next_continuation = selected.continuation
     except SolverInputError as error:
         if not _work_limit_only(error):
             raise
@@ -113,9 +138,12 @@ def _solve_parts(
             beats_per_bar=beats_per_bar,
             beam=beam,
             segment_budget=segment_budget - 1,
+            technique_profile_name=technique_profile_name,
+            continuation=continuation,
         )
         if isinstance(left_result, Infeasible):
             return left_result
+        left_parts, left_continuation = left_result
         right_result = _solve_parts(
             right,
             tuning,
@@ -124,14 +152,19 @@ def _solve_parts(
             tempo_bpm=tempo_bpm,
             beats_per_bar=beats_per_bar,
             beam=beam,
-            segment_budget=segment_budget - len(left_result),
+            segment_budget=segment_budget - len(left_parts),
+            technique_profile_name=technique_profile_name,
+            continuation=left_continuation,
         )
         if isinstance(right_result, Infeasible):
             return right_result
-        return left_result + right_result
+        right_parts, right_continuation = right_result
+        return (left_parts + right_parts, right_continuation)
     if isinstance(solved, Infeasible):
         return solved
-    return (solved,)
+    if next_continuation is None:  # pragma: no cover - successful invariant
+        raise AssertionError("successful fingering search omitted continuation")
+    return ((solved,), next_continuation)
 
 
 def solve_fingering_score(
@@ -143,17 +176,17 @@ def solve_fingering_score(
     tempo_bpm: float = 90.0,
     beats_per_bar: int = 4,
     beam: int = 16,
+    technique_profile_name: str = DEFAULT_TECHNIQUE_PROFILE,
 ) -> Tab | Infeasible:
     """Solve a complete score while preserving the solver's per-search work gate."""
 
-    exact_notes, exact_tuning, exact_capo, exact_profile, exact_tempo_bpm = (
-        ensure_solver_domain(
-            notes,
-            tuning,
-            capo,
-            profile,
-            tempo_bpm=tempo_bpm,
-        )
+    preference = technique_profile(technique_profile_name)
+    exact_notes, exact_tuning, exact_capo, exact_profile, exact_tempo_bpm = ensure_solver_domain(
+        notes,
+        tuning,
+        capo,
+        profile,
+        tempo_bpm=tempo_bpm,
     )
     result = _solve_parts(
         exact_notes,
@@ -164,18 +197,20 @@ def solve_fingering_score(
         beats_per_bar=beats_per_bar,
         beam=beam,
         segment_budget=MAX_SCORE_SOLVER_SEGMENTS,
+        technique_profile_name=preference.id,
     )
     if isinstance(result, Infeasible):
         return result
+    parts, _continuation = result
     combined = Tab(
         tuple(
             sorted(
-                (note for part in result for note in part.notes),
+                (note for part in parts for note in part.notes),
                 key=lambda note: (note.onset, note.string),
             )
         ),
-        result[0].tuning,
-        result[0].capo,
+        parts[0].tuning,
+        parts[0].capo,
     )
     oracle = check_playability(
         combined,
@@ -186,9 +221,7 @@ def solve_fingering_score(
     if oracle.verdict != "RED":
         return combined
     final_onset = max((note.onset for note in exact_notes), default=None)
-    pitches = tuple(
-        sorted(note.pitch for note in exact_notes if note.onset == final_onset)
-    )
+    pitches = tuple(sorted(note.pitch for note in exact_notes if note.onset == final_onset))
     return Infeasible(
         InfeasibleCode.NO_NON_RED_EXTENSION,
         final_onset,

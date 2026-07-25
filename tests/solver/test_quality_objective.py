@@ -1,3 +1,4 @@
+from dataclasses import fields, replace
 from fractions import Fraction as F
 from itertools import product
 
@@ -72,32 +73,43 @@ def _two_tigers_melody() -> tuple[Note, ...]:
 
 
 def test_quality_order_is_lexicographic_not_a_weighted_unit_mix() -> None:
-    # This deliberately gives the low path absurdly worse lower-priority values.
-    # A weighted sum could let millimetres or finger counts overturn position;
-    # the declared lexicographic objective must not.
-    low_1_to_3 = QualityCost(3, F(4), 9, 10_000, 99, 99)
-    high_15_to_17 = QualityCost(17, F(32), 0, 0, 0, 0)
+    # Once the versioned ergonomic dimensions tie, lower placement remains the
+    # deterministic objective; unrelated physical units cannot overturn it.
+    low_1_to_3 = QualityCost(
+        max_fret=3,
+        fret_exposure=F(4),
+        shift_count=9,
+        shift_distance_um=10_000,
+        finger_load=99,
+        string_crossings=99,
+    )
+    high_15_to_17 = QualityCost(max_fret=17, fret_exposure=F(32))
 
     assert low_1_to_3 < high_15_to_17
 
 
-@pytest.mark.parametrize(
-    "worse",
-    [
-        QualityCost(4, F(0), 0, 0, 0, 0),
-        QualityCost(3, F(5), 0, 0, 0, 0),
-        QualityCost(3, F(4), 2, 0, 0, 0),
-        QualityCost(3, F(4), 1, 11, 0, 0),
-        QualityCost(3, F(4), 1, 10, 3, 0),
-        QualityCost(3, F(4), 1, 10, 2, 2),
-    ],
-)
-def test_each_quality_dimension_only_breaks_ties_after_earlier_dimensions(
-    worse: QualityCost,
-) -> None:
-    baseline = QualityCost(3, F(4), 1, 10, 2, 1)
+def test_each_quality_dimension_is_a_lower_is_better_tiebreak() -> None:
+    baseline = QualityCost(
+        awkward_fingering_events=1,
+        left_hand_effort=2,
+        refingering_count=3,
+        barre_burden=4,
+        fret_height_burden=5,
+        position_deviation=6,
+        position_shift_count=7,
+        position_shift_distance=8,
+        max_fret=9,
+        fret_exposure=F(10),
+        shift_count=11,
+        shift_distance_um=12,
+        finger_load=13,
+        string_crossings=14,
+    )
 
-    assert baseline < worse
+    for field in fields(QualityCost):
+        value = getattr(baseline, field.name)
+        worse = replace(baseline, **{field.name: value + 1})
+        assert baseline < worse, field.name
 
 
 def test_open_frame_preserves_the_previous_hand_window() -> None:
@@ -142,8 +154,7 @@ def test_bounded_solver_matches_exhaustive_lexicographic_position_search(
     """Differential check against every geometry path in a tiny search space."""
 
     positions = tuple(
-        tuple(candidates(pitch, _TWO_POSITION_TUNING, 0, MEDIAN_HAND.max_fret))
-        for pitch in pitches
+        tuple(candidates(pitch, _TWO_POSITION_TUNING, 0, MEDIAN_HAND.max_fret)) for pitch in pitches
     )
     assert all(len(frame) == 2 for frame in positions)
     paths = tuple(product(*positions))
@@ -178,17 +189,10 @@ def test_bounded_solver_matches_exhaustive_lexicographic_position_search(
 
     expected = min(green_paths, key=independent_prefix)
     assert (
-        sum(
-            independent_prefix(path) == independent_prefix(expected)
-            for path in green_paths
-        )
-        == 1
+        sum(independent_prefix(path) == independent_prefix(expected) for path in green_paths) == 1
     )
 
-    notes = tuple(
-        Note(F(3 * index), F(1), pitch, "melody")
-        for index, pitch in enumerate(pitches)
-    )
+    notes = tuple(Note(F(3 * index), F(1), pitch, "melody") for index, pitch in enumerate(pitches))
     result = solve_fingering(notes, _TWO_POSITION_TUNING, 0, MEDIAN_HAND, beam=16)
 
     assert isinstance(result, Tab)

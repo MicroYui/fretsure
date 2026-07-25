@@ -43,6 +43,22 @@ def test_unreachable_stretch_not_playable_any_tier() -> None:
     assert not check_tier(t, ADVANCED).meets  # RED under geometry
 
 
+def test_check_tier_threads_beats_per_bar_into_shift_overlay() -> None:
+    t = _t(
+        [
+            TabNote(F(0), F(1), 0, 1, 1, "p"),
+            TabNote(F(1), F(1), 0, 5, 1, "p"),
+            TabNote(F(2), F(1), 0, 1, 1, "p"),
+            TabNote(F(3), F(1), 0, 5, 1, "p"),
+        ]
+    )
+    compact_bars = check_tier(t, BEGINNER, beats_per_bar=2)
+    long_bar = check_tier(t, BEGINNER, beats_per_bar=4)
+
+    assert not any("too_many_shifts" in item for item in compact_bars.tier_violations)
+    assert any("too_many_shifts" in item for item in long_bar.tier_violations)
+
+
 def test_check_tier_uses_same_detached_tier_for_oracle_and_overlay(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

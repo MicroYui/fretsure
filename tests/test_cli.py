@@ -75,7 +75,7 @@ def test_cli_success_prints_full_product_result_and_writes_trace(
     ]
     metadata = trace_rows[0]["data"]
     assert metadata["llm_model_id"] == "constant-stub"
-    assert metadata["checker_version"] == "oracle@0.2.0"
+    assert metadata["checker_version"] == "oracle@0.3.0"
     assert metadata["input_schema_version"] == "tab-input@0.2.0"
     assert metadata["fidelity_checker_version"] == "fidelity@0.3.0"
     assert len(metadata["profile_fingerprint"]) == 64
@@ -413,7 +413,7 @@ def test_frozen_musescore_cli_is_loss_aware_and_deterministic(
     assert first.out == second.out
     assert first.err == second.err == ""
     assert first_trace == second_trace
-    assert "IMPORTER          : musicxml@0.3.0" in first.out
+    assert "IMPORTER          : musicxml@0.4.0" in first.out
     assert "key / meter     : key-signature:fifths=0;mode=unprovided / 4/4" in first.out
     assert "key / meter     : C /" not in first.out
     assert "key / meter     : C major /" not in first.out

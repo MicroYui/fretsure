@@ -1,0 +1,302 @@
+{
+  "coverage": {
+    "missing_annotations_are_unlabelled": true,
+    "scored_labels": 639,
+    "scored_windows": 351,
+    "unsupported_labels": {
+      "no_green_window": 50,
+      "open_string_labels": 18
+    }
+  },
+  "deployment_status": "guarded_default_green_near_tie",
+  "evaluation": {
+    "carcassi_prelude_1": {
+      "baseline_exact_matches": 16,
+      "labels": 21,
+      "model_exact_matches": 16
+    },
+    "dev": {
+      "baseline_exact_matches": 29,
+      "baseline_exact_rate": 0.48333333333333334,
+      "labels": 60,
+      "model_exact_matches": 30,
+      "model_exact_rate": 0.5,
+      "oracle_status_regressions": 0,
+      "selected_changes": 1,
+      "windows": 26
+    },
+    "test": {
+      "baseline_exact_matches": 30,
+      "baseline_exact_rate": 0.38461538461538464,
+      "labels": 78,
+      "model_exact_matches": 32,
+      "model_exact_rate": 0.41025641025641024,
+      "oracle_status_regressions": 0,
+      "selected_changes": 3,
+      "windows": 32
+    },
+    "train": {
+      "baseline_exact_matches": 224,
+      "baseline_exact_rate": 0.4471057884231537,
+      "labels": 501,
+      "model_exact_matches": 236,
+      "model_exact_rate": 0.47105788423153694,
+      "oracle_status_regressions": 0,
+      "selected_changes": 52,
+      "windows": 293
+    }
+  },
+  "feature_schema": "published-fingering-features@0.1.0",
+  "features": [
+    {
+      "name": "awkward_fingering_events",
+      "scale": "0.09617364259371358",
+      "weight": "0.04915649936732668"
+    },
+    {
+      "name": "left_hand_effort",
+      "scale": "23.50093949288547",
+      "weight": "0.038970254973085386"
+    },
+    {
+      "name": "refingering_count",
+      "scale": "0.03585134645070375",
+      "weight": "-0.00683360312100638"
+    },
+    {
+      "name": "barre_burden",
+      "scale": "2.3314227717205416",
+      "weight": "-0.02428597940337864"
+    },
+    {
+      "name": "finger_crossover_burden",
+      "scale": "0.6063698143017737",
+      "weight": "-0.04322793412361183"
+    },
+    {
+      "name": "fret_height_burden",
+      "scale": "10.477001677942978",
+      "weight": "0.0640261994596564"
+    },
+    {
+      "name": "position_deviation",
+      "scale": "0.7657731245104938",
+      "weight": "-0.004107306034385941"
+    },
+    {
+      "name": "position_shift_count",
+      "scale": "0.431359116511355",
+      "weight": "-0.0021684537725459676"
+    },
+    {
+      "name": "position_shift_distance",
+      "scale": "1.0473148360618796",
+      "weight": "0.0010460982579859482"
+    },
+    {
+      "name": "max_fret",
+      "scale": "3.3352479573270988",
+      "weight": "-0.07539710576405559"
+    },
+    {
+      "name": "fret_exposure",
+      "scale": "6.3000581695406845",
+      "weight": "-0.05055905746710668"
+    },
+    {
+      "name": "shift_count",
+      "scale": "0.2818407494591643",
+      "weight": "-0.008939682875956853"
+    },
+    {
+      "name": "shift_distance_um",
+      "scale": "12341.748543108495",
+      "weight": "0.008297505317883635"
+    },
+    {
+      "name": "finger_load",
+      "scale": "0.3367122553177289",
+      "weight": "0.004517047600110663"
+    },
+    {
+      "name": "string_crossings",
+      "scale": "0.932476746178199",
+      "weight": "0.0038974034945537615"
+    },
+    {
+      "name": "finger1_count",
+      "scale": "0.8458526551100003",
+      "weight": "0.016939883253027522"
+    },
+    {
+      "name": "finger2_count",
+      "scale": "0.7583349206150212",
+      "weight": "-0.0033428517353030146"
+    },
+    {
+      "name": "finger3_count",
+      "scale": "0.7436125545138824",
+      "weight": "-0.016748546079730788"
+    },
+    {
+      "name": "finger4_count",
+      "scale": "0.7768953645418294",
+      "weight": "-0.0208891942892731"
+    },
+    {
+      "name": "finger1_x_f1",
+      "scale": "0.34745290422842146",
+      "weight": "0.09533874563597537"
+    },
+    {
+      "name": "finger1_x_f2",
+      "scale": "0.41018076824832445",
+      "weight": "-0.00017214301987255004"
+    },
+    {
+      "name": "finger1_x_f3",
+      "scale": "0.34822762232970245",
+      "weight": "-0.01873913869464983"
+    },
+    {
+      "name": "finger1_x_f4",
+      "scale": "0.22432870615641587",
+      "weight": "-0.026541635394690673"
+    },
+    {
+      "name": "finger1_x_f5_7",
+      "scale": "0.6141025535330334",
+      "weight": "-0.0024436504320245567"
+    },
+    {
+      "name": "finger1_x_f8p",
+      "scale": "0.5543417899065609",
+      "weight": "-0.008562011290518527"
+    },
+    {
+      "name": "finger2_x_f1",
+      "scale": "0.09868726384012007",
+      "weight": "-0.023171644804800075"
+    },
+    {
+      "name": "finger2_x_f2",
+      "scale": "0.4261132712949934",
+      "weight": "0.029989971424849375"
+    },
+    {
+      "name": "finger2_x_f3",
+      "scale": "0.32220154503495824",
+      "weight": "-0.023489229579240222"
+    },
+    {
+      "name": "finger2_x_f4",
+      "scale": "0.20205878724516574",
+      "weight": "0.004250183777043531"
+    },
+    {
+      "name": "finger2_x_f5_7",
+      "scale": "0.5193735257836185",
+      "weight": "0.00948664292466454"
+    },
+    {
+      "name": "finger2_x_f8p",
+      "scale": "0.5026372677152238",
+      "weight": "-0.022372021802010873"
+    },
+    {
+      "name": "finger3_x_f1",
+      "scale": "0.028401251092872816",
+      "weight": "-0.020004727165101162"
+    },
+    {
+      "name": "finger3_x_f2",
+      "scale": "0.11308499004935758",
+      "weight": "-0.011642245006160212"
+    },
+    {
+      "name": "finger3_x_f3",
+      "scale": "0.33443630879641245",
+      "weight": "0.002061608131370604"
+    },
+    {
+      "name": "finger3_x_f4",
+      "scale": "0.20406640050563285",
+      "weight": "0.01699260278922255"
+    },
+    {
+      "name": "finger3_x_f5_7",
+      "scale": "0.5694152044141906",
+      "weight": "-0.01168226399649696"
+    },
+    {
+      "name": "finger3_x_f8p",
+      "scale": "0.5584103470811783",
+      "weight": "-0.014460233223641544"
+    },
+    {
+      "name": "finger4_x_f1",
+      "scale": "0.028401251092872816",
+      "weight": "-0.03534840958651619"
+    },
+    {
+      "name": "finger4_x_f2",
+      "scale": "0.025016683351873483",
+      "weight": "-0.013891269202177835"
+    },
+    {
+      "name": "finger4_x_f3",
+      "scale": "0.16774566125113388",
+      "weight": "0.035749774832996226"
+    },
+    {
+      "name": "finger4_x_f4",
+      "scale": "0.18688118660498615",
+      "weight": "-0.00869032622083728"
+    },
+    {
+      "name": "finger4_x_f5_7",
+      "scale": "0.5572600954911425",
+      "weight": "-0.031204747326424895"
+    },
+    {
+      "name": "finger4_x_f8p",
+      "scale": "0.6259243456741305",
+      "weight": "-0.0029730691156188713"
+    }
+  ],
+  "guard": {
+    "max_awkward_fingering_event_delta": 0,
+    "max_fret_delta": 0,
+    "max_left_hand_effort_delta": 6,
+    "minimum_distinct_attack_geometries": 2,
+    "minimum_onsets": 4,
+    "requires_complete_oracle_green": true
+  },
+  "minimum_score_margin": "0.14336370844959828",
+  "ranker_version": "published-fingering-ranker@0.1.0",
+  "source_solver_version": "fingering-solver@0.5.0",
+  "training": {
+    "composer_splits": {
+      "Francisco Tárrega": "train",
+      "Gabriel Fauré": "test",
+      "Johann Kaspar Mertz": "train",
+      "Johannes Brahms": "dev",
+      "Matteo Carcassi": "train"
+    },
+    "corpora": [
+      {
+        "path": "data/score_corpus/carcassi_op59.json",
+        "sha256": "4f906864d68ed9272a4ed74be11743b080d2e5e8519e1125ffae9c8fd9363908"
+      },
+      {
+        "path": "data/score_corpus/mutopia_pd_additional.json",
+        "sha256": "4bf36f7633693f4b02f19bccb1f8ccf704de47915bec2e4bab3f25fad7997e37"
+      }
+    ],
+    "method": "window-centred ridge regression",
+    "ridge_l2": 100.0,
+    "split_policy": "composer-grouped-sha256@0.1.0",
+    "split_seed": "plan7b-fingering-composer-v1",
+    "window_onsets": 4
+  }
+}

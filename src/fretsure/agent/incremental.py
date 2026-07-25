@@ -32,7 +32,13 @@ from fretsure.agent.critic import CriticOutcome, CriticScore, CriticStatus, crit
 from fretsure.agent.harness import ArrangeResult
 from fretsure.agent.model_calls import ModelCallScopeFactory
 from fretsure.agent.tools import solve_and_check
-from fretsure.agent.trace import Trace, TraceStep, target_checkpoint
+from fretsure.agent.trace import (
+    Trace,
+    TraceStep,
+    diagnostics_payload,
+    tab_checkpoint,
+    target_checkpoint,
+)
 from fretsure.ir import ChordSymbol, MusicIR, Note, snapshot_music_ir
 from fretsure.llm.client import LLMClient
 from fretsure.metrics.fidelity import FaithfulnessGate, Fidelity, faithfulness, fidelity
@@ -657,7 +663,24 @@ def _trace_trial(
     candidate_index: int,
     trial: IncrementalTrial,
     current: IncrementalCheckpoint,
+    attempted_tab: Tab | None = None,
+    attempted_oracle: OracleResult | None = None,
+    static_gate_reasons: tuple[str, ...] = (),
 ) -> None:
+    evidence: dict[str, object] = {
+        "policy": "incremental_v1",
+        "additions": _batch_wire(trial.batch),
+        "solver_called": trial.solver_called,
+        "accepted": trial.accepted,
+        "reason_code": None if trial.reason is None else trial.reason.value,
+        "verdict": trial.verdict,
+        "static_gate_reasons": list(static_gate_reasons),
+        "retained_target_checkpoint": target_checkpoint(current.target),
+    }
+    if attempted_tab is not None:
+        evidence["tab_checkpoint"] = tab_checkpoint(attempted_tab)
+    if attempted_oracle is not None:
+        evidence.update(diagnostics_payload(attempted_oracle))
     trace.add(
         "EDIT",
         "Accepted an additive batch into the GREEN checkpoint."
@@ -666,13 +689,7 @@ def _trace_trial(
         event="EDIT",
         candidate_index=candidate_index,
         iteration=trial.ordinal + 1,
-        policy="incremental_v1",
-        additions=_batch_wire(trial.batch),
-        solver_called=trial.solver_called,
-        accepted=trial.accepted,
-        reason_code=None if trial.reason is None else trial.reason.value,
-        verdict=trial.verdict,
-        retained_target_checkpoint=target_checkpoint(current.target),
+        **evidence,
     )
 
 
@@ -781,7 +798,13 @@ def _salvage_candidate(
                 None,
             )
             trials.append(trial)
-            _trace_trial(trace, candidate_index=candidate_index, trial=trial, current=best)
+            _trace_trial(
+                trace,
+                candidate_index=candidate_index,
+                trial=trial,
+                current=best,
+                static_gate_reasons=static_reasons,
+            )
             ordinal += 1
             left, right = _split(batch)
             if right:
@@ -798,6 +821,7 @@ def _salvage_candidate(
             profile,
             tempo_bpm=goal.tempo_bpm,
             beats_per_bar=source.meta.time_sig[0],
+            technique_profile_name=goal.technique_profile,
         )
         solver_calls += 1
         accepted = False
@@ -838,7 +862,14 @@ def _salvage_candidate(
             verdict,
         )
         trials.append(trial)
-        _trace_trial(trace, candidate_index=candidate_index, trial=trial, current=best)
+        _trace_trial(
+            trace,
+            candidate_index=candidate_index,
+            trial=trial,
+            current=best,
+            attempted_tab=None if isinstance(solved, Infeasible) else solved,
+            attempted_oracle=oracle,
+        )
         ordinal += 1
         if not accepted:
             left, right = _split(batch)
@@ -887,6 +918,8 @@ def _salvage_candidate(
         accepted_addition_count=accepted_count,
         trial_solver_calls=solver_calls,
         final_target_checkpoint=target_checkpoint(best.target),
+        target_checkpoint=target_checkpoint(best.target),
+        tab_checkpoint=tab_checkpoint(best.tab),
     )
     return IncrementalCandidate(
         candidate_index,
@@ -963,6 +996,7 @@ def arrange_incremental_pool(
     goal = ArrangeGoal(
         style=goal.style,
         tier=goal.tier,
+        technique_profile=goal.technique_profile,
         tuning=tuning,
         capo=capo,
         tempo_bpm=tempo_bpm,
@@ -976,6 +1010,7 @@ def arrange_incremental_pool(
         profile,
         tempo_bpm=tempo_bpm,
         beats_per_bar=source.meta.time_sig[0],
+        technique_profile_name=goal.technique_profile,
     )
     seed_trace.add(
         "SOLVE",
@@ -1143,6 +1178,7 @@ def best_of_incremental_pool(
         winner.critic,
         trace,
         k,
+        winner.best.target,
     )
 
 

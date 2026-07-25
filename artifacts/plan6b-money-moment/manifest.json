@@ -1,0 +1,157 @@
+{
+  "schema_version": "plan6b-money-moment-manifest@0.1.0",
+  "status": "CLOSED_HUMAN_PLAYTHROUGH_PARTIAL",
+  "closed_at": "2026-07-24T07:51:47Z",
+  "authorization": {
+    "authorized_at": "2026-07-24T05:35:04Z",
+    "scope": "at most 2 real proxy model calls",
+    "actual_model_calls": 2,
+    "additional_model_calls": 0
+  },
+  "run": {
+    "submitted_at": "2026-07-24T07:25:42Z",
+    "receipt_recorded_at": "2026-07-24T07:34:23Z",
+    "service_stopped_at": "2026-07-24T07:35:17Z",
+    "surface": "Chrome-controlled production Web UI",
+    "endpoint": "/api/v1/arrangements?filename=unseen-etude.musicxml&engine=proxy&n=2&max_iters=0&use_critic=false",
+    "http_status": 200,
+    "engine": "proxy",
+    "model_id": "gpt-5.6-sol",
+    "difficulty_tier": "advanced",
+    "candidate_count": 2,
+    "critic_enabled": false,
+    "max_attempts_per_model_call": 1
+  },
+  "source": {
+    "filename": "unseen-etude.musicxml",
+    "license": "CC0-1.0",
+    "sha256": "0b6568715fc62cf963f7eac66adff13e73de6c88b1a7dcd65a26fab4f2332630",
+    "import_warnings": []
+  },
+  "result": {
+    "title": "Plan 6B Unseen Etude",
+    "selected_candidate": 1,
+    "selected_checkpoint": "GREEN",
+    "difficulty_check": "PASS",
+    "tempo_bpm": 84,
+    "source_note_count": 16,
+    "oracle_version": "oracle@0.2.0",
+    "profile_version": "median@0.1",
+    "agent_trace_version": "agent-trace@0.2.0",
+    "candidate_pool": [
+      {
+        "candidate": 1,
+        "role": "selected_by_ranking",
+        "oracle": "GREEN",
+        "fidelity": "REVIEW",
+        "model_calls": 1,
+        "solver_trials": 8,
+        "additions_kept": 2,
+        "additions_proposed": 6
+      },
+      {
+        "candidate": 2,
+        "role": "verified_alternative",
+        "oracle": "GREEN",
+        "fidelity": "REVIEW",
+        "model_calls": 1,
+        "solver_trials": 8,
+        "additions_kept": 2,
+        "additions_proposed": 6
+      }
+    ],
+    "trace": {
+      "accepted_trials": 1,
+      "rejected_trials": 7,
+      "solver_calls": 8,
+      "visible_rejected_trial": 6,
+      "visible_diagnostic": "FRET_SPAN",
+      "final_checkpoint_step": 9
+    },
+    "fidelity": {
+      "verdict": "REVIEW",
+      "available_checks": "3/3",
+      "melody_percent": 100,
+      "bass_root_percent": 50,
+      "harmony_percent": 69
+    }
+  },
+  "browser_playback": {
+    "implementation": "AlphaTab 1.8.4",
+    "checkpoint": "selected GREEN checkpoint",
+    "observed": true,
+    "full_playthrough_completed": true,
+    "duration_seconds": 11,
+    "progress_observed_ms": 1670,
+    "completion_reset_to_start": true,
+    "score_audio_exports_same_checkpoint_visible": true
+  },
+  "checkpoint": {
+    "canonical_tab_file": "fretsure-money-moment.tab.json",
+    "canonical_tab_sha256": "3764d70399152d2ead40e47e8cd230797acb2249383d93b2d632d6a881187a0e"
+  },
+  "files": {
+    "gp7": {
+      "filename": "fretsure-money-moment.gp",
+      "bytes": 3345,
+      "sha256": "b13af4d9cf1e32ed725701cdd1b40308cf326e7eaefa0a44e362de1dbb512671",
+      "structural_check": "ZIP_PASS"
+    },
+    "gp5": {
+      "filename": "fretsure-money-moment.gp5",
+      "bytes": 1807,
+      "sha256": "341fbf05582d51f7ea1229288d74f229aff8a0f3332c9f17a52d0a9b8d46c95b",
+      "structural_check": "PYGUITARPRO_PASS"
+    },
+    "midi": {
+      "filename": "fretsure-money-moment.mid",
+      "bytes": 196,
+      "sha256": "85a5be892178e644234f4e115869715a7e4172d4445c64e91aaa6bdd2dbb70ea",
+      "structural_check": "SMF_FORMAT_0_PASS"
+    },
+    "musicxml": {
+      "filename": "fretsure-money-moment.musicxml",
+      "bytes": 9968,
+      "sha256": "339876572f6def340042f9daa4f85f881c45a1811616ede8b2c03973dd79c605",
+      "structural_check": "XML_PASS"
+    },
+    "pdf": {
+      "filename": "fretsure-money-moment.pdf",
+      "bytes": 4600,
+      "sha256": "1619b8435595444cc3d0ee181a5f4ea46e4f1c390c21f4b165627ea800bcb73f",
+      "structural_check": "PYPDF_PASS"
+    },
+    "tab_json": {
+      "filename": "fretsure-money-moment.tab.json",
+      "bytes": 1656,
+      "sha256": "3764d70399152d2ead40e47e8cd230797acb2249383d93b2d632d6a881187a0e",
+      "structural_check": "JSON_PASS"
+    },
+    "ascii_tab": {
+      "filename": "fretsure-money-moment.txt",
+      "bytes": 1301,
+      "sha256": "8c702c0e45d13426439bc87c4fbf407ee1c77b35f673de6fa39cf577206398e7",
+      "structural_check": "NONEMPTY_PASS"
+    },
+    "wav": {
+      "filename": "fretsure-money-moment.wav",
+      "bytes": 2436396,
+      "sha256": "23787b184c0777268d33514cca36501327aacc8f179649242a9823a84f00019b",
+      "structural_check": "RIFF_WAVE_PASS"
+    }
+  },
+  "service": {
+    "allow_proxy_product_service_stopped": true,
+    "additional_calls_possible_without_restart": false
+  },
+  "human_guitarist_receipt": {
+    "status": "COMPLETE",
+    "filename": "human-guitarist-receipt.json",
+    "bytes": 1101,
+    "sha256": "98d035a68289b0798069aeffdd65eaab1100a4065ec6de9b080a6613e0cfb47e",
+    "performed_at": "2026-07-24T07:51:47Z",
+    "full_playthrough": "PARTIAL",
+    "signed_by": "Anonymous",
+    "consent_to_publish_summary": false
+  }
+}

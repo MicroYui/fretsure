@@ -28,6 +28,7 @@ from fretsure.oracle.predicates import (
 )
 from fretsure.oracle.profiles import Profile, optimistic
 from fretsure.solver.candidates import candidates
+from fretsure.solver.left_hand import static_assignment_sort_key
 from fretsure.tab import RightFinger, Tab, TabNote
 
 _RIGHT_ORDER: tuple[RightFinger, ...] = ("p", "i", "m", "a")
@@ -50,7 +51,7 @@ class FrameConfig:
 _ConfigKey = tuple[tuple[int, int, int, str], ...]
 _GeometryKey = tuple[tuple[int, int], ...]
 _LeftKey = tuple[int, ...]
-_ConfigSortKey = tuple[int, int, _ConfigKey]
+_ConfigSortKey = tuple[int, int, int, int, int, int, _ConfigKey]
 _KeyT = TypeVar("_KeyT")
 
 
@@ -104,17 +105,16 @@ def _single_frame_static_passes(
 
 
 def _candidate(placements: tuple[Placement, ...]) -> _ConfigCandidate:
-    key: _ConfigKey = tuple(
-        (p.string, p.fret, p.left_finger, p.right_finger) for p in placements
-    )
+    key: _ConfigKey = tuple((p.string, p.fret, p.left_finger, p.right_finger) for p in placements)
     left_key = tuple(p.left_finger for p in placements)
+    left_sort = static_assignment_sort_key(placements)
     return _ConfigCandidate(
         placements,
         key,
         left_key,
         (
+            *left_sort,
             sum(p.fret for p in placements),
-            len({p.left_finger for p in placements if p.left_finger > 0}),
             key,
         ),
     )
@@ -206,9 +206,7 @@ def frame_configs(
                     for i, k in enumerate(order)
                 )
                 item = _candidate(placements)
-                geometry: _GeometryKey = tuple(
-                    (p.string, p.fret) for p in placements
-                )
+                geometry: _GeometryKey = tuple((p.string, p.fret) for p in placements)
                 bucket = buckets.setdefault(
                     geometry,
                     _GeometryBucket({}, {}),
@@ -220,26 +218,18 @@ def frame_configs(
         return []
 
     ordered_all = {
-        geometry: tuple(
-            sorted(bucket.all_best.values(), key=lambda item: item.sort_key)
-        )
+        geometry: tuple(sorted(bucket.all_best.values(), key=lambda item: item.sort_key))
         for geometry, bucket in buckets.items()
     }
     ordered_left = {
-        geometry: tuple(
-            sorted(bucket.left_best.values(), key=lambda item: item.sort_key)
-        )
+        geometry: tuple(sorted(bucket.left_best.values(), key=lambda item: item.sort_key))
         for geometry, bucket in buckets.items()
     }
-    geometries = tuple(
-        sorted(buckets, key=lambda geometry: ordered_all[geometry][0].sort_key)
-    )
+    geometries = tuple(sorted(buckets, key=lambda geometry: ordered_all[geometry][0].sort_key))
 
     selected: list[_ConfigCandidate] = []
     selected_keys: set[_ConfigKey] = set()
-    seen_left: dict[_GeometryKey, set[_LeftKey]] = {
-        geometry: set() for geometry in geometries
-    }
+    seen_left: dict[_GeometryKey, set[_LeftKey]] = {geometry: set() for geometry in geometries}
 
     def add(item: _ConfigCandidate, geometry: _GeometryKey) -> None:
         selected.append(item)
@@ -262,8 +252,7 @@ def frame_configs(
                 (
                     item
                     for item in ordered_left[geometry]
-                    if item.key not in selected_keys
-                    and item.left_key not in seen_left[geometry]
+                    if item.key not in selected_keys and item.left_key not in seen_left[geometry]
                 ),
                 None,
             )
@@ -281,11 +270,7 @@ def frame_configs(
         added_variant = False
         for geometry in geometries:
             history_variant = next(
-                (
-                    item
-                    for item in ordered_all[geometry]
-                    if item.key not in selected_keys
-                ),
+                (item for item in ordered_all[geometry] if item.key not in selected_keys),
                 None,
             )
             if history_variant is None:

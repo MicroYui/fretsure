@@ -499,6 +499,10 @@ def test_unsafe_melody_fill_is_rejected_before_solver(fill: Note) -> None:
     assert len(candidate.trials) == 1
     assert candidate.trials[0].reason is IncrementalRejectReason.STATIC_GATE
     assert candidate.best.target == melody_seed_target(ir)
+    trial_step = next(step for step in candidate.trace_steps if step.event == "EDIT")
+    assert trial_step.data["accepted"] is False
+    assert trial_step.data["static_gate_reasons"]
+    assert "tab_checkpoint" not in trial_step.data
 
 
 def test_green_but_source_faithfulness_regression_is_rolled_back() -> None:
@@ -524,6 +528,20 @@ def test_green_but_source_faithfulness_regression_is_rolled_back() -> None:
     assert candidate.trials[0].reason is IncrementalRejectReason.FAITHFULNESS_REGRESSION
     assert candidate.accepted_addition_count == 0
     assert candidate.best.faithfulness.bass_root == 1.0
+    trial_step = next(step for step in candidate.trace_steps if step.event == "EDIT")
+    attempted = trial_step.data["tab_checkpoint"]
+    assert isinstance(attempted, dict)
+    assert attempted["type"] == "tab"
+    assert attempted["complete"] is True
+    assert trial_step.data["verdict"] == "GREEN"
+    assert trial_step.data["diagnostic_count"] == 0
+    terminal = next(
+        step
+        for step in candidate.trace_steps
+        if step.event == "SOLVE" and step.data.get("policy") == "incremental_v1"
+    )
+    assert terminal.data["target_checkpoint"] == terminal.data["final_target_checkpoint"]
+    assert terminal.data["tab_checkpoint"]["type"] == "tab"  # type: ignore[index]
 
 
 def test_melody_only_rank_rewards_valid_enrichment_without_legacy_harmony_penalty() -> None:

@@ -31,7 +31,7 @@ from fretsure.importers._mxl_container import read_mxl_container
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "musicxml"
 BASIC = FIXTURES / "supported_basic.musicxml"
 
-IMPORTER_VERSION = "musicxml@0.3.0"
+IMPORTER_VERSION = "musicxml@0.4.0"
 CONTAINER_VERSION = "mxl-container@0.1.0"
 ROOT_MEDIA_TYPE = "application/vnd.recordare.musicxml+xml"
 MIMETYPE = b"application/vnd.recordare.musicxml"
@@ -1326,5 +1326,5 @@ def test_real_mxl_cli_and_trace_are_deterministic(
     assert first.out == second.out
     assert first.err == second.err == ""
     assert first_trace == second_trace
-    assert "IMPORTER          : musicxml@0.3.0" in first.out
+    assert "IMPORTER          : musicxml@0.4.0" in first.out
     assert "ROOTFILE MEMBER   : scores/lead.musicxml" in first.out

@@ -13,6 +13,7 @@ from fretsure.oracle.core import OracleResult, check_playability
 from fretsure.oracle.profiles import Profile
 from fretsure.solver.api import Infeasible
 from fretsure.solver.score import solve_fingering_score as solve_fingering
+from fretsure.solver.technique import DEFAULT_TECHNIQUE_PROFILE
 from fretsure.tab import Tab
 
 
@@ -24,6 +25,7 @@ def solve_and_check(
     *,
     tempo_bpm: float = 90.0,
     beats_per_bar: int = 4,
+    technique_profile_name: str = DEFAULT_TECHNIQUE_PROFILE,
 ) -> tuple[Tab | Infeasible, OracleResult | None]:
     solved = solve_fingering(
         target,
@@ -32,6 +34,7 @@ def solve_and_check(
         profile,
         tempo_bpm=tempo_bpm,
         beats_per_bar=beats_per_bar,
+        technique_profile_name=technique_profile_name,
     )
     if isinstance(solved, Infeasible):
         return solved, None

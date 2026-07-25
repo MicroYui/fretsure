@@ -85,6 +85,7 @@ def run_config(
                 n=cfg.best_of_n,
                 max_iters=8 if cfg.repair else 0,
                 use_critic=cfg.critic,
+                fallback_to_deterministic_baseline=False,
             )
         is_green, is_joint, mf1, edits = _score(result, item)
         green += int(is_green)
@@ -175,6 +176,7 @@ def paired_best_of_n(
                 n=n,
                 max_iters=max_iters,
                 use_critic=use_critic,
+                fallback_to_deterministic_baseline=False,
             )
         s1 = _score(best_of_k(pool, 1), item)
         sn = _score(best_of_k(pool, pool.n), item)
@@ -273,6 +275,7 @@ def paired_critic(
                 n=n,
                 max_iters=max_iters,
                 use_critic=True,
+                fallback_to_deterministic_baseline=False,
             )
         r0 = best_of_k(pool, pool.n, use_critic=False)
         r1 = best_of_k(pool, pool.n, use_critic=True)

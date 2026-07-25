@@ -1,12 +1,132 @@
 # Fretsure — 项目状态 / 恢复文档
 
-> 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-24。
+> 目的：任何新会话读完本文件 + 设计 spec，即可无损接上。最后更新：2026-07-25。
 
 ## 0. 当前恢复真源
 
-2026-07-24 的产品收口已由用户实测确认“最起码能弹”：真实 LLM 路径采用 baseline-first
-incremental arrangement，只向保持 GREEN 的 checkpoint 增加 bass/harmony/静音 gap fill；canonical
-Tab 现在可导出 MusicXML TAB、GP5、A4 PDF、format-0 MIDI、ASCII TAB 与 JSON，Web 提供对应下载。
+2026-07-25 在 Plan 7B 之后完成首轮无逐谱人工复标的授权扩库：新增 35 份 Mutopia CC BY-SA 吉他
+版本、37 个去重乐章、14,461 个音符、1,776 条技术标注，其中 1,673 条含明确的按弦指 1–4。加上
+原有 Public Domain 语料，当前仓库共 58 个规范化 example、17,944 个音符、2,483 条技术标注和
+2,362 个按弦指标签。所有新行都绑定源 URL、许可、原始 SHA、转换 root SHA、版本与 group；缺失
+标注仍是 unlabelled，没有请人或模型重新编指法。扩展模型审计覆盖升至 1,035 windows / 2,080
+可评分 labels，但因新增数据仍集中于四位作曲家和同一排版者，composer-held-out dev/test 没有增益，
+故没有替换生产 ranker。详见
+[`experiments/2026-07-25-score-corpus-expansion.md`](experiments/2026-07-25-score-corpus-expansion.md)。
+
+风格节奏不再完全硬编码：`arrangement-style-registry@0.2.0` 使用 CC BY 4.0 GuitarSet 的
+performer-disjoint 训练聚合，Jazz 直接取 Jazz accompaniment 相位；R&B 只采用显式标注为
+`adjacent-funk-proxy-not-rnb-supervision` 的 Funk 邻近代理。每种风格实际用于建模的是 24 train /
+6 dev / 6 test 个 comp 文件，模型 hash 为
+`c1a57bb1aa4599594db83f5fb9074e96b53be83a03d1e306e38ea5cae7df342d`，API/结果 stamp 同步暴露。
+它改善的是节奏依据和可追溯性，不构成真人认可的 Jazz/R&B 地道性结论。
+
+2026-07-25 Plan 7B 已闭合：采用有许可、编辑完成的优秀曲谱作为主要监督，不建立逐谱人工校对
+流程。确定性语料合同现冻结 21 首 Public Domain 作品、3,483 个音符、707 个明确左手指号；缺失
+指号保持 unlabelled，作品/版本/作曲家组不跨 split。`published-fingering-ranker@0.1.0` 只在完整
+Oracle GREEN pool 内使用 43 个无曲目身份的通用人体工学与 finger/fret 特征，并带短片段、重复形状、
+最高品位、awkward event 和左手负担保护。composer-held-out dev 从 29/60 提升到 30/60，test 从
+30/78 提升到 32/78，Oracle 状态回退为 0；完整 Carcassi Prelude 1 冻结对照保持 17/21。
+
+独立的 `published-grade-estimator@0.1.0` 使用 Delcamp/Eric Crouch 1–10 体系的 427 首有归属古典吉他谱
+校准，composer-grouped untouched test 为 exact 50.0%、within-one 88.46%、MAE 0.615、three-band
+65.38%。Web/API 同时显示低置信度估计、±1 区间、体系、模型/hash 与训练范围；原有 deterministic
+beginner/intermediate/advanced hard gate 仍独立存在，固定谱面的指号不读取 grade/tier。当前生产
+solver stamps 为 `fingering-solver@0.6.0` / `score-solver@0.4.0`。最终相关 Python 门 `380 passed`，
+Web `70 passed` 且 typecheck/build 通过；模型/语料构建可逐字节复现。该轮没有真实代理调用。完整
+receipt 见 [`PLAN7B_ACCEPTANCE.md`](PLAN7B_ACCEPTANCE.md)。
+
+此前 2026-07-25 完成 Plan 7A：用户确认当前可弹性可以先视为达标，决策改为“先补全全部功能，主观
+效果随后按真实反馈调”。已实现并接入既有 Performance Workspace：Fingerstyle/Classical/Jazz/R&B
+版本化风格、small/median/large player hand profile、balanced/avoid-barres/low-position/fewer-shifts
+技巧偏好、1–32 小节局部重生成与 melody/bass/harmony locks、只改 1–4 左手指号的事务式 Oracle
+复查、匿名本地评分/A-B/修订 JSON 证据，以及 rejected trial 不再默认覆盖 selected checkpoint。
+难度档现已通过 Web → typed HTTP → service → pipeline → ArrangeGoal 全链路进入生成目标：离线路径按
+beginner/intermediate/advanced 控制可选织体，代理提示携带同一档位，结果仍由独立 tier checker 验收。
+固定谱面的指号编辑完全不读取 difficulty；技巧偏好只在完整 Oracle 已通过的 GREEN pool 里排序。
+本地反馈明确不是远程 API 模型后训练。
+
+Plan 7A 冻结组合为 service/API/Web/trace=`0.3.0`，MCP 保持 `0.2.0`；profile registry=`0.2.0`、style/
+technique registries=`0.1.0`，当时 fingering/score solver=`0.5.0`/`0.3.0`，现已由上述 Plan 7B
+runtime stamps 取代。Python 受影响门此前
+`350 passed`，最终直接相交门 `297 passed`；难度生成链路的新增直接门 `177 passed`，Web `67 passed` 且 typecheck/build
+通过。真实 `127.0.0.1:8001` 离线 HTTP 验证中，四种风格均在 bundled CC0 示例产出 GREEN；Jazz 的
+beginner/intermediate/advanced 分别生成 0/4/6 个可选 harmony notes 且均为 GREEN；Jazz +
+low-position、全声部锁定 0-call unchanged、错误指号 RED 回滚均贯通。最终审计还补齐了“代理候选全部
+无 Tab”时 deterministic baseline 的 difficulty tier 传递，并以 2 个聚焦回归及 Ruff/strict mypy 关闭。
+该轮没有真实代理调用。
+
+生产 Chrome 视觉/交互验收已在现有用户标签页完成，且未触发代理调用：CC0 示例从可见 UI 导入，
+Jazz + Advanced + small hand + low-position 得到 GREEN、Advanced PASS 与 3/3 available fidelity；
+全声部锁定的局部重生成保持 checkpoint，手动指号同时覆盖 AMBER 拒绝回滚和 GREEN 接受，匿名评分后
+本地共有 3 条事件。桌面与 375 px 响应式视图均已检查，无横向溢出，浏览器控制台无 warning/error；
+最终 GREEN 结果页已留给用户复核。Plan 7A 因此闭合，receipt 见
+[`PLAN7A_ACCEPTANCE.md`](PLAN7A_ACCEPTANCE.md)。
+
+2026-07-24 已进入 Plan 6B 最终验收。用户已查看真实工作台并确认“做的不错，界面挺好看的”，
+“古典制琴工坊 × 验证仪器”的视觉方向再次锁定。软件已完成 AlphaTab 1.8.4 本地谱面/播放、同步
+指板、trial checkpoint、上传前 difficulty target 与 checkpoint difficulty check、verified best-of-N
+alternatives、fair Demo Lab、实时记分卡、
+本地个人库、FluidSynth WAV、GP7、OpenTelemetry 单 seam，以及同一 checkpoint 的 GP7/GP5/
+MusicXML/MIDI/PDF/WAV/Tab JSON 导出。
+
+生产浏览器已在桌面 `1728×832` 与移动端 `390×844` 通过：AlphaTab 全部 SVG text/glyph 可见、播放
+位置驱动谱面与指板、移动端无横向溢出；生产 CSP 只允许 AlphaTab 1.8.4 两段固定字体 CSS 的 SHA-256
+和运行时 SVG style attributes，脚本与其余 inline style blocks 仍拒绝。MuseScore Studio 4.7.4 已实际
+打开 MusicXML、GP5、GP7，MusicXML 还执行了播放控制。直接证据集中在
+[`PLAN6B_ACCEPTANCE.md`](PLAN6B_ACCEPTANCE.md) 和
+[`../artifacts/plan6b-interoperability/manifest.json`](../artifacts/plan6b-interoperability/manifest.json)。
+
+Plan 6B 已按证据范围 **CLOSED — HUMAN PLAYTHROUGH PARTIAL**：unseen symbolic input 的真实代理
+money moment 与匿名真人签收均已完成。真人结果是 `PARTIAL`，不是 PASS；不得把 GREEN、tier 或
+critic metadata 外推为普适真人可弹、真人难度或 musicality。新的付费调用仍需新批次明确授权；
+Task 9 历史预算授权和金额不得复用。
+
+Plan 6B 后的首个真实上传缺口已修复：`musicxml@0.4.0` 可把严格的双谱表钢琴缩编确定性转换为
+staff 1 旋律与由 staff 2 唯一音高集合导出的和弦。原始树先完成资源/外部引用/不支持语义预检，缩编后
+的单谱表树再完整预检；任一含糊根音、缺失和弦成员、错位时间轴或额外不支持语义仍 fail-closed。
+成功结果带 `PIANO_REDUCTION_DERIVED`，不声称保留下谱表钢琴声位或转位。用户原始
+`ode_to_joy_beginner.musicxml` 离线贯通为 62 个旋律音、16 个 C/G 和弦、64 beats，最终 Tab 为
+124 notes 且 Oracle GREEN；该验证未调用代理模型。当前 importer 组合是 `musicxml@0.4.0` /
+`midi@0.1.0`。
+
+最后一轮运行材料与 receipt 位于 `artifacts/plan6b-money-moment/`：CC0 MusicXML SHA-256
+`0b6568715fc62cf963f7eac66adff13e73de6c88b1a7dcd65a26fab4f2332630` 在 UI 提交前只经过 XML
+well-formed 检查，未经过产品路径预筛；冻结参数为 advanced、`gpt-5.6-sol`、`n=2`、critic off、
+最多 2 个 model calls。完整结果见
+[`../artifacts/plan6b-money-moment/manifest.json`](../artifacts/plan6b-money-moment/manifest.json)。
+
+用户于 `2026-07-24T05:35:04Z` 授权最多 2 次真实代理调用。审计随即把产品 API 的每逻辑调用
+attempt 上限固定为 1，避免客户端重试越过授权。`2026-07-24T05:37:03Z` 首次执行在提交前因浏览器
+运行时无可用 surface 暂停；arrangement/model calls 均为 0。Chrome 权限恢复后于
+`2026-07-24T07:25:42Z` 从真实 Web UI 提交：HTTP 200，实际恰好 2 calls，两个候选各 1 call 且均
+GREEN，candidate 1 被选中，critic 未运行。最终 checkpoint advanced PASS；AlphaTab 完整播放 11 秒；
+8 种导出 hashes 已冻结。匿名业余 3 年琴手使用古典吉他、标准调弦、无变调夹试奏，整体难度不高，
+但 `12-10-8-12` 尤其 `8→12` 的大把位跳转不易按，完整演奏结果记为 `PARTIAL`；四小节不足以可靠
+评价音乐性。canonical Tab SHA-256 为
+`3764d70399152d2ead40e47e8cd230797acb2249383d93b2d632d6a881187a0e`。allow-proxy 服务随后停止，
+不得在没有新授权时追加调用。
+
+Plan 6B 最终软件门：Python `2765 passed, 8 deselected`（唯一 warning 是第三方 Starlette/httpx2
+deprecation）；Web `61 passed`、typecheck/build、npm audit 0 vulnerabilities；Ruff、strict mypy
+108 source files、`uv lock --check`、Markdown 49 files、`git diff --check` 全绿。wheel/sdist 内容审计为
+149/420 entries；core replay、benchmark、musicxml、midi、score、service、mcp 七组 clean-install
+smoke 全绿。生产浏览器、MuseScore、真实代理与真人 `PARTIAL` receipt 如上；软件数字不替代真人结果。
+
+左手指法求解器当前为 `fingering-solver@0.6.0` / `score-solver@0.4.0` /
+`left-hand-ergonomics@0.1.0`：固定谱面的
+指法不读取 difficulty tier，只由谱面、调弦、变调夹、上下文和 player profile 决定；离散把位、
+自然指序、重复音连续性、换把、横按与同品跨弦人体工学均进入确定性目标，最终仍由
+`oracle@0.3.0` 非 RED 硬门核验。默认 balanced 模式再由
+`published-fingering-ranker@0.1.0` 在受保护的完整 GREEN pool 内排序；公版 Carcassi Prelude 1 明示
+指号冻结对照命中 17/21，
+全曲 Oracle 为诚实保留的 AMBER；完整证据见
+[`LEFT_HAND_SOLVER_V2.md`](LEFT_HAND_SOLVER_V2.md) 与
+[`PLAN7B_ACCEPTANCE.md`](PLAN7B_ACCEPTANCE.md)。下文早期阶段记录中的旧 solver/oracle stamps
+保留为历史快照，不代表当前运行版本。
+
+以下段落保留进入 Plan 6B 前的产品收口背景：真实 LLM 路径采用 baseline-first incremental
+arrangement，只向保持 GREEN 的 checkpoint 增加 bass/harmony/静音 gap fill；canonical Tab 可导出
+MusicXML TAB、GP5、A4 PDF、format-0 MIDI、ASCII TAB 与 JSON，Web 提供对应下载。
 指法求解器使用 `fingering-solver@0.3.0` 的通用无曲目特判质量目标、空弦手位延续与 GREEN-prefix
 优先搜索；《两只老虎》的 `max_fret <= 5` 只作为回归观察，不是生产阈值。GuitarSet 训练的本地小
 ranker 在内部 test 上改善 imitation，但在锁定的 EGSet12 工程审计中由 `65.97%` 回退到 `64.58%`，
@@ -15,8 +135,7 @@ ranker 在内部 test 上改善 imitation，但在锁定的 EGSet12 工程审计
 本段所在收口批次的 release gates：Python 非 integration/非 benchmark `2038 passed, 8 deselected`；
 solver/scripts focused `216 passed`；Web `43 passed`、typecheck/build、`npm audit` 0 vulnerabilities；
 Ruff、strict mypy、`uv lock --check`、wheel/sdist build 与 fresh `[service]` wheel install/export smoke 全绿。
-本地 `output/`、`outputs/` 与 corpus/实验运行工件不进入 Git。下一正式主线仍是完整 Plan 6B；涉及
-AlphaTab/播放/指板动画的新布局先与用户确认统一审美。Plan 7/RL 在真人盲听与可弹性奖励建立前后置。
+本地 `output/`、`outputs/` 与 corpus/实验运行工件不进入 Git。Plan 7/RL 在真人盲听与可弹性奖励建立前后置。
 
 当前恢复分支是 `main`。Task 10 的 reviewable content/validation commit 是
 `d64cace8ac34d19a299c5b20fefdd7c4ad9bc985`；包含本段的 closure commit 由最终 handoff
@@ -302,8 +421,10 @@ Task 9 automation 已删除；正式与 pilot 的历史建客户端边界仍机�
   - SHA-256 继续绑定用户原始输入；`.mxl` 另记录 root SHA-256、percent-escaped rootfile path 与 `mxl-container@0.1.0`。`ImportProvenance`、CLI rootfile 行和 trace/benchmark checker stamps 已冻结。
   - 容器只扩展 transport：root MusicXML 仍走同一 defused XML → frozen envelope → exact raw timeline/preflight → music21 交叉验证，复杂语义与 URI/resource-bearing XML 继续在 adapter 前 fail-closed。
 - **Plan 6A Web/API/replay trace/MCP（DONE，历史 `0.1.0` 合同）**：新增不依赖 transport framework 的 bytes-first application seam；HTTP 以 raw streamed body 接受 MusicXML/MXL 与 strict Tab JSON，默认 loopback、拒 DNS rebinding Host/跨源写、typed `application/problem+json`、固定 8×16 公开预算。proxy 默认关闭，缺 loopback URL/token/dependency 时在读 body/发网络前 fail-closed；真实 `gpt-5.6-sol` API smoke 已盖实际 model id。
-  - 当时的 `agent-trace@0.1.0` 冻结 contiguous seq/event/candidate/iteration、逐事件 exact schema、结构化诊断/edit、canonical checkpoint digest/size/count、512 KiB aggregate state budget 与敏感键/内容 fail-closed。当前 trace 因 authoritative availability wire 已升至 `agent-trace@0.2.0`。
-  - 当时的 `fretsure-mcp@0.1.0` 默认 stdio，只提供 `check_playability`、有界 `feasible_fingerings` 与 ASCII `render_notation`，无假 `render_audio`；当前共享 capabilities/wire 已升至 `fretsure-mcp@0.2.0`，工具集合未借升版扩张。
+  - 当时的 `agent-trace@0.1.0` 冻结 contiguous seq/event/candidate/iteration、逐事件 exact schema、结构化诊断/edit、canonical checkpoint digest/size/count、512 KiB aggregate state budget 与敏感键/内容 fail-closed。后续 trace 因 authoritative availability wire 升至 `agent-trace@0.2.0`，Plan 7A 再因公开 style/technique 配置升至 `agent-trace@0.3.0`。
+  - 当时的 `fretsure-mcp@0.1.0` 默认 stdio，只提供 `check_playability`、有界 `feasible_fingerings` 与
+    ASCII `render_notation`，无假 `render_audio`；当前 `fretsure-mcp@0.2.0` 在 Plan 6B 增加
+    `check_difficulty` 与真实 FluidSynth `render_audio`。
   - React/Vite Web 使用同源 capabilities 作为配置真源，提供 raw upload、CC0 真实示例、独立双门、ASCII tab、typed failure 与 trace viewer。严格 CSP 下无 inline style/HTML；键盘结果焦点、retry、reduced motion、desktop/mobile 与 hostile metadata 回归已关闭。用户于 2026-07-16 明确评价“这个前端做的挺好看的”，认可带古典气质的方向；该方向冻结为后续视觉基线。截图见 `docs/assets/plan6a/`。
   - 最终门、独立审计闭环、截图与用户原话集中记录在 `docs/PLAN6A_ACCEPTANCE.md`。
 - **Producer-driven MusicXML/IR（DONE）**：package 升至 `0.4.0`、importer 升至
@@ -353,7 +474,9 @@ Task 9 automation 已删除；正式与 pilot 的历史建客户端边界仍机�
 - **诚实记分卡**：v2 repair=`NOT_KEPT`；best-of-4=`PROBATION_COST_UNKNOWN`；critic=`HUMAN_BLOCKED_PROBATION`。旧 repair 强信号只保留为 legacy/unversioned 记录。
 - **Plan 6A 闭门质量门（历史快照）**：收集 `1500` 项；离线 `1494 passed, 6 deselected`，真实本地 `gpt-5.6-sol` integration `6 passed, 1494 deselected`。ruff、strict mypy、`uv lock --check`、Markdown local-link 与 `git diff --check` 全绿；前端 `20 passed`、typecheck/build、`npm audit` 0 vulnerabilities，真实浏览器 desktop/mobile 的 landing/result/trace 与 focus/retry/CSP/MIME/cache 路径通过。`fretsure_oracle-0.3.0` wheel/sdist 经过路径 allowlist、字体 OFL、静态资源审计；clean core、`[musicxml]`、`[service,musicxml,agent]`、`[mcp]` 四组合安装 smoke 全绿。FastAPI 0.139 TestClient 仍发出上游 httpx2 迁移 warning，运行时代码无对应 warning。producer 阶段的新门不从这组历史数字推断，以 `docs/PRODUCER_MUSICXML_ACCEPTANCE.md` 为准。
 - **分支**：plan-1→2→3→4→5→`consolidation` 已**全部 ff 并入 `master`（trunk）**（trunk 原只有 spec 脚手架；现含完整后端）。
-- **下一步已冻结**：在真人/许可等 OPEN gate 处暂停等待用户指示。不得重启 Task 9 collection，也不得自行开启下一计划。完整 Plan 6B 仍后置；新的前端/音频审美需先请求用户确认。
+- **Plan 6B 当前门**：已闭合。软件、生产浏览器、MuseScore 互操作、本批次明确授权的 unseen-input
+  真实代理 run 与匿名真人签收均完成；视觉已获批。真人结果为 `PARTIAL`，后续改进属于新范围。
+  不得重启 Task 9 collection，也不得把历史预算授权复用于新调用。
 - **已知点**：solve_fingering 是资源有界、非完备搜索；tier/忠实度/难度参数占位待 design partner 校准；旧 Plan 4 的非配对 repair 结论仅是 historical。当前 v2 已用共享候选池和 family-level 配对推断，正式 repair 裁决为 `NOT_KEPT`。
 
 ## 1. 这是什么
@@ -388,11 +511,24 @@ Task 9 automation 已删除；正式与 pilot 的历史建客户端边界仍机�
     `46ff8ac` 闭合。
 16. **Benchmark v2（2026-07-17→23）**：历史 Plan 4 runner 只保留为骨架；v2 冻结逐
     item/candidate rows、corpus/manifest/report 版本、availability strata 与共享 proposal 的配对检验，
-    并以 `gpt-5.6-sol` 完成 500 procedural + 3 public controls 的正式运行。Task 1–9 已闭门；
-    attempt-004 10,563 rows / 45,215 calls、双 FULL_RESCORE 一致。Task 10 正在发布当前结果、
+    并以 `gpt-5.6-sol` 完成 500 procedural + 3 public controls 的正式运行。Task 1–10 已闭门；
+    attempt-004 10,563 rows / 45,215 calls、双 FULL_RESCORE 一致。Task 10 已发布当前结果、
     artifact access policy、fresh gates 与独立 review。真人标签、跨供应商比较和完整 replay 包公开
     仍 unavailable/open。Task 10 只同步 Web 控件默认值，无视觉设计改动；若增加 dashboard、图表
     页面或 live leaderboard，须先与用户确认统一视觉。
+17. **Plan 6B（2026-07-24）**：沿获批视觉完成真实 performance workspace，不引入第二 trace store、
+    fake streaming 或未核验候选。AlphaTab/指板/播放/导出共用 selected checkpoint；trial replay 明确
+    与导出隔离。A/B 只在相同输入、模型身份与实际每输出 model-call 数相等时开放；critic 明确是机器
+    metadata。用户再次确认界面好看。软件、生产浏览器、MuseScore 互操作、本批次明确授权的
+    unseen-input 真实代理 run 与匿名真人签收均完成；真人完整演奏结果保持 `PARTIAL`，Plan 6B 按此
+    有限结论闭合。
+18. **Plan 7A（2026-07-25）**：冻结当前可弹性门，先完成风格、手型/技巧、局部重生成、手动指号与
+    本地反馈的产品闭环，再用真实使用记录调主观效果。difficulty 不参与固定谱面指号；local A/B/评分
+    不冒充模型训练；局部重生成与指号修改都保持 checkpoint 事务语义。软件与真实离线 HTTP 门已通过，
+    production Chrome 桌面/响应式视觉与真实交互复核也已通过，Plan 7A 已闭合。
+19. **Plan 7B（2026-07-25）**：以有许可的编辑谱代替大规模人工重标。确定性语料、composer-grouped
+    split、无身份泄漏的 GREEN-pool 指法 ranker、独立出版分级估计及 Web/API 证据均完成。held-out
+    指号一致率提升且 Oracle 无回退，分级 untouched test within-one 为 88.46%；软件与离线证据门闭合。
 
 ## 3. 诚实的新颖性裁决（红队结论，勿自欺）
 - **部分开放**：无成熟上线产品做这套完整组合；但**概念不新**。
@@ -406,14 +542,16 @@ Task 9 automation 已删除；正式与 pilot 的历史建客户端边界仍机�
 3. Agent 回路（自研 harness）+ verifier-guided 修复 + best-of-N + critic。
 4. Benchmark & eval 台（语料+程序生成器 + 忠实度 + pass^k/Wilson + baselines + leave-one-out 消融 + checker-vs-judge + 一条命令复现）。
 5. 难度简化 + 伴奏。
-6. UI / trace viewer / demo：**6A 已完成 Web/API/replay viewer/stdio MCP**；MusicXML TAB、真实 GP5、A4 PDF、MIDI、ASCII TAB 与 canonical JSON 导出已完成。完整 6B 的 AlphaTab、指板动画、live A/B/榜单、音频、原生 GP7 `.gp` 与 money moment 仍 open。
+6. UI / trace viewer / demo：**6A 已完成基础 Web/API/replay/MCP；6B software/desktop gates 已完成**。
+   AlphaTab、同步指板、verified A/B、实时记分卡、本地库、FluidSynth、GP7 与多格式互操作均已实现；
+   公共 live leaderboard 不在范围内；真人 money moment receipt 已完成，结果为 `PARTIAL`。
 7. (stretch) DSPy/GEPA + CPU RL reranker + verifiers env。
 
 ## 5. 未决项（不阻塞，但迟早要定）
-- 首发风格/曲库范围（建议先民谣+流行指弹，M0 前定 1 个风格）。
-- 难度 tier 具体参数（span/把位/tempo 阈值，需对真实琴手校准，M4 前定）。
-- RL 具体形态（reranker vs 学习型代价）。
-- **真人 design partner**（吉他老师/琴手校准 oracle 与难度）——能大幅降低"合成基准不真实"质疑，建议尽早找。
+- 公开谱监督下一批覆盖范围：优先扩充有许可的爵士、R&B、流行指弹版本与独立分级体系。
+- 难度 tier 的 span/把位/tempo 参数若要声称对应现实琴手，仍需小规模抽样校准；这不要求逐谱人工标注。
+- RL / 远程 fine-tuning 均保持 deferred；当前有监督 GREEN-pool ranker 已能离线迭代，不是 Plan 7B 前提。
+- 真人 design partner 是舒适度、风格像真度与普适性主张的可选抽样复核者，不是指法数据生产线。
 
 ## 6. 已完成的调研（勿重复；结论已并入 spec）
 用 workflow 跑过并已内化：① agent 产品赛道 landscape；② 创意向重筛（音乐/游戏谜题/格律写作/视觉/wildcard）；③ 音乐深挖（新颖性 + Azure TTS 可否撑 demo + 免费/付费工具链）；④ AI 编曲成熟度红队（生成成熟 vs 保证不成熟）；⑤ 吉他 tab 具体新颖性红队（TemPolor/SMC id55…）；⑥ benchmark + checker + agent 深度设计（含消融矩阵 + 两个头牌结果）；⑦ SOTA harness 选型 + 可展示 demo + 求职 artifact。**再研究前先看 spec §14/§15,多数问题已答。**
@@ -422,5 +560,14 @@ Task 9 automation 已删除；正式与 pilot 的历史建客户端边界仍机�
 - 不重做 Plan 1–5 或 MusicXML-first 纵切。
 - Oracle 0.2 软件信任门已经完成；不要重做。
 - 安全 `.mxl` container reader 已完成；不要重做。
-- Benchmark v2 Task 9 已闭环；不要检查私密 prompt/response/unit/lane payload 或 private observations，也不要把缺失 usage 写成零。继续时只完成 Task 10 文档、fresh gates、独立 reviews 与 Git closure，不得重启 collection。新的前端/音频审美仍需用户确认；真人听感/calibration 保持 OPEN。
-- 真人 gold/calibration 可并行，不阻塞上述软件实现；它仍阻塞现实世界 GREEN 误接受率、profile/tier 校准与“真实琴手一定能弹”的强主张。
+- Benchmark v2 Task 9/10 已闭环；不要检查私密 prompt/response/unit/lane payload 或 private observations，
+  也不要把缺失 usage 写成零，不得重启 collection。
+- Plan 6B 已闭合；不要重跑本次真实代理批次。若要改善 `8→12` 等大把位跳转，应另开明确的新范围、
+  回归门和（如需）调用授权。真人 gold/calibration 仍阻塞现实世界 GREEN 误接受率、profile/tier
+  校准与“真实琴手一定能弹”的强主张。
+- Plan 7A 已闭合；不要为重复验收触发 proxy engine，也不要把当前 provisional 风格/人体工学效果写成
+  已经真人校准。
+- Plan 7B 已闭合；不要为已有明确指号或分级的优质曲谱建立逐谱人工重标流程。后续优先扩充有许可的
+  出版社、风格与分级体系，并保持作品/版本/作曲家分组的离线评测。
+- 真人反馈只用于抽样检验舒适度、风格像真度和可接受替代指法等曲谱本身不能证明的主张；不得把本地
+  事件计数描述成远程模型已经学习。

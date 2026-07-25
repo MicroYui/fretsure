@@ -6,6 +6,8 @@ import json
 from collections.abc import Mapping
 from types import MappingProxyType
 
+from fretsure.agent.arranger import ArrangeGoal, propose_arrangement_outcome
+from fretsure.agent.tools import solve_and_check
 from fretsure.application.contracts import (
     PROFILE_REGISTRY_VERSION,
     SERVICE_VERSION,
@@ -17,16 +19,33 @@ from fretsure.application.contracts import (
     ArrangeStatus,
     CheckOptions,
     CheckOutcome,
+    DifficultyOptions,
+    DifficultyOutcome,
+    FingeringEditOutcome,
     RenderOptions,
     RenderOutcome,
+    SectionRegenerationOutcome,
     ServiceCapabilities,
     SolveOptions,
     SolveOutcome,
+    VerifiedAlternative,
 )
 from fretsure.application.target import (
     TARGET_INPUT_SCHEMA_VERSION,
     TargetInputError,
     target_from_json,
+)
+from fretsure.arrange.revision import SectionSelection, merge_section_target, section_target_text
+from fretsure.arrange.styles import ARRANGEMENT_STYLE_NAMES, arrangement_style
+from fretsure.difficulty.checker import check_tier
+from fretsure.difficulty.estimate import estimate_published_grade
+from fretsure.difficulty.tiers import (
+    DIFFICULTY_TIER_NAMES,
+    Tier,
+    snapshot_tier,
+)
+from fretsure.difficulty.tiers import (
+    difficulty_tier as resolve_difficulty_tier,
 )
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.importers import (
@@ -38,6 +57,7 @@ from fretsure.importers import (
     ImportSuccess,
     import_score_bytes,
 )
+from fretsure.ir import Note
 from fretsure.llm.client import (
     CONSTANT_LLM_MODEL_ID,
     ConstantLLM,
@@ -45,6 +65,8 @@ from fretsure.llm.client import (
     LLMModelIdError,
     snapshot_llm_model_id,
 )
+from fretsure.metrics.fidelity import faithfulness
+from fretsure.observability import product_telemetry
 from fretsure.oracle.core import check_playability
 from fretsure.oracle.input import (
     MAX_AGENT_CANDIDATES,
@@ -55,14 +77,24 @@ from fretsure.oracle.input import (
     OracleInputError,
     SolverInputError,
     ensure_instrument_config,
+    ensure_solver_domain,
 )
-from fretsure.oracle.profiles import MEDIAN_HAND, Profile, validated_profile_snapshot
+from fretsure.oracle.profiles import (
+    LARGE_HAND,
+    MEDIAN_HAND,
+    SMALL_HAND,
+    Profile,
+    validated_profile_snapshot,
+)
 from fretsure.pipeline import PipelineOptions, run_pipeline
 from fretsure.render.ascii import render_ascii
 from fretsure.solver.api import Infeasible, solve_fingering
-from fretsure.tab import TabSchemaError, validated_tab_from_json
+from fretsure.solver.technique import TECHNIQUE_PROFILE_NAMES, technique_profile
+from fretsure.tab import Tab, TabNote, TabSchemaError, validated_tab_from_json
 
-_PROFILE_REGISTRY: Mapping[str, Profile] = MappingProxyType({"median": MEDIAN_HAND})
+_PROFILE_REGISTRY: Mapping[str, Profile] = MappingProxyType(
+    {"small": SMALL_HAND, "median": MEDIAN_HAND, "large": LARGE_HAND}
+)
 PROFILE_NAMES = tuple(_PROFILE_REGISTRY)
 
 
@@ -153,7 +185,13 @@ def _profile(name: object, *, path: str = "options.profile") -> tuple[str, Profi
             ApplicationCode.UNKNOWN_PROFILE,
             path,
             "profile is not in the public registry",
-            (ApplicationDiagnostic("UNKNOWN_PROFILE", path, "supported profile: median"),),
+            (
+                ApplicationDiagnostic(
+                    "UNKNOWN_PROFILE",
+                    path,
+                    f"supported profiles: {', '.join(PROFILE_NAMES)}",
+                ),
+            ),
         )
     return name, validated_profile_snapshot(profile)
 
@@ -191,11 +229,47 @@ def _snapshot_arrange_options(options: object) -> tuple[ArrangeOptions, Profile]
     if type(options) is not ArrangeOptions:
         raise _missing_options("ArrangeOptions")
     profile_name, profile = _profile(_option_field(options, "profile"))
+    style_name = _option_field(options, "style")
+    difficulty_name = _option_field(options, "difficulty_tier")
+    technique_name = _option_field(options, "technique_profile")
     n = _option_field(options, "n")
     max_iters = _option_field(options, "max_iters")
     use_critic = _option_field(options, "use_critic")
     tempo = _option_field(options, "tempo_bpm")
     diagnostics: list[ApplicationDiagnostic] = []
+    try:
+        style = arrangement_style(style_name)
+    except ValueError:
+        diagnostics.append(
+            ApplicationDiagnostic(
+                "UNKNOWN_ARRANGEMENT_STYLE",
+                "options.style",
+                f"supported styles: {', '.join(ARRANGEMENT_STYLE_NAMES)}",
+            )
+        )
+        style = None
+    try:
+        difficulty = resolve_difficulty_tier(difficulty_name)
+    except ValueError:
+        diagnostics.append(
+            ApplicationDiagnostic(
+                "UNKNOWN_DIFFICULTY_TIER",
+                "options.difficulty_tier",
+                f"supported tiers: {', '.join(DIFFICULTY_TIER_NAMES)}",
+            )
+        )
+        difficulty = None
+    try:
+        technique = technique_profile(technique_name)
+    except ValueError:
+        diagnostics.append(
+            ApplicationDiagnostic(
+                "UNKNOWN_TECHNIQUE_PROFILE",
+                "options.technique_profile",
+                f"supported technique profiles: {', '.join(TECHNIQUE_PROFILE_NAMES)}",
+            )
+        )
+        technique = None
     if type(n) is not int or not 1 <= n <= MAX_AGENT_CANDIDATES:
         diagnostics.append(
             ApplicationDiagnostic(
@@ -238,9 +312,15 @@ def _snapshot_arrange_options(options: object) -> tuple[ArrangeOptions, Profile]
     assert type(n) is int
     assert type(max_iters) is int
     assert type(use_critic) is bool
+    assert style is not None
+    assert difficulty is not None
+    assert technique is not None
     return (
         ArrangeOptions(
             profile=profile_name,
+            style=style.id,
+            difficulty_tier=difficulty.name,
+            technique_profile=technique.id,
             n=n,
             max_iters=max_iters,
             use_critic=use_critic,
@@ -272,6 +352,48 @@ def _snapshot_check_options(options: object) -> tuple[CheckOptions, Profile]:
         CheckOptions(profile_name, normalized_tempo, beats),
         profile,
     )
+
+
+def _snapshot_difficulty_options(options: object) -> tuple[DifficultyOptions, Tier]:
+    if type(options) is not DifficultyOptions:
+        raise _missing_options("DifficultyOptions")
+    tier_name = _option_field(options, "tier")
+    if type(tier_name) is not str:
+        raise _error(
+            ApplicationCode.INVALID_OPTIONS,
+            "options.tier",
+            "tier must be an exact string",
+        )
+    try:
+        tier = resolve_difficulty_tier(tier_name)
+    except ValueError:
+        raise _error(
+            ApplicationCode.INVALID_OPTIONS,
+            "options.tier",
+            "tier is not in the public difficulty registry",
+            (
+                ApplicationDiagnostic(
+                    "UNKNOWN_DIFFICULTY_TIER",
+                    "options.tier",
+                    f"supported tiers: {', '.join(DIFFICULTY_TIER_NAMES)}",
+                ),
+            ),
+        ) from None
+    tempo = _option_field(options, "tempo_bpm")
+    beats = _option_field(options, "beats_per_bar")
+    _, _, _, normalized_tempo = _validated_config(
+        STANDARD_TUNING,
+        0,
+        tier.profile,
+        tempo,
+    )
+    if type(beats) is not int or not 1 <= beats <= MAX_BEATS_PER_BAR:
+        raise _error(
+            ApplicationCode.INVALID_OPTIONS,
+            "options.beats_per_bar",
+            f"beats_per_bar must be an exact integer in 1..{MAX_BEATS_PER_BAR}",
+        )
+    return DifficultyOptions(tier.name, normalized_tempo, beats), snapshot_tier(tier)
 
 
 def _snapshot_solve_options(options: object) -> tuple[SolveOptions, Profile]:
@@ -361,10 +483,14 @@ def capabilities() -> ServiceCapabilities:
         score_format_registry=MappingProxyType(dict(SCORE_FORMAT_REGISTRY)),
         target_input_schema_version=TARGET_INPUT_SCHEMA_VERSION,
         profiles=PROFILE_NAMES,
+        arrangement_styles=ARRANGEMENT_STYLE_NAMES,
+        technique_profiles=TECHNIQUE_PROFILE_NAMES,
+        difficulty_tiers=DIFFICULTY_TIER_NAMES,
         input_suffixes=SCORE_SUFFIXES,
         render_formats=("ascii",),
         default_arrange_options=ArrangeOptions(),
         default_check_options=CheckOptions(),
+        default_difficulty_options=DifficultyOptions(),
         default_solve_options=SolveOptions(),
         default_render_options=RenderOptions(),
     )
@@ -438,18 +564,35 @@ def arrange_score_bytes(
         pinned_model = _PinnedModelLLM(llm, model_id)
         pinned_llm = pinned_model
     try:
-        pipeline = run_pipeline(
-            imported.ir,
-            pinned_llm,
-            incremental_agent=model_id != CONSTANT_LLM_MODEL_ID,
-            options=PipelineOptions(
-                profile=profile,
-                n=options_snapshot.n,
-                max_iters=options_snapshot.max_iters,
-                use_critic=options_snapshot.use_critic,
-                tempo_override_bpm=options_snapshot.tempo_bpm,
-            ),
-        )
+        telemetry = product_telemetry()
+        with telemetry.span(
+            "fretsure.arrangement",
+            attributes={
+                "fretsure.model.id": model_id,
+                "fretsure.arrangement.candidate_count": options_snapshot.n,
+                "fretsure.arrangement.critic_enabled": options_snapshot.use_critic,
+                "fretsure.arrangement.style": options_snapshot.style,
+                "fretsure.arrangement.difficulty_tier": options_snapshot.difficulty_tier,
+                "fretsure.arrangement.technique_profile": options_snapshot.technique_profile,
+                "fretsure.source.importer_version": imported.importer_version,
+            },
+        ):
+            pipeline = run_pipeline(
+                imported.ir,
+                pinned_llm,
+                incremental_agent=model_id != CONSTANT_LLM_MODEL_ID,
+                options=PipelineOptions(
+                    profile=profile,
+                    style=options_snapshot.style,
+                    difficulty_tier=options_snapshot.difficulty_tier,
+                    technique_profile=options_snapshot.technique_profile,
+                    n=options_snapshot.n,
+                    max_iters=options_snapshot.max_iters,
+                    use_critic=options_snapshot.use_critic,
+                    tempo_override_bpm=options_snapshot.tempo_bpm,
+                ),
+                call_scope_factory=telemetry.model_call_scope,
+            )
         # Core arrangement policies record and terminate on transport failure so
         # direct library callers retain a diagnostic replay.  The service seam
         # must still reject that request instead of stamping a successful
@@ -473,19 +616,275 @@ def arrange_score_bytes(
     status: ArrangeStatus = (
         "tab_produced" if pipeline.arrangement.tab is not None else "no_fingering_within_budget"
     )
+    alternatives = tuple(
+        VerifiedAlternative(
+            candidate_index=candidate.index,
+            tab=candidate.best.tab,
+            oracle=candidate.best.oracle,
+            faithfulness=candidate.best.faithfulness,
+            ascii=render_ascii(candidate.best.tab),
+            model_calls=candidate.llm_calls,
+            solver_calls=candidate.solver_calls,
+            proposed_additions=candidate.proposed_addition_count,
+            accepted_additions=candidate.accepted_addition_count,
+            proposal_status=candidate.proposal.status.value,
+            critic_status=(
+                candidate.critic_outcome.status.value
+                if candidate.critic_outcome is not None
+                else None
+            ),
+            critic_overall=(
+                candidate.critic_outcome.score.overall
+                if candidate.critic_outcome is not None
+                else None
+            ),
+        )
+        for candidate in pipeline.alternatives
+    )
     return ArrangeOutcome(
         status,
         imported,
+        pipeline.arrangement.target,
         pipeline.arrangement.tab,
         pipeline.arrangement.oracle,
         pipeline.faithfulness,
         pipeline.ascii,
+        alternatives,
         trace_document_json,
         pipeline.source_tempo_bpm,
         pipeline.effective_tempo_bpm,
         options_snapshot,
         profile,
         model_id,
+    )
+
+
+def regenerate_section_bytes(
+    data: bytes,
+    *,
+    filename: str,
+    baseline_target: tuple[Note, ...],
+    baseline_tab: Tab,
+    selection: SectionSelection,
+    options: ArrangeOptions,
+    llm: LLMClient,
+) -> SectionRegenerationOutcome:
+    """Regenerate unlocked voices in a measure range and preserve on gate failure."""
+
+    options_snapshot, profile = _snapshot_arrange_options(options)
+    if type(data) is not bytes or type(filename) is not str:
+        raise _error(
+            ApplicationCode.INVALID_ARGUMENT,
+            "source",
+            "section regeneration requires exact score bytes and filename",
+        )
+    if type(selection) is not SectionSelection:
+        raise _error(
+            ApplicationCode.INVALID_OPTIONS,
+            "selection",
+            "selection must be an exact SectionSelection instance",
+        )
+    if type(baseline_target) is not tuple or type(baseline_tab) is not Tab:
+        raise _error(
+            ApplicationCode.INVALID_ARGUMENT,
+            "baseline",
+            "section regeneration requires an exact target and Tab checkpoint",
+        )
+    imported = import_score_bytes(data, filename)
+    if isinstance(imported, ImportFailure):
+        raise _error(
+            ApplicationCode.IMPORT_REJECTED,
+            "score",
+            "score bytes were rejected by the selected score importer",
+            tuple(
+                ApplicationDiagnostic(
+                    diagnostic.code.value,
+                    "score",
+                    f"score importer rejected input ({diagnostic.code.value})",
+                )
+                for diagnostic in imported.diagnostics
+            ),
+        )
+    assert isinstance(imported, ImportSuccess)
+    if imported.ir.meta.time_sig != (4, 4):
+        raise _error(
+            ApplicationCode.INVALID_ARGUMENT,
+            "score.time_signature",
+            "section regeneration currently supports 4/4 scores",
+        )
+    effective_tempo = (
+        imported.ir.meta.tempo_bpm
+        if options_snapshot.tempo_bpm is None
+        else options_snapshot.tempo_bpm
+    )
+    try:
+        baseline_target, tuning, capo, profile, effective_tempo = ensure_solver_domain(
+            baseline_target,
+            baseline_tab.tuning,
+            baseline_tab.capo,
+            profile,
+            tempo_bpm=effective_tempo,
+        )
+        baseline_oracle = check_playability(
+            baseline_tab,
+            profile,
+            tempo_bpm=effective_tempo,
+            beats_per_bar=4,
+        )
+        if baseline_oracle.verdict == "RED":
+            raise ValueError("baseline checkpoint is RED")
+        baseline_faithfulness = faithfulness(imported.ir, baseline_tab)
+    except Exception:
+        raise _error(
+            ApplicationCode.INVALID_ARGUMENT,
+            "baseline",
+            "baseline checkpoint is not valid for the selected player profile",
+        ) from None
+    try:
+        model_id = snapshot_llm_model_id(llm)
+    except LLMModelIdError:
+        raise _error(
+            ApplicationCode.LLM_CONFIGURATION_REJECTED,
+            "llm.model_id",
+            "LLM model provenance is missing or invalid",
+        ) from None
+
+    locked = ", ".join(selection.locked_voices) or "none"
+    if len(selection.locked_voices) == 3:
+        return SectionRegenerationOutcome(
+            "unchanged",
+            baseline_target,
+            baseline_tab,
+            baseline_oracle,
+            baseline_faithfulness,
+            render_ascii(baseline_tab),
+            selection,
+            options_snapshot,
+            profile,
+            model_id,
+            None,
+            0,
+            "ALL_VOICES_LOCKED",
+        )
+
+    pinned_model: _PinnedModelLLM | None = None
+    if model_id == CONSTANT_LLM_MODEL_ID:
+        pinned_llm: LLMClient = ConstantLLM("noop")
+    else:
+        pinned_model = _PinnedModelLLM(llm, model_id)
+        pinned_llm = pinned_model
+    try:
+        goal = ArrangeGoal(
+            style=options_snapshot.style,
+            tier=options_snapshot.difficulty_tier,
+            technique_profile=options_snapshot.technique_profile,
+            tuning=tuning,
+            capo=capo,
+            tempo_bpm=effective_tempo,
+            extras={
+                "revision_instructions": (
+                    f"Regenerate attack onsets in measures {selection.start_measure}-"
+                    f"{selection.end_measure}. Copy locked voices exactly; locked voices: "
+                    f"{locked}. Return a complete target so the application can merge it."
+                ),
+                "baseline_section": section_target_text(
+                    baseline_target,
+                    imported.ir,
+                    selection,
+                ),
+            },
+        )
+        proposal = propose_arrangement_outcome(
+            imported.ir,
+            goal,
+            pinned_llm,
+            profile=profile,
+            incremental_guidance=True,
+        )
+        if pinned_model is not None and pinned_model.model_call_failed:
+            raise _ApplicationModelCallFailed
+        revised_target = merge_section_target(
+            imported.ir,
+            baseline_target,
+            proposal.target,
+            selection,
+        )
+        if revised_target == baseline_target:
+            return SectionRegenerationOutcome(
+                "unchanged",
+                baseline_target,
+                baseline_tab,
+                baseline_oracle,
+                baseline_faithfulness,
+                render_ascii(baseline_tab),
+                selection,
+                options_snapshot,
+                profile,
+                model_id,
+                proposal.status.value,
+                proposal.llm_calls,
+                "NO_TARGET_CHANGE",
+            )
+        solved, oracle = solve_and_check(
+            revised_target,
+            tuning,
+            capo,
+            profile,
+            tempo_bpm=effective_tempo,
+            beats_per_bar=4,
+            technique_profile_name=options_snapshot.technique_profile,
+        )
+        revised_faithfulness = (
+            None if isinstance(solved, Infeasible) else faithfulness(imported.ir, solved)
+        )
+    except Exception:
+        raise _error(
+            ApplicationCode.ARRANGEMENT_FAILED,
+            "section_regeneration",
+            "section regeneration could not be completed",
+        ) from None
+
+    if (
+        not isinstance(solved, Infeasible)
+        and oracle is not None
+        and oracle.verdict == "GREEN"
+        and revised_faithfulness is not None
+        and revised_faithfulness.passed
+    ):
+        return SectionRegenerationOutcome(
+            "accepted",
+            revised_target,
+            solved,
+            oracle,
+            revised_faithfulness,
+            render_ascii(solved),
+            selection,
+            options_snapshot,
+            profile,
+            model_id,
+            proposal.status.value,
+            proposal.llm_calls,
+            None,
+        )
+    reason = (
+        "NO_GREEN_FINGERING"
+        if isinstance(solved, Infeasible) or oracle is None or oracle.verdict != "GREEN"
+        else "FAITHFULNESS_GATE"
+    )
+    return SectionRegenerationOutcome(
+        "preserved",
+        baseline_target,
+        baseline_tab,
+        baseline_oracle,
+        baseline_faithfulness,
+        render_ascii(baseline_tab),
+        selection,
+        options_snapshot,
+        profile,
+        model_id,
+        proposal.status.value,
+        proposal.llm_calls,
+        reason,
     )
 
 
@@ -515,6 +914,151 @@ def check_tab_json(tab_json: str, *, options: CheckOptions) -> CheckOutcome:
             "playability check could not be completed",
         ) from None
     return CheckOutcome(tab, oracle, options_snapshot, profile)
+
+
+def edit_left_finger_json(
+    tab_json: str,
+    *,
+    note_index: int,
+    left_finger: int,
+    options: CheckOptions,
+) -> FingeringEditOutcome:
+    """Apply one finger-number edit only when the complete Tab stays GREEN."""
+
+    options_snapshot, profile = _snapshot_check_options(options)
+    if type(note_index) is not int or note_index < 0:
+        raise _error(
+            ApplicationCode.INVALID_OPTIONS,
+            "note_index",
+            "note_index must be a non-negative integer",
+        )
+    if type(left_finger) is not int or not 1 <= left_finger <= 4:
+        raise _error(
+            ApplicationCode.INVALID_OPTIONS,
+            "left_finger",
+            "left_finger must be an integer in 1..4",
+        )
+    try:
+        tab = validated_tab_from_json(
+            tab_json,
+            profile=profile,
+            tempo_bpm=options_snapshot.tempo_bpm,
+            beats_per_bar=options_snapshot.beats_per_bar,
+        )
+    except (TabSchemaError, OracleInputError) as exc:
+        raise _tab_error(exc) from None
+    if note_index >= len(tab.notes):
+        raise _error(
+            ApplicationCode.INVALID_OPTIONS,
+            "note_index",
+            "note_index is outside the Tab note list",
+        )
+    selected = tab.notes[note_index]
+    if selected.fret == 0:
+        raise _error(
+            ApplicationCode.INVALID_OPTIONS,
+            "left_finger",
+            "open strings must keep left_finger 0",
+        )
+    original_oracle = check_playability(
+        tab,
+        profile,
+        tempo_bpm=options_snapshot.tempo_bpm,
+        beats_per_bar=options_snapshot.beats_per_bar,
+    )
+    if selected.left_finger == left_finger:
+        return FingeringEditOutcome(
+            "unchanged",
+            tab,
+            original_oracle,
+            original_oracle,
+            render_ascii(tab),
+            note_index,
+            selected.left_finger,
+            left_finger,
+            options_snapshot,
+            profile,
+            "SAME_FINGER",
+        )
+    notes = list(tab.notes)
+    notes[note_index] = TabNote(
+        selected.onset,
+        selected.duration,
+        selected.string,
+        selected.fret,
+        left_finger,
+        selected.right_finger,
+    )
+    attempted = Tab(tuple(notes), tab.tuning, tab.capo)
+    attempted_oracle = check_playability(
+        attempted,
+        profile,
+        tempo_bpm=options_snapshot.tempo_bpm,
+        beats_per_bar=options_snapshot.beats_per_bar,
+    )
+    if attempted_oracle.verdict == "GREEN":
+        return FingeringEditOutcome(
+            "applied",
+            attempted,
+            attempted_oracle,
+            attempted_oracle,
+            render_ascii(attempted),
+            note_index,
+            selected.left_finger,
+            left_finger,
+            options_snapshot,
+            profile,
+            None,
+        )
+    return FingeringEditOutcome(
+        "rejected",
+        tab,
+        original_oracle,
+        attempted_oracle,
+        render_ascii(tab),
+        note_index,
+        selected.left_finger,
+        left_finger,
+        options_snapshot,
+        profile,
+        "NON_GREEN_ATTEMPT",
+    )
+
+
+def check_tab_difficulty_json(
+    tab_json: str,
+    *,
+    options: DifficultyOptions,
+) -> DifficultyOutcome:
+    """Check one canonical Tab against a named, versioned difficulty tier."""
+
+    options_snapshot, tier = _snapshot_difficulty_options(options)
+    try:
+        tab = validated_tab_from_json(
+            tab_json,
+            profile=MEDIAN_HAND,
+            tempo_bpm=options_snapshot.tempo_bpm,
+            beats_per_bar=options_snapshot.beats_per_bar,
+        )
+        result = check_tier(
+            tab,
+            tier,
+            tempo_bpm=options_snapshot.tempo_bpm,
+            beats_per_bar=options_snapshot.beats_per_bar,
+        )
+        published_grade = estimate_published_grade(
+            tab,
+            beats_per_bar=options_snapshot.beats_per_bar,
+        )
+    except (TabSchemaError, OracleInputError) as exc:
+        raise _tab_error(exc) from None
+    except Exception:
+        raise _error(
+            ApplicationCode.CHECK_FAILED,
+            "tab_json",
+            "difficulty check could not be completed",
+        ) from None
+    return DifficultyOutcome(tab, result, published_grade, options_snapshot, tier)
 
 
 def solve_target_json(target_json: str, *, options: SolveOptions) -> SolveOutcome:
@@ -607,10 +1151,14 @@ def render_tab_json(tab_json: str, *, options: RenderOptions) -> RenderOutcome:
 
 
 __all__ = [
+    "DIFFICULTY_TIER_NAMES",
     "PROFILE_NAMES",
     "arrange_score_bytes",
     "capabilities",
+    "check_tab_difficulty_json",
     "check_tab_json",
+    "edit_left_finger_json",
+    "regenerate_section_bytes",
     "render_tab_json",
     "solve_target_json",
 ]

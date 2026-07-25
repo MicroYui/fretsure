@@ -31,6 +31,7 @@ jobs:
           uv run mypy --strict scripts/task9_operational_stub_gate.py
           uv run mypy --strict scripts/task9_throughput_pilot.py
           uv run mypy --strict scripts/task9_recover_orphan_lanes.py
+          uv run mypy --strict scripts/build_plan6b_acceptance_artifacts.py
 
       - name: Offline tests
         run: uv run pytest -q -m 'not integration'

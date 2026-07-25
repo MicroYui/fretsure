@@ -58,12 +58,22 @@ FORBIDDEN_RELEASE_FILENAMES = {
 }
 
 SDIST_REQUIRED_FILES = (
+    "artifacts/plan6b-money-moment/human-guitarist-receipt.json",
+    "artifacts/plan6b-money-moment/preflight.json",
+    "artifacts/plan6b-money-moment/unseen-etude.musicxml",
+    "artifacts/plan6b-interoperability/manifest.json",
+    "docs/PLAN6B_ACCEPTANCE.md",
+    "docs/superpowers/plans/2026-07-24-plan-6b-performance-workspace.md",
+    "scripts/build_plan6b_acceptance_artifacts.py",
+    "web/scripts/build-plan6b-gp7.ts",
     "web/package.json",
     "web/package-lock.json",
     "web/public/licenses/OFL-1.1.txt",
+    "web/public/licenses/MPL-2.0.txt",
     "web/public/licenses/THIRD_PARTY_NOTICES.txt",
     "src/fretsure/web_static/index.html",
     "src/fretsure/web_static/licenses/THIRD_PARTY_NOTICES.txt",
+    "src/fretsure/web_static/licenses/MPL-2.0.txt",
     "docs/WEB_API_MCP.md",
     "docs/superpowers/plans/2026-07-16-producer-driven-musicxml-ir.md",
     "docs/PRODUCER_MUSICXML_ACCEPTANCE.md",
@@ -91,6 +101,14 @@ SDIST_REQUIRED_FILES = (
     "tests/fixtures/midi/producers/music21-10.5.0-supported_basic.mid",
 )
 SDIST_EXACT_FILES = (
+    "artifacts/plan6b-money-moment/human-guitarist-receipt.json",
+    "artifacts/plan6b-money-moment/preflight.json",
+    "artifacts/plan6b-money-moment/unseen-etude.musicxml",
+    "artifacts/plan6b-interoperability/manifest.json",
+    "docs/PLAN6B_ACCEPTANCE.md",
+    "docs/superpowers/plans/2026-07-24-plan-6b-performance-workspace.md",
+    "scripts/build_plan6b_acceptance_artifacts.py",
+    "web/scripts/build-plan6b-gp7.ts",
     "pyproject.toml",
     "uv.lock",
     "src/fretsure/__init__.py",
@@ -305,8 +323,23 @@ def _audit_wheel(path: Path, *, expected_version: str) -> int:
         "fretsure/web_static/licenses/OFL-1.1.txt",
         "fretsure/web_static/licenses/README.txt",
         "fretsure/web_static/licenses/THIRD_PARTY_NOTICES.txt",
+        "fretsure/web_static/licenses/MPL-2.0.txt",
+        "fretsure/web_static/font/Bravura-OFL.txt",
+        "fretsure/web_static/font/Bravura.woff2",
+        "fretsure/web_static/soundfont/LICENSE",
+        "fretsure/web_static/soundfont/sonivox.sf3",
+        "fretsure/audio_data/LICENSE",
+        "fretsure/audio_data/sonivox.sf2",
     ):
         _require_suffix(names, suffix, artifact=path.name)
+    for stem in ("alphaTab.worker-", "alphaTab.worklet-"):
+        if not any(
+            "fretsure/web_static/assets/" in name
+            and Path(name).name.startswith(stem)
+            and name.endswith(".js")
+            for name in names
+        ):
+            raise ValueError(f"{path.name}: built alphaTab asset {stem!r} is missing")
     for extension in (".js", ".css", ".woff2"):
         if not any(
             "fretsure/web_static/assets/" in name and name.endswith(extension) for name in names

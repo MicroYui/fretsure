@@ -1,14 +1,15 @@
 # Fretsure —— 可证明可弹的吉他谱智能体（设计文档 / Design Spec）
 
 > 产品名 **Fretsure**（fret + ensure，已定）。备选 PlayProof / Fretwright 仅存档。
-> 状态（2026-07-23）：设计已锁定；Plan 1–5、MusicXML/MXL/MIDI、Oracle 0.2、Plan 6A 与 benchmark v2 Task 1–10 已闭门，当前在真人、许可、cross-provider 等 OPEN gate 处暂停。当前组合树为 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.3.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace/service/API/MCP/Web=`0.2.0`；playability=`oracle@0.2.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`，runtime 锁定 `music21==10.5.0`，正式模型为 `gpt-5.6-sol`。MusicXML TAB、真实 GP5、A4 PDF、MIDI、ASCII TAB 与 canonical JSON 导出已实现；完整 Plan 6 的音频/琴颈/原生 GP7 `.gp`/live demo 仍 open。本文中的 target/预测数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
+> 状态（2026-07-25）：设计已锁定；Plan 1–6B 已按有限真人 `PARTIAL` 证据闭合，Plan 7A 软件/真实离线 HTTP 门已通过、production browser 复核 pending。当前组合树为 package=`0.6.0`、router=`score-input@0.1.0`、importers=`musicxml@0.4.0` / `midi@0.1.0`、faithfulness=`fidelity@0.3.0`、trace/service/API/Web=`0.3.0`、MCP=`0.2.0`；playability=`oracle@0.3.0`、公共输入=`tab-input@0.2.0`、container=`mxl-container@0.1.0`，runtime 锁定 `music21==10.5.0`，正式模型为 `gpt-5.6-sol`。Plan 7A 的风格/手型/技巧/局部编辑/本地反馈是功能闭环，不是主观效果或真人校准已完成的声明。`musicxml@0.4.0` 在既有 lead-sheet 合同外新增严格、带 warning 的双谱表钢琴缩编，不代表通用复调支持。本文中的 target/预测数字不是实测结果。日期：2026-07-09。作者：solo founder + Claude。
 >
 > **当前证据修正**：本设计中的“repair 脊柱/头牌”是跑前假设，不是当前结论。正式 v2 得到 repair Δjoint `+0.0566`，低于预注册 `0.10` SESOI，裁决 `NOT_KEPT`；best-of-4 为 `PROBATION_COST_UNKNOWN`，critic 为 `HUMAN_BLOCKED_PROBATION`。产品缺省因此为 `n=1, max_iters=0, use_critic=false`；三个组件仅显式 opt in，repair 实现保留作研究/兼容控制。实测真源见 [`BENCHMARK_RESULTS.md`](../../BENCHMARK_RESULTS.md) 与 [`BENCHMARK_V2_ACCEPTANCE.md`](../../BENCHMARK_V2_ACCEPTANCE.md)。
 >
 > **全文 claim override**：下文所有未限定的“可弹”“保证”“真人弹出”、真人 demo、critic
 > musicality、live leaderboard 和营销句均是历史设计目标或 aspirational 计划，不是当前产品
 > 证据。当前只允许主张带 checker/profile/version stamps 的模型内 GREEN；真人 playability、
-> profile/tier calibration、盲测 musicality、真实设计伙伴与完整 Plan 6 demo 均为 OPEN。正文若与
+> profile/tier calibration、代表性盲测 musicality 与真实设计伙伴仍为 OPEN；Plan 6 的真人结果只允许
+> 记为 `PARTIAL`，Plan 7A 的本地 feedback 不等于模型训练。正文若与
 > 本段或当前 acceptance receipt 冲突，以本段和 acceptance receipt 为准。
 
 ---
@@ -119,7 +120,7 @@
 
 ### 5.1 输入解析 Input Parser
 - **目标保证路径（符号）**：MusicXML / MIDI / MusicXML-lite / lead sheet（旋律+和弦符号）/ 纯和弦谱。这里是目标集合，不表示当前全部实现。
-- **当前 `musicxml@0.3.0`**：安全 envelope + fail-closed 完整 raw 语义预检后，才重建一个 bounded event-only XML 交给精确锁定的 **music21 10.5.0**（BSD-3）做交叉验证；第三方只接收 divisions、harmony root/kind 与 note/rest/duration/tie，credit、instrument/MIDI、layout/print、lyrics/voice、key visual metadata 和合法额外 non-note-bearing part 不进入该边界。支持 MusicXML 3.1/4.0 `score-partwise` 的未压缩 `.musicxml`/`.xml`，以及由 `mxl-container@0.1.0` 有界校验、全内存解压和逐 member size/CRC/完整性核验后选出的唯一 `.mxl` root。语义仍限单 note-bearing part/staff/voice、普通 note/rest/tie、全曲固定的 bounded XSD-decimal divisions 与 decimal duration、固定传统 key、4/4、1–1000 BPM quarter tempo 与白名单 root+kind harmony。显式 major/minor 维持原 key；MusicXML 4.0 traditional key 省略 `<mode>` 时保留 `key-signature:fifths=N;mode=unprovided` 并发 located `KEY_MODE_UNPROVIDED`，不从音符、和弦、spelling 或 music21 猜 mode。MusicXML 3.1 省略 mode、空/其他 mode、重复权威 scalar、错误 key shape 与 key change 继续拒绝；外部资源、权威语义数值字段中的非 ASCII/XSD 值、location/diagnostic amplification 与派生 Fraction 均在 adapter 前有界失败。raw exact event timeline 是权威，music21 只做逐事件语义交叉验证；每个 success 还须满足 256-bit Fraction 的 public MusicIR snapshot；`.mxl` 不扩语义。复调、多 note-bearing part/staff/voice、导航/重复、pickup、变拍/变调/变速、复杂 harmony/技巧与 audio 均延后并 typed fail-closed。
+- **当前 `musicxml@0.4.0`**：安全 envelope + fail-closed 完整 raw 语义预检后，才重建一个 bounded event-only XML 交给精确锁定的 **music21 10.5.0**（BSD-3）做交叉验证；第三方只接收 divisions、harmony root/kind 与 note/rest/duration/tie。支持 MusicXML 3.1/4.0 `score-partwise` 的未压缩 `.musicxml`/`.xml`、严格 `.mxl` root，以及一个窄双谱表钢琴缩编：staff 1 必须是单声部旋律，staff 2 必须在每小节一次精确 rewind 后形成同步和弦帧，每个完整音高集合必须唯一匹配白名单 root+kind。转换发出 `PIANO_REDUCTION_DERIVED` 并明确不保留下谱表声位/转位；缩编前后的树都经过有界检查，含糊根音、缺音、独立复调或错位时间轴继续拒绝。其余语义仍限单 note-bearing part、固定 divisions/key/4/4/tempo 与普通 note/rest/tie。显式 major/minor 维持原 key；MusicXML 4.0 省略 `<mode>` 时保留 `mode=unprovided`，不猜调式。raw exact event timeline 是权威，music21 只做逐事件交叉验证；每个 success 还须满足 256-bit Fraction MusicIR 边界。通用复调、多 note-bearing parts、导航/重复、pickup、变拍/变调/变速、复杂 harmony/技巧与 audio 均 typed fail-closed。
 - producer 证据只覆盖 manifest 中未经手改、精确冻结的 artifacts：music21 10.5.0、musicxml 1.6.1 与 MuseScore Studio 4.7.4 XML/MXL rows。它不证明任意 MuseScore 4.7.4 乐谱、其他版本或完整 MusicXML 兼容；逐文件 census 与限制见 [`2026-07-16-producer-musicxml-census.json`](../../experiments/2026-07-16-producer-musicxml-census.json)，闭门证据见 [`PRODUCER_MUSICXML_ACCEPTANCE.md`](../../PRODUCER_MUSICXML_ACCEPTANCE.md)。
 - **当前 `midi@0.1.0`**：`score-input@0.1.0` 只把 `.mid/.midi` 路由到 strict SMF importer。第一方 parser 在任何 music21/pipeline/LLM 工作前验证 format 0/1、PPQN、chunk/EOF/VLQ/running status/EOT、资源门、单一非打击乐单声部 note stream 与固定 tempo/4/4/key/event allowlist；raw tick/PPQN 是权威。零 error 后只重建最小 canonical SMF 给 music21 10.5.0、`quantizePost=False` 逐 note 交叉验证。所有 note 固定为 melody、`chords=()`；不猜 track role、bass/chord/key、量化或 notation timing。10 MiB/64 tracks/250k events/20k notes/tick `2**31-1`/PPQN 32767/note-track EOT 4096 quarter notes/text/VLQ/diagnostic 门先于对象放大；EOT span 同时约束 leading rest、note duration 与 trailing silence，防止 music21 稀疏小节放大。MuseScore 4.7.4 melody-only exact positive 保留 7 beats 与每音 1 tick release gap，music21 10.5.0 positive 保留 8 beats；两个 harmony-realized exact rows typed 拒绝，不声称跨 producer IR equality 或通用 MIDI 兼容。证据见 [`2026-07-17-midi-census.json`](../../experiments/2026-07-17-midi-census.json) 与 [`MIDI_ACCEPTANCE.md`](../../MIDI_ACCEPTANCE.md)。
 - **尽力路径（音频,v2）**：mp3/wav → 转谱（旋律+和弦+节拍）。候选免费工具：Spotify **Basic Pitch**、librosa 节拍/和弦识别。**明确标注"近似、需校对、不保证"**;提供校对 UI。转谱错误不计入产品的"保证"。
@@ -373,11 +374,11 @@ class MusicIR:
 
 **A.0 统领一切的诚实规则**：可弹性是**物理/几何事实**,故用**确定性 checker(oracle)打分,绝不用 LLM 评委**。但 checker 只在**给定手模型**下认证可行;所有对外主张都限定在该模型,且该模型对真实琴手校准(A.8)。**oracle 没验证之前,下游一切数字不可信 → 先建并验证 checker。**
 
-**A.1 语料（零专有数据，5 层）** 全部符号输入:
+**A.1 语料（零专有数据，5 层）** 以符号输入为主；任何表演数据只生成下述有版本、可审计的聚合统计：
 - **A 真实公有领域 lead sheet**(旋律+和弦):Enhanced Wikifonia(~5k,逐文件许可审计)、Nottingham、thesession.org。
 - **B 公有古典**(更丰富的低音/和声 ground truth):Mutopia、CPDL/ChoralWiki、Hymnary 公有赞美诗。
 - **C 大规模 MIDI**(逐文件核 provenance):Lakh MIDI。
-- **D 真人演奏吉他谱——只用于验证 checker,绝不作 agent 输入**:DadaGP(~26k GuitarPro)、GuitarSet(360 条带弦/品标注的录音)。人真弹过=已知可弹。
+- **D 真人演奏吉他数据**：DadaGP 因许可边界不纳入当前产品训练语料，只保留为 checker 研究候选；GuitarSet（360 条带逐弦音符标注的录音）的原始 JAMS/音频不进入 agent prompt、生成 target 或左手 1–4 指监督。除 checker 验证外，只允许先按 performer 切分，再用 train performers 生成带版本/hash 的聚合节奏统计；当前 Jazz 直接使用 Jazz accompaniment 统计，R&B 只能明确标为 Funk 邻近代理，不能宣称为 R&B 曲谱监督。dev/test performers 不参与 profile 选择。
 - **E 程序生成曲（★测试集皇冠）**:功能和声文法采样 调/拍/乐句/和弦进行 + 受和弦音+经过音约束的旋律。**这些曲从没存在过→LLM 不可能背过其 tab;且旋律/低音/和声 ground truth 天然精确。**
 
 统一用 music21/MusPy 归一成 JSON note-graph:`{onset,duration,midi_pitch,voice_role∈{melody,bass,inner},chord_segment}`。附 datasheet + 许可审计。
@@ -412,7 +413,7 @@ class MusicIR:
 
 **A.8 谁来检查检查器(验证 oracle 本身,方法学核心)**：
 1. **无标签自检**:property-based(旗舰不变量 **monotone-in-resources**:手更大/更慢/更低把位/r_max 更高,只能 FAIL→PASS 绝不反向)、metamorphic(变速单调、音高对 music21、变调/移调几何不变、静态谓词时间反演不变)、mutation(注入故障看测试杀不杀,报 kill rate)、N-version(每谓词写两遍:慢穷举 spec + 快生产版,差分 fuzz)。
-2. **对真实语料差分(头牌信任数)**:DadaGP+GuitarSet 过 checker;**GuitarSet 上每个 RED=bug 单**(人真弹过);再与 Sayegh DP / Radicioni CSP / Fretting-Transformer 三角验证。
+2. **对真实语料差分(头牌信任数)**：逐项完成许可审计后，才可让 DadaGP/GuitarSet 过 checker；GuitarSet 上每个 RED 都进入保守误拒审计，而不是自动改松 GREEN 门。用于该验证的 test performers 必须与风格聚合的 train performers 隔离；风格聚合不含左手 1–4 指标签，也不改变 checker 的测试合同。再与 Sayegh DP / Radicioni CSP / Fretting-Transformer 三角验证。
 3. **人手实弹金标集（规模由 pilot/功效决定）**：含对抗近失样本；带实测手围的琴手在规定 tempo 下尝试展示的精确指法。当前尚未采集；没有第二 rater/retest 就不能报 κ，当前固定 AMBER transform 也不能冒充由 κ 学得。
 4. **先校准后留出**:拟合 d_max/v_shift 使 GREEN⊆真弹过、RED⊆全弹不了;人标 train/dev/**test** 切分,test 金标绝不用于校准。
 5. **信任指标=GREEN 上的误接受率**,报 Clopper–Pearson 单侧上界(如 "0/120 已知不可弹被认证 GREEN;97.5% 上界 3%")+ 混淆矩阵 + Wilson CI。
@@ -504,7 +505,7 @@ class MusicIR:
 
 **以下为参考设计对照(非依赖)**：
 
-1. **自研 harness — 已采用的运行时(orchestration)**。回路是明确、有界的环（plan→emit edit→oracle→reason→edit→re-check 到不动点）加 best-of-N 扇出；状态、checkpoint、公开 `agent-trace@0.2.0` 与 eval 合同均由项目持有。Plan 6A 已证明它可直接驱动 replay viewer，不需要把 LangGraph/Claude Agent SDK 引入关键路径。LangGraph/Agent SDK 只保留为未来同预算对照实验；没有消融收益就不引入。
+1. **自研 harness — 已采用的运行时(orchestration)**。回路是明确、有界的环（plan→emit edit→oracle→reason→edit→re-check 到不动点）加 best-of-N 扇出；状态、checkpoint、公开 `agent-trace@0.3.0` 与 eval 合同均由项目持有。Plan 6A 已证明它可直接驱动 replay viewer，不需要把 LangGraph/Claude Agent SDK 引入关键路径。LangGraph/Agent SDK 只保留为未来同预算对照实验；没有消融收益就不引入。
    > 历史备选记录：早期曾在 LangGraph 与 Claude Agent SDK 间二选一；founder 后续决定已覆盖该方向，不能再把历史备选写成当前依赖。
 2. **DSPy 3.x + GEPA — prompt 优化(★皇冠研究信号)**。*建,但用消融把关。* GEPA 用**书面反馈**(而非数值奖励)进化 prompt,是 ICLR 2026 oral、以 ~35× 更少 rollout 胜过 RL(GRPO)、**不需要 GPU**(API+CPU),正好卡你硬件。**契合近乎教科书:你的 oracle 已经吐定位化类型诊断→把诊断原样喂给 GEPA,进化 ①编排者规划 prompt ②critic rubric,用你的确定性 checker 打分。这就是无 GPU 的 RL 风味胜利。** 招聘信号:全栈最高的"我做了真研究工程"。反 LARP:GEPA 只碰自然语言 prompt/rubric,**绝不碰 oracle/DSL/checker**;**用 leave-one-out 消融把关**(手写 prompt vs GEPA),不提升就**砍掉并说明**。先跑一天 spike 再决定。
 3. **Inspect-AI(UK AISI)— eval/verifier 台(可信度倍增器)**。*把 benchmark 建在它上面。* 它的词汇 Task/Solver/Scorer 让你的"checker 打分 + leave-one-out 消融"用标准语言可读:oracle 包成确定性 **Scorer**、每首歌是 **Task**、best-of-N+修复到不动点是 **Solver**。招聘信号:对研究倾向岗比任何厂商可观测工具都高(UK AISI 背书)。

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import FrozenInstanceError
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -14,15 +15,21 @@ from fretsure.application import (
     ApplicationError,
     ArrangeOptions,
     CheckOptions,
+    DifficultyOptions,
     RenderOptions,
     SolveOptions,
     arrange_outcome_to_wire,
     arrange_score_bytes,
     capabilities,
+    check_tab_difficulty_json,
     check_tab_json,
+    difficulty_outcome_to_wire,
+    edit_left_finger_json,
+    regenerate_section_bytes,
     render_tab_json,
     solve_target_json,
 )
+from fretsure.arrange.revision import SectionSelection
 from fretsure.demo import sample_ir
 from fretsure.importers import (
     DiagnosticSeverity,
@@ -33,9 +40,10 @@ from fretsure.importers import (
     import_musicxml_bytes,
 )
 from fretsure.ir import Note
-from fretsure.llm.client import ConstantLLM
+from fretsure.llm.client import ConstantLLM, FakeLLM
 from fretsure.oracle.profiles import MEDIAN_HAND
 from fretsure.pipeline import PipelineOptions, run_pipeline
+from fretsure.solver.api import Infeasible, InfeasibleCode
 from fretsure.tab import tab_to_json
 
 _BASIC = Path("tests/fixtures/musicxml/supported_basic.musicxml")
@@ -76,18 +84,30 @@ class _CountingLLM(ConstantLLM):
 
 def test_capabilities_freeze_service_target_and_profile_contracts() -> None:
     value = capabilities()
-    assert value.service_version == SERVICE_VERSION == "fretsure-service@0.2.0"
+    assert value.service_version == SERVICE_VERSION == "fretsure-service@0.3.0"
     assert value.score_input_version == "score-input@0.1.0"
     assert dict(value.score_format_registry) == {
-        "musicxml": "musicxml@0.3.0",
-        "mxl": "musicxml@0.3.0",
+        "musicxml": "musicxml@0.4.0",
+        "mxl": "musicxml@0.4.0",
         "midi": "midi@0.1.0",
     }
     assert value.input_suffixes == (".musicxml", ".xml", ".mxl", ".mid", ".midi")
     assert value.target_input_schema_version == "target-input@0.1.0"
-    assert value.profiles == ("median",)
+    assert value.profiles == ("small", "median", "large")
+    assert value.arrangement_styles == ("fingerstyle", "classical", "jazz", "rnb")
+    assert value.technique_profiles == (
+        "balanced",
+        "avoid_barres",
+        "low_position",
+        "minimize_shifts",
+    )
+    assert value.difficulty_tiers == ("beginner", "intermediate", "advanced")
+    assert value.default_difficulty_options == DifficultyOptions()
     assert value.render_formats == ("ascii",)
     assert value.default_arrange_options == ArrangeOptions(
+        profile="median",
+        style="fingerstyle",
+        technique_profile="balanced",
         n=1,
         max_iters=0,
         use_critic=False,
@@ -151,6 +171,19 @@ def test_invalid_arrange_options_fail_before_importer_or_llm(
         )
     )
     assert error.code is ApplicationCode.INVALID_OPTIONS
+    assert calls == []
+    assert llm.model_reads == 0
+
+    error = _application_error(
+        lambda: arrange_score_bytes(
+            b"irrelevant",
+            filename="score.musicxml",
+            options=ArrangeOptions(difficulty_tier="virtuoso"),
+            llm=llm,
+        )
+    )
+    assert error.code is ApplicationCode.INVALID_OPTIONS
+    assert error.diagnostics[0].path == "options.difficulty_tier"
     assert calls == []
     assert llm.model_reads == 0
 
@@ -325,6 +358,52 @@ def test_real_arrangement_matches_the_existing_pipeline_and_pins_model_once() ->
     assert outcome.faithfulness == direct.faithfulness
 
 
+def test_incremental_pool_exposes_checked_alternatives_with_actual_work() -> None:
+    data = _BASIC.read_bytes()
+    imported = import_musicxml_bytes(data, _BASIC.name)
+    assert isinstance(imported, ImportSuccess)
+    reply = json.dumps(
+        {
+            "notes": [
+                {
+                    "onset": str(note.onset),
+                    "duration": str(note.duration),
+                    "pitch": note.pitch,
+                    "voice": note.voice,
+                }
+                for note in imported.ir.notes
+            ]
+        },
+        separators=(",", ":"),
+    )
+
+    outcome = arrange_score_bytes(
+        data,
+        filename=_BASIC.name,
+        options=ArrangeOptions(n=2, max_iters=0, use_critic=False),
+        llm=FakeLLM([reply, reply]),
+    )
+    wire = arrange_outcome_to_wire(outcome)
+
+    assert len(outcome.alternatives) == 2
+    assert [item.candidate_index for item in outcome.alternatives] == [0, 1]
+    assert all(item.oracle.verdict == "GREEN" for item in outcome.alternatives)
+    assert all(item.model_calls == 1 for item in outcome.alternatives)
+    alternatives = wire["alternatives"]
+    assert isinstance(alternatives, list) and len(alternatives) == 2
+    assert all(item["playability"]["verdict"] == "GREEN" for item in alternatives)
+    assert all(item["work"]["model_calls"] == 1 for item in alternatives)
+    assert all(
+        item["observed_critic"]
+        == {
+            "status": None,
+            "overall": None,
+            "meaning": "machine_observation_not_human_musicality_evidence",
+        }
+        for item in alternatives
+    )
+
+
 def test_minimal_midi_crosses_application_with_dynamic_stamps_and_na_evidence() -> None:
     outcome = arrange_score_bytes(
         _MINIMAL_MIDI,
@@ -419,8 +498,8 @@ def test_frozen_musescore_inputs_cross_the_application_seam_deterministically(
     assert first_wire["source"]["format"] == source_format
     assert first_wire["source"]["root_member"] == root_member
     assert [item["code"] for item in first_wire["source"]["warnings"]] == warning_codes
-    assert first_wire["source"]["importer_version"] == "musicxml@0.3.0"
-    assert first_wire["stamps"]["importer_version"] == "musicxml@0.3.0"
+    assert first_wire["source"]["importer_version"] == "musicxml@0.4.0"
+    assert first_wire["stamps"]["importer_version"] == "musicxml@0.4.0"
 
 
 @pytest.mark.integration
@@ -441,13 +520,11 @@ def test_real_proxy_arranges_frozen_musescore_and_stamps_every_contract() -> Non
 
     assert outcome.status in {"tab_produced", "no_fingering_within_budget"}
     assert wire["score"]["key"] == _UNPROVIDED_KEY
-    assert [item["code"] for item in wire["source"]["warnings"]] == [
-        "KEY_MODE_UNPROVIDED"
-    ]
+    assert [item["code"] for item in wire["source"]["warnings"]] == ["KEY_MODE_UNPROVIDED"]
     assert wire["model"] == {"model_id": "gpt-5.6-sol"}
     assert wire["stamps"]["model_id"] == "gpt-5.6-sol"
-    assert wire["stamps"]["importer_version"] == "musicxml@0.3.0"
-    assert wire["stamps"]["oracle_checker_version"] == "oracle@0.2.0"
+    assert wire["stamps"]["importer_version"] == "musicxml@0.4.0"
+    assert wire["stamps"]["oracle_checker_version"] == "oracle@0.3.0"
     assert wire["stamps"]["profile_version"] == "median@0.1"
 
 
@@ -503,9 +580,158 @@ def test_arrange_outcome_is_frozen_and_trace_is_an_immutable_snapshot() -> None:
 
 
 def test_unknown_profile_is_a_stable_option_error() -> None:
-    error = _application_error(lambda: check_tab_json("{}", options=CheckOptions(profile="large")))
+    error = _application_error(lambda: check_tab_json("{}", options=CheckOptions(profile="giant")))
     assert error.code is ApplicationCode.UNKNOWN_PROFILE
     assert error.path == "options.profile"
+
+
+def test_section_regeneration_accepts_one_green_faithful_revision() -> None:
+    baseline = arrange_score_bytes(
+        _MINIMAL_MIDI,
+        filename="minimal.mid",
+        options=ArrangeOptions(),
+        llm=ConstantLLM(),
+    )
+    assert baseline.target is not None and baseline.tab is not None
+    reply = json.dumps(
+        {
+            "notes": [
+                {"onset": "0", "duration": "1", "pitch": 60, "voice": "melody"},
+                {"onset": "0", "duration": "1", "pitch": 52, "voice": "harmony"},
+            ]
+        }
+    )
+
+    revised = regenerate_section_bytes(
+        _MINIMAL_MIDI,
+        filename="minimal.mid",
+        baseline_target=baseline.target,
+        baseline_tab=baseline.tab,
+        selection=SectionSelection(1, 1, ()),
+        options=ArrangeOptions(),
+        llm=FakeLLM([reply]),
+    )
+
+    assert revised.status == "accepted"
+    assert revised.model_calls == 1
+    assert revised.oracle.verdict == "GREEN"
+    assert revised.faithfulness.passed
+    assert Note(Fraction(0), Fraction(1), 52, "harmony") in revised.target
+
+
+def test_section_regeneration_with_all_locks_preserves_checkpoint_without_call() -> None:
+    baseline = arrange_score_bytes(
+        _MINIMAL_MIDI,
+        filename="minimal.mid",
+        options=ArrangeOptions(),
+        llm=ConstantLLM(),
+    )
+    assert baseline.target is not None and baseline.tab is not None
+    llm = FakeLLM(["must not be read"])
+
+    revised = regenerate_section_bytes(
+        _MINIMAL_MIDI,
+        filename="minimal.mid",
+        baseline_target=baseline.target,
+        baseline_tab=baseline.tab,
+        selection=SectionSelection(1, 1, ("melody", "bass", "harmony")),
+        options=ArrangeOptions(),
+        llm=llm,
+    )
+
+    assert revised.status == "unchanged"
+    assert revised.reason == "ALL_VOICES_LOCKED"
+    assert revised.model_calls == 0
+    assert revised.target == baseline.target
+    assert revised.tab == baseline.tab
+
+
+def test_section_regeneration_rolls_back_a_non_green_revision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    baseline = arrange_score_bytes(
+        _MINIMAL_MIDI,
+        filename="minimal.mid",
+        options=ArrangeOptions(),
+        llm=ConstantLLM(),
+    )
+    assert baseline.target is not None and baseline.tab is not None
+    reply = json.dumps(
+        {
+            "notes": [
+                {"onset": "0", "duration": "1", "pitch": 60, "voice": "melody"},
+                {"onset": "0", "duration": "1", "pitch": 52, "voice": "harmony"},
+            ]
+        }
+    )
+
+    def no_green_fingering(*args: object, **kwargs: object) -> tuple[Infeasible, None]:
+        return (
+            Infeasible(
+                InfeasibleCode.NO_FRAME_CONFIG,
+                Fraction(0),
+                "test-only forced rejection",
+                (52, 60),
+            ),
+            None,
+        )
+
+    monkeypatch.setattr(service_module, "solve_and_check", no_green_fingering)
+    revised = regenerate_section_bytes(
+        _MINIMAL_MIDI,
+        filename="minimal.mid",
+        baseline_target=baseline.target,
+        baseline_tab=baseline.tab,
+        selection=SectionSelection(1, 1, ()),
+        options=ArrangeOptions(),
+        llm=FakeLLM([reply]),
+    )
+
+    assert revised.status == "preserved"
+    assert revised.reason == "NO_GREEN_FINGERING"
+    assert revised.model_calls == 1
+    assert revised.target == baseline.target
+    assert revised.tab == baseline.tab
+
+
+def test_left_finger_edit_applies_green_change_and_rejects_red_change() -> None:
+    baseline = arrange_score_bytes(
+        _BASIC.read_bytes(),
+        filename=_BASIC.name,
+        options=ArrangeOptions(),
+        llm=ConstantLLM(),
+    )
+    assert baseline.tab is not None
+    tab_json = tab_to_json(baseline.tab)
+
+    applied = edit_left_finger_json(
+        tab_json,
+        note_index=0,
+        left_finger=4,
+        options=CheckOptions(),
+    )
+    rejected = edit_left_finger_json(
+        tab_json,
+        note_index=0,
+        left_finger=1,
+        options=CheckOptions(),
+    )
+    unchanged = edit_left_finger_json(
+        tab_json,
+        note_index=0,
+        left_finger=baseline.tab.notes[0].left_finger,
+        options=CheckOptions(),
+    )
+
+    assert applied.status == "applied"
+    assert applied.tab.notes[0].left_finger == 4
+    assert applied.oracle.verdict == "GREEN"
+    assert rejected.status == "rejected"
+    assert rejected.tab == baseline.tab
+    assert rejected.attempted_oracle.verdict == "RED"
+    assert unchanged.status == "unchanged"
+    assert unchanged.reason == "SAME_FINGER"
+    assert unchanged.tab == baseline.tab
 
 
 def test_check_maps_strict_tab_schema_and_returns_oracle_evidence() -> None:
@@ -526,6 +752,64 @@ def test_check_maps_strict_tab_schema_and_returns_oracle_evidence() -> None:
     )
     assert error.code is ApplicationCode.TAB_INPUT_REJECTED
     assert error.diagnostics[0].code == "DUPLICATE_KEY"
+
+
+def test_difficulty_check_returns_typed_tier_evidence() -> None:
+    solved = solve_target_json(
+        '{"notes":[{"onset":"0/1","duration":"1/1","pitch":60,"voice":"melody"}]}',
+        options=SolveOptions(),
+    )
+    assert solved.tab is not None
+
+    outcome = check_tab_difficulty_json(
+        tab_to_json(solved.tab),
+        options=DifficultyOptions(tier="beginner", tempo_bpm=92, beats_per_bar=3),
+    )
+    wire = difficulty_outcome_to_wire(outcome)
+
+    assert outcome.result.meets
+    assert wire["options"] == {
+        "tier": "beginner",
+        "tempo_bpm": 92.0,
+        "beats_per_bar": 3,
+    }
+    assert wire["difficulty"] == {
+        "checker_version": "difficulty@0.1.0",
+        "meets": True,
+        "playable": "GREEN",
+        "tier_violations": [],
+    }
+    assert wire["tier"]["constraints"]["max_position"] == 5
+    assert wire["stamps"]["difficulty_checker_version"] == "difficulty@0.1.0"
+    assert wire["published_grade"]["model_version"] == (
+        "published-grade-estimator@0.1.0"
+    )
+    assert wire["published_grade"]["confidence"] == "low"
+    assert wire["published_grade"]["likely_interval"]["lower"] <= (
+        wire["published_grade"]["estimated_grade"]
+    )
+    assert wire["published_grade"]["likely_interval"]["upper"] >= (
+        wire["published_grade"]["estimated_grade"]
+    )
+
+
+def test_unknown_difficulty_tier_fails_before_tab_parsing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def must_not_parse(*args: object, **kwargs: object) -> object:
+        raise AssertionError
+
+    monkeypatch.setattr(service_module, "validated_tab_from_json", must_not_parse)
+    error = _application_error(
+        lambda: check_tab_difficulty_json(
+            "not-json",
+            options=DifficultyOptions(tier="virtuoso"),
+        )
+    )
+
+    assert error.code is ApplicationCode.INVALID_OPTIONS
+    assert error.path == "options.tier"
+    assert error.diagnostics[0].code == "UNKNOWN_DIFFICULTY_TIER"
 
 
 def test_solve_returns_one_found_result_without_completeness_claim() -> None:

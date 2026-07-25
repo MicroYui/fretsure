@@ -18,6 +18,11 @@ from fretsure.importers._music21_adapter import (
     MusicXMLDependencyError,
     music21_to_ir,
 )
+from fretsure.importers._musicxml_piano_reduction import (
+    PianoReductionFailure,
+    PianoReductionSuccess,
+    maybe_reduce_piano_score,
+)
 from fretsure.importers._musicxml_preflight import preflight_musicxml
 from fretsure.importers._mxl_container import (
     MXL_CONTAINER_VERSION,
@@ -39,7 +44,7 @@ from fretsure.importers.contracts import (
 )
 from fretsure.ir import IRInputError, snapshot_music_ir, validate_ir
 
-MUSICXML_IMPORTER_VERSION = "musicxml@0.3.0"
+MUSICXML_IMPORTER_VERSION = "musicxml@0.4.0"
 # Backwards-compatible alias retained for callers of the original single-format API.
 IMPORTER_VERSION = MUSICXML_IMPORTER_VERSION
 
@@ -507,6 +512,14 @@ def _import_musicxml_bytes_snapshot(
         return ImportFailure((*container_warnings, envelope_error))
     _strip_namespaces(root)
     preflight = preflight_musicxml(root, limits)
+    reduction_warnings: tuple[ImportDiagnostic, ...] = ()
+    reduction = maybe_reduce_piano_score(root, preflight.diagnostics)
+    if isinstance(reduction, PianoReductionFailure):
+        return ImportFailure((*container_warnings, reduction.diagnostic))
+    if isinstance(reduction, PianoReductionSuccess):
+        root = reduction.root
+        reduction_warnings = reduction.warnings
+        preflight = preflight_musicxml(root, limits)
     errors = tuple(
         diagnostic
         for diagnostic in preflight.diagnostics
@@ -615,7 +628,7 @@ def _import_musicxml_bytes_snapshot(
         return ImportFailure(
             container_warnings + violation_diagnostics + overflow
         )
-    warnings = container_warnings + tuple(
+    warnings = container_warnings + reduction_warnings + tuple(
         diagnostic
         for diagnostic in preflight.diagnostics
         if diagnostic.severity is DiagnosticSeverity.WARNING

@@ -1,9 +1,11 @@
 from collections.abc import Sequence
 from fractions import Fraction as F
+from types import SimpleNamespace
 
 import pytest
 
 import fretsure.solver.score as score_module
+from fretsure.geometry import note_pitch
 from fretsure.ir import Note
 from fretsure.oracle.core import OracleResult, check_playability
 from fretsure.oracle.input import (
@@ -94,9 +96,7 @@ def test_score_composition_preserves_the_strict_solver_object_boundary() -> None
     with pytest.raises(SolverInputError) as captured:
         solve_fingering_score(_ExplodingSequence(), tuning, 0, profile)
 
-    assert [item.code for item in captured.value.diagnostics] == [
-        OracleInputCode.SOLVER_NOTES_TYPE
-    ]
+    assert [item.code for item in captured.value.diagnostics] == [OracleInputCode.SOLVER_NOTES_TYPE]
 
 
 def test_score_composition_has_an_explicit_aggregate_segment_gate(
@@ -116,7 +116,10 @@ def test_score_composition_has_an_explicit_aggregate_segment_gate(
         tempo_bpm: float,
         beats_per_bar: int,
         beam: int,
-    ) -> Tab | Infeasible:
+        _collect_full_green_pool: bool,
+        _initial_continuation: object,
+    ) -> object:
+        del _collect_full_green_pool, _initial_continuation
         del tempo_bpm, beats_per_bar, beam
         nonlocal successful_segments
         if len(segment) > 1:
@@ -131,13 +134,17 @@ def test_score_composition_has_an_explicit_aggregate_segment_gate(
             )
         successful_segments += 1
         note = segment[0]
-        return Tab(
-            (TabNote(note.onset, note.duration, 0, 0, 0, "p"),),
-            segment_tuning,
-            segment_capo,
+        return SimpleNamespace(
+            result=Tab(
+                (TabNote(note.onset, note.duration, 0, 0, 0, "p"),),
+                segment_tuning,
+                segment_capo,
+            ),
+            green_pool=(),
+            continuation=object(),
         )
 
-    monkeypatch.setattr(score_module, "solve_fingering", fake_solve)
+    monkeypatch.setattr(score_module, "_solve_fingering_with_green_pool", fake_solve)
 
     result = solve_fingering_score(notes, tuning, 0, profile)
 
@@ -167,7 +174,10 @@ def test_score_composition_never_releases_a_red_reassembly(
         tempo_bpm: float,
         beats_per_bar: int,
         beam: int,
-    ) -> Tab | Infeasible:
+        _collect_full_green_pool: bool,
+        _initial_continuation: object,
+    ) -> object:
+        del _collect_full_green_pool, _initial_continuation
         del tempo_bpm, beats_per_bar, beam
         if len(segment) > 1:
             raise SolverInputError(
@@ -180,10 +190,14 @@ def test_score_composition_never_releases_a_red_reassembly(
                 )
             )
         note = segment[0]
-        return Tab(
-            (TabNote(note.onset, note.duration, 0, 0, 0, "p"),),
-            segment_tuning,
-            segment_capo,
+        return SimpleNamespace(
+            result=Tab(
+                (TabNote(note.onset, note.duration, 0, 0, 0, "p"),),
+                segment_tuning,
+                segment_capo,
+            ),
+            green_pool=(),
+            continuation=object(),
         )
 
     def red_result(
@@ -203,7 +217,7 @@ def test_score_composition_never_releases_a_red_reassembly(
             "test-input",
         )
 
-    monkeypatch.setattr(score_module, "solve_fingering", fake_solve)
+    monkeypatch.setattr(score_module, "_solve_fingering_with_green_pool", fake_solve)
     monkeypatch.setattr(score_module, "check_playability", red_result)
 
     result = solve_fingering_score(notes, tuning, 0, profile)
@@ -212,3 +226,43 @@ def test_score_composition_never_releases_a_red_reassembly(
     assert result.reason == (
         "independently bounded score segments failed the full-history oracle gate"
     )
+
+
+def test_score_segments_carry_hand_context_across_carcassi_seam() -> None:
+    # Seven source-shaped bars exceed one beam-32 work envelope.  The historical
+    # independent-segment implementation restarted at onset 14 on low-E fret 7,
+    # producing a RED shift seam.  Context propagation keeps B2 at A-string
+    # fret 2 with finger 2, as the public-domain edition indicates.
+    bars = (
+        (48, 55, 60, 64, 52, 55, 60, 64),
+        (45, 57, 60, 64, 48, 57, 60, 64),
+        (50, 57, 62, 65, 53, 57, 62, 65),
+        (43, 55, 59, 65, 47, 55, 62, 65),
+        (48, 55, 60, 64, 45, 55, 61, 64),
+        (50, 57, 62, 65, 53, 57, 62, 65),
+        (43, 55, 60, 64, 43, 55, 59, 65),
+    )
+    notes = tuple(
+        Note(
+            F(bar_index * 4) + F(event_index, 2),
+            F(2) if event_index in (0, 4) else F(1, 2),
+            pitch,
+            "bass" if event_index in (0, 4) else "melody",
+        )
+        for bar_index, bar in enumerate(bars)
+        for event_index, pitch in enumerate(bar)
+    )
+
+    result = solve_fingering_score(
+        notes,
+        (40, 45, 50, 55, 59, 64),
+        0,
+        MEDIAN_HAND,
+        beam=32,
+    )
+
+    assert isinstance(result, Tab)
+    seam_note = next(note for note in result.notes if note.onset == F(14))
+    assert note_pitch(seam_note.string, seam_note.fret, result.tuning, result.capo) == 47
+    assert (seam_note.string, seam_note.fret, seam_note.left_finger) == (1, 2, 2)
+    assert check_playability(result, MEDIAN_HAND).verdict != "RED"

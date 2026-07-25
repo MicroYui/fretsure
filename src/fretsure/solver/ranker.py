@@ -21,12 +21,8 @@ FINGERING_RANKER_MODEL_SHA256: Final = (
     "b6cc57b0b55ed55f959d827e46276371e87820938c5678adf860ffa60f845315"
 )
 FINGERING_RANKER_SOURCE_SOLVER_VERSION: Final = "fingering-solver@0.3.0"
-FINGERING_RANKER_FEATURE_SCHEMA: Final = (
-    "fingering-generic-burden-features@0.1.0"
-)
-FINGERING_RANKER_MANIFEST: Final = (
-    "models/fingering-green-ranker-v0.1.0.json"
-)
+FINGERING_RANKER_FEATURE_SCHEMA: Final = "fingering-generic-burden-features@0.1.0"
+FINGERING_RANKER_MANIFEST: Final = "models/fingering-green-ranker-v0.1.0.json"
 FINGERING_RANKER_MANIFEST_SHA256: Final = (
     "63fb10e54f22903b30260d3c87b7323d5e18eec0a9431c3df227c4b94f07b9be"
 )
@@ -61,9 +57,7 @@ FINGERING_RANKER_SCALED_WEIGHTS_TEXT: Final = (
 )
 
 _FEATURE_SCALES = tuple(Decimal(value) for value in FINGERING_RANKER_FEATURE_SCALES_TEXT)
-_SCALED_WEIGHTS = tuple(
-    Decimal(value) for value in FINGERING_RANKER_SCALED_WEIGHTS_TEXT
-)
+_SCALED_WEIGHTS = tuple(Decimal(value) for value in FINGERING_RANKER_SCALED_WEIGHTS_TEXT)
 
 
 def _quality_values(quality: QualityCost) -> tuple[int | Fraction, ...]:
@@ -138,16 +132,13 @@ def select_guarded_green_index(
 
     legacy_max_fret = qualities[legacy_index].max_fret
     eligible = tuple(
-        index
-        for index, quality in enumerate(qualities)
-        if quality.max_fret <= legacy_max_fret
+        index for index, quality in enumerate(qualities) if quality.max_fret <= legacy_max_fret
     )
     frontier = tuple(
         index
         for index in eligible
         if not any(
-            other != index and _dominates(qualities[other], qualities[index])
-            for other in eligible
+            other != index and _dominates(qualities[other], qualities[index]) for other in eligible
         )
     )
     if not frontier:  # A non-empty finite partial order always has a minimum.

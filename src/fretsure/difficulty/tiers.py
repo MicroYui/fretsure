@@ -10,8 +10,10 @@ CALIBRATION: tier thresholds are v1 placeholders — fit against real learners
 """
 
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from fractions import Fraction
+from types import MappingProxyType
 
 from fretsure.geometry import press_x
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
@@ -96,22 +98,62 @@ def snapshot_tier(tier: object, *, profile: Profile | None = None) -> Tier:
 
 BEGINNER = Tier(
     "beginner",
-    replace(MEDIAN_HAND, version="beginner@0.1", max_fret=5, hand_span_mm=90.0,
-            v_shift_mm_per_s=400.0, r_max_hz=6.0),
-    max_simultaneous=2, allow_barre=False, max_position=5, max_shifts_per_bar=2,
+    replace(
+        MEDIAN_HAND,
+        version="beginner@0.1",
+        max_fret=5,
+        hand_span_mm=90.0,
+        v_shift_mm_per_s=400.0,
+        r_max_hz=6.0,
+    ),
+    max_simultaneous=2,
+    allow_barre=False,
+    max_position=5,
+    max_shifts_per_bar=2,
 )
 INTERMEDIATE = Tier(
     "intermediate",
-    replace(MEDIAN_HAND, version="intermediate@0.1", max_fret=9, hand_span_mm=100.0,
-            v_shift_mm_per_s=500.0, r_max_hz=8.0),
-    max_simultaneous=3, allow_barre=True, max_position=9, max_shifts_per_bar=4,
+    replace(
+        MEDIAN_HAND,
+        version="intermediate@0.1",
+        max_fret=9,
+        hand_span_mm=100.0,
+        v_shift_mm_per_s=500.0,
+        r_max_hz=8.0,
+    ),
+    max_simultaneous=3,
+    allow_barre=True,
+    max_position=9,
+    max_shifts_per_bar=4,
 )
 ADVANCED = Tier(
     "advanced",
-    replace(MEDIAN_HAND, version="advanced@0.1", max_fret=19, hand_span_mm=115.0,
-            v_shift_mm_per_s=560.0, r_max_hz=10.0),
-    max_simultaneous=4, allow_barre=True, max_position=19, max_shifts_per_bar=99,
+    replace(
+        MEDIAN_HAND,
+        version="advanced@0.1",
+        max_fret=19,
+        hand_span_mm=115.0,
+        v_shift_mm_per_s=560.0,
+        r_max_hz=10.0,
+    ),
+    max_simultaneous=4,
+    allow_barre=True,
+    max_position=19,
+    max_shifts_per_bar=99,
 )
+
+DIFFICULTY_TIERS: Mapping[str, Tier] = MappingProxyType(
+    {tier.name: tier for tier in (BEGINNER, INTERMEDIATE, ADVANCED)}
+)
+DIFFICULTY_TIER_NAMES = tuple(DIFFICULTY_TIERS)
+
+
+def difficulty_tier(name: object) -> Tier:
+    """Return a detached public tier or reject an unknown generation target."""
+
+    if type(name) is not str or name not in DIFFICULTY_TIERS:
+        raise ValueError("difficulty tier must be one of " + ", ".join(DIFFICULTY_TIER_NAMES))
+    return snapshot_tier(DIFFICULTY_TIERS[name])
 
 
 def tier_violations(tab: Tab, tier: Tier, *, beats_per_bar: int = 4) -> list[str]:
@@ -163,10 +205,7 @@ def tier_violations(tab: Tab, tier: Tier, *, beats_per_bar: int = 4) -> list[str
                     ),
                     default=None,
                 )
-                if (
-                    earliest_other is not None
-                    and earliest_other < note.onset + note.duration
-                ):
+                if earliest_other is not None and earliest_other < note.onset + note.duration:
                     flagged[index] = True
                 current = minimum_later_onset[note.string]
                 if current is None or note.onset < current:
@@ -199,8 +238,6 @@ def tier_violations(tab: Tab, tier: Tier, *, beats_per_bar: int = 4) -> list[str
         prev = centers[onset]
     for bar in sorted(shifts_per_bar):
         if shifts_per_bar[bar] > tier.max_shifts_per_bar:
-            out.append(
-                f"too_many_shifts@bar{bar}: {shifts_per_bar[bar]}>{tier.max_shifts_per_bar}"
-            )
+            out.append(f"too_many_shifts@bar{bar}: {shifts_per_bar[bar]}>{tier.max_shifts_per_bar}")
 
     return out
