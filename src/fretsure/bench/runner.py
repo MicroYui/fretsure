@@ -5,9 +5,12 @@ The public ``fretsure-bench`` command owns the benchmark-v2 artifact workflow:
 deterministic stub or live collection, complete-unit resume, and offline replay.
 """
 
+from __future__ import annotations
+
 import argparse
 import hashlib
 import json
+import math
 import os
 import queue
 import signal
@@ -20,7 +23,7 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from types import FrameType
-from typing import Any, cast
+from typing import Any, Final, cast
 
 from fretsure.agent.arranger import (
     ARRANGEMENT_UNISON_COALESCER_VERSION,
@@ -117,17 +120,11 @@ from fretsure.bench.observe import (
     CallSequence,
     ObservingLLM,
 )
-from fretsure.bench.precall import (
-    BenchmarkPreCallConfig,
-    pre_call_artifact_budget,
-    pre_call_config_from_bytes,
-    preregistered_artifact_budget,
-    require_explicit_spend_confirmation,
-    require_live_authorization,
-    validate_current_runtime,
-)
 from fretsure.bench.preregistration import (
+    FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS,
+    FORMAL_OPERATIONAL_REQUEST_TIMEOUT_SECONDS,
     BenchmarkPreregistration,
+    artifact_ceilings,
     preregistration_from_bytes,
     preregistration_from_dict,
 )
@@ -151,6 +148,7 @@ from fretsure.llm.client import (
     MAX_PROXY_OUTPUT_TOKENS,
     MAX_PROXY_TEXT_BYTES_PER_TOKEN,
     MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
+    MAX_PROXY_USAGE_TOKENS,
     PROXY_REQUEST_TIMEOUT_SECONDS,
     LLMClient,
     LLMIntegrityError,
@@ -252,6 +250,186 @@ class _OperationalResumeClientUnavailable(RuntimeError):
     """A resumable output remains untouched because worker clients could not open."""
 
 
+LIVE_RUN_POLICY_VERSION: Final = "benchmark-live-policy@0.1.0"
+# Provider contract for one attempt: every input/cache bucket and the billable
+# output bucket, which includes tokens the response never shows.  Distinct from
+# MAX_PROXY_OUTPUT_TOKENS, which caps what a single request may *ask* for.
+FORMAL_INPUT_TOKEN_CEILING: Final = 272_000
+FORMAL_OUTPUT_TOKEN_CEILING: Final = 128_000
+MAX_COLLECTION_ATTEMPT: Final = 999_999
+MAX_LIVE_SPEND_MICROUNITS: Final = (1 << 63) - 1
+
+
+@dataclass(frozen=True, slots=True)
+class LiveRunPolicy:
+    """The whole authorization surface of a live run: one confirmed spend ceiling.
+
+    ``confirmed_spend_microunits`` must repeat ``max_spend_microunits`` exactly.
+    The repetition is the point: an operator who cannot restate the number they
+    are authorizing has not authorized it.  Nothing here is derived from a file,
+    so there is no artifact to forge and no digest chain to keep in sync.
+    """
+
+    max_spend_microunits: int
+    confirmed_spend_microunits: int
+    collection_attempt: int = 1
+    currency: str = "USD"
+    requested_model_id: str = DEFAULT_PROXY_MODEL
+    # Concurrency is opt-in: one lane is the serial collector, more than one
+    # engages the durable multi-lane coordinator.
+    max_in_flight_units: int = 1
+    request_timeout_seconds: float = FORMAL_OPERATIONAL_REQUEST_TIMEOUT_SECONDS
+    recorded_attempt_elapsed_overhead_seconds: float = (
+        FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS
+    )
+    input_token_ceiling: int = FORMAL_INPUT_TOKEN_CEILING
+    output_token_ceiling: int = FORMAL_OUTPUT_TOKEN_CEILING
+
+    def __post_init__(self) -> None:
+        for name, value, minimum, maximum in (
+            ("max_spend_microunits", self.max_spend_microunits, 1, MAX_LIVE_SPEND_MICROUNITS),
+            (
+                "confirmed_spend_microunits",
+                self.confirmed_spend_microunits,
+                1,
+                MAX_LIVE_SPEND_MICROUNITS,
+            ),
+            ("collection_attempt", self.collection_attempt, 1, MAX_COLLECTION_ATTEMPT),
+            ("max_in_flight_units", self.max_in_flight_units, 1, 8),
+            ("input_token_ceiling", self.input_token_ceiling, 1, MAX_PROXY_USAGE_TOKENS),
+            ("output_token_ceiling", self.output_token_ceiling, 1, MAX_PROXY_USAGE_TOKENS),
+        ):
+            if type(value) is not int or not minimum <= value <= maximum:
+                raise BenchmarkInputError(
+                    name, f"must be an exact integer in {minimum}..{maximum}"
+                )
+        for name, seconds in (
+            ("request_timeout_seconds", self.request_timeout_seconds),
+            (
+                "recorded_attempt_elapsed_overhead_seconds",
+                self.recorded_attempt_elapsed_overhead_seconds,
+            ),
+        ):
+            if type(seconds) is not float or not math.isfinite(seconds) or seconds < 0:
+                raise BenchmarkInputError(name, "must be one nonnegative finite float")
+        if self.request_timeout_seconds <= 0:
+            raise BenchmarkInputError("request_timeout_seconds", "must be positive")
+        if self.currency != "USD":
+            raise BenchmarkInputError("currency", "must be USD")
+        _benchmark_model_id(self.requested_model_id)
+        if self.confirmed_spend_microunits != self.max_spend_microunits:
+            raise BenchmarkInputError(
+                "confirmed_spend_microunits",
+                "must exactly repeat the maximum spend authorized for this attempt",
+            )
+
+    @property
+    def billable_token_ceiling_per_attempt(self) -> dict[str, int]:
+        return {
+            "cache_creation_input_tokens": self.input_token_ceiling,
+            "cache_read_input_tokens": self.input_token_ceiling,
+            "input_tokens": self.input_token_ceiling,
+            "output_tokens": self.output_token_ceiling,
+        }
+
+    def to_wire(self) -> dict[str, object]:
+        """Return what the manifest records: the ceiling, not the confirmation."""
+
+        return {
+            "billable_token_ceiling_per_attempt": self.billable_token_ceiling_per_attempt,
+            "collection_attempt": self.collection_attempt,
+            "currency": self.currency,
+            "max_in_flight_units": self.max_in_flight_units,
+            "max_spend_microunits": self.max_spend_microunits,
+            "recorded_attempt_elapsed_overhead_seconds": (
+                self.recorded_attempt_elapsed_overhead_seconds
+            ),
+            "request_timeout_seconds": self.request_timeout_seconds,
+            "requested_model_id": self.requested_model_id,
+            "schema": LIVE_RUN_POLICY_VERSION,
+        }
+
+    @classmethod
+    def from_wire(cls, value: object) -> LiveRunPolicy:
+        wire = _exact_object(
+            value,
+            "parameters.live",
+            frozenset(
+                {
+                    "billable_token_ceiling_per_attempt",
+                    "collection_attempt",
+                    "currency",
+                    "max_in_flight_units",
+                    "max_spend_microunits",
+                    "recorded_attempt_elapsed_overhead_seconds",
+                    "request_timeout_seconds",
+                    "requested_model_id",
+                    "schema",
+                }
+            ),
+        )
+        if wire["schema"] != LIVE_RUN_POLICY_VERSION:
+            raise BenchmarkInputError("parameters.live.schema", "has the wrong version")
+        ceilings = _exact_object(
+            wire["billable_token_ceiling_per_attempt"],
+            "parameters.live.billable_token_ceiling_per_attempt",
+            frozenset(
+                {
+                    "cache_creation_input_tokens",
+                    "cache_read_input_tokens",
+                    "input_tokens",
+                    "output_tokens",
+                }
+            ),
+        )
+        input_ceiling = ceilings["input_tokens"]
+        if (
+            ceilings["cache_creation_input_tokens"] != input_ceiling
+            or ceilings["cache_read_input_tokens"] != input_ceiling
+        ):
+            raise BenchmarkInputError(
+                "parameters.live.billable_token_ceiling_per_attempt",
+                "must use one input ceiling for every input bucket",
+            )
+        maximum_spend = wire["max_spend_microunits"]
+        if type(maximum_spend) is not int:
+            raise BenchmarkInputError(
+                "parameters.live.max_spend_microunits", "must be an exact integer"
+            )
+        return cls(
+            max_spend_microunits=maximum_spend,
+            confirmed_spend_microunits=maximum_spend,
+            collection_attempt=cast(int, wire["collection_attempt"]),
+            currency=cast(str, wire["currency"]),
+            requested_model_id=cast(str, wire["requested_model_id"]),
+            max_in_flight_units=cast(int, wire["max_in_flight_units"]),
+            request_timeout_seconds=cast(float, wire["request_timeout_seconds"]),
+            recorded_attempt_elapsed_overhead_seconds=cast(
+                float, wire["recorded_attempt_elapsed_overhead_seconds"]
+            ),
+            input_token_ceiling=cast(int, input_ceiling),
+            output_token_ceiling=cast(int, ceilings["output_tokens"]),
+        )
+
+
+def _require_confirmed_spend(policy: LiveRunPolicy, supplied: object) -> None:
+    """Re-check the confirmation against a policy that may have been forged."""
+
+    if type(policy) is not LiveRunPolicy:
+        raise BenchmarkInputError("live_policy", "must be an exact LiveRunPolicy")
+    maximum = policy.max_spend_microunits
+    if type(maximum) is not int or not 1 <= maximum <= MAX_LIVE_SPEND_MICROUNITS:
+        raise BenchmarkInputError(
+            "live_policy.max_spend_microunits",
+            f"must be an exact integer in 1..{MAX_LIVE_SPEND_MICROUNITS}",
+        )
+    if type(supplied) is not int or supplied != maximum:
+        raise BenchmarkInputError(
+            "authorized_maximum_spend_microunits",
+            "does not exactly equal the live policy maximum spend",
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class BenchmarkV2Config:
     """Small deterministic collection config embedded with the full corpus snapshot."""
@@ -338,7 +516,7 @@ class BenchmarkV2Context:
     profile: Profile
     requested_model_id: str
     preregistration: BenchmarkPreregistration | None = None
-    pre_call_config: BenchmarkPreCallConfig | None = None
+    live_policy: LiveRunPolicy | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -471,12 +649,9 @@ def _v2_limits(
     item_count: int,
     *,
     preregistration: BenchmarkPreregistration | None = None,
-    pre_call_config: BenchmarkPreCallConfig | None = None,
 ) -> ArtifactLimits:
-    if preregistration is not None and pre_call_config is not None:
-        maximum, reservation = pre_call_artifact_budget(pre_call_config)
-    elif preregistration is not None:
-        maximum, reservation = preregistered_artifact_budget(preregistration)
+    if preregistration is not None:
+        maximum, reservation = artifact_ceilings(preregistration)
     else:
         maximum_calls = item_count * 110
         return ArtifactLimits(
@@ -528,45 +703,28 @@ def _v2_parameters(
     requested_model_id: str,
     *,
     preregistration: BenchmarkPreregistration | None = None,
-    pre_call_config: BenchmarkPreCallConfig | None = None,
+    live_policy: LiveRunPolicy | None = None,
     procedural_parameters: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    if pre_call_config is None:
-        analysis_sha256 = _analysis_contract_sha256(preregistration)
-        analysis_kind = (
-            "preregistered_analysis_contract_sha256"
-            if preregistration is not None
-            else "software_stub_analysis_contract_sha256"
-        )
-        analysis_parameters: dict[str, object] = {
-            "analysis_contract_sha256": analysis_sha256,
-            "binding_kind": analysis_kind,
-            "version": BENCHMARK_V2_ANALYSIS_VERSION,
-        }
-        execution: dict[str, object] = {
-            "analysis_binding": {
-                "kind": analysis_kind,
-                "sha256": analysis_sha256,
-            },
-            "execution_git_sha": None,
-            "mode": "stub",
-        }
-    else:
-        execution = cast(dict[str, object], pre_call_config.to_dict()["execution"])
-        external_binding = cast(dict[str, object], execution["analysis_binding"])
-        analysis_sha256 = pre_call_config.analysis_code_sha256
-        analysis_parameters = {
-            "analysis_code_sha256": analysis_sha256,
-            "binding_kind": external_binding["kind"],
-            "version": BENCHMARK_V2_ANALYSIS_VERSION,
-        }
-    allowed_returned_model_id = (
-        requested_model_id if pre_call_config is None else pre_call_config.allowed_returned_model_id
+    analysis_sha256 = _analysis_contract_sha256(preregistration)
+    analysis_kind = (
+        "preregistered_analysis_contract_sha256"
+        if preregistration is not None
+        else "software_stub_analysis_contract_sha256"
     )
-    pre_call_wire: dict[str, object] | None = None
-    if pre_call_config is not None:
-        pre_call_wire = pre_call_config.to_dict()
-        del pre_call_wire["preregistration"]
+    analysis_parameters: dict[str, object] = {
+        "analysis_contract_sha256": analysis_sha256,
+        "binding_kind": analysis_kind,
+        "version": BENCHMARK_V2_ANALYSIS_VERSION,
+    }
+    execution: dict[str, object] = {
+        "analysis_binding": {
+            "kind": analysis_kind,
+            "sha256": analysis_sha256,
+        },
+        "execution_git_sha": None,
+        "mode": "stub" if live_policy is None else "live",
+    }
     return {
         "analysis": analysis_parameters,
         "corpus": (
@@ -582,11 +740,11 @@ def _v2_parameters(
         "goal": _goal_wire(goal),
         "execution": execution,
         "model": {
-            "allowed_returned_model_id": allowed_returned_model_id,
+            "allowed_returned_model_id": requested_model_id,
             "requested_model_id": requested_model_id,
             "returned_model_rule": "exact_equal",
         },
-        "pre_call": pre_call_wire,
+        "live": None if live_policy is None else live_policy.to_wire(),
         "preregistration": (
             None
             if preregistration is None
@@ -626,7 +784,7 @@ def _build_context_from_items(
     items: tuple[CorpusItem, ...],
     *,
     preregistration: BenchmarkPreregistration | None = None,
-    pre_call_config: BenchmarkPreCallConfig | None = None,
+    live_policy: LiveRunPolicy | None = None,
     procedural_parameters: dict[str, object] | None = None,
 ) -> BenchmarkV2Context:
     corpus_digest = corpus_sha256(items)
@@ -635,19 +793,15 @@ def _build_context_from_items(
     goal = ArrangeGoal()
     profile = MEDIAN_HAND
     requested_model_id = _benchmark_model_id(
-        pre_call_config.requested_model_id
-        if pre_call_config is not None
+        live_policy.requested_model_id
+        if live_policy is not None
         else config.requested_model_id
         if config.requested_model_id is not None
         else BENCHMARK_V2_STUB_MODEL_ID
         if config.stub
         else DEFAULT_PROXY_MODEL
     )
-    analysis_code_sha256 = (
-        _analysis_contract_sha256(preregistration)
-        if pre_call_config is None
-        else pre_call_config.analysis_code_sha256
-    )
+    analysis_code_sha256 = _analysis_contract_sha256(preregistration)
     manifest = build_manifest(
         run_id=run_id,
         corpus_sha256=corpus_digest,
@@ -657,7 +811,6 @@ def _build_context_from_items(
         limits=_v2_limits(
             len(items),
             preregistration=preregistration,
-            pre_call_config=pre_call_config,
         ),
         parameters=_v2_parameters(
             config,
@@ -666,7 +819,7 @@ def _build_context_from_items(
             profile,
             requested_model_id,
             preregistration=preregistration,
-            pre_call_config=pre_call_config,
+            live_policy=live_policy,
             procedural_parameters=procedural_parameters,
         ),
     )
@@ -678,7 +831,7 @@ def _build_context_from_items(
         profile,
         requested_model_id,
         preregistration,
-        pre_call_config,
+        live_policy,
     )
 
 
@@ -689,8 +842,8 @@ def build_benchmark_v2_context(config: BenchmarkV2Config) -> BenchmarkV2Context:
         raise BenchmarkInputError("config", "must be an exact BenchmarkV2Config")
     if not config.stub:
         raise BenchmarkInputError(
-            "pre_call_config",
-            "live collection requires a validated pre-call config",
+            "live_policy",
+            "live collection requires a confirmed live run policy",
         )
     items = build_primary_procedural_corpus(
         ProceduralCorpusConfig(
@@ -707,13 +860,13 @@ def _preregistration_context(
     preregistration: BenchmarkPreregistration,
     *,
     stub: bool,
-    pre_call_config: BenchmarkPreCallConfig | None = None,
+    live_policy: LiveRunPolicy | None = None,
 ) -> BenchmarkV2Context:
     if type(preregistration) is not BenchmarkPreregistration:
         raise BenchmarkInputError("preregistration", "must be an exact BenchmarkPreregistration")
-    if (pre_call_config is None) != stub:
+    if (live_policy is None) != stub:
         raise BenchmarkInputError(
-            "pre_call_config", "stub must omit and live must provide pre-call config"
+            "live_policy", "stub must omit and live must provide a live run policy"
         )
     wire = preregistration.to_dict()
     corpus = _exact_object(
@@ -744,6 +897,7 @@ def _preregistration_context(
     sign_flip = cast(dict[str, object], inference["sign_flip"])
     schedule = cast(dict[str, object], wire["schedule"])
     formal_run_id = cast(str, wire["run_id"])
+    attempt = 1 if live_policy is None else live_policy.collection_attempt
     config = BenchmarkV2Config(
         family_count=len(items),
         base_seed=cast(int, primary["base_seed"]),
@@ -762,14 +916,14 @@ def _preregistration_context(
         run_id=(
             f"{formal_run_id}-stub-attempt-001"
             if stub
-            else cast(BenchmarkPreCallConfig, pre_call_config).run_id
+            else f"{formal_run_id}-attempt-{attempt:03d}"
         ),
     )
     context = _build_context_from_items(
         config,
         items,
         preregistration=preregistration,
-        pre_call_config=pre_call_config,
+        live_policy=live_policy,
         procedural_parameters={
             "bars": primary["bars"],
             "base_seed": primary["base_seed"],
@@ -804,19 +958,17 @@ def build_benchmark_v2_preregistered_context(
 
 
 def build_benchmark_v2_live_context(
-    pre_call_config: BenchmarkPreCallConfig,
+    preregistration: BenchmarkPreregistration,
+    live_policy: LiveRunPolicy,
 ) -> BenchmarkV2Context:
-    """Build a live context only from one fully validated pre-call config."""
+    """Build a live context from the preregistration and one confirmed policy."""
 
-    if type(pre_call_config) is not BenchmarkPreCallConfig:
-        raise BenchmarkInputError("pre_call_config", "must be an exact BenchmarkPreCallConfig")
-    validated = pre_call_config_from_bytes(pre_call_config.wire_json)
-    validate_current_runtime(validated)
-    require_live_authorization(validated)
+    if type(live_policy) is not LiveRunPolicy:
+        raise BenchmarkInputError("live_policy", "must be an exact LiveRunPolicy")
     return _preregistration_context(
-        validated.preregistration,
+        preregistration,
         stub=False,
-        pre_call_config=validated,
+        live_policy=live_policy,
     )
 
 
@@ -836,8 +988,8 @@ def benchmark_v2_context_from_manifest(manifest: BenchmarkManifest) -> Benchmark
                 "execution",
                 "experiment",
                 "goal",
+                "live",
                 "model",
-                "pre_call",
                 "preregistration",
                 "procedural",
                 "profile",
@@ -873,7 +1025,7 @@ def benchmark_v2_context_from_manifest(manifest: BenchmarkManifest) -> Benchmark
             "parameters.model", "must use the exact requested/returned model rule"
         )
     raw_preregistration = parameters["preregistration"]
-    raw_pre_call = parameters["pre_call"]
+    raw_live = parameters["live"]
     if raw_preregistration is not None:
         corpus_reference = _exact_object(
             parameters["corpus"],
@@ -906,35 +1058,27 @@ def benchmark_v2_context_from_manifest(manifest: BenchmarkManifest) -> Benchmark
                 "does not bind the embedded preregistration",
             )
         if manifest.stub:
-            if raw_pre_call is not None:
+            if raw_live is not None:
                 raise BenchmarkInputError(
-                    "parameters.pre_call", "stub manifests must not contain a pre-call config"
+                    "parameters.live", "stub manifests must not contain a live run policy"
                 )
             context = build_benchmark_v2_preregistered_context(preregistration)
         else:
-            if raw_pre_call is None:
+            if raw_live is None:
                 raise BenchmarkInputError(
-                    "parameters.pre_call", "live manifests require a pre-call config"
+                    "parameters.live", "live manifests require a live run policy"
                 )
-            if type(raw_pre_call) is not dict:
-                raise BenchmarkInputError(
-                    "parameters.pre_call", "must be one exact pre-call binding object"
-                )
-            complete_pre_call = dict(cast(dict[str, object], raw_pre_call))
-            complete_pre_call["preregistration"] = preregistration.to_dict()
-            pre_call = pre_call_config_from_bytes(canonical_json_bytes(complete_pre_call))
-            if pre_call.preregistration != preregistration:
-                raise BenchmarkInputError(
-                    "parameters.pre_call", "binds a different preregistration"
-                )
-            context = build_benchmark_v2_live_context(pre_call)
+            context = build_benchmark_v2_live_context(
+                preregistration,
+                LiveRunPolicy.from_wire(raw_live),
+            )
         if manifest != context.manifest:
             raise BenchmarkInputError(
                 "manifest", "does not match the preregistered executable context"
             )
         return context
-    if raw_pre_call is not None or not manifest.stub:
-        raise BenchmarkInputError("parameters.pre_call", "scalar contexts are offline stub-only")
+    if raw_live is not None or not manifest.stub:
+        raise BenchmarkInputError("parameters.live", "scalar contexts are offline stub-only")
     experiment = _exact_object(
         parameters["experiment"],
         "parameters.experiment",
@@ -1238,8 +1382,8 @@ def _default_v2_client_factory(context: BenchmarkV2Context) -> Callable[[], LLMC
 
         timeout_seconds = (
             PROXY_REQUEST_TIMEOUT_SECONDS
-            if context.pre_call_config is None
-            else context.pre_call_config.request_timeout_seconds
+            if context.live_policy is None
+            else context.live_policy.request_timeout_seconds
         )
         return ProxyLLM(
             context.requested_model_id,
@@ -1363,8 +1507,8 @@ def _scheduled_unit_reservation(
     attempts = logical_calls * 3
     if request_timeout_seconds is not None:
         timeout_seconds = request_timeout_seconds
-    elif context.pre_call_config is not None:
-        timeout_seconds = context.pre_call_config.request_timeout_seconds
+    elif context.live_policy is not None:
+        timeout_seconds = context.live_policy.request_timeout_seconds
     else:
         timeout_seconds = PROXY_REQUEST_TIMEOUT_SECONDS
     return CompleteUnitReservation(
@@ -1398,13 +1542,13 @@ def _configure_next_unit_reservation(
 
 
 def _formal_observation_request_guard(
-    config: BenchmarkPreCallConfig,
+    policy: LiveRunPolicy,
 ) -> Callable[[bytes, bytes, int], None]:
     """Freeze one envelope check for every request in a formal collection."""
 
-    input_ceiling = config.formal_input_token_ceiling
+    input_ceiling = policy.input_token_ceiling
     output_ceiling = min(
-        config.formal_output_token_ceiling,
+        policy.output_token_ceiling,
         MAX_PROXY_OUTPUT_TOKENS,
     )
 
@@ -1677,12 +1821,10 @@ def _collection_reservation_limits(
     )
 
 
-def _formal_lane_policy(config: BenchmarkPreCallConfig) -> LaneObservationPolicy:
-    envelope = cast(dict[str, object], config.to_dict()["billing_envelope"])
-    wire = cast(dict[str, object], envelope["wire"])
-    ceilings = cast(dict[str, int], wire["billable_token_ceiling_per_attempt"])
+def _formal_lane_policy(policy: LiveRunPolicy) -> LaneObservationPolicy:
+    ceilings = policy.billable_token_ceiling_per_attempt
     return LaneObservationPolicy(
-        allowed_returned_model_id=config.allowed_returned_model_id,
+        allowed_returned_model_id=policy.requested_model_id,
         require_successful_provider_evidence=True,
         billable_token_ceiling_per_attempt=(
             ceilings["input_tokens"],
@@ -2197,18 +2339,13 @@ def _collect_operational_concurrent(
     raw_llm_factory: Callable[[], LLMClient] | None,
     stop_requested: Callable[[], bool],
 ) -> BenchmarkV2Result:
-    pre_call = context.pre_call_config
-    if pre_call is None or pre_call.collection_execution_contract is None:
+    policy = context.live_policy
+    if policy is None:
         raise BenchmarkInputError(
-            "pre_call_config", "operational concurrency requires a bound contract"
+            "live_policy", "operational concurrency requires a live run policy"
         )
-    contract = CollectionExecutionContract.from_dict(pre_call.collection_execution_contract)
-    worker_count = pre_call.max_in_flight_units
-    if contract.max_in_flight_units != worker_count:
-        raise BenchmarkInputError(
-            "pre_call_config.collection_execution",
-            "worker count differs from the bound execution contract",
-        )
+    worker_count = policy.max_in_flight_units
+    contract = CollectionExecutionContract.preregistered(max_in_flight_units=worker_count)
     client_pairs: tuple[tuple[LLMClient, LLMClient], ...] = ()
     if not resume:
         client_pairs = _create_v2_worker_client_pairs(
@@ -2277,9 +2414,9 @@ def _collect_operational_concurrent(
                     "staging", "rows do not form pure controls plus one schedule prefix"
                 )
 
-            operational_timeout_seconds = pre_call.request_timeout_seconds
+            operational_timeout_seconds = policy.request_timeout_seconds
             operational_attempt_overhead_seconds = (
-                pre_call.recorded_attempt_elapsed_overhead_seconds
+                policy.recorded_attempt_elapsed_overhead_seconds
             )
             reservations = tuple(
                 _scheduled_unit_reservation(
@@ -2310,7 +2447,7 @@ def _collect_operational_concurrent(
                 run_id=context.plan.run_id,
                 unit_reservations=reservations,
                 collection_limits=_collection_reservation_limits(context),
-                lane_policy=_formal_lane_policy(pre_call),
+                lane_policy=_formal_lane_policy(policy),
             )
             try:
                 if stop_requested():
@@ -2365,7 +2502,7 @@ def _collect_operational_concurrent(
                     coordinator,
                     unit_artifact_dir,
                     client_pairs,
-                    _formal_observation_request_guard(pre_call),
+                    _formal_observation_request_guard(policy),
                     stop_requested,
                     progress,
                     committed_count=committed_count,
@@ -2456,7 +2593,7 @@ def collect_benchmark_v2(
     *,
     config: BenchmarkV2Config | None = None,
     preregistration: BenchmarkPreregistration | None = None,
-    pre_call_config: BenchmarkPreCallConfig | None = None,
+    live_policy: LiveRunPolicy | None = None,
     output_dir: Path,
     resume: bool = False,
     agent_llm_factory: Callable[[], LLMClient] | None = None,
@@ -2473,20 +2610,22 @@ def collect_benchmark_v2(
         raise BenchmarkInputError(
             "llm_factory", "agent and raw factories must be supplied together"
         )
-    selected = sum(value is not None for value in (config, preregistration, pre_call_config))
-    if selected != 1:
+    if live_policy is not None and preregistration is None:
+        raise BenchmarkInputError(
+            "collection_config", "a live policy requires the preregistration it runs"
+        )
+    if config is not None and preregistration is not None:
         raise BenchmarkInputError(
             "collection_config",
-            "requires exactly one scalar config, preregistration, or pre-call config",
+            "requires exactly one scalar config or preregistration",
         )
-    if pre_call_config is not None:
-        if type(pre_call_config) is not BenchmarkPreCallConfig:
-            raise BenchmarkInputError("pre_call_config", "must be an exact BenchmarkPreCallConfig")
-        pre_call_config = pre_call_config_from_bytes(pre_call_config.wire_json)
-        require_explicit_spend_confirmation(
-            pre_call_config,
-            authorized_maximum_spend_microunits,
+    if config is None and preregistration is None:
+        raise BenchmarkInputError(
+            "collection_config",
+            "requires exactly one scalar config or preregistration",
         )
+    if live_policy is not None:
+        _require_confirmed_spend(live_policy, authorized_maximum_spend_microunits)
     elif authorized_maximum_spend_microunits is not None:
         raise BenchmarkInputError(
             "authorized_maximum_spend_microunits",
@@ -2494,23 +2633,24 @@ def collect_benchmark_v2(
         )
     if config is not None:
         context = build_benchmark_v2_context(config)
-    elif preregistration is not None:
+    elif live_policy is None:
+        assert preregistration is not None
         context = build_benchmark_v2_preregistered_context(preregistration)
     else:
-        assert pre_call_config is not None
-        context = build_benchmark_v2_live_context(pre_call_config)
+        assert preregistration is not None
+        context = build_benchmark_v2_live_context(preregistration, live_policy)
     if context.config.stub and agent_llm_factory is not None:
         raise BenchmarkInputError("llm_factory", "stub collection does not accept client factories")
     if context.config.stub:
         observation_request_guard: Callable[[bytes, bytes, int], None] | None = None
     else:
-        assert context.pre_call_config is not None
-        observation_request_guard = _formal_observation_request_guard(context.pre_call_config)
+        assert context.live_policy is not None
+        observation_request_guard = _formal_observation_request_guard(context.live_policy)
 
     operational_concurrent = (
         not context.config.stub
-        and context.pre_call_config is not None
-        and context.pre_call_config.collection_execution_contract is not None
+        and context.live_policy is not None
+        and context.live_policy.max_in_flight_units > 1
     )
     if operational_concurrent:
         if agent_llm_factory is None:
@@ -2739,8 +2879,18 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     mode.add_argument("--live", action="store_true", help="collect through the configured proxy")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--prereg", type=Path)
-    parser.add_argument("--pre-call-config", type=Path)
-    parser.add_argument("--authorized-maximum-spend-microunits", type=int)
+    parser.add_argument(
+        "--max-spend-microunits",
+        type=int,
+        help="ceiling on what this live attempt may spend, in micro-USD",
+    )
+    parser.add_argument(
+        "--confirm-spend",
+        type=int,
+        help="repeat --max-spend-microunits exactly to authorize the attempt",
+    )
+    parser.add_argument("--collection-attempt", type=int)
+    parser.add_argument("--concurrent-units", type=int)
     parser.add_argument("--run-id")
     parser.add_argument("--model")
     parser.add_argument("--seed", type=int)
@@ -2788,8 +2938,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         or args.live
         or args.resume
         or args.prereg is not None
-        or args.pre_call_config is not None
-        or args.authorized_maximum_spend_microunits is not None
+        or args.max_spend_microunits is not None
+        or args.confirm_spend is not None
+        or args.collection_attempt is not None
+        or args.concurrent_units is not None
     ):
         parser.error("replay flags cannot be combined with collection mode flags")
     if not replay and not (args.stub or args.live):
@@ -2808,20 +2960,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.sign_flip_seed,
         args.sign_flip_draws,
     )
-    if args.stub and args.pre_call_config is not None:
-        parser.error("--stub cannot be combined with --pre-call-config")
-    if args.stub and args.authorized_maximum_spend_microunits is not None:
-        parser.error("--stub cannot be combined with spend authorization")
-    if args.live and args.prereg is not None:
-        parser.error("--live cannot be combined with --prereg")
-    if args.live and args.pre_call_config is None and not replay:
-        parser.error("--live requires --pre-call-config")
-    if args.live and args.authorized_maximum_spend_microunits is None and not replay:
-        parser.error("--live requires --authorized-maximum-spend-microunits")
+    live_values = (
+        args.max_spend_microunits,
+        args.confirm_spend,
+        args.collection_attempt,
+        args.concurrent_units,
+    )
+    if args.stub and any(value is not None for value in live_values):
+        parser.error("--stub cannot be combined with live collection controls")
+    if args.live and not replay:
+        if args.prereg is None:
+            parser.error("--live requires --prereg")
+        if args.max_spend_microunits is None or args.confirm_spend is None:
+            parser.error("--live requires --max-spend-microunits and --confirm-spend")
     if args.stub and args.prereg is not None and any(value is not None for value in scalar_values):
         parser.error("--prereg cannot be combined with scalar collection controls")
     if args.live and any(value is not None for value in scalar_values):
-        parser.error("--pre-call-config cannot be combined with scalar collection controls")
+        parser.error("--live cannot be combined with scalar collection controls")
 
     try:
         if replay:
@@ -2840,18 +2995,28 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         elif args.prereg is not None:
             preregistration = preregistration_from_bytes(args.prereg.read_bytes())
+            policy = (
+                None
+                if not args.live
+                else LiveRunPolicy(
+                    max_spend_microunits=args.max_spend_microunits,
+                    confirmed_spend_microunits=args.confirm_spend,
+                    collection_attempt=(
+                        1 if args.collection_attempt is None else args.collection_attempt
+                    ),
+                    max_in_flight_units=(
+                        1 if args.concurrent_units is None else args.concurrent_units
+                    ),
+                )
+            )
             result = collect_benchmark_v2(
                 preregistration=preregistration,
+                live_policy=policy,
                 output_dir=args.output_dir,
                 resume=args.resume,
-            )
-        elif args.pre_call_config is not None:
-            pre_call = pre_call_config_from_bytes(args.pre_call_config.read_bytes())
-            result = collect_benchmark_v2(
-                pre_call_config=pre_call,
-                output_dir=args.output_dir,
-                resume=args.resume,
-                authorized_maximum_spend_microunits=(args.authorized_maximum_spend_microunits),
+                authorized_maximum_spend_microunits=(
+                    None if policy is None else args.confirm_spend
+                ),
             )
         else:
             result = collect_benchmark_v2(

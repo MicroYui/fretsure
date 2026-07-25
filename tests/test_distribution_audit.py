@@ -164,21 +164,13 @@ def test_sdist_audit_requires_task7_task8_and_task9_evidence_and_exact_sources(
     with pytest.raises(ValueError, match="operational-prereg"):
         _audit_sdist(missing_prereg)
 
-    missing_envelope = tmp_path / "missing-formal-billing-envelope.tar.gz"
+    missing_corpus_builder = tmp_path / "missing-benchmark-corpus-builder.tar.gz"
     _write_test_sdist(
-        missing_envelope,
-        omitted=("docs/experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json"),
+        missing_corpus_builder,
+        omitted="scripts/build_benchmark_corpus.py",
     )
-    with pytest.raises(ValueError, match="formal-billing-envelope"):
-        _audit_sdist(missing_envelope)
-
-    missing_operational_stub_gate = tmp_path / "missing-task9-operational-stub-gate.tar.gz"
-    _write_test_sdist(
-        missing_operational_stub_gate,
-        omitted="scripts/task9_operational_stub_gate.py",
-    )
-    with pytest.raises(ValueError, match="task9_operational_stub_gate"):
-        _audit_sdist(missing_operational_stub_gate)
+    with pytest.raises(ValueError, match="build_benchmark_corpus"):
+        _audit_sdist(missing_corpus_builder)
 
     source_name = next(iter(_licensed_source_files()))
     missing_source = tmp_path / "missing-source.tar.gz"

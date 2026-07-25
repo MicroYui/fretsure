@@ -18,80 +18,52 @@ import fretsure.bench.runner as runner_module
 from fretsure.bench.artifacts import CompleteUnitReservation
 from fretsure.bench.concurrent import CollectionExecutionContract
 from fretsure.bench.contracts import canonical_json_bytes
-from fretsure.bench.precall import BenchmarkPreCallConfig
 from fretsure.bench.preregistration import FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS
 from fretsure.bench.runner import (
     BenchmarkV2Config,
     BenchmarkV2Context,
+    LiveRunPolicy,
     replay_benchmark_v2,
 )
 
+_OPERATIONAL_RUN_ID = "runner-concurrent-operational-test"
 
-def _operational_pre_call() -> BenchmarkPreCallConfig:
-    """Small runtime double carrying the exact frozen operational fields."""
 
-    contract = CollectionExecutionContract.preregistered(
-        max_in_flight_units=FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS
-    ).to_dict()
-    return BenchmarkPreCallConfig(
-        canonical_json_bytes(
-            {
-                "billing_envelope": {
-                    "wire": {
-                        "billable_token_ceiling_per_attempt": {
-                            "cache_creation_input_tokens": 272_000,
-                            "cache_read_input_tokens": 272_000,
-                            "input_tokens": 272_000,
-                            "output_tokens": 128_000,
-                        }
-                    }
-                },
-                "collection_execution": {
-                    "contract": contract,
-                    "request_timeout_seconds": 300.0,
-                },
-                "model": {
-                    "allowed_returned_model_id": "gpt-5.6-sol",
-                    "requested_model_id": "gpt-5.6-sol",
-                },
-                "preregistration": {
-                    "budgets": {
-                        "provider_policy": {
-                            "recorded_attempt_elapsed_overhead_seconds": 10.0,
-                        }
-                    }
-                },
-                "run_id": "runner-concurrent-operational-test",
-                "schema": "benchmark-pre-call-config@0.4.0",
-            }
-        )
+def _operational_policy() -> LiveRunPolicy:
+    """The confirmed policy a four-lane operational collection runs under."""
+
+    return LiveRunPolicy(
+        max_spend_microunits=1_000_000,
+        confirmed_spend_microunits=1_000_000,
+        requested_model_id="gpt-5.6-sol",
+        max_in_flight_units=FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS,
     )
 
 
-def _live_like_context(pre_call: BenchmarkPreCallConfig) -> BenchmarkV2Context:
+def _live_like_context(policy: LiveRunPolicy) -> BenchmarkV2Context:
     base = runner_module.build_benchmark_v2_context(
         BenchmarkV2Config(
             family_count=1,
             bars=1,
             bootstrap_repetitions=11,
             sign_flip_draws=11,
-            requested_model_id=pre_call.requested_model_id,
-            run_id=pre_call.run_id,
+            requested_model_id=policy.requested_model_id,
+            run_id=_OPERATIONAL_RUN_ID,
         )
     )
     provisional = replace(
         base,
         config=replace(base.config, stub=False),
-        requested_model_id=pre_call.requested_model_id,
-        pre_call_config=pre_call,
+        requested_model_id=policy.requested_model_id,
+        live_policy=policy,
     )
     reservations = tuple(
         runner_module._scheduled_unit_reservation(
             provisional,
             index,
-            request_timeout_seconds=pre_call.request_timeout_seconds,
+            request_timeout_seconds=policy.request_timeout_seconds,
             recorded_attempt_elapsed_overhead_seconds=(
-                pre_call.recorded_attempt_elapsed_overhead_seconds
+                policy.recorded_attempt_elapsed_overhead_seconds
             ),
         )
         for index in range(len(provisional.plan.collection_schedule))
@@ -111,11 +83,11 @@ def _live_like_context(pre_call: BenchmarkPreCallConfig) -> BenchmarkV2Context:
     parameters = copy.deepcopy(base.manifest.parameters)
     parameters["execution"]["mode"] = "live"  # type: ignore[index]
     parameters["model"] = {
-        "allowed_returned_model_id": pre_call.allowed_returned_model_id,
-        "requested_model_id": pre_call.requested_model_id,
+        "allowed_returned_model_id": policy.requested_model_id,
+        "requested_model_id": policy.requested_model_id,
         "returned_model_rule": "exact_equal",
     }
-    parameters["pre_call"] = pre_call.to_dict()
+    parameters["live"] = policy.to_wire()
     manifest = replace(
         base.manifest,
         stub=False,
@@ -139,7 +111,7 @@ def _install_live_like_context(
     monkeypatch.setattr(
         runner_module,
         "build_benchmark_v2_live_context",
-        lambda _config: context,
+        lambda *_arguments: context,
     )
     monkeypatch.setattr(
         runner_module,
@@ -247,9 +219,9 @@ def _collect(
     resume: bool = False,
     probe: _ConcurrencyProbe | None = None,
 ) -> None:
-    pre_call = context.pre_call_config
-    assert pre_call is not None
-    factory = _factory(pre_call.requested_model_id, created, probe)
+    policy = context.live_policy
+    assert policy is not None
+    factory = _factory(policy.requested_model_id, created, probe)
     with runner_module._deferred_operational_sigint() as stop_requested:
         result = runner_module._collect_operational_concurrent(
             context=context,
@@ -263,8 +235,8 @@ def _collect(
 
 
 def test_operational_unit_reservation_includes_bound_attempt_elapsed_overhead() -> None:
-    pre_call = _operational_pre_call()
-    context = _live_like_context(pre_call)
+    policy = _operational_policy()
+    context = _live_like_context(policy)
     raw_index = next(
         index
         for index, unit in enumerate(context.plan.collection_schedule)
@@ -274,9 +246,9 @@ def test_operational_unit_reservation_includes_bound_attempt_elapsed_overhead() 
     reservation = runner_module._scheduled_unit_reservation(
         context,
         raw_index,
-        request_timeout_seconds=pre_call.request_timeout_seconds,
+        request_timeout_seconds=policy.request_timeout_seconds,
         recorded_attempt_elapsed_overhead_seconds=(
-            pre_call.recorded_attempt_elapsed_overhead_seconds
+            policy.recorded_attempt_elapsed_overhead_seconds
         ),
     )
 
@@ -289,10 +261,10 @@ def test_operational_runner_merges_out_of_order_units_and_rebases_raw_keys(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    pre_call = _operational_pre_call()
-    context = _live_like_context(pre_call)
+    policy = _operational_policy()
+    context = _live_like_context(policy)
     _install_live_like_context(monkeypatch, context)
-    worker_count = pre_call.max_in_flight_units
+    worker_count = policy.max_in_flight_units
     probe = _ConcurrencyProbe(worker_count)
     created: list[_FailingClient] = []
 
@@ -400,8 +372,8 @@ def test_operational_resume_recovers_ready_artifacts_before_main_store_commit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pre_call = _operational_pre_call()
-    context = _live_like_context(pre_call)
+    policy = _operational_policy()
+    context = _live_like_context(policy)
     _install_live_like_context(monkeypatch, context)
     interrupted = tmp_path / "interrupted-ready"
     expected = tmp_path / "expected-ready"
@@ -436,7 +408,7 @@ def test_operational_resume_recovers_ready_artifacts_before_main_store_commit(
         _collect(context, interrupted, first_clients)
 
     artifacts = sorted((interrupted / "staging/concurrent/unit-artifacts").glob("*.json"))
-    assert len(artifacts) == pre_call.max_in_flight_units
+    assert len(artifacts) == policy.max_in_flight_units
     assert all(path.stat().st_size > 0 for path in artifacts)
     assert not (interrupted / "abort-receipt.json").exists()
     assert not (interrupted / "canonical").exists()
@@ -457,8 +429,8 @@ def test_operational_fully_ready_resume_finalizes_without_creating_clients(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pre_call = _operational_pre_call()
-    context = _live_like_context(pre_call)
+    policy = _operational_policy()
+    context = _live_like_context(policy)
     _install_live_like_context(monkeypatch, context)
     interrupted = tmp_path / "interrupted-finalize"
     expected = tmp_path / "expected-finalize"
@@ -496,8 +468,8 @@ def test_operational_sigint_during_main_merge_finishes_atomic_unit_then_resumes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pre_call = _operational_pre_call()
-    context = _live_like_context(pre_call)
+    policy = _operational_policy()
+    context = _live_like_context(policy)
     _install_live_like_context(monkeypatch, context)
     interrupted = tmp_path / "sigint-during-merge"
     expected = tmp_path / "expected-merge"
@@ -540,8 +512,8 @@ def test_operational_sigint_during_mark_ready_finishes_atomic_unit_then_resumes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pre_call = _operational_pre_call()
-    context = _live_like_context(pre_call)
+    policy = _operational_policy()
+    context = _live_like_context(policy)
     _install_live_like_context(monkeypatch, context)
     interrupted = tmp_path / "sigint-during-ready"
     expected = tmp_path / "expected-ready-signal"
@@ -593,8 +565,8 @@ def test_operational_sigint_during_coordinator_create_finishes_setup_then_resume
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pre_call = _operational_pre_call()
-    context = _live_like_context(pre_call)
+    policy = _operational_policy()
+    context = _live_like_context(policy)
     _install_live_like_context(monkeypatch, context)
     interrupted = tmp_path / "sigint-during-coordinator-create"
     expected = tmp_path / "expected-coordinator-create"
@@ -645,8 +617,8 @@ def test_operational_keyboard_interrupt_drains_then_resumes_byte_identically(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pre_call = _operational_pre_call()
-    context = _live_like_context(pre_call)
+    policy = _operational_policy()
+    context = _live_like_context(policy)
     _install_live_like_context(monkeypatch, context)
     interrupted = tmp_path / "interrupted-keyboard"
     expected = tmp_path / "expected-keyboard"
@@ -691,8 +663,8 @@ def test_terminal_concurrent_abort_receipt_binds_complete_lane_audit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pre_call = _operational_pre_call()
-    context = _live_like_context(pre_call)
+    policy = _operational_policy()
+    context = _live_like_context(policy)
     _install_live_like_context(monkeypatch, context)
     output = tmp_path / "terminal-audit"
     store = runner_module.ArtifactStore.create(output, context.manifest)
@@ -701,22 +673,22 @@ def test_terminal_concurrent_abort_receipt_binds_complete_lane_audit(
         runner_module._scheduled_unit_reservation(
             context,
             index,
-            request_timeout_seconds=pre_call.request_timeout_seconds,
+            request_timeout_seconds=policy.request_timeout_seconds,
             recorded_attempt_elapsed_overhead_seconds=(
-                pre_call.recorded_attempt_elapsed_overhead_seconds
+                policy.recorded_attempt_elapsed_overhead_seconds
             ),
         )
         for index in range(len(context.plan.collection_schedule))
     )
-    contract_wire = pre_call.collection_execution_contract
-    assert contract_wire is not None
     coordinator = runner_module.ConcurrentUnitCoordinator.create(
         coordinator_root,
-        CollectionExecutionContract.from_dict(contract_wire),
+        CollectionExecutionContract.preregistered(
+            max_in_flight_units=policy.max_in_flight_units
+        ),
         run_id=context.plan.run_id,
         unit_reservations=reservations,
         collection_limits=runner_module._collection_reservation_limits(context),
-        lane_policy=runner_module._formal_lane_policy(pre_call),
+        lane_policy=runner_module._formal_lane_policy(policy),
     )
     try:
         coordinator.admit_next()

@@ -1,4 +1,3 @@
-import hashlib
 import json
 from dataclasses import replace
 from functools import lru_cache
@@ -13,13 +12,7 @@ from fretsure.agent.arranger import ArrangeGoal
 from fretsure.bench.artifacts import manifest_to_dict
 from fretsure.bench.contracts import canonical_json_bytes
 from fretsure.bench.experiment import CompletedExperimentUnit, ExperimentPlan, ObservationLedger
-from fretsure.bench.precall import (
-    BenchmarkPreCallConfig,
-    PreCallConfigError,
-    build_pre_call_config,
-    current_runtime_identity,
-)
-from fretsure.bench.preregistration import preregistration_from_bytes
+from fretsure.bench.preregistration import BenchmarkPreregistration, preregistration_from_bytes
 from fretsure.bench.report import ArtifactRowBundle, ReplayMode
 from fretsure.bench.runner import (
     MAX_BENCHMARK_BARS,
@@ -27,6 +20,7 @@ from fretsure.bench.runner import (
     BenchmarkInputError,
     BenchmarkV2Config,
     BenchReport,
+    LiveRunPolicy,
     collect_benchmark_v2,
     main,
     replay_benchmark_v2,
@@ -252,43 +246,22 @@ def _canonical_bytes(path: Path) -> dict[str, bytes]:
     return {value.name: value.read_bytes() for value in (path / "canonical").iterdir()}
 
 
+_MAXIMUM_SPEND_MICROUNITS = 1_167_905_640_000
+
+
+def _live_policy(*, input_token_ceiling: int = 272_000) -> LiveRunPolicy:
+    return LiveRunPolicy(
+        max_spend_microunits=_MAXIMUM_SPEND_MICROUNITS,
+        confirmed_spend_microunits=_MAXIMUM_SPEND_MICROUNITS,
+        input_token_ceiling=input_token_ceiling,
+    )
+
+
 @lru_cache
-def _formal_pre_call(*, input_token_ceiling: int = 272_000):
+def _formal_preregistration() -> BenchmarkPreregistration:
     root = Path(__file__).resolve().parents[2]
-    preregistration = preregistration_from_bytes(
+    return preregistration_from_bytes(
         (root / "docs/experiments/2026-07-17-benchmark-v2-prereg.json").read_bytes()
-    )
-    envelope_path = (
-        root
-        / "docs/experiments/2026-07-18-gpt-5.6-sol-formal-billing-envelope.json"
-    )
-    envelope = cast(dict[str, object], json.loads(envelope_path.read_text()))
-    ceilings = cast(
-        dict[str, object], envelope["billable_token_ceiling_per_attempt"]
-    )
-    for field in (
-        "input_tokens",
-        "cache_creation_input_tokens",
-        "cache_read_input_tokens",
-    ):
-        ceilings[field] = input_token_ceiling
-    envelope_bytes = canonical_json_bytes(envelope)
-    pricing_sha256 = cast(str, envelope["pricing_contract_raw_sha256"])
-    return build_pre_call_config(
-        preregistration,
-        collection_attempt=1,
-        execution_git_sha="1" * 40,
-        uv_lock_sha256="2" * 64,
-        analysis_binding_kind="analysis_module_sha256",
-        analysis_code_sha256="3" * 64,
-        runtime_identity=current_runtime_identity(),
-        formal_billing_envelope=envelope,
-        formal_billing_envelope_raw_sha256=hashlib.sha256(envelope_bytes).hexdigest(),
-        cost_status="available",
-        currency="USD",
-        maximum_spend_microunits=1_167_905_640_000,
-        pricing_contract_sha256=pricing_sha256,
-        formal_budget_gate_raw_sha256="4" * 64,
     )
 
 
@@ -314,13 +287,13 @@ def test_live_scalar_config_fails_before_creating_output(tmp_path: Path) -> None
             output_dir=output,
         )
 
-    assert caught.value.field == "pre_call_config"
+    assert caught.value.field == "live_policy"
     assert not output.exists()
 
 
 def test_formal_request_guard_enforces_utf8_plus_256_and_output_ceiling() -> None:
-    pre_call = _formal_pre_call(input_token_ceiling=300)
-    guard = runner_module._formal_observation_request_guard(pre_call)
+    policy = _live_policy(input_token_ceiling=300)
+    guard = runner_module._formal_observation_request_guard(policy)
 
     guard("é".encode() * 20, b"abcd", 16_384)
     with pytest.raises(runner_module.FormalRequestCeilingError) as input_error:
@@ -337,7 +310,8 @@ def test_formal_request_guard_enforces_utf8_plus_256_and_output_ceiling() -> Non
 def test_live_requires_exact_spend_before_client_or_output(
     tmp_path: Path,
 ) -> None:
-    pre_call = _formal_pre_call()
+    preregistration = _formal_preregistration()
+    policy = _live_policy()
     calls = 0
 
     def forbidden() -> ConstantLLM:
@@ -351,7 +325,8 @@ def test_live_requires_exact_spend_before_client_or_output(
         output = tmp_path / f"unauthorized-{index}"
         with pytest.raises(ValueError):
             collect_benchmark_v2(
-                pre_call_config=pre_call,
+                preregistration=preregistration,
+                live_policy=policy,
                 output_dir=output,
                 agent_llm_factory=forbidden,
                 raw_llm_factory=forbidden,
@@ -359,19 +334,21 @@ def test_live_requires_exact_spend_before_client_or_output(
             )
         assert not output.exists()
 
-    forged_wire = pre_call.to_dict()
-    forged_wire["budget"]["cost"]["maximum_spend_microunits"] = 1  # type: ignore[index]
-    forged_wire["billing_envelope"]["raw_sha256"] = "0" * 64  # type: ignore[index]
-    forged = BenchmarkPreCallConfig(canonical_json_bytes(forged_wire))
+    # A policy whose confirmation was bypassed after construction is still
+    # rejected before any client or output node exists.
+    forged = _live_policy()
+    object.__setattr__(forged, "max_spend_microunits", 1)
     forged_output = tmp_path / "forged"
-    with pytest.raises(PreCallConfigError):
+    with pytest.raises(BenchmarkInputError) as forged_error:
         collect_benchmark_v2(
-            pre_call_config=forged,
+            preregistration=preregistration,
+            live_policy=forged,
             output_dir=forged_output,
             agent_llm_factory=forbidden,
             raw_llm_factory=forbidden,
-            authorized_maximum_spend_microunits=1,
+            authorized_maximum_spend_microunits=_MAXIMUM_SPEND_MICROUNITS,
         )
+    assert forged_error.value.field == "authorized_maximum_spend_microunits"
     assert not forged_output.exists()
     assert calls == 0
 
@@ -380,23 +357,23 @@ def test_live_like_collection_is_raw_only_then_two_replays_are_identical(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pre_call = _formal_pre_call()
+    policy = _live_policy()
     base = runner_module.build_benchmark_v2_context(
         replace(
             _v2_config(),
-            requested_model_id=pre_call.requested_model_id,
+            requested_model_id=policy.requested_model_id,
             run_id="task9-live-like-raw-only",
         )
     )
     live_like = replace(
         base,
         config=replace(base.config, stub=False),
-        pre_call_config=pre_call,
+        live_policy=policy,
     )
     monkeypatch.setattr(
         runner_module,
         "build_benchmark_v2_live_context",
-        lambda _config: live_like,
+        lambda *_arguments: live_like,
     )
     created: list[_ClosableFailure] = []
 
@@ -407,11 +384,12 @@ def test_live_like_collection_is_raw_only_then_two_replays_are_identical(
 
     source = tmp_path / "source"
     result = collect_benchmark_v2(
-        pre_call_config=pre_call,
+        preregistration=_formal_preregistration(),
+        live_policy=policy,
         output_dir=source,
         agent_llm_factory=factory,
         raw_llm_factory=factory,
-        authorized_maximum_spend_microunits=pre_call.maximum_spend_microunits,
+        authorized_maximum_spend_microunits=policy.max_spend_microunits,
     )
 
     assert result.report is None
@@ -441,23 +419,23 @@ def test_formal_guard_failure_writes_terminal_abort_receipt_without_observation(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pre_call = _formal_pre_call(input_token_ceiling=256)
+    policy = _live_policy(input_token_ceiling=256)
     base = runner_module.build_benchmark_v2_context(
         replace(
             _v2_config(),
-            requested_model_id=pre_call.requested_model_id,
+            requested_model_id=policy.requested_model_id,
             run_id="task9-guard-abort",
         )
     )
     live_like = replace(
         base,
         config=replace(base.config, stub=False),
-        pre_call_config=pre_call,
+        live_policy=policy,
     )
     monkeypatch.setattr(
         runner_module,
         "build_benchmark_v2_live_context",
-        lambda _config: live_like,
+        lambda *_arguments: live_like,
     )
     clients: list[_ClosableConstant] = []
 
@@ -469,11 +447,12 @@ def test_formal_guard_failure_writes_terminal_abort_receipt_without_observation(
     output = tmp_path / "guard-abort"
     with pytest.raises(runner_module.FormalRequestCeilingError):
         collect_benchmark_v2(
-            pre_call_config=pre_call,
+            preregistration=_formal_preregistration(),
+            live_policy=policy,
             output_dir=output,
             agent_llm_factory=factory,
             raw_llm_factory=factory,
-            authorized_maximum_spend_microunits=pre_call.maximum_spend_microunits,
+            authorized_maximum_spend_microunits=policy.max_spend_microunits,
         )
 
     receipt = json.loads((output / "abort-receipt.json").read_text())
@@ -488,23 +467,23 @@ def test_post_call_row_conversion_failure_writes_terminal_abort_receipt(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pre_call = _formal_pre_call()
+    policy = _live_policy()
     base = runner_module.build_benchmark_v2_context(
         replace(
             _v2_config(),
-            requested_model_id=pre_call.requested_model_id,
+            requested_model_id=policy.requested_model_id,
             run_id="task9-post-call-abort",
         )
     )
     live_like = replace(
         base,
         config=replace(base.config, stub=False),
-        pre_call_config=pre_call,
+        live_policy=policy,
     )
     monkeypatch.setattr(
         runner_module,
         "build_benchmark_v2_live_context",
-        lambda _config: live_like,
+        lambda *_arguments: live_like,
     )
     monkeypatch.setattr(
         runner_module,
@@ -520,11 +499,12 @@ def test_post_call_row_conversion_failure_writes_terminal_abort_receipt(
     output = tmp_path / "post-call-abort"
     with pytest.raises(runner_module.ReportInputError):
         collect_benchmark_v2(
-            pre_call_config=pre_call,
+            preregistration=_formal_preregistration(),
+            live_policy=policy,
             output_dir=output,
             agent_llm_factory=factory,
             raw_llm_factory=factory,
-            authorized_maximum_spend_microunits=pre_call.maximum_spend_microunits,
+            authorized_maximum_spend_microunits=policy.max_spend_microunits,
         )
 
     receipt = json.loads((output / "abort-receipt.json").read_text())
@@ -593,19 +573,25 @@ def test_preregistered_mixed_context_is_self_contained_and_replayable() -> None:
     }
 
 
-def test_formal_context_round_trip_embeds_the_billing_envelope() -> None:
-    pre_call = _formal_pre_call()
+def test_live_context_round_trip_embeds_the_run_policy() -> None:
+    policy = _live_policy()
 
-    context = runner_module.build_benchmark_v2_live_context(pre_call)
+    context = runner_module.build_benchmark_v2_live_context(
+        _formal_preregistration(), policy
+    )
     restored = runner_module.benchmark_v2_context_from_manifest(context.manifest)
 
     assert restored.manifest == context.manifest
-    assert restored.pre_call_config == pre_call
-    embedded = cast(dict[str, object], context.manifest.parameters["pre_call"])
-    envelope = cast(dict[str, object], embedded["billing_envelope"])
-    assert envelope["raw_sha256"] == (
-        "a1969546babcdcbcbf281c682260c38551b2fd12ef382014eb34a79e85df5544"
-    )
+    assert restored.live_policy == policy
+    embedded = cast(dict[str, object], context.manifest.parameters["live"])
+    assert embedded["max_spend_microunits"] == _MAXIMUM_SPEND_MICROUNITS
+    assert embedded["schema"] == "benchmark-live-policy@0.1.0"
+    assert embedded["billable_token_ceiling_per_attempt"] == {
+        "cache_creation_input_tokens": 272_000,
+        "cache_read_input_tokens": 272_000,
+        "input_tokens": 272_000,
+        "output_tokens": 128_000,
+    }
 
 
 def test_v2_client_creation_closes_first_client_when_second_factory_fails() -> None:
@@ -802,16 +788,18 @@ def test_v2_cli_requires_explicit_collection_mode_and_output(tmp_path: Path) -> 
         main(["--output-dir", str(tmp_path / "missing-mode")])
     assert caught.value.code == 2
 
-    with pytest.raises(SystemExit) as missing_pre_call:
-        main(["--live", "--output-dir", str(tmp_path / "missing-pre-call")])
-    assert missing_pre_call.value.code == 2
+    with pytest.raises(SystemExit) as missing_prereg:
+        main(["--live", "--output-dir", str(tmp_path / "missing-prereg")])
+    assert missing_prereg.value.code == 2
 
     with pytest.raises(SystemExit) as wrong_binding:
         main(
             [
                 "--stub",
-                "--pre-call-config",
-                str(tmp_path / "not-read.json"),
+                "--max-spend-microunits",
+                "1",
+                "--confirm-spend",
+                "1",
                 "--output-dir",
                 str(tmp_path / "wrong-binding"),
             ]
@@ -824,12 +812,12 @@ def test_v2_cli_redacts_live_integrity_abort_as_exit_one(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    pre_call_path = tmp_path / "pre-call.json"
-    pre_call_path.write_bytes(b"ignored by fixture")
+    prereg_path = tmp_path / "prereg.json"
+    prereg_path.write_bytes(b"ignored by fixture")
     monkeypatch.setattr(
         runner_module,
-        "pre_call_config_from_bytes",
-        lambda _data: _formal_pre_call(),
+        "preregistration_from_bytes",
+        lambda _data: _formal_preregistration(),
     )
     monkeypatch.setattr(
         runner_module,
@@ -843,9 +831,11 @@ def test_v2_cli_redacts_live_integrity_abort_as_exit_one(
         main(
             [
                 "--live",
-                "--pre-call-config",
-                str(pre_call_path),
-                "--authorized-maximum-spend-microunits",
+                "--prereg",
+                str(prereg_path),
+                "--max-spend-microunits",
+                "1167905640000",
+                "--confirm-spend",
                 "1167905640000",
                 "--output-dir",
                 str(tmp_path / "output"),

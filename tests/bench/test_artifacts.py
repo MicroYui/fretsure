@@ -703,13 +703,8 @@ def test_durable_sink_rechecks_usage_ceiling_during_resume(
     assert cause.field == "journal.provider.output_tokens"
 
 
-@pytest.mark.parametrize(
-    "pre_call_schema",
-    ["benchmark-pre-call-config@0.3.0", "benchmark-pre-call-config@0.4.0"],
-)
 def test_artifact_store_enforces_formal_per_attempt_usage_ceilings(
     tmp_path: Path,
-    pre_call_schema: str,
 ) -> None:
     base = _manifest()
     ceilings = {
@@ -727,9 +722,9 @@ def test_artifact_store_enforces_formal_per_attempt_usage_ceilings(
         limits=base.limits,
         parameters={
             "model": {"allowed_returned_model_id": "requested-model"},
-            "pre_call": {
-                "schema": pre_call_schema,
-                "billing_envelope": {"wire": {"billable_token_ceiling_per_attempt": ceilings}},
+            "live": {
+                "schema": "benchmark-live-policy@0.1.0",
+                "billable_token_ceiling_per_attempt": ceilings,
             },
         },
     )

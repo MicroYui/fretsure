@@ -1249,6 +1249,54 @@ def preregistration_from_bytes(data: object) -> BenchmarkPreregistration:
     return preregistration_from_dict(parsed)
 
 
+def artifact_ceilings(
+    preregistration: BenchmarkPreregistration,
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Return the full-run artifact ceilings and the complete-unit reservation.
+
+    Both are pure arithmetic over ``budgets``, which this module derived from the
+    corpus itself, so the caller gets detached copies rather than a live view.
+    """
+
+    if type(preregistration) is not BenchmarkPreregistration:
+        _fail("preregistration", "must be an exact BenchmarkPreregistration")
+    budgets = cast(dict[str, object], preregistration.to_dict()["budgets"])
+    full = cast(dict[str, object], budgets["full_corpus"])
+    reservation = cast(dict[str, object], budgets["reserve_before_next_scheduled_unit"])
+    provider = cast(dict[str, object], budgets["provider_policy"])
+    wall_ceiling_seconds = cast(int, budgets["recorded_provider_call_elapsed_ceiling_seconds"])
+    maximum = {
+        "max_attempt_reserved_output_tokens": cast(
+            int, full["attempt_reserved_output_tokens"]
+        ),
+        "max_attempts": cast(int, full["maximum_attempts"]),
+        "max_logical_calls": cast(int, full["logical_calls_total"]),
+        "max_requested_output_tokens": cast(int, full["requested_output_tokens_total"]),
+        "max_response_text_bytes": cast(int, full["response_text_bytes"]),
+        "max_transport_response_bytes": cast(int, full["transport_response_bytes"]),
+        "max_recorded_provider_call_elapsed_microseconds": wall_ceiling_seconds * 1_000_000,
+    }
+    attempts = cast(int, reservation["attempts"])
+    logical_calls = cast(int, reservation["logical_calls"])
+    requested_output_tokens = cast(int, reservation["requested_output_tokens"])
+    retry_backoff = cast(list[float], provider["retry_backoff_seconds"])
+    unit_wall_seconds = attempts * (
+        float(cast(float, provider["request_timeout_seconds"]))
+        # The legacy 2026-07-17 protocol predates the recorded-overhead field.
+        + float(cast(float, provider.get("recorded_attempt_elapsed_overhead_seconds", 0.0)))
+    ) + logical_calls * sum(float(value) for value in retry_backoff)
+    unit = {
+        "attempt_reserved_output_tokens": requested_output_tokens * 3,
+        "attempts": attempts,
+        "logical_calls": logical_calls,
+        "requested_output_tokens": requested_output_tokens,
+        "response_text_bytes": cast(int, reservation["response_text_bytes"]),
+        "transport_response_bytes": cast(int, reservation["transport_response_bytes"]),
+        "recorded_provider_call_elapsed_microseconds": int(unit_wall_seconds * 1_000_000),
+    }
+    return maximum, unit
+
+
 def budget_markdown(preregistration: BenchmarkPreregistration) -> str:
     if type(preregistration) is not BenchmarkPreregistration:
         _fail("preregistration", "must be an exact BenchmarkPreregistration")
@@ -1556,6 +1604,7 @@ __all__ = [
     "BenchmarkPreregistration",
     "PreregistrationError",
     "PUBLIC_COMPACT_PROPOSAL_VERSION",
+    "artifact_ceilings",
     "budget_markdown",
     "build_legacy_preregistration",
     "build_preregistration",

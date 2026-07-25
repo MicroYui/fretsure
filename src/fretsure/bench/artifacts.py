@@ -75,12 +75,7 @@ _WAL_DOMAIN = b"fretsure:benchmark-wal@0.1.0\0"
 _ROW_TABLE_DOMAIN = b"fretsure:benchmark-row-table@0.1.0\0"
 _BLOB_TABLE_DOMAIN = b"fretsure:benchmark-blob-table@0.1.0\0"
 _BLOB_DOMAIN = b"fretsure:benchmark-blob@0.1.0\0"
-_FORMAL_PRE_CALL_CONFIG_VERSIONS: Final = frozenset(
-    {
-        "benchmark-pre-call-config@0.3.0",
-        "benchmark-pre-call-config@0.4.0",
-    }
-)
+_LIVE_RUN_POLICY_VERSIONS: Final = frozenset({"benchmark-live-policy@0.1.0"})
 _PROVIDER_USAGE_FIELDS: Final = (
     "input_tokens",
     "output_tokens",
@@ -3669,39 +3664,25 @@ def _manifest_allowed_returned_model_id(manifest: BenchmarkManifest) -> str | No
 def _manifest_billable_token_ceilings(
     manifest: BenchmarkManifest,
 ) -> dict[str, int] | None:
-    """Read a validated live pre-call envelope without importing the cyclic parser."""
+    """Read the live run policy without importing the runner it belongs to."""
 
     if manifest.stub:
         return None
-    pre_call = manifest.parameters.get("pre_call")
-    if pre_call is None:
+    live = manifest.parameters.get("live")
+    if live is None:
         return None
-    if type(pre_call) is not dict:
+    if type(live) is not dict:
         raise _error(
             ArtifactCode.INVALID_INPUT,
-            "manifest.parameters.pre_call",
+            "manifest.parameters.live",
             "must be an exact object or null",
         )
-    pre_call_obj = cast(dict[str, object], pre_call)
-    if pre_call_obj.get("schema") not in _FORMAL_PRE_CALL_CONFIG_VERSIONS:
+    live_obj = cast(dict[str, object], live)
+    if live_obj.get("schema") not in _LIVE_RUN_POLICY_VERSIONS:
         return None
-    billing = pre_call_obj.get("billing_envelope")
-    if type(billing) is not dict:
-        raise _error(
-            ArtifactCode.INVALID_INPUT,
-            "manifest.parameters.pre_call.billing_envelope",
-            "must be an exact object",
-        )
-    wire = cast(dict[str, object], billing).get("wire")
-    if type(wire) is not dict:
-        raise _error(
-            ArtifactCode.INVALID_INPUT,
-            "manifest.parameters.pre_call.billing_envelope.wire",
-            "must be an exact object",
-        )
     return _provider_usage_ceilings(
-        cast(dict[str, object], wire).get("billable_token_ceiling_per_attempt"),
-        ("manifest.parameters.pre_call.billing_envelope.wire.billable_token_ceiling_per_attempt"),
+        live_obj.get("billable_token_ceiling_per_attempt"),
+        "manifest.parameters.live.billable_token_ceiling_per_attempt",
     )
 
 
@@ -3710,10 +3691,10 @@ def _manifest_requires_successful_provider_evidence(
 ) -> bool:
     if manifest.stub:
         return False
-    pre_call = manifest.parameters.get("pre_call")
+    live = manifest.parameters.get("live")
     return (
-        type(pre_call) is dict
-        and cast(dict[str, object], pre_call).get("schema") in _FORMAL_PRE_CALL_CONFIG_VERSIONS
+        type(live) is dict
+        and cast(dict[str, object], live).get("schema") in _LIVE_RUN_POLICY_VERSIONS
     )
 
 

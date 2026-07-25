@@ -265,14 +265,15 @@ uv run fretsure-bench --stub --seed 1 --items 16 --output-dir /tmp/fretsure-stub
 ```
 
 `fretsure-bench --stub` 与 replay 完全离线，并要求新的输出目录。只有集成测试、`--llm` 与
-`fretsure-bench --live --pre-call-config ...` 需要显式本地 LLM 代理（loopback
-`ANTHROPIC_BASE_URL` + 非空 `ANTHROPIC_AUTH_TOKEN`）；live benchmark 还要求 runner-ready、价格与
-attempt-local pre-call 门，并显式重复该 attempt 的精确金额：
+`fretsure-bench --live` 需要显式本地 LLM 代理（loopback
+`ANTHROPIC_BASE_URL` + 非空 `ANTHROPIC_AUTH_TOKEN`）；live benchmark 还要求你把该次 attempt 的
+花费上限精确写两遍——写不出这个数字，就等于没有授权：
 
 ```bash
-uv run fretsure-bench --live --pre-call-config <pre-call.json> \
-  --authorized-maximum-spend-microunits 1167905640000 \
-  --output-dir <fresh-attempt-004>
+uv run fretsure-bench --live --prereg <preregistration.json> \
+  --max-spend-microunits 1167905640000 \
+  --confirm-spend        1167905640000 \
+  --output-dir <fresh-attempt>
 ```
 
 默认 model id 为 `gpt-5.6-sol`，服务端网络 engine 另须 `--allow-proxy`。

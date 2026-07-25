@@ -140,7 +140,6 @@ def _benchmark_extra_smoke(root: Path, wheel: Path) -> None:
         work,
         """
         import importlib.util
-        import hashlib
         from importlib.resources import files
         from pathlib import Path
 
@@ -149,12 +148,6 @@ def _benchmark_extra_smoke(root: Path, wheel: Path) -> None:
         import httpx
         import music21
         from fretsure.bench import runner
-        from fretsure.bench.contracts import canonical_json_bytes
-        from fretsure.bench.precall import (
-            PreCallConfigError,
-            build_pre_call_config,
-            current_runtime_identity,
-        )
         from fretsure.bench.preregistration import preregistration_from_bytes
         from fretsure.bench.public_adapters import arrangement_source_from_pinned_bytes
 
@@ -215,59 +208,20 @@ def _benchmark_extra_smoke(root: Path, wheel: Path) -> None:
                 output_dir=live_output,
             )
         except runner.BenchmarkInputError as error:
-            assert error.field == "pre_call_config"
+            assert error.field == "live_policy"
         else:
-            raise AssertionError("live collection accepted missing pre-call configuration")
+            raise AssertionError("live collection accepted a missing live run policy")
         assert not live_output.exists()
 
-        unpriced_output = Path.cwd() / "unpriced-live-must-not-exist"
-        formal_envelope = {
-            "billable_token_ceiling_per_attempt": {
-                "cache_creation_input_tokens": 272_000,
-                "cache_read_input_tokens": 272_000,
-                "input_tokens": 272_000,
-                "output_tokens": 128_000,
-            },
-            "enforcement": {
-                "input_upper_bound_method": "utf8_bytes_plus_256",
-                "required_before": "before_observation_retry_network",
-            },
-            "output_usage_contract": {
-                "billing_field": "output_tokens",
-                "captured_at_utc": "2026-07-18T09:32:40Z",
-                "includes_non_visible_tokens": True,
-                "maximum_tokens": 128_000,
-                "model_id": "gpt-5.6-sol",
-                "source_model_ref": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
-                "source_token_counting_ref": "https://developers.openai.com/api/docs/guides/token-counting#understand-output-token-counts",
-            },
-            "pricing_contract_raw_sha256": "0" * 64,
-            "schema": "benchmark-formal-billing-envelope@0.2.0",
-            "scope": "formal_collection",
-        }
-        unpriced = build_pre_call_config(
-            preregistration,
-            collection_attempt=1,
-            execution_git_sha="0" * 40,
-            uv_lock_sha256="0" * 64,
-            analysis_binding_kind="wheel_record_sha256",
-            analysis_code_sha256="0" * 64,
-            runtime_identity=current_runtime_identity(),
-            formal_billing_envelope=formal_envelope,
-            formal_billing_envelope_raw_sha256=hashlib.sha256(
-                canonical_json_bytes(formal_envelope)
-            ).hexdigest(),
-        )
         try:
-            runner.collect_benchmark_v2(
-                pre_call_config=unpriced,
-                output_dir=unpriced_output,
+            runner.LiveRunPolicy(
+                max_spend_microunits=1_000,
+                confirmed_spend_microunits=999,
             )
-        except PreCallConfigError as error:
-            assert error.field == "budget.cost"
+        except runner.BenchmarkInputError as error:
+            assert error.field == "confirmed_spend_microunits"
         else:
-            raise AssertionError("live collection accepted an unpriced pre-call declaration")
-        assert not unpriced_output.exists()
+            raise AssertionError("live policy accepted an unconfirmed spend ceiling")
         assert importlib.util.find_spec("anthropic") is not None
         assert importlib.util.find_spec("defusedxml") is not None
         assert importlib.util.find_spec("httpcore") is not None

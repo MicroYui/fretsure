@@ -116,7 +116,9 @@ READY and no active lane remained. The provider returned only the exact requeste
 
 Collection used the pre-call-bound command below; resumes reused the same output
 directory and arguments with `--resume`. Authentication values are intentionally not
-recorded.
+recorded. This command shape no longer exists: the pre-call and budget-gate machinery
+was removed on 2026-07-25, so the run recorded here cannot be reproduced from the
+current tree.
 
 ```bash
 .venv/bin/fretsure-bench \
