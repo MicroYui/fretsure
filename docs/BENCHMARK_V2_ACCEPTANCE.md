@@ -3,6 +3,12 @@
 Date: 2026-07-23
 Status: **TASK 10 COMPLETE; HUMAN AND PUBLIC-REDISTRIBUTION GATES OPEN**
 
+> **Machinery note (2026-07-25).** The pre-call and budget-gate SHA-256 rows
+> below record what attempt-004 actually bound. That mechanism has since been
+> removed: a live run is now authorized by one repeated spend ceiling, and this
+> attempt is not re-runnable from the current tree. The measured results are
+> unaffected.
+
 This receipt separates what the completed benchmark establishes from what remains
 external or human work. A closed software/statistical gate does not turn the oracle
 into human playability evidence, and a completed provider collection does not make the

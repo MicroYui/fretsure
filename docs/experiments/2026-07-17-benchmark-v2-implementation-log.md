@@ -1,5 +1,11 @@
 # Benchmark v2 implementation log
 
+> **HISTORICAL (2026-07-25).** The preregistration byte-equality machinery and
+> the pricing -> billing envelope -> budget gate -> pre-call authorization chain
+> described below were removed from the tree. The digests, artifacts and
+> commands recorded here are evidence of what happened; they are no longer
+> reproducible from the current code. The results themselves stand.
+
 ## 2026-07-17 — Tasks 1–4
 
 - Entry receipts remain the pushed MIDI SHA `46ff8ac070e97422b4aecf5c0f2a22b588a5fda4`

@@ -1,5 +1,11 @@
 # Benchmark v2 — versioned evidence, paired ablations, and honest replay
 
+> **HISTORICAL (2026-07-25).** The preregistration byte-equality machinery and
+> the pricing -> billing envelope -> budget gate -> pre-call authorization chain
+> described below were removed from the tree. The digests, artifacts and
+> commands recorded here are evidence of what happened; they are no longer
+> reproducible from the current code. The results themselves stand.
+
 > **Status (2026-07-23): COMPLETE THROUGH TASK 10; OPEN EXTERNAL GATES REMAIN.** The
 > historical 2026-07-10 Plan 4 remains an implementation record and its numerical
 > tables are not the current baseline. Formal v2 results and acceptance are in
