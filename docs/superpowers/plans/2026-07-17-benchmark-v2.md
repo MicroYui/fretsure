@@ -575,7 +575,7 @@ findings. Exact hashes and exclusions are recorded in the corpus datasheet.
 - `src/fretsure/bench/normalizers.py`
 - `src/fretsure/bench/contamination.py`
 - `scripts/build_benchmark_corpus.py`
-- `data/benchmark/**`
+- `src/fretsure/bench/data/**` (was `data/benchmark/**`)
 - `docs/experiments/benchmark-v2-corpus-datasheet.md`
 - corpus/normalizer/contamination tests
 

@@ -24,8 +24,8 @@ from fretsure.importers.contracts import DEFAULT_LIMITS, ImportCode, ImportFailu
 from fretsure.importers.midi import import_midi_bytes
 
 _ROOT = Path(__file__).resolve().parents[2]
-_CENSUS_PATH = _ROOT / "data" / "benchmark" / "source-census.json"
-_SOURCES_DIR = _ROOT / "data" / "benchmark" / "sources"
+_CENSUS_PATH = _ROOT / "src" / "fretsure" / "bench" / "data" / "source-census.json"
+_SOURCES_DIR = _ROOT / "src" / "fretsure" / "bench" / "data" / "sources"
 
 _EXPECTED = {
     "mutopia-bach-bwv774": {

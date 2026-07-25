@@ -12,7 +12,8 @@ from fretsure.agent.arranger import ArrangeGoal
 from fretsure.bench.artifacts import manifest_to_dict
 from fretsure.bench.contracts import canonical_json_bytes
 from fretsure.bench.experiment import CompletedExperimentUnit, ExperimentPlan, ObservationLedger
-from fretsure.bench.preregistration import BenchmarkPreregistration, preregistration_from_bytes
+from fretsure.bench.frozen_corpus import load_frozen_benchmark_corpus
+from fretsure.bench.preregistration import BenchmarkPreregistration, build_preregistration
 from fretsure.bench.report import ArtifactRowBundle, ReplayMode
 from fretsure.bench.runner import (
     MAX_BENCHMARK_BARS,
@@ -259,10 +260,7 @@ def _live_policy(*, input_token_ceiling: int = 272_000) -> LiveRunPolicy:
 
 @lru_cache
 def _formal_preregistration() -> BenchmarkPreregistration:
-    root = Path(__file__).resolve().parents[2]
-    return preregistration_from_bytes(
-        (root / "docs/experiments/2026-07-17-benchmark-v2-prereg.json").read_bytes()
-    )
+    return build_preregistration(load_frozen_benchmark_corpus())
 
 
 def test_v2_config_rejects_seeds_that_cannot_fit_frozen_report_offsets() -> None:
@@ -533,10 +531,7 @@ def test_stub_rejects_client_factories_before_call_or_output(tmp_path: Path) -> 
 
 
 def test_preregistered_mixed_context_is_self_contained_and_replayable() -> None:
-    root = Path(__file__).resolve().parents[2]
-    preregistration = preregistration_from_bytes(
-        (root / "docs/experiments/2026-07-17-benchmark-v2-prereg.json").read_bytes()
-    )
+    preregistration = _formal_preregistration()
 
     context = runner_module.build_benchmark_v2_preregistered_context(preregistration)
     restored = runner_module.benchmark_v2_context_from_manifest(context.manifest)
@@ -788,9 +783,9 @@ def test_v2_cli_requires_explicit_collection_mode_and_output(tmp_path: Path) -> 
         main(["--output-dir", str(tmp_path / "missing-mode")])
     assert caught.value.code == 2
 
-    with pytest.raises(SystemExit) as missing_prereg:
-        main(["--live", "--output-dir", str(tmp_path / "missing-prereg")])
-    assert missing_prereg.value.code == 2
+    with pytest.raises(SystemExit) as missing_corpus:
+        main(["--live", "--output-dir", str(tmp_path / "missing-corpus")])
+    assert missing_corpus.value.code == 2
 
     with pytest.raises(SystemExit) as wrong_binding:
         main(
@@ -812,12 +807,10 @@ def test_v2_cli_redacts_live_integrity_abort_as_exit_one(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    prereg_path = tmp_path / "prereg.json"
-    prereg_path.write_bytes(b"ignored by fixture")
     monkeypatch.setattr(
         runner_module,
-        "preregistration_from_bytes",
-        lambda _data: _formal_preregistration(),
+        "build_preregistration",
+        lambda _items: _formal_preregistration(),
     )
     monkeypatch.setattr(
         runner_module,
@@ -831,8 +824,7 @@ def test_v2_cli_redacts_live_integrity_abort_as_exit_one(
         main(
             [
                 "--live",
-                "--prereg",
-                str(prereg_path),
+                "--full-corpus",
                 "--max-spend-microunits",
                 "1167905640000",
                 "--confirm-spend",

@@ -10,7 +10,7 @@ secondary stratum contains three pinned works: one OpenScore classical score and
 Mutopia MIDI files. Public and procedural results must be reported separately; the
 three public works are controls, not a representative music benchmark.
 
-The checked-in [source census](../../data/benchmark/source-census.json) is the source
+The checked-in [source census](../../src/fretsure/bench/data/source-census.json) is the source
 of truth for URLs, retrieval date, upstream revisions, hashes, licenses, role maps,
 normalization steps, inclusion decisions, and exclusions. `scripts/build_benchmark_corpus.py`
 reads only that census and the local pinned cache. It does not fetch data.

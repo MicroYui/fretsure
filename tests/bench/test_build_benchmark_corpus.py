@@ -34,8 +34,8 @@ from fretsure.bench.public_adapters import (  # type: ignore[import-untyped]
 )
 
 _ROOT = Path(__file__).resolve().parents[2]
-_CENSUS = _ROOT / "data" / "benchmark" / "source-census.json"
-_SOURCES = _ROOT / "data" / "benchmark" / "sources"
+_CENSUS = _ROOT / "src" / "fretsure" / "bench" / "data" / "source-census.json"
+_SOURCES = _ROOT / "src" / "fretsure" / "bench" / "data" / "sources"
 _SPEC = importlib.util.spec_from_file_location(
     "fretsure_test_build_benchmark_corpus",
     _ROOT / "scripts" / "build_benchmark_corpus.py",

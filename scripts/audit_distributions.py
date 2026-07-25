@@ -17,10 +17,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 PACKAGE_INIT = ROOT / "src" / "fretsure" / "__init__.py"
-SOURCE_CENSUS = ROOT / "data" / "benchmark" / "source-census.json"
-SOURCE_CACHE = ROOT / "data" / "benchmark" / "sources"
-PREREGISTRATION = ROOT / "docs" / "experiments" / "2026-07-18-benchmark-v2-operational-prereg.json"
-BUDGET = ROOT / "docs" / "experiments" / "2026-07-18-benchmark-v2-operational-budget.md"
+SOURCE_CENSUS = ROOT / "src" / "fretsure" / "bench" / "data" / "source-census.json"
+SOURCE_CACHE = ROOT / "src" / "fretsure" / "bench" / "data" / "sources"
 
 BENCHMARK_REQUIREMENTS = (
     "anthropic>=0.40",
@@ -112,11 +110,7 @@ SDIST_EXACT_FILES = (
     "pyproject.toml",
     "uv.lock",
     "src/fretsure/__init__.py",
-    "data/benchmark/source-census.json",
-    "docs/experiments/2026-07-17-benchmark-v2-prereg.json",
-    "docs/experiments/2026-07-17-benchmark-v2-budget.md",
-    "docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json",
-    "docs/experiments/2026-07-18-benchmark-v2-operational-budget.md",
+    "src/fretsure/bench/data/source-census.json",
     "scripts/build_benchmark_corpus.py",
     "scripts/audit_distributions.py",
     "scripts/smoke_distributions.py",
@@ -209,19 +203,6 @@ def _licensed_source_files() -> dict[str, Path]:
     return dict(sorted(result.items()))
 
 
-def _wheel_evidence_files() -> dict[str, Path]:
-    result = {
-        "fretsure/bench/data/source-census.json": SOURCE_CENSUS,
-        "fretsure/bench/data/benchmark-v2-prereg.json": PREREGISTRATION,
-    }
-    for name, path in _licensed_source_files().items():
-        result[f"fretsure/bench/data/sources/{name}"] = path
-    for name, path in result.items():
-        if not path.is_file():
-            raise ValueError(f"wheel evidence source for {name!r} is missing")
-    return result
-
-
 def _assert_safe(names: set[str], *, artifact: str) -> None:
     for name in names:
         parts = Path(name).parts
@@ -252,10 +233,15 @@ def _workspace_runtime_files() -> dict[str, Path]:
         ):
             continue
         result[path.relative_to(ROOT / "src").as_posix()] = path
-    for name, path in _wheel_evidence_files().items():
-        if name in result:
-            raise ValueError(f"wheel evidence destination {name!r} collides with package source")
-        result[name] = path
+    # The census and its pinned sources are package data, so rglob above already
+    # carried them; check they are actually there rather than re-adding them.
+    required = {
+        "fretsure/bench/data/source-census.json",
+        *(f"fretsure/bench/data/sources/{name}" for name in _licensed_source_files()),
+    }
+    missing = sorted(required - set(result))
+    if missing:
+        raise ValueError(f"wheel evidence source is missing: {missing!r}")
     return result
 
 
@@ -354,7 +340,10 @@ def _audit_sdist(path: Path) -> int:
             raise ValueError(f"{path.name}: links are not allowed in the source distribution")
         for relative in SDIST_REQUIRED_FILES:
             _require_suffix(names, relative, artifact=path.name)
-        exact_files = (*SDIST_EXACT_FILES, *(f"data/benchmark/sources/{name}" for name in licensed))
+        exact_files = (
+            *SDIST_EXACT_FILES,
+            *(f"src/fretsure/bench/data/sources/{name}" for name in licensed),
+        )
         for relative in exact_files:
             matching = _matching_members(members, relative)
             if len(matching) != 1:
@@ -362,7 +351,7 @@ def _audit_sdist(path: Path) -> int:
             stream = archive.extractfile(matching[0])
             if stream is None or stream.read() != (ROOT / relative).read_bytes():
                 raise ValueError(f"{path.name}: source evidence bytes differ for {relative!r}")
-        marker = "/data/benchmark/sources/"
+        marker = "/src/fretsure/bench/data/sources/"
         archived_sources = {
             member.name.rsplit("/", 1)[-1]
             for member in members

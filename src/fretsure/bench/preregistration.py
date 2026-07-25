@@ -9,12 +9,8 @@ human-readable budget view.
 from __future__ import annotations
 
 import hashlib
-import math
 from dataclasses import dataclass
 from typing import Final, NoReturn, cast
-
-import numpy as np
-from scipy.stats import binom
 
 import fretsure.agent.arranger as arranger_module
 import fretsure.agent.critic as critic_module
@@ -23,6 +19,7 @@ import fretsure.bench.baselines as baselines_module
 from fretsure.agent.arranger import proposal_output_token_budget
 from fretsure.agent.critic import CRITIC_MAX_TOKENS
 from fretsure.agent.repair import REPAIR_MAX_TOKENS
+from fretsure.agent.trace import TRACE_SCHEMA_VERSION
 from fretsure.bench.artifacts import parse_canonical_json_bytes
 from fretsure.bench.contracts import (
     BENCHMARK_CORPUS_VERSION,
@@ -40,7 +37,6 @@ from fretsure.bench.corpus import (
     corpus_from_dict,
     corpus_sha256,
     corpus_to_dict,
-    datasheet,
     snapshot_corpus,
 )
 from fretsure.bench.experiment import (
@@ -56,13 +52,6 @@ from fretsure.bench.public_adapters import (
     BENCHMARK_PUBLIC_ADAPTER_VERSION,
     BENCHMARK_PUBLIC_ROUTER_VERSION,
 )
-from fretsure.bench.stats import (
-    PowerEstimate,
-    PowerGateStatus,
-    PowerMethod,
-    evaluate_power_gate,
-    wilson_interval,
-)
 from fretsure.importers.score import SCORE_INPUT_VERSION
 from fretsure.llm.client import (
     DEFAULT_PROXY_MODEL,
@@ -70,24 +59,18 @@ from fretsure.llm.client import (
     MAX_PROXY_TEXT_BYTES_PER_TOKEN,
     MAX_PROXY_TRANSPORT_RESPONSE_BYTES,
     PROXY_CONNECT_TIMEOUT_SECONDS,
-    PROXY_REQUEST_TIMEOUT_SECONDS,
 )
 from fretsure.metrics.fidelity import FIDELITY_CHECKER_VERSION
-from fretsure.oracle.input import MAX_SOLVER_WORK_UNITS, ORACLE_INPUT_SCHEMA_VERSION
+from fretsure.oracle.core import CHECKER_VERSION
+from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION
 from fretsure.oracle.profiles import MEDIAN_HAND
 from fretsure.solver.score import (
-    MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS,
-    MAX_SCORE_SOLVER_SEGMENTS,
+    SCORE_SOLVER_VERSION,
 )
 
-FROZEN_BENCHMARK_ORACLE_VERSION: Final = "oracle@0.2.0"
-FROZEN_BENCHMARK_SCORE_SOLVER_VERSION: Final = "score-solver@0.1.0"
-FROZEN_BENCHMARK_TRACE_VERSION: Final = "agent-trace@0.2.0"
-BENCHMARK_PREREGISTRATION_LEGACY_VERSION: Final = "benchmark-preregistration@0.1.0"
-BENCHMARK_PREREGISTRATION_VERSION: Final = "benchmark-preregistration@0.2.0"
+BENCHMARK_PREREGISTRATION_VERSION: Final = "benchmark-preregistration@0.3.0"
 BENCHMARK_PROMPT_CONTRACT_VERSION: Final = "benchmark-prompt-contract@0.1.0"
 BENCHMARK_SCHEDULE_VERSION: Final = "benchmark-experiment-schedule@0.1.0"
-BENCHMARK_POWER_VERSION: Final = "benchmark-power@0.1.0"
 BENCHMARK_COLLECTION_EXECUTION_VERSION: Final = "benchmark-collection-execution@0.1.0"
 PUBLIC_COMPACT_PROPOSAL_VERSION: Final = arranger_module.PROPOSAL_COMPACT_PROTOCOL_VERSION
 
@@ -97,15 +80,11 @@ FORMAL_OPERATIONAL_RECORDED_ELAPSED_CEILING_SECONDS: Final = 51_840_000
 FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS: Final = 4
 
 FORMAL_RUN_ID: Final = "benchmark-v2-formal-20260717"
-PLAN_GIT_SHA: Final = "44927517958ecd3b9868bafb7bfe6133be25cc8e"
-TARGET_PACKAGE_VERSION: Final = "0.6.0"
 SCHEDULE_SEED: Final = 2_026_071_700
 BOOTSTRAP_SEED: Final = 2_026_071_701
 BOOTSTRAP_REPETITIONS: Final = 10_000
 SIGN_FLIP_SEED: Final = 2_026_071_702
 SIGN_FLIP_DRAWS: Final = 100_000
-POWER_SEED: Final = 2_026_071_703
-POWER_REPETITIONS: Final = 100_000
 
 PRIMARY_FAMILY_COUNT: Final = 500
 FULL_CORPUS_COUNT: Final = 503
@@ -113,17 +92,6 @@ TASK5_CORPUS_SHA256: Final = "b4e2a1ed05eb07d82bdea18b9105cdd92b564cf864d8acedaa
 TASK5_SOURCE_CENSUS_SHA256: Final = (
     "aa10f8d60b35d1c687806c0426bf50a2d30488d84b1f23317f72fc7dcceee372"
 )
-TASK5_CORPUS_FILE_SHA256: Final = "be32ceaf3abd0ad027667eb2dc78f08511f4f63bd78ac0e40f9d718dfead1f4c"
-TASK5_DATASHEET_FILE_SHA256: Final = (
-    "88a3863c6c382b3348adbfc08bf23a9a8678e2be5a1a4584d021a4cd36990be8"
-)
-TASK5_SOURCE_CENSUS_FILE_SHA256: Final = (
-    "2c29a3ce7d4d528fecb854e585de44096531bff0c83cd8e7f7ca546fe6efd263"
-)
-TASK5_CONTAMINATION_FILE_SHA256: Final = (
-    "64bcda562f72a0c7867b49521c2430e6be4ea15ab67fef39baba99ba913c75f5"
-)
-
 PUBLIC_PROPOSAL_TOKENS: Final[dict[str, int]] = {
     "public-classical-beethoven-op48-5": 6_464,
     "public-midi-bwv775": 14_304,
@@ -136,18 +104,7 @@ PUBLIC_EVENT_COUNTS: Final[dict[str, int]] = {
 }
 
 _SCHEDULE_DOMAIN = f"fretsure:{BENCHMARK_SCHEDULE_VERSION}\0".encode("ascii")
-_SCHEDULE_DIGEST_DOMAIN = b"fretsure:benchmark-preregistered-schedule@0.1.0\0"
 _PROMPT_DIGEST_DOMAIN = f"fretsure:{BENCHMARK_PROMPT_CONTRACT_VERSION}\0".encode("ascii")
-_POWER_SIMULATION_DOMAIN = b"fretsure:benchmark-repair-power-simulation@0.1.0\0"
-_SEARCH_POWER_DOMAIN = b"fretsure:benchmark-search-power@0.1.0\0"
-# SciPy binomial tails can vary by a few ULPs across platform wheels.  Keep the
-# preregistered bytes stable while still rejecting any material calculation drift.
-_FROZEN_SEARCH_POWER: Final[dict[tuple[int, float, float, float], float]] = {
-    (PRIMARY_FAMILY_COUNT, 0.10, 0.05, 0.025): 0.9412598472387863,
-    (PRIMARY_FAMILY_COUNT, 0.15, 0.05, 0.025): 0.8024095994885648,
-    (PRIMARY_FAMILY_COUNT, 0.20, 0.05, 0.025): 0.6763653639604847,
-}
-_FROZEN_SEARCH_POWER_ABS_TOLERANCE: Final = 2e-15
 
 
 class PreregistrationError(ValueError):
@@ -161,6 +118,41 @@ class PreregistrationError(ValueError):
 
 def _fail(field: str, detail: str) -> NoReturn:
     raise PreregistrationError(field, detail)
+
+
+_EXPECTED_TOP_LEVEL_KEYS: Final = frozenset(
+    {
+        "budgets",
+        "collection_execution",
+        "corpus",
+        "inference",
+        "model_and_prompts",
+        "run_id",
+        "sampling",
+        "schedule",
+        "schema",
+        "versions",
+    }
+)
+
+
+def _object(value: object, field: str, keys: frozenset[str]) -> dict[str, object]:
+    if type(value) is not dict or frozenset(cast(dict[str, object], value)) != keys:
+        _fail(field, "must contain the exact frozen keys")
+    return cast(dict[str, object], value)
+
+
+def _object_of(holder: dict[str, object], field: str) -> dict[str, object]:
+    value = holder.get(field.rsplit(".", 1)[-1])
+    if type(value) is not dict:
+        _fail(field, "must be an exact object")
+    return cast(dict[str, object], value)
+
+
+def _positive_int(value: object, field: str) -> int:
+    if type(value) is not int or value < 0:
+        _fail(field, "must be an exact nonnegative integer")
+    return value
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -223,15 +215,10 @@ def _schedule_wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
             )
         )
         units.extend(round_units)
-    schedule_body: dict[str, object] = {
-        "collection_schedule": units,
-        "item_permutations": list(permutations),
-    }
     return {
         "algorithm": BENCHMARK_SCHEDULE_VERSION,
         "collection_schedule": units,
         "collection_unit_count": len(units),
-        "digest_sha256": _domain_sha256(_SCHEDULE_DIGEST_DOMAIN, schedule_body),
         "item_permutations": list(permutations),
         "schedule_seed": SCHEDULE_SEED,
     }
@@ -428,208 +415,6 @@ def _budget_wire(
     }
 
 
-def _search_power_exact(
-    *, family_count: int, discordance: float, delta: float, alpha: float
-) -> float:
-    if not 0.0 < delta <= discordance <= 1.0:
-        _fail("power.search", "discordance and delta are inconsistent")
-    improved_given_discordance = (discordance + delta) / (2.0 * discordance)
-    power = 0.0
-    for discordant in range(family_count + 1):
-        critical: int | None = None
-        for improved in range(discordant + 1):
-            if float(binom.sf(improved - 1, discordant, 0.5)) < alpha:
-                critical = improved
-                break
-        conditional = (
-            0.0
-            if critical is None
-            else float(binom.sf(critical - 1, discordant, improved_given_discordance))
-        )
-        power += float(binom.pmf(discordant, family_count, discordance)) * conditional
-    frozen = _FROZEN_SEARCH_POWER.get((family_count, discordance, delta, alpha))
-    if frozen is None:
-        return power
-    if not math.isclose(
-        power,
-        frozen,
-        rel_tol=0.0,
-        abs_tol=_FROZEN_SEARCH_POWER_ABS_TOLERANCE,
-    ):
-        _fail("power.search", "calculation differs from the frozen canonical value")
-    return frozen
-
-
-def _repair_power_simulation(*, icc: float) -> dict[str, object]:
-    if not 0.0 <= icc <= 1.0:
-        _fail("power.repair.icc", "must be in 0..1")
-    rng = np.random.Generator(np.random.PCG64(POWER_SEED))
-    batch_size = 256
-    rejected = 0
-    digest = hashlib.sha256()
-    digest.update(_POWER_SIMULATION_DOMAIN)
-    digest.update(
-        canonical_json_bytes(
-            {
-                "alpha": 0.025,
-                "batch_size": batch_size,
-                "candidates_per_family": EXPERIMENT_N_SAMPLES,
-                "family_count": PRIMARY_FAMILY_COUNT,
-                "icc": icc,
-                "p_positive": 0.55,
-                "repetitions": POWER_REPETITIONS,
-                "seed": POWER_SEED,
-            }
-        )
-    )
-    log_alpha = math.log(0.025)
-    completed = 0
-    while completed < POWER_REPETITIONS:
-        current = min(batch_size, POWER_REPETITIONS - completed)
-        common = rng.random((current, PRIMARY_FAMILY_COUNT)) < icc
-        shared = np.where(
-            rng.random((current, PRIMARY_FAMILY_COUNT)) < 0.55,
-            10,
-            -10,
-        ).astype(np.int16)
-        independent_positive = np.count_nonzero(
-            rng.random((current, PRIMARY_FAMILY_COUNT, EXPERIMENT_N_SAMPLES)) < 0.55,
-            axis=2,
-        )
-        independent = (2 * independent_positive - EXPERIMENT_N_SAMPLES).astype(np.int16)
-        family_sums = np.where(common, shared, independent).astype("<i2", copy=False)
-        observed = family_sums.astype(np.int64).sum(axis=1)
-        squared = (family_sums.astype(np.int64) ** 2).sum(axis=1)
-        # For the exact weighted family sign-flip tail, Hoeffding gives
-        # p <= exp(-T^2/(2*sum(w_i^2))).  Counting only certified rejections is
-        # therefore a conservative lower bound on the power of that same test.
-        eligible = (observed > 0) & (squared > 0)
-        log_bound = np.zeros(current, dtype=np.float64)
-        log_bound[eligible] = -(observed[eligible].astype(np.float64) ** 2) / (
-            2.0 * squared[eligible]
-        )
-        certified = eligible & (log_bound < log_alpha)
-        rejected += int(np.count_nonzero(certified))
-        digest.update(family_sums.tobytes(order="C"))
-        digest.update(certified.astype(np.uint8).tobytes(order="C"))
-        completed += current
-    estimate = rejected / POWER_REPETITIONS
-    mc_se = math.sqrt(estimate * (1.0 - estimate) / POWER_REPETITIONS)
-    interval = wilson_interval(rejected, POWER_REPETITIONS).interval
-    if interval is None:  # pragma: no cover - positive fixed repetitions
-        raise AssertionError("simulation interval must be available")
-    return {
-        "certified_rejections": rejected,
-        "estimate": estimate,
-        "estimate_kind": "conservative_lower_bound_for_exact_family_sign_flip",
-        "icc": icc,
-        "mc_se": mc_se,
-        "repetitions": POWER_REPETITIONS,
-        "seed": POWER_SEED,
-        "simulation_sha256": digest.hexdigest(),
-        "wilson_95": {"lower": interval.lower, "upper": interval.upper},
-    }
-
-
-_FROZEN_POWER_CACHE: dict[str, object] | None = None
-
-
-def _power_wire() -> dict[str, object]:
-    global _FROZEN_POWER_CACHE
-    if _FROZEN_POWER_CACHE is not None:
-        return _FROZEN_POWER_CACHE
-    search_power = _search_power_exact(
-        family_count=PRIMARY_FAMILY_COUNT,
-        discordance=0.15,
-        delta=0.05,
-        alpha=0.025,
-    )
-    repair = _repair_power_simulation(icc=0.25)
-    repair_power = cast(float, repair["estimate"])
-    estimates = (
-        PowerEstimate(
-            "repair_joint",
-            PRIMARY_FAMILY_COUNT,
-            0.025,
-            repair_power,
-            PowerMethod.SIMULATION,
-            "repair-common-shock-rademacher@0.1.0",
-        ),
-        PowerEstimate(
-            "search_best4_joint",
-            PRIMARY_FAMILY_COUNT,
-            0.025,
-            search_power,
-            PowerMethod.EXACT,
-            "search-mcnemar-multinomial@0.1.0",
-        ),
-    )
-    gate = evaluate_power_gate(
-        estimates,
-        required_tests=("repair_joint", "search_best4_joint"),
-        initial_family_count=PRIMARY_FAMILY_COUNT,
-        target_power=0.8,
-        required_alpha=0.025,
-    )
-    if gate.status is not PowerGateStatus.PASS or gate.selected_family_count != 500:
-        _fail("power.gate", "the frozen 500-family design does not pass")
-    search_sensitivity = [
-        {
-            "discordance": discordance,
-            "power": _search_power_exact(
-                family_count=PRIMARY_FAMILY_COUNT,
-                discordance=discordance,
-                delta=0.05,
-                alpha=0.025,
-            ),
-        }
-        for discordance in (0.10, 0.15, 0.20)
-    ]
-    repair_sensitivity = [_repair_power_simulation(icc=icc) for icc in (0.10, 0.25, 0.40)]
-    search_contract = {
-        "alpha": 0.025,
-        "delta": 0.05,
-        "discordance": 0.15,
-        "family_count": PRIMARY_FAMILY_COUNT,
-        "improved_probability": 0.10,
-        "method": "exact_mcnemar_multinomial_sum",
-        "power": search_power,
-        "worsened_probability": 0.05,
-    }
-    result: dict[str, object] = {
-        "gate": {
-            "minimum_power": gate.minimum_power,
-            "per_test_alpha": gate.per_test_alpha,
-            "required_tests": list(gate.required_tests),
-            "selected_family_count": gate.selected_family_count,
-            "status": gate.status.value,
-            "target_power": gate.target_power,
-        },
-        "initial_family_count": PRIMARY_FAMILY_COUNT,
-        "repair": {
-            "alpha": 0.025,
-            "candidates_per_family": EXPERIMENT_N_SAMPLES,
-            "dgp": "repair-common-shock-rademacher@0.1.0",
-            "family_delta_mean": 0.10,
-            "frozen_simulation": repair,
-            "icc": 0.25,
-            "p_positive": 0.55,
-            "sensitivity": repair_sensitivity,
-            "test": "one_sided_family_sign_flip",
-        },
-        "schema": BENCHMARK_POWER_VERSION,
-        "search": {
-            **search_contract,
-            "calculation_sha256": _domain_sha256(_SEARCH_POWER_DOMAIN, search_contract),
-            "dgp": "search-mcnemar-multinomial@0.1.0",
-            "sensitivity": search_sensitivity,
-            "test": "one_sided_exact_mcnemar",
-        },
-    }
-    _FROZEN_POWER_CACHE = result
-    return result
-
-
 def _prompt_contract(
     stage: str,
     system_prompt_sha256: str,
@@ -717,149 +502,39 @@ def _prompt_wire() -> list[dict[str, object]]:
     ]
 
 
-def _ordered_bindings(corpus_wire: dict[str, object]) -> list[dict[str, object]]:
-    raw_items = corpus_wire.get("items")
-    if type(raw_items) is not list:
-        _fail("corpus.snapshot.items", "must be an exact array")
-    result: list[dict[str, object]] = []
-    for raw in cast(list[object], raw_items):
-        if type(raw) is not dict:
-            _fail("corpus.snapshot.items", "must contain exact objects")
-        entry = cast(dict[str, object], raw)
-        item = entry.get("item")
-        if type(item) is not dict:
-            _fail("corpus.snapshot.items.item", "must be an exact object")
-        value = cast(dict[str, object], item)
-        evidence = cast(dict[str, object], value["evidence"])
-        signature = "+".join(
-            name for name in ("melody", "bass", "harmony") if evidence[name] is True
-        )
-        result.append(
-            {
-                "cluster_id": value["cluster_id"],
-                "evidence_signature": signature,
-                "family_id": value["family_id"],
-                "item_id": value["item_id"],
-                "item_sha256": entry["item_sha256"],
-                "layer": value["layer"],
-                "notegraph_sha256": value["notegraph_sha256"],
-                "polyphony": value["polyphony"],
-                "position": value["position"],
-                "synthetic_complexity": value["synthetic_complexity"],
-            }
-        )
-    return result
+def _wire(items: tuple[CorpusItem, ...]) -> dict[str, object]:
+    """Derive the executable preregistration from the frozen corpus itself."""
 
-
-def _public_bindings(items: tuple[CorpusItem, ...]) -> list[dict[str, object]]:
-    result: list[dict[str, object]] = []
-    for item in items:
-        if not item.layer.startswith("public_"):
-            continue
-        provenance = item.provenance
-        evidence = item.evidence
-        if provenance is None or evidence is None:
-            _fail("corpus.public", "public provenance/evidence is unavailable")
-        result.append(
-            {
-                "evidence_signature": evidence.signature,
-                "item_id": item.item_id,
-                "layer": item.layer,
-                "license": {
-                    "derivatives": provenance.license.derivatives,
-                    "expression": provenance.license.expression,
-                    "provider_submission": provenance.license.provider_submission,
-                    "redistribution": provenance.license.redistribution,
-                },
-                "retrieval_date": provenance.retrieval_date,
-                "root_sha256": provenance.root_sha256,
-                "source_sha256": provenance.source_sha256,
-                "source_url": provenance.source_url,
-            }
-        )
-    return result
-
-
-def _arms_wire() -> list[dict[str, object]]:
-    return [
-        {"arm": "initial", "definition": "iteration_zero_of_each_frozen_target"},
-        {"arm": "terminal", "definition": "terminal_state_after_up_to_eight_repairs"},
-        {"arm": "full", "definition": "terminal_repaired_best_of_4_critic_enabled"},
-        {"arm": "critic_off", "definition": "same_repaired_prefix_selected_without_critic"},
-        {"arm": "critic_on", "definition": "same_repaired_prefix_selected_with_critic"},
-        {"arm": "raw_llm", "definition": "direct_unverified_tab_without_fallback_or_repair"},
-        {"arm": "pure_solver", "definition": "deterministic_once_per_item"},
-        {"arm": "terminal_llm_only", "definition": "fallback_assisted_counts_as_failure"},
-        {
-            "arm": "matched_no_repair",
-            "definition": "largest_preregistered_prefix_fitting_repair_budget",
-        },
-        {
-            "arm": "matched_raw",
-            "definition": "largest_preregistered_prefix_fitting_repair_budget",
-        },
-    ]
-
-
-def _wire(
-    items: tuple[CorpusItem, ...],
-    *,
-    version: str,
-) -> dict[str, object]:
-    if version not in {
-        BENCHMARK_PREREGISTRATION_LEGACY_VERSION,
-        BENCHMARK_PREREGISTRATION_VERSION,
-    }:
-        _fail("schema", "has the wrong version")
-    operational = version == BENCHMARK_PREREGISTRATION_VERSION
-    corpus_wire = cast(dict[str, object], corpus_to_dict(items))
-    corpus_file_sha = _sha256_bytes(canonical_json_bytes(corpus_wire))
-    datasheet_file_sha = _sha256_bytes(canonical_json_bytes(datasheet(items)))
-    if corpus_sha256(items) != TASK5_CORPUS_SHA256 or corpus_file_sha != TASK5_CORPUS_FILE_SHA256:
-        _fail("corpus", "does not match the frozen Task 5 corpus")
-    if datasheet_file_sha != TASK5_DATASHEET_FILE_SHA256:
-        _fail("corpus.datasheet", "does not match the frozen Task 5 datasheet")
+    if corpus_sha256(items) != TASK5_CORPUS_SHA256:
+        _fail("corpus", "does not match the frozen benchmark corpus identity")
     if len(items) != FULL_CORPUS_COUNT:
         _fail("corpus.count", "must equal 503")
     primary = tuple(item for item in items if item.layer == "procedural")
     if len(primary) != PRIMARY_FAMILY_COUNT or len({item.family_id for item in primary}) != 500:
         _fail("corpus.primary", "must contain 500 independent procedural families")
-    preregistration_path = (
-        "docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json"
-        if operational
-        else "docs/experiments/2026-07-17-benchmark-v2-prereg.json"
-    )
     wire: dict[str, object] = {
-        "arms": _arms_wire(),
         "budgets": _budget_wire(
             items,
-            request_timeout_seconds=(
-                FORMAL_OPERATIONAL_REQUEST_TIMEOUT_SECONDS
-                if operational
-                else PROXY_REQUEST_TIMEOUT_SECONDS
-            ),
+            request_timeout_seconds=FORMAL_OPERATIONAL_REQUEST_TIMEOUT_SECONDS,
             recorded_attempt_overhead_seconds=(
-                FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS if operational else None
+                FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS
             ),
             recorded_provider_elapsed_ceiling_seconds=(
-                FORMAL_OPERATIONAL_RECORDED_ELAPSED_CEILING_SECONDS if operational else 5_184_000
+                FORMAL_OPERATIONAL_RECORDED_ELAPSED_CEILING_SECONDS
             ),
         ),
+        "collection_execution": {
+            "admission_order": "collection_schedule_index_ascending",
+            "canonical_merge_order": ("collection_schedule_index_ascending_then_local_call_index"),
+            "client_ownership": "one_agent_and_one_raw_client_per_worker",
+            "completion_order": "not_semantic",
+            "durability": "unit_intent_and_attempt_fsync_before_provider_request",
+            "max_in_flight_units": FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS,
+            "protocol": BENCHMARK_COLLECTION_EXECUTION_VERSION,
+            "resume_boundary": "completed_durable_unit",
+        },
         "corpus": {
-            "artifact_sha256": {
-                "contamination.json": TASK5_CONTAMINATION_FILE_SHA256,
-                "corpus.json": TASK5_CORPUS_FILE_SHA256,
-                "datasheet.json": TASK5_DATASHEET_FILE_SHA256,
-                "source-census.json": TASK5_SOURCE_CENSUS_FILE_SHA256,
-            },
-            "contamination_clean": {
-                "cross_stratum": True,
-                "procedural": True,
-                "real": True,
-            },
             "corpus_sha256": TASK5_CORPUS_SHA256,
-            "counts": datasheet(items),
-            "ordered_bindings": _ordered_bindings(corpus_wire),
             "primary": {
                 "bars": 4,
                 "base_seed": PRIMARY_PROCEDURAL_BASE_SEED,
@@ -868,104 +543,8 @@ def _wire(
                 "layer": "procedural",
                 "split": "test",
             },
-            "public_secondary": _public_bindings(items),
-            "snapshot": corpus_wire,
+            "snapshot": cast(dict[str, object], corpus_to_dict(items)),
             "source_census_sha256": TASK5_SOURCE_CENSUS_SHA256,
-        },
-        "decisions": {
-            "cheap_remedy_guards": {
-                "alternative": "positive",
-                "decision": (
-                    "point>=0.05_and_holm_p<0.05_and_lower97.5>0_else_not_kept_or_inconclusive"
-                ),
-                "holm_family": ["no_repair", "raw_llm"],
-                "sesoi": 0.05,
-            },
-            "critic": {
-                "decision": "HUMAN_BLOCKED_PROBATION",
-                "inferential_p_value": False,
-            },
-            "repair": {
-                "alternative": "positive",
-                "decision": (
-                    "point>=0.10_and_confirmatory_holm_p<0.05_and_lower97.5>0_and_both_guards_pass"
-                ),
-                "sesoi": 0.10,
-            },
-            "search": {
-                "alternative": "positive",
-                "decision": (
-                    "point>=0.05_and_confirmatory_holm_p<0.05_and_lower97.5>0_"
-                    "and_best4_nondominated"
-                ),
-                "sesoi": 0.05,
-                "unknown_cost_decision": "PROBATION_COST_UNKNOWN",
-            },
-        },
-        "evidence_status": "PRE_OUTCOME_SOFTWARE_ONLY",
-        "gate_commands": {
-            "assumed_runner_flags_requiring_alignment": ["--prereg", "--pre-call-config"],
-            "full_replay": [
-                "uv",
-                "run",
-                "fretsure-bench",
-                "--replay-config",
-                "<config>",
-                "--replay-receipt",
-                "<receipt>",
-                "--replay-rows",
-                "<rows>",
-                "--replay-blobs",
-                "<blobs>",
-                "--replay-observations",
-                "<sanitized-observations>",
-                "--output-dir",
-                "<fresh-replay>",
-            ],
-            "live": [
-                "uv",
-                "run",
-                "fretsure-bench",
-                "--live",
-                "--pre-call-config",
-                "<pre-call-config>",
-                "--output-dir",
-                "<fresh-live>",
-            ],
-            "offline_gates": [
-                "uv run pytest -q -m 'not integration'",
-                "uv run pytest -q -m integration",
-                "uv run ruff check .",
-                "uv run mypy --strict src",
-                "uv run mypy --strict scripts/build_benchmark_corpus.py",
-                "uv run mypy --strict scripts/build_benchmark_prereg.py",
-                "uv lock --check",
-                "uv run python scripts/check_markdown_links.py",
-                "git diff --check",
-                "uv build",
-                "uv run python scripts/audit_distributions.py",
-                "uv run python scripts/smoke_distributions.py",
-            ],
-            "stub_a": [
-                "uv",
-                "run",
-                "fretsure-bench",
-                "--stub",
-                "--prereg",
-                preregistration_path,
-                "--output-dir",
-                "<fresh-a>",
-            ],
-            "stub_b": [
-                "uv",
-                "run",
-                "fretsure-bench",
-                "--stub",
-                "--prereg",
-                preregistration_path,
-                "--output-dir",
-                "<fresh-b>",
-            ],
         },
         "inference": {
             "binary_intervals": ["wilson_95", "clopper_pearson_95"],
@@ -986,33 +565,6 @@ def _wire(
                 "seed": SIGN_FLIP_SEED,
             },
         },
-        "itt_missingness": {
-            "binary_denominator": "all_structurally_applicable_scheduled_outcomes",
-            "continuous_fidelity": {
-                "conditional": "mean_among_scored_structurally_applicable_outcomes",
-                "failure_inclusive": "zero_for_structurally_applicable_failed_or_unscored_outcomes",
-            },
-            "fallback": {
-                "llm_only_sensitivity": "failure",
-                "primary_end_to_end": "score_valid_fallback_normally_and_tag_fallback_assisted",
-            },
-            "no_tab_or_invalid": "failure_in_every_structurally_applicable_binary_denominator",
-            "orphan_intent": {
-                "abandoned_attempt_analysis": "excluded_in_full",
-                "artifact_requirement": "fresh_output_directory",
-                "authorization": "new_pre_call_config_and_cost_authorization_required",
-                "budget_scope": "single_collection_attempt_nontransferable",
-                "complete_attempt_selection": (
-                    "lowest_numbered_complete_attempt_only_no_replacement_after_complete"
-                ),
-                "formal_experiment_id": "preregistration.run_id",
-                "next_attempt": "strictly_higher_positive_collection_attempt",
-                "partial_outcome_use": "forbidden_for_restart_selection",
-                "run_id_derivation": "<formal_experiment_id>-attempt-{collection_attempt:03d}",
-            },
-            "structural_dimensions": "frozen_from_source_evidence_before_calls",
-            "transport_parse_scoring_failures": "remain_in_itt_denominator",
-        },
         "model_and_prompts": {
             "allowed_returned_model_rule": {
                 "operator": "exact_equal",
@@ -1020,22 +572,6 @@ def _wire(
             },
             "prompts": _prompt_wire(),
             "requested_model": DEFAULT_PROXY_MODEL,
-        },
-        "package_target_version": TARGET_PACKAGE_VERSION,
-        "plan_receipt_git_sha": PLAN_GIT_SHA,
-        "power": _power_wire(),
-        "pre_call_manifest_requirements": {
-            "analysis_binding": (
-                "analysis_module_digest_or_installed_wheel_RECORD_digest_including_"
-                "bound_proposal_raw_protocol_constants"
-            ),
-            "execution_git_sha": (
-                "required_external_clean_runner_ready_gate_value_not_stored_in_prereg"
-            ),
-            "forbidden_runtime_discovery": ["git", "subprocess", "ambient_import_path_inspection"],
-            "prereg_file_sha256": "required_raw_file_digest_not_stored_in_prereg",
-            "required_runtime_fields": ["package", "python", "os", "architecture"],
-            "uv_lock_sha256": "required_from_runner_ready_tree",
         },
         "run_id": FORMAL_RUN_ID,
         "sampling": {
@@ -1050,42 +586,16 @@ def _wire(
             "selection_full": "repaired_best_of_4_critic_enabled",
         },
         "schedule": _schedule_wire(items),
-        "schema": version,
-        "unit_contract": {
-            "candidate_index": "ordered_index_within_one_preregistered_ten_proposal_pool",
-            "independent_unit": "family_id_cluster_id",
-            "public_windows_if_any": "nested_within_original_family_never_new_inferential_units",
-            "repeated_observations": 10,
-            "solver_target": {
-                "aggregate_admitted_segment_search_work_limit": (
-                    MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS
-                ),
-                "full_score_reassembly_gate": "oracle_RED_returns_Infeasible",
-                "long_score_split": "deterministic_complete_onset_frames_only",
-                "maximum_segments": MAX_SCORE_SOLVER_SEGMENTS,
-                "per_segment_solver_work_limit": MAX_SOLVER_WORK_UNITS,
-                "source_event_budget_basis": (
-                    "original_source_notes_plus_chords_before_target_coalescing"
-                ),
-                "unison_coalescing": (
-                    "same_onset_pitch_solver_target_only_source_prompt_fidelity_unchanged"
-                ),
-            },
-        },
+        "schema": BENCHMARK_PREREGISTRATION_VERSION,
         "versions": {
+            "collection_execution": BENCHMARK_COLLECTION_EXECUTION_VERSION,
             "arrangement_unison_coalescer": (arranger_module.ARRANGEMENT_UNISON_COALESCER_VERSION),
             "corpus": BENCHMARK_CORPUS_VERSION,
             "fidelity": FIDELITY_CHECKER_VERSION,
             "manifest": BENCHMARK_MANIFEST_VERSION,
             "notegraph": BENCHMARK_NOTEGRAPH_VERSION,
             "observations": BENCHMARK_OBSERVATIONS_VERSION,
-            # The 2026-07-17 preregistration is an immutable historical
-            # protocol, so these three entries stay pinned to the versions
-            # frozen then.  Current execution still binds its live checker
-            # and score-solver versions through the analysis-contract
-            # digest, and every emitted trace carries its own schema
-            # version.
-            "oracle": FROZEN_BENCHMARK_ORACLE_VERSION,
+            "oracle": CHECKER_VERSION,
             "profile_fingerprint": MEDIAN_HAND.fingerprint,
             "profile_version": MEDIAN_HAND.version,
             "public_adapter": BENCHMARK_PUBLIC_ADAPTER_VERSION,
@@ -1098,24 +608,11 @@ def _wire(
             "report": BENCHMARK_REPORT_VERSION,
             "row": BENCHMARK_ROW_VERSION,
             "score_input": SCORE_INPUT_VERSION,
-            "score_solver_composition": FROZEN_BENCHMARK_SCORE_SOLVER_VERSION,
+            "score_solver_composition": SCORE_SOLVER_VERSION,
             "tab_input": ORACLE_INPUT_SCHEMA_VERSION,
-            "trace": FROZEN_BENCHMARK_TRACE_VERSION,
+            "trace": TRACE_SCHEMA_VERSION,
         },
     }
-    if operational:
-        wire["collection_execution"] = {
-            "admission_order": "collection_schedule_index_ascending",
-            "canonical_merge_order": ("collection_schedule_index_ascending_then_local_call_index"),
-            "client_ownership": "one_agent_and_one_raw_client_per_worker",
-            "completion_order": "not_semantic",
-            "durability": "unit_intent_and_attempt_fsync_before_provider_request",
-            "max_in_flight_units": FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS,
-            "protocol": BENCHMARK_COLLECTION_EXECUTION_VERSION,
-            "resume_boundary": "completed_durable_unit",
-        }
-        versions = cast(dict[str, object], wire["versions"])
-        versions["collection_execution"] = BENCHMARK_COLLECTION_EXECUTION_VERSION
     return wire
 
 
@@ -1140,102 +637,80 @@ class BenchmarkPreregistration:
 
 
 def build_preregistration(items: object) -> BenchmarkPreregistration:
-    snapshots = snapshot_corpus(items)
-    return BenchmarkPreregistration(
-        canonical_json_bytes(_wire(snapshots, version=BENCHMARK_PREREGISTRATION_VERSION))
-    )
-
-
-def build_legacy_preregistration(items: object) -> BenchmarkPreregistration:
-    """Reproduce the immutable pre-amendment Task 7 preregistration."""
+    """Derive the canonical preregistration for one frozen corpus."""
 
     snapshots = snapshot_corpus(items)
-    return BenchmarkPreregistration(
-        canonical_json_bytes(_wire(snapshots, version=BENCHMARK_PREREGISTRATION_LEGACY_VERSION))
-    )
+    return BenchmarkPreregistration(canonical_json_bytes(_wire(snapshots)))
 
 
 def preregistration_from_dict(value: object) -> BenchmarkPreregistration:
+    """Validate the shape and the fields a collection actually consumes.
+
+    This is deliberately structural rather than a byte-for-byte re-derivation.
+    The real integrity proof lives in the runner, which regenerates the schedule
+    from the corpus and rejects any preregistration whose schedule does not
+    match the executable plan.
+    """
+
     if type(value) is not dict:
         _fail("$", "must be an exact object")
     obj = cast(dict[str, object], value)
-    version = obj.get("schema")
-    if version not in {
-        BENCHMARK_PREREGISTRATION_LEGACY_VERSION,
-        BENCHMARK_PREREGISTRATION_VERSION,
-    }:
+    if obj.get("schema") != BENCHMARK_PREREGISTRATION_VERSION:
         _fail("schema", "has the wrong version")
-    expected_top = frozenset(
-        {
-            "arms",
-            "budgets",
-            "corpus",
-            "decisions",
-            "evidence_status",
-            "gate_commands",
-            "inference",
-            "itt_missingness",
-            "model_and_prompts",
-            "package_target_version",
-            "plan_receipt_git_sha",
-            "power",
-            "pre_call_manifest_requirements",
-            "run_id",
-            "sampling",
-            "schedule",
-            "schema",
-            "unit_contract",
-            "versions",
-        }
-    )
-    if version == BENCHMARK_PREREGISTRATION_VERSION:
-        expected_top |= {"collection_execution"}
-    if frozenset(obj) != expected_top:
+    if frozenset(obj) != _EXPECTED_TOP_LEVEL_KEYS:
         _fail("$", "must contain the exact frozen top-level keys")
-    if version == BENCHMARK_PREREGISTRATION_VERSION:
-        budgets = obj.get("budgets")
-        provider = (
-            None
-            if type(budgets) is not dict
-            else cast(dict[str, object], budgets).get("provider_policy")
-        )
-        overhead = (
-            None
-            if type(provider) is not dict
-            else cast(dict[str, object], provider).get("recorded_attempt_elapsed_overhead_seconds")
-        )
-        request_timeout = (
-            None
-            if type(provider) is not dict
-            else cast(dict[str, object], provider).get("request_timeout_seconds")
-        )
-        if (
-            type(request_timeout) is not float
-            or request_timeout != FORMAL_OPERATIONAL_REQUEST_TIMEOUT_SECONDS
-        ):
-            _fail(
-                "budgets.provider_policy.request_timeout_seconds",
-                "must equal the exact operational float",
-            )
-        if (
-            type(overhead) is not float
-            or overhead != FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS
-        ):
-            _fail(
-                "budgets.provider_policy.recorded_attempt_elapsed_overhead_seconds",
-                "must equal the exact operational float",
-            )
-    corpus = obj.get("corpus")
-    if type(corpus) is not dict:
-        _fail("corpus", "must be an exact object")
-    snapshot = cast(dict[str, object], corpus).get("snapshot")
+    corpus = _object(obj["corpus"], "corpus", frozenset({
+        "corpus_sha256",
+        "primary",
+        "snapshot",
+        "source_census_sha256",
+    }))
     try:
-        items = corpus_from_dict(snapshot)
+        items = corpus_from_dict(corpus["snapshot"])
     except ValueError as error:
         raise PreregistrationError("corpus.snapshot", "is not a strict corpus") from error
-    expected = _wire(items, version=version)
-    if obj != expected:
-        _fail("$", "content differs from the frozen deterministic preregistration")
+    if (
+        corpus_sha256(items) != TASK5_CORPUS_SHA256
+        or corpus["corpus_sha256"] != TASK5_CORPUS_SHA256
+    ):
+        _fail("corpus", "does not match the frozen benchmark corpus identity")
+    primary = _object(
+        corpus["primary"],
+        "corpus.primary",
+        frozenset({"bars", "base_seed", "family_count", "generator_version", "layer", "split"}),
+    )
+    for field, holder, name in (
+        ("corpus.primary.bars", primary, "bars"),
+        ("corpus.primary.base_seed", primary, "base_seed"),
+        ("corpus.primary.family_count", primary, "family_count"),
+    ):
+        _positive_int(holder[name], field)
+    inference = cast(dict[str, object], obj["inference"])
+    bootstrap = _object_of(inference, "inference.bootstrap")
+    sign_flip = _object_of(inference, "inference.sign_flip")
+    for field, holder, name in (
+        ("inference.bootstrap.seed", bootstrap, "seed"),
+        ("inference.bootstrap.repetitions", bootstrap, "repetitions"),
+        ("inference.sign_flip.seed", sign_flip, "seed"),
+        ("inference.sign_flip.draws", sign_flip, "draws"),
+    ):
+        _positive_int(holder.get(name), field)
+    schedule = cast(dict[str, object], obj["schedule"])
+    _positive_int(schedule.get("schedule_seed"), "schedule.schedule_seed")
+    _positive_int(schedule.get("collection_unit_count"), "schedule.collection_unit_count")
+    execution = cast(dict[str, object], obj["collection_execution"])
+    _positive_int(
+        execution.get("max_in_flight_units"), "collection_execution.max_in_flight_units"
+    )
+    model = _object(
+        obj["model_and_prompts"],
+        "model_and_prompts",
+        frozenset({"allowed_returned_model_rule", "prompts", "requested_model"}),
+    )
+    if type(model["requested_model"]) is not str or not model["requested_model"]:
+        _fail("model_and_prompts.requested_model", "must be one nonempty string")
+    if type(obj["run_id"]) is not str or not obj["run_id"]:
+        _fail("run_id", "must be one nonempty string")
     return BenchmarkPreregistration(canonical_json_bytes(obj))
 
 
@@ -1297,307 +772,8 @@ def artifact_ceilings(
     return maximum, unit
 
 
-def budget_markdown(preregistration: BenchmarkPreregistration) -> str:
-    if type(preregistration) is not BenchmarkPreregistration:
-        _fail("preregistration", "must be an exact BenchmarkPreregistration")
-    wire = preregistration.to_dict()
-    operational = wire["schema"] == BENCHMARK_PREREGISTRATION_VERSION
-    budget = cast(dict[str, object], wire["budgets"])
-    primary = cast(dict[str, object], budget["primary_procedural"])
-    full = cast(dict[str, object], budget["full_corpus"])
-    primary_calls = cast(dict[str, int], primary["logical_calls_by_stage"])
-    primary_tokens = cast(dict[str, int], primary["requested_output_tokens_by_stage"])
-    full_calls = cast(dict[str, int], full["logical_calls_by_stage"])
-    full_tokens = cast(dict[str, int], full["requested_output_tokens_by_stage"])
-    reservation = cast(dict[str, object], budget["reserve_before_next_scheduled_unit"])
-    prefixes = cast(dict[str, int], budget["matched_control_prefix_counts"])
-    public = cast(list[object], cast(dict[str, object], wire["corpus"])["public_secondary"])
-    public_budget = {
-        cast(str, value["item_id"]): PUBLIC_PROPOSAL_TOKENS[cast(str, value["item_id"])]
-        for value in cast(list[dict[str, object]], public)
-    }
-    primary_call_total = cast(int, primary["logical_calls_total"])
-    primary_token_total = cast(int, primary["requested_output_tokens_total"])
-    primary_attempts = cast(int, primary["maximum_attempts"])
-    primary_reserved = cast(int, primary["attempt_reserved_output_tokens"])
-    primary_response = cast(int, primary["response_text_bytes"])
-    primary_transport = cast(int, primary["transport_response_bytes"])
-    full_call_total = cast(int, full["logical_calls_total"])
-    full_token_total = cast(int, full["requested_output_tokens_total"])
-    full_attempts = cast(int, full["maximum_attempts"])
-    full_reserved = cast(int, full["attempt_reserved_output_tokens"])
-    full_response = cast(int, full["response_text_bytes"])
-    full_transport = cast(int, full["transport_response_bytes"])
-    full_timeout = cast(int, full["provider_timeout_envelope_milliseconds"])
-    full_elapsed_reservation = full_timeout + full_attempts * int(
-        FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS * 1_000
-    )
-    provider_elapsed = cast(
-        int,
-        budget["recorded_provider_call_elapsed_ceiling_seconds"],
-    )
-    reserve_calls = cast(int, reservation["logical_calls"])
-    reserve_attempts = cast(int, reservation["attempts"])
-    reserve_tokens = cast(int, reservation["requested_output_tokens"])
-    reserve_response = cast(int, reservation["response_text_bytes"])
-    reserve_transport = cast(int, reservation["transport_response_bytes"])
-    lines = [
-        "# Benchmark v2 preregistered budget",
-        "",
-        "Date: 2026-07-17<br>",
-        "Status: frozen before proxy outcomes; not collection authorization",
-        "",
-        "The independent primary unit is one procedural family. Ten proposal slots are nested",
-        "repeated observations, not 5,000 independent families. Unknown provider usage and price",
-        "remain unavailable rather than zero.",
-        "",
-        "## Frozen collection shape",
-        "",
-        "- Primary: 500 procedural families; secondary: 3 licensed public works.",
-        "- Ten agent candidates and ten raw-baseline calls per item, temperature `0.8`.",
-        "- Maximum eight repair calls and one conditional critic call per agent candidate.",
-        "- One deterministic pure-solver row per item makes no provider call.",
-        "",
-        "## Primary procedural maximum",
-        "",
-        "| Stage | Logical calls | Requested output tokens |",
-        "|---|---:|---:|",
-    ]
-    for stage in ("proposal", "repair", "critic", "raw"):
-        lines.append(f"| {stage} | {primary_calls[stage]:,} | {primary_tokens[stage]:,} |")
-    lines.extend(
-        [
-            f"| **Total** | **{primary_call_total:,}** | **{primary_token_total:,}** |",
-            "",
-            f"- Provider attempts: `{primary_attempts:,}`.",
-            f"- Attempt-reserved output tokens: `{primary_reserved:,}`.",
-            f"- Bounded response text: `{primary_response:,}` bytes.",
-            f"- Raw transport envelope: `{primary_transport:,}` bytes.",
-            "",
-            "## Full 503-item maximum",
-            "",
-            "| Stage | Logical calls | Requested output tokens |",
-            "|---|---:|---:|",
-        ]
-    )
-    if operational:
-        lines[2] = "Date: 2026-07-18<br>"
-        lines[3] = (
-            "Status: operational amendment before a fresh collection attempt; "
-            "estimands and schedule unchanged"
-        )
-        lines[9:9] = [
-            "## Operational collection amendment",
-            "",
-            (
-                f"- At most `{FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS}` scheduled units may "
-                "be in flight; admission and canonical merge"
-            ),
-            "  remain ordered by the frozen collection schedule.",
-            "- Each formal proxy attempt has a hard `300`-second whole-attempt deadline;",
-            "  pool/connect/TLS/write/read operations are capped by the remaining wall time.",
-            "  Connect inactivity also retains its separate `5`-second cap.",
-            "- Each logical call still permits three attempts with `0.5` / `1.0` second",
-            "  retry backoffs.",
-            "- Each attempt also reserves `10` seconds of recorded elapsed overhead for",
-            "  durable attempt-intent/result fsync and timeout-delivery scheduling.",
-            "- The durable recorded provider-call elapsed ceiling is `51,840,000` seconds,",
-            "  which covers the `51,539,895`-second timeout/overhead full-run envelope.",
-            "- Model, prompts, corpus, schedule, statistical decisions, output-token limits,",
-            "  and pricing contracts are unchanged by this operational amendment.",
-            "",
-        ]
-    for stage in ("proposal", "repair", "critic", "raw"):
-        lines.append(f"| {stage} | {full_calls[stage]:,} | {full_tokens[stage]:,} |")
-    lines.extend(
-        [
-            f"| **Total** | **{full_call_total:,}** | **{full_token_total:,}** |",
-            "",
-            f"- Maximum attempts: `{full_attempts:,}`.",
-            f"- Attempt-reserved output tokens: `{full_reserved:,}`.",
-            f"- Bounded response text: `{full_response:,}` bytes.",
-            f"- Raw transport envelope: `{full_transport:,}` bytes.",
-            f"- Timeout-derived provider envelope: `{full_timeout:,}` ms.",
-            *(
-                [
-                    (
-                        "- Timeout plus recorded attempt-overhead reservation: "
-                        f"`{full_elapsed_reservation:,}` ms."
-                    )
-                ]
-                if operational
-                else []
-            ),
-            (f"- Recorded provider-call elapsed ceiling: `{provider_elapsed:,}` seconds."),
-            "  This sums durable call-result elapsed time; it is not host wall time and",
-            "  excludes local solver, serialization, replay, and report CPU time.",
-            "",
-            "## Lossless public compact proposal contract",
-            "",
-            f"The version `{PUBLIC_COMPACT_PROPOSAL_VERSION}` uses `128 + 32 × source events`,",
-            "with a 16,384-token cap. It changes the wire representation, not the normalized",
-            "notegraph: no event is truncated, and every work remains one inferential family.",
-            "This is a visible-output request/format cap, not a billable `output_tokens` ceiling.",
-            "Provider-reported output usage includes non-visible generated tokens; the corrected",
-            "formal cost contract therefore uses the official `gpt-5.6-sol` maximum of 128,000",
-            "billable output tokens per attempt.",
-            f"Long-score solving admits at most `{MAX_SCORE_SOLVER_SEGMENTS}` bounded searches:",
-            f"`{MAX_SOLVER_WORK_UNITS:,}` estimated work units per admitted segment and",
-            f"`{MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS:,}` across admitted segment searches.",
-            "Rejected oversized preflights and the final full-history oracle are control",
-            "work outside that estimate; they do not authorize another segment search.",
-            "",
-            "| Public item | Events | Proposal/raw tokens |",
-            "|---|---:|---:|",
-        ]
-    )
-    for item_id in (
-        "public-classical-beethoven-op48-5",
-        "public-midi-bwv775",
-        "public-midi-bwv774",
-    ):
-        lines.append(
-            f"| `{item_id}` | {PUBLIC_EVENT_COUNTS[item_id]} | {public_budget[item_id]:,} |"
-        )
-    lines.extend(
-        [
-            "",
-            "## Scheduled-unit reservation and matched controls",
-            "",
-            "Before starting the next preregistered schedule unit, reserve its exact arm",
-            "envelope. The maximum single-unit envelope is the agent arm:",
-            f"`{reserve_calls}` logical calls,",
-            f"`{reserve_attempts}` attempts and `{reserve_tokens:,}` requested output tokens,",
-            f"plus `{reserve_response:,}` response-text bytes and",
-            f"`{reserve_transport:,}` transport bytes.",
-            "An agent+raw pair has a separate 11-call/33-attempt maximum envelope; it is",
-            "not the ArtifactStore atomic unit. Summed schedule-unit envelopes equal the",
-            "full preregistered totals.",
-            "",
-            "Matched no-repair/raw prefix counts across all 503 items:",
-            "",
-        ]
-    )
-    lines.extend(f"- `m={prefix}`: {count} items" for prefix, count in prefixes.items())
-    if operational:
-        billing_correction = [
-            "### Billing-contract and terminal-attempt boundary",
-            "",
-            "The historical 16,384-output contract and attempt-001 gate remain immutable",
-            "audit evidence. Pricing contract v2 and formal envelope v0.2 retain the official",
-            "128,000-token billable-output maximum and the unchanged one-attempt formal",
-            "mechanical maximum of `1,167,905,640,000` micro-USD",
-            "(`$1,167,905.640000`). Attempts 001, 002, and 003 are terminal `INCOMPLETE`",
-            "and must not be resumed or overwritten. Their cumulative known/tight cost is",
-            "`$2.130022 / $804.234022`; adding one complete future formal attempt gives a",
-            "cumulative audit maximum of `$1,168,709.874022`. A fresh attempt-004 requires",
-            "a new pre-call and formal budget gate that bind this operational",
-            "preregistration's raw SHA-256.",
-            "",
-            "## Excluded throughput pilot and ETA reporting",
-            "",
-            "Before formal collection, an analysis-excluded throughput pilot advances through",
-            "`2 → 4 → 8` in-flight units. Each step records success rate, retry rate,",
-            "provider-latency P50/P95, and completed-unit/call throughput. One eight-unit block",
-            "per level is smoke evidence that may reject but never approve eight-way execution.",
-            "Only complete live blocks with identical execution, analysis, lock, pricing, model,",
-            "timeout, and corpus bindings may enter the comparison; stub blocks never qualify.",
-            "Freezing `8` requires at least eight complete blocks (64 units) at both `4` and `8`,",
-            "an independent confirmation, 8/4 unit throughput at least 1.35, call throughput",
-            "at least 1.25, success degradation at most two percentage points, bounded retry and",
-            "P50/P95 degradation, and no new timeout or integrity failure. Missing or boundary",
-            "evidence freezes `4`. Selecting `8` requires regenerating and rebinding this",
-            "operational preregistration before attempt-004.",
-            "",
-            "Before the formal call gate opens, the pilot's observed rates must produce",
-            "optimistic, median, and conservative completion-time estimates. During collection,",
-            "the estimate is updated from actual durable completions after 30 minutes, near each",
-            "additional 5% of scheduled units, and whenever throughput changes materially.",
-            "Canonical `benchmark-progress@0.1.0` JSON lines are appended to the operator log;",
-            "they report the durable row count out of 10,563, current-process and recent",
-            "throughput, stalled state, and all three ETA estimates without entering analysis",
-            "artifacts.",
-            "",
-            "## Durable checkpoint and interruption boundary",
-            "",
-            "Each completed scheduled unit is durably checkpointed with its lane WAL before it",
-            "becomes resumable. A graceful interruption stops new admissions, drains already",
-            "started units, persists their completed-unit checkpoints, and resumes later from the",
-            "next schedule unit after the verified durable prefix. Resume never changes frozen",
-            "schedule order or treats network completion order as semantic.",
-            "The formal invocation runs detached from the interactive Codex session, so a UI or",
-            "client connection loss does not terminate collection. The detached process writes",
-            "its PID and append-only operator log beside the attempt artifacts.",
-            "The wrapper directly `exec`s the repository's `.venv/bin/fretsure-bench` entry",
-            "point; it does not interpose `uv run`, whose supervisor PID does not reliably",
-            "forward `SIGINT` on this host.",
-            "Formal and pilot proxy URLs use numeric loopback (`127.0.0.1` or `::1`), not",
-            "`localhost`, so name resolution cannot sit outside the attempt deadline.",
-            "",
-            "This contract does not promise recovery of a provider request interrupted halfway.",
-            "An admitted unit without a verified durable completion, or a WAL with an",
-            "open attempt, fails closed for operator audit instead of guessing whether the",
-            "provider completed it.",
-            "A terminal concurrent abort writes a canonical sidecar that binds the coordinator",
-            "and every admitted lane WAL; the abort receipt reason embeds that sidecar's raw",
-            "SHA-256 so usage from out-of-order or incomplete lanes remains auditable.",
-            "",
-            "## Runner alignment note",
-            "",
-            "Formal live collection must derive its 300-second request timeout and frozen",
-            "admission limit from the preregistration embedded in the pre-call declaration.",
-            "The declaration and gate must be regenerated after the implementation commit;",
-            "neither artifact generation nor this preregistration grants billing authorization.",
-            "Formal hot paths must remain linear in units and provider observations; the pilot",
-            "must not run against a prefix-dependent implementation whose later units get slower.",
-            "",
-        ]
-    else:
-        billing_correction = [
-            "### 2026-07-18 billing-contract correction",
-            "",
-            "The historical 16,384-output formal envelope and `$538,865.486400` gate",
-            "are preserved because they bound Task 9 attempt-001, but they are not valid",
-            "for another call. Pricing",
-            "contract v2 and formal envelope v0.2 bind the official 128,000-token billable-output",
-            "maximum. The corrected one-attempt formal mechanical maximum is",
-            "`1,167,905,640,000` micro-USD (`$1,167,905.640000`). This is an",
-            "official-contract audit maximum, not a claim that the local proxy enforces a",
-            "pre-consumption spend hard stop. Task 9 attempt-001 is terminal `INCOMPLETE`; a fresh",
-            "attempt-002 requires `benchmark-pre-call-config@0.3.0` and the corrected",
-            "`benchmark-formal-budget-gate@0.3.0`, SHA-256",
-            "`9b50fd8a271a78705e728de8f8cbb24a09e08b24eb2db9122df6a943bdd958f6`.",
-            "",
-            "## Runner alignment note",
-            "",
-            "The frozen command shapes use `--prereg` for stub collection and `--pre-call-config`",
-            "for live collection. Runner work must implement or deliberately map those exact",
-            "flags before either gate is claimed.",
-            "",
-        ]
-    lines.extend(
-        [
-            "",
-            "## External cost gate",
-            "",
-            "`cost_contract_unavailable`: maximum spend is null until a verifiable price contract",
-            "and explicit user authorization exist. This preregistration authorizes no provider",
-            "call. Later pilot and formal configs may lower these ceilings but may not raise",
-            "them without a new preregistration.",
-            "All ceilings apply to one numbered collection attempt and are non-transferable.",
-            "After an orphan, a higher attempt needs a fresh pre-call config and cost",
-            "authorization that accounts for prior consumed spend; partial outcomes cannot",
-            "be inspected to choose whether to restart.",
-            "",
-            *billing_correction,
-        ]
-    )
-    return "\n".join(lines)
-
-
 __all__ = [
     "BENCHMARK_COLLECTION_EXECUTION_VERSION",
-    "BENCHMARK_PREREGISTRATION_LEGACY_VERSION",
     "BENCHMARK_PREREGISTRATION_VERSION",
     "FORMAL_OPERATIONAL_RECORDED_ATTEMPT_OVERHEAD_SECONDS",
     "FORMAL_OPERATIONAL_MAX_IN_FLIGHT_UNITS",
@@ -1605,8 +781,6 @@ __all__ = [
     "PreregistrationError",
     "PUBLIC_COMPACT_PROPOSAL_VERSION",
     "artifact_ceilings",
-    "budget_markdown",
-    "build_legacy_preregistration",
     "build_preregistration",
     "preregistration_from_bytes",
     "preregistration_from_dict",

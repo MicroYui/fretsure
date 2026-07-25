@@ -111,6 +111,7 @@ from fretsure.bench.experiment import (
     run_experiment,
     sample_pair_id,
 )
+from fretsure.bench.frozen_corpus import load_frozen_benchmark_corpus
 from fretsure.bench.generator import GenConfig, generate_leadsheet
 from fretsure.bench.observe import (
     AttemptIntent,
@@ -125,7 +126,7 @@ from fretsure.bench.preregistration import (
     FORMAL_OPERATIONAL_REQUEST_TIMEOUT_SECONDS,
     BenchmarkPreregistration,
     artifact_ceilings,
-    preregistration_from_bytes,
+    build_preregistration,
     preregistration_from_dict,
 )
 from fretsure.bench.progress import ProgressConfig, ProgressReporter
@@ -872,19 +873,7 @@ def _preregistration_context(
     corpus = _exact_object(
         wire["corpus"],
         "preregistration.corpus",
-        frozenset(
-            {
-                "artifact_sha256",
-                "contamination_clean",
-                "corpus_sha256",
-                "counts",
-                "ordered_bindings",
-                "primary",
-                "public_secondary",
-                "snapshot",
-                "source_census_sha256",
-            }
-        ),
+        frozenset({"corpus_sha256", "primary", "snapshot", "source_census_sha256"}),
     )
     items = corpus_from_dict(corpus["snapshot"])
     primary = _exact_object(
@@ -2878,7 +2867,11 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     mode.add_argument("--stub", action="store_true", help="deterministic offline collection")
     mode.add_argument("--live", action="store_true", help="collect through the configured proxy")
     parser.add_argument("--resume", action="store_true")
-    parser.add_argument("--prereg", type=Path)
+    parser.add_argument(
+        "--full-corpus",
+        action="store_true",
+        help="collect the frozen 503-item benchmark corpus",
+    )
     parser.add_argument(
         "--max-spend-microunits",
         type=int,
@@ -2937,7 +2930,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.stub
         or args.live
         or args.resume
-        or args.prereg is not None
+        or args.full_corpus
         or args.max_spend_microunits is not None
         or args.confirm_spend is not None
         or args.collection_attempt is not None
@@ -2969,12 +2962,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.stub and any(value is not None for value in live_values):
         parser.error("--stub cannot be combined with live collection controls")
     if args.live and not replay:
-        if args.prereg is None:
-            parser.error("--live requires --prereg")
+        if not args.full_corpus:
+            parser.error("--live requires --full-corpus")
         if args.max_spend_microunits is None or args.confirm_spend is None:
             parser.error("--live requires --max-spend-microunits and --confirm-spend")
-    if args.stub and args.prereg is not None and any(value is not None for value in scalar_values):
-        parser.error("--prereg cannot be combined with scalar collection controls")
+    if args.full_corpus and any(value is not None for value in scalar_values):
+        parser.error("--full-corpus cannot be combined with scalar collection controls")
     if args.live and any(value is not None for value in scalar_values):
         parser.error("--live cannot be combined with scalar collection controls")
 
@@ -2993,8 +2986,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     else ReplayMode.FULL_RESCORE
                 ),
             )
-        elif args.prereg is not None:
-            preregistration = preregistration_from_bytes(args.prereg.read_bytes())
+        elif args.full_corpus:
+            preregistration = build_preregistration(load_frozen_benchmark_corpus())
             policy = (
                 None
                 if not args.live

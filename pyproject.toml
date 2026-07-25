@@ -4,10 +4,37 @@ version = "0.6.0"
 description = "Deterministic guitar-playability oracle for the Fretsure arrangement agent."
 readme = "README.md"
 requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Fretsure contributors" }]
+keywords = [
+    "guitar",
+    "tablature",
+    "music",
+    "arrangement",
+    "playability",
+    "benchmark",
+    "llm-agent",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
 dependencies = [
     "numpy>=1.25",
     "scipy>=1.11",
 ]
+
+[project.urls]
+Homepage = "https://github.com/MicroYui/fretsure"
+Repository = "https://github.com/MicroYui/fretsure"
+Issues = "https://github.com/MicroYui/fretsure/issues"
+Changelog = "https://github.com/MicroYui/fretsure/commits/main"
 
 [project.optional-dependencies]
 agent = [
@@ -84,13 +111,6 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/fretsure"]
 
-[tool.hatch.build.targets.wheel.force-include]
-"data/benchmark/source-census.json" = "fretsure/bench/data/source-census.json"
-"data/benchmark/sources/mutopia-bach-bwv774.mid" = "fretsure/bench/data/sources/mutopia-bach-bwv774.mid"
-"data/benchmark/sources/mutopia-bach-bwv775.mid" = "fretsure/bench/data/sources/mutopia-bach-bwv775.mid"
-"data/benchmark/sources/openscore-lieder-beethoven-op48-5.mxl" = "fretsure/bench/data/sources/openscore-lieder-beethoven-op48-5.mxl"
-"docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json" = "fretsure/bench/data/benchmark-v2-prereg.json"
-
 [tool.hatch.build.targets.sdist]
 include = [
     "/.github",
@@ -102,7 +122,6 @@ include = [
     "/artifacts/plan6b-money-moment/preflight.json",
     "/artifacts/plan6b-money-moment/unseen-etude.musicxml",
     "/artifacts/plan6b-interoperability/manifest.json",
-    "/data/benchmark",
     "/data/gold",
     "/data/score_corpus",
     "/docs",

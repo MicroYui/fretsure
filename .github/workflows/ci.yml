@@ -58,7 +58,6 @@ jobs:
         run: |
           uv run mypy --strict src
           uv run mypy --strict scripts/build_benchmark_corpus.py
-          uv run mypy --strict scripts/build_benchmark_prereg.py
 
       - name: Core tests
         run: uv run pytest -q -m 'not integration' --ignore=tests/bench

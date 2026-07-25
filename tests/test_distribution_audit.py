@@ -80,7 +80,7 @@ def _write_test_sdist(
     omitted: str | None = None,
     extra_name: str | None = None,
 ) -> None:
-    licensed = tuple(f"data/benchmark/sources/{name}" for name in _licensed_source_files())
+    licensed = tuple(f"src/fretsure/bench/data/sources/{name}" for name in _licensed_source_files())
     relatives = tuple(dict.fromkeys((*_SDIST_REQUIRED_FILES, *_SDIST_EXACT_FILES, *licensed)))
     prefix = f"fretsure_oracle-{_VERSION}"
     with tarfile.open(path, mode="w:gz") as archive:
@@ -149,20 +149,12 @@ def test_wheel_audit_rejects_private_or_formal_run_artifacts(tmp_path: Path, fil
         _audit_wheel(wheel, expected_version=_VERSION)
 
 
-def test_sdist_audit_requires_task7_task8_and_task9_evidence_and_exact_sources(
+def test_sdist_audit_requires_pinned_evidence_and_exact_licensed_sources(
     tmp_path: Path,
 ) -> None:
     complete = tmp_path / f"fretsure_oracle-{_VERSION}.tar.gz"
     _write_test_sdist(complete)
     assert _audit_sdist(complete) > 0
-
-    missing_prereg = tmp_path / "missing-operational-prereg.tar.gz"
-    _write_test_sdist(
-        missing_prereg,
-        omitted="docs/experiments/2026-07-18-benchmark-v2-operational-prereg.json",
-    )
-    with pytest.raises(ValueError, match="operational-prereg"):
-        _audit_sdist(missing_prereg)
 
     missing_corpus_builder = tmp_path / "missing-benchmark-corpus-builder.tar.gz"
     _write_test_sdist(
@@ -174,14 +166,14 @@ def test_sdist_audit_requires_task7_task8_and_task9_evidence_and_exact_sources(
 
     source_name = next(iter(_licensed_source_files()))
     missing_source = tmp_path / "missing-source.tar.gz"
-    _write_test_sdist(missing_source, omitted=f"data/benchmark/sources/{source_name}")
+    _write_test_sdist(missing_source, omitted=f"src/fretsure/bench/data/sources/{source_name}")
     with pytest.raises(ValueError, match="expected one source entry"):
         _audit_sdist(missing_source)
 
     extra_source = tmp_path / "extra-source.tar.gz"
     _write_test_sdist(
         extra_source,
-        extra_name="data/benchmark/sources/not-in-license-census.mid",
+        extra_name="src/fretsure/bench/data/sources/not-in-license-census.mid",
     )
     with pytest.raises(ValueError, match="licensed census"):
         _audit_sdist(extra_source)

@@ -148,16 +148,17 @@ def _benchmark_extra_smoke(root: Path, wheel: Path) -> None:
         import httpx
         import music21
         from fretsure.bench import runner
-        from fretsure.bench.preregistration import preregistration_from_bytes
+        from fretsure.bench.frozen_corpus import load_frozen_benchmark_corpus
+        from fretsure.bench.preregistration import build_preregistration
         from fretsure.bench.public_adapters import arrangement_source_from_pinned_bytes
 
         del anthropic, defusedxml, httpx
         assert music21.__version__ == "10.5.0"
         package_data = files("fretsure.bench").joinpath("data")
         assert package_data.joinpath("source-census.json").is_file()
-        preregistration = preregistration_from_bytes(
-            package_data.joinpath("benchmark-v2-prereg.json").read_bytes()
-        )
+        # The clean install rebuilds the frozen corpus from packaged sources
+        # rather than parsing a shipped snapshot of it.
+        preregistration = build_preregistration(load_frozen_benchmark_corpus())
         frozen = runner.build_benchmark_v2_preregistered_context(preregistration)
         assert len(frozen.plan.items) == 503
         assert len(frozen.plan.collection_schedule) == 10_060

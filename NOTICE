@@ -1,0 +1,29 @@
+Fretsure
+Copyright 2026 Fretsure contributors
+
+This product includes software developed by the Fretsure contributors and
+distributed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party components are not vendored into this repository except for the
+browser and audio assets listed below, which ship inside the wheel so the
+local web workspace works offline:
+
+- alphaTab 1.8.4 — Mozilla Public License 2.0
+  src/fretsure/web_static/licenses/MPL-2.0.txt
+- Bravura music font — SIL Open Font License 1.1
+  src/fretsure/web_static/font/Bravura-OFL.txt
+- Instrument Serif, Manrope — SIL Open Font License 1.1
+  src/fretsure/web_static/licenses/OFL-1.1.txt
+- SONiVOX GM SoundFont — Apache License 2.0
+  src/fretsure/audio_data/LICENSE
+
+Full third-party attribution is recorded in
+src/fretsure/web_static/licenses/THIRD_PARTY_NOTICES.txt.
+
+Python dependencies are resolved from PyPI and pinned by uv.lock rather than
+copied into this repository. The optional `exports` extra pulls in PyGuitarPro
+(LGPL-3.0-only) and ReportLab (BSD); both stay separate installable packages.
+
+The benchmark corpus ships three licensed public-domain or openly licensed
+scores under src/fretsure/bench/data/sources/. Their sources, licences and
+digests are recorded in src/fretsure/bench/data/source-census.json.
