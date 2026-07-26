@@ -144,3 +144,45 @@ it and paying for it in the objective.
 - **Two Sor pieces carry 7- and 11-note simultaneities** (`sorf-op35-no21`,
   `sorf-op45n01`) — rolled chords flattened onto one onset by the converter.
   They become representable once W4 lands.
+
+### W2 — the solver's mirror stops guessing: 15 → 18
+
+`check_shift_speed` propagates a reachable hand-centre interval through every
+release and attack. The solver's incremental admission state summarized the hand
+as a single centre and only compared it when the fretted sets were disjoint, so
+it admitted paths the complete oracle later rejected. Sixteen beam slots filled
+with doomed states and the final gate rejected all of them.
+
+Rather than write a fourth copy of the rules, the propagation was extracted from
+the predicate into shared helpers (`travel_reachable`, `admit_attack_shape`,
+`hand_shape`, `fretted_interval`) and both callers now use them. The extraction
+was verified behaviour-neutral first: the 1,718 negative tabs kept every verdict
+and the gate stayed at 15 before the mirror was rewired.
+
+The same reconciliation closed the barre divergence recorded at baseline.
+`csp.assignment_valid` gained the missing rule, and the pruned DFS now defers a
+completed candidate to that shared definition instead of approximating it
+pairwise — the N-version differential caught the half-done version immediately,
+which is what it is for.
+
+| `Infeasible.reason` | before | after |
+|---|---|---|
+| no candidate passes the final full-oracle gate | 10 | **0** |
+| no non-red extension within beam | 15 | 19 |
+| score-level solver segment budget is exhausted | 8 | 10 |
+| no feasible frame config | 7 | 8 |
+| frame has more attacks than fingers | 3 | 3 |
+
+The whole final-gate bucket is gone. Pieces that used to die there now either
+solve or die inside the beam, and two more hit the segment budget — the exact
+replay costs more work per extension, which is W5's problem.
+
+GREEN 8 → 12, AMBER 7 → 6, accepted 15 → 18. Nothing lost. Worst sustain
+retention 0.921, melody 0.984. Frozen Carcassi reference still 17/21 AMBER.
+The oracle's verdicts on the negative set are unchanged: no rule moved, only the
+solver's ability to see them.
+
+One frozen expectation was re-frozen knowingly:
+`test_decimal_runtime_reproduces_frozen_development_selection` pinned a specific
+index into the GREEN finalist pool, and the pool is whatever the search kept.
+The selection is still a certified GREEN finalist with zero awkward events.

@@ -52,6 +52,26 @@ def assignment_valid(
                 assert pa is not None and pb is not None  # fret > 0 => fretted
                 if euclid(pa, pb) > d_max(assignment[i], assignment[j], hs):
                     return False
+    # A barre presses every string it crosses, so nothing inside its span can be
+    # stopped lower.  check_barre enforces this on an exhibited Tab; enumerating
+    # assignments that violate it only spends the bounded fingering budget on
+    # candidates the oracle will reject.
+    by_finger: dict[int, list[int]] = {}
+    for index, finger in enumerate(assignment):
+        by_finger.setdefault(finger, []).append(index)
+    for finger, indices in by_finger.items():
+        if len(indices) < 2:
+            continue
+        barre_fret = fretted[indices[0]].fret
+        strings = [fretted[index].string for index in indices]
+        low, high = min(strings), max(strings)
+        for index, note in enumerate(fretted):
+            if (
+                assignment[index] != finger
+                and low <= note.string <= high
+                and note.fret < barre_fret
+            ):
+                return False
     return True
 
 
@@ -70,7 +90,11 @@ def feasible_finger_assignment(
 
     def dfs(pos: int) -> bool:
         if pos == n:
-            return True
+            # Pairwise pruning cannot see a barre's string span, which depends on
+            # every note carrying that finger.  Deferring the completed candidate
+            # to the shared definition keeps this fast path and the exhaustive
+            # one from drifting apart.
+            return assignment_valid(fretted, tuple(assign), profile, capo=capo)
         k = order[pos]
         note = fretted[k]
         lo = 1

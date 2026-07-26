@@ -180,4 +180,10 @@ def test_decimal_runtime_reproduces_frozen_development_selection() -> None:
         tuple(finalist.stable_rank for finalist in outcome.green_pool),
     )
 
-    assert selected == 1
+    # The index is a property of the pool, and the pool is whatever the search
+    # kept.  Re-frozen when the incremental mirror became an exact replica of
+    # check_shift_speed: rejecting doomed paths earlier changes which states
+    # survive the beam.  What must hold is that the ranker still moves off the
+    # incumbent to a certified GREEN finalist inside its effort guard.
+    assert selected == 2
+    assert outcome.green_pool[selected].quality.awkward_fingering_events == 0

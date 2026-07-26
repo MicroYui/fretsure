@@ -21,7 +21,6 @@ from enum import StrEnum
 from fractions import Fraction
 from typing import cast
 
-from fretsure.geometry import press_x
 from fretsure.ir import Note
 from fretsure.oracle.core import check_playability
 from fretsure.oracle.input import (
@@ -31,10 +30,14 @@ from fretsure.oracle.input import (
     ensure_solver_input,
 )
 from fretsure.oracle.predicates import (
+    admit_attack_shape,
     check_barre,
     check_finger_count,
     check_finger_monotonic,
     check_fret_span,
+    fretted_interval,
+    hand_shape,
+    travel_reachable,
 )
 from fretsure.oracle.profiles import Profile, optimistic, pessimistic
 from fretsure.solver.candidates import candidates
@@ -118,9 +121,16 @@ _RightHistory = tuple[
 
 @dataclass(frozen=True, slots=True)
 class _ShiftOracleState:
-    center: float
-    active_note_ids: frozenset[int]
-    latest_release: Fraction
+    """The reachable hand-centre interval, exactly as check_shift_speed carries it.
+
+    Earlier revisions summarized the hand as a single centre and only compared
+    it across disjoint fretted sets.  That admitted paths the complete oracle
+    then rejected, so the beam filled with doomed states.  This state and the
+    shared propagation helpers make the mirror exact rather than approximate.
+    """
+
+    reachable: tuple[float, float] | None
+    previous_time: Fraction | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,18 +197,9 @@ def _remap_continuation_oracle(
     """Move prior note ids into a negative namespace before the next segment."""
 
     ids = {index for index, _note in value.active}
-    if value.shift is not None:
-        ids.update(value.shift.active_note_ids)
     remap = {index: -(offset + 1) for offset, index in enumerate(sorted(ids))}
     active = tuple((remap[index], note) for index, note in value.active)
-    shift = value.shift
-    if shift is not None:
-        shift = _ShiftOracleState(
-            shift.center,
-            frozenset(remap[index] for index in shift.active_note_ids),
-            shift.latest_release,
-        )
-    return _IncrementalOracleState(active, value.right_last_used, shift)
+    return _IncrementalOracleState(active, value.right_last_used, value.shift)
 
 
 def _continuation_from_state(state: _State) -> _SolverContinuation:
@@ -384,6 +385,70 @@ def _left_hand_frame_passes(
     )
 
 
+def _advance_shift_state(
+    prior: _IncrementalOracleState,
+    *,
+    onset: Fraction,
+    added: tuple[TabNote, ...],
+    capo: int,
+    profile: Profile,
+    tempo_bpm: float,
+) -> _ShiftOracleState | None:
+    """Replay check_shift_speed's event loop across one frame boundary.
+
+    The predicate propagates a reachable hand-centre interval through every
+    release and attack, clipping to the shape still held at each event.  Doing
+    the same here -- on the same shared helpers -- makes the mirror reject
+    exactly what the oracle would, instead of guessing with a centre distance
+    and letting doomed paths occupy the beam.  ``None`` means the new attack is
+    unreachable, which is a rejection.
+    """
+
+    reachable = None if prior.shift is None else prior.shift.reachable
+    previous_time = None if prior.shift is None else prior.shift.previous_time
+    held = tuple(
+        (note.onset + note.duration, interval)
+        for _index, note in prior.active
+        for interval in (fretted_interval(note, capo=capo, profile=profile),)
+        if interval is not None
+    )
+    attacked = tuple(
+        interval
+        for note in added
+        for interval in (fretted_interval(note, capo=capo, profile=profile),)
+        if interval is not None
+    )
+
+    # Releases inside the gap are events of their own: the predicate clips the
+    # travelling interval against whatever is still held at each of them, so
+    # jumping straight to the new attack would be more permissive.
+    event_times = sorted(
+        {end for end, _interval in held if previous_time is None or previous_time < end <= onset}
+        | ({onset} if attacked else set())
+    )
+    for event_time in event_times:
+        if previous_time is not None:
+            reachable = travel_reachable(
+                reachable,
+                elapsed_seconds=float(event_time - previous_time) * 60.0 / tempo_bpm,
+                held_shape=hand_shape(
+                    [interval for end, interval in held if end > previous_time]
+                ),
+                profile=profile,
+            )
+        if event_time == onset and attacked:
+            shape = hand_shape(
+                [*(interval for end, interval in held if end > onset), *attacked]
+            )
+            assert shape is not None
+            reachable, gap = admit_attack_shape(reachable, shape)
+            if gap > 0.0:
+                return None
+        previous_time = event_time
+
+    return _ShiftOracleState(reachable, previous_time)
+
+
 def _advance_oracle_state(
     prior: _IncrementalOracleState,
     *,
@@ -444,37 +509,16 @@ def _advance_oracle_state(
     for note in added:
         right_history[_RIGHT_RANK[note.right_finger]] = onset
 
-    shift = prior.shift
-    fretted = tuple((index, note) for index, note in active if note.fret > 0)
-    if fretted:
-        xs = tuple(press_x(capo + note.fret, profile.string_length_mm) for _, note in fretted)
-        assert all(value is not None for value in xs)
-        current_center = sum(value for value in xs if value is not None) / len(xs)
-        active_note_ids = frozenset(index for index, _ in fretted)
-        latest_release = max(note.onset + note.duration for _, note in fretted)
-        terminal_xs = tuple(
-            press_x(capo + note.fret, profile.string_length_mm)
-            for _, note in fretted
-            if note.onset + note.duration == latest_release
-        )
-        assert terminal_xs and all(value is not None for value in terminal_xs)
-        terminal_center = sum(value for value in terminal_xs if value is not None) / len(
-            terminal_xs
-        )
-
-        if shift is not None and not (active_note_ids & shift.active_note_ids):
-            available_beats = max(Fraction(0), onset - shift.latest_release)
-            available_seconds = float(available_beats) * 60.0 / tempo_bpm
-            centre_delta = abs(current_center - shift.center)
-            required_distance = max(0.0, centre_delta - 2.0 * profile.reach_mm)
-            allowed_distance = profile.v_shift_mm_per_s * available_seconds
-            if required_distance > allowed_distance:
-                return None
-        shift = _ShiftOracleState(
-            terminal_center,
-            active_note_ids,
-            latest_release,
-        )
+    shift = _advance_shift_state(
+        prior,
+        onset=onset,
+        added=added,
+        capo=capo,
+        profile=profile,
+        tempo_bpm=tempo_bpm,
+    )
+    if shift is None:
+        return None
 
     return _IncrementalOracleState(
         active,

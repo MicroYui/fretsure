@@ -9,6 +9,7 @@ Note indices in diagnostics are global indices into ``tab.notes``.
 """
 
 import heapq
+from collections.abc import Sequence
 from fractions import Fraction
 
 from fretsure.geometry import d_max, euclid, fingertip_xy, press_x
@@ -334,6 +335,96 @@ def _interval_gap(left: _HandInterval, right: _HandInterval) -> float:
     return 0.0
 
 
+def _closest_shape_state(
+    source: _HandInterval, shape: _HandInterval
+) -> _HandInterval:
+    """Return a bounded singleton after an already-diagnosed empty set."""
+    if shape[0] > shape[1]:
+        midpoint = (shape[0] + shape[1]) / 2.0
+        return (midpoint, midpoint)
+    if source[1] < shape[0]:
+        return (shape[0], shape[0])
+    return (shape[1], shape[1])
+
+
+def travel_reachable(
+    reachable: _HandInterval | None,
+    *,
+    elapsed_seconds: float,
+    held_shape: _HandInterval | None,
+    profile: Profile,
+) -> _HandInterval | None:
+    """Expand the reachable hand-centre set for travel, then clip to what is held.
+
+    Shared by :func:`check_shift_speed` and the solver's incremental mirror so
+    the two cannot drift.  Releasing a constraint never widens the state
+    instantaneously and never diagnoses anything.
+    """
+
+    if reachable is None:
+        return None
+    arrival = _expand_interval(reachable, profile.v_shift_mm_per_s * elapsed_seconds)
+    if held_shape is None:
+        return arrival
+    held_reachable = _intersect_intervals(arrival, held_shape)
+    # A valid prior state cannot lose feasibility while its active shape is
+    # unchanged: expansion only widens it.  Projection is needed solely to keep
+    # diagnostics finite after an earlier intrinsically infeasible shape.
+    return (
+        held_reachable
+        if held_reachable is not None
+        else _closest_shape_state(arrival, held_shape)
+    )
+
+
+def admit_attack_shape(
+    reachable: _HandInterval | None,
+    shape: _HandInterval,
+) -> tuple[_HandInterval, float]:
+    """Attack ``shape`` and report the impossible gap in millimetres.
+
+    A positive gap means the hand cannot be where the new attack requires: the
+    shape is intrinsically unreachable, the travel was too far, or both.
+    """
+
+    intrinsic_gap = max(0.0, shape[0] - shape[1])
+    if reachable is None:
+        # The first feasible fretted shape may start at any hand centre.
+        if intrinsic_gap == 0.0:
+            return shape, 0.0
+        midpoint = (shape[0] + shape[1]) / 2.0
+        return (midpoint, midpoint), intrinsic_gap
+    intersection = _intersect_intervals(reachable, shape)
+    if intersection is not None:
+        return intersection, intrinsic_gap
+    if intrinsic_gap == 0.0:
+        travel_gap = _interval_gap(reachable, shape)
+    else:
+        midpoint = (shape[0] + shape[1]) / 2.0
+        travel_gap = _interval_gap(reachable, (midpoint, midpoint))
+    return _closest_shape_state(reachable, shape), max(intrinsic_gap, travel_gap)
+
+
+def hand_shape(intervals: Sequence[_HandInterval]) -> _HandInterval | None:
+    """The feasible hand-centre interval implied by every held fretted note."""
+
+    if not intervals:
+        return None
+    return (max(low for low, _ in intervals), min(high for _, high in intervals))
+
+
+def fretted_interval(
+    note: TabNote, *, capo: int, profile: Profile
+) -> _HandInterval | None:
+    """The hand-centre interval one fretted note allows, or None if open."""
+
+    if note.fret <= 0 or note.duration <= 0:
+        return None
+    x = press_x(capo + note.fret, profile.string_length_mm)
+    assert x is not None  # fret > 0 => not open
+    return (x - profile.reach_mm, x + profile.reach_mm)
+
+
 def check_shift_speed(
     tab: Tab, profile: Profile, *, tempo_bpm: float = 90.0, beats_per_bar: int = 4
 ) -> list[Diagnostic]:
@@ -355,9 +446,12 @@ def check_shift_speed(
 
     attacks: dict[Fraction, list[tuple[int, TabNote]]] = {}
     releases: dict[Fraction, list[int]] = {}
+    intervals: dict[int, _HandInterval] = {}
     for index, note in enumerate(tab.notes):
-        if note.fret <= 0 or note.duration <= 0:
+        interval = fretted_interval(note, capo=tab.capo, profile=profile)
+        if interval is None:
             continue
+        intervals[index] = interval
         attacks.setdefault(note.onset, []).append((index, note))
         releases.setdefault(note.onset + note.duration, []).append(index)
 
@@ -374,17 +468,6 @@ def check_shift_speed(
             return None
         return (-max_lower[0][0], min_upper[0][0])
 
-    def closest_shape_state(
-        source: _HandInterval, shape: _HandInterval
-    ) -> _HandInterval:
-        """Return a bounded singleton after an already-diagnosed empty set."""
-        if shape[0] > shape[1]:
-            midpoint = (shape[0] + shape[1]) / 2.0
-            return (midpoint, midpoint)
-        if source[1] < shape[0]:
-            return (shape[0], shape[0])
-        return (shape[1], shape[1])
-
     out: list[Diagnostic] = []
     reachable: _HandInterval | None = None
     previous_time: Fraction | None = None
@@ -392,27 +475,12 @@ def check_shift_speed(
 
     for event_time in event_times:
         if reachable is not None and previous_time is not None:
-            elapsed_seconds = (
-                float(event_time - previous_time) * 60.0 / tempo_bpm
-            )
-            arrival = _expand_interval(
+            reachable = travel_reachable(
                 reachable,
-                profile.v_shift_mm_per_s * elapsed_seconds,
+                elapsed_seconds=float(event_time - previous_time) * 60.0 / tempo_bpm,
+                held_shape=active_shape(),
+                profile=profile,
             )
-            held_shape = active_shape()
-            if held_shape is None:
-                reachable = arrival
-            else:
-                held_reachable = _intersect_intervals(arrival, held_shape)
-                # A valid prior state cannot lose feasibility while its active
-                # shape is unchanged: expansion only widens it.  Projection is
-                # needed solely to keep diagnostics finite after an earlier
-                # intrinsically infeasible shape.
-                reachable = (
-                    held_reachable
-                    if held_reachable is not None
-                    else closest_shape_state(arrival, held_shape)
-                )
 
         # Half-open sounding intervals: a note ending now no longer constrains
         # an attack at the same time.  Releasing a constraint never widens the
@@ -421,10 +489,8 @@ def check_shift_speed(
             active.pop(index, None)
 
         new_attacks = attacks.get(event_time, ())
-        for index, note in new_attacks:
-            x = press_x(tab.capo + note.fret, profile.string_length_mm)
-            assert x is not None  # fret > 0 => not open
-            interval = (x - profile.reach_mm, x + profile.reach_mm)
+        for index, _note in new_attacks:
+            interval = intervals[index]
             active[index] = interval
             heapq.heappush(max_lower, (-interval[0], index))
             heapq.heappush(min_upper, (interval[1], index))
@@ -432,30 +498,8 @@ def check_shift_speed(
         if new_attacks:
             shape = active_shape()
             assert shape is not None
-            intrinsic_gap = max(0.0, shape[0] - shape[1])
-            if reachable is None:
-                # The first feasible fretted shape may start at any hand centre.
-                if intrinsic_gap == 0.0:
-                    reachable = shape
-                else:
-                    midpoint = (shape[0] + shape[1]) / 2.0
-                    reachable = (midpoint, midpoint)
-            else:
-                intersection = _intersect_intervals(reachable, shape)
-                if intersection is not None:
-                    reachable = intersection
-                else:
-                    if intrinsic_gap == 0.0:
-                        travel_gap = _interval_gap(reachable, shape)
-                    else:
-                        midpoint = (shape[0] + shape[1]) / 2.0
-                        travel_gap = _interval_gap(
-                            reachable, (midpoint, midpoint)
-                        )
-                    reachable = closest_shape_state(reachable, shape)
-                    intrinsic_gap = max(intrinsic_gap, travel_gap)
-
-            if intrinsic_gap > 0.0:
+            reachable, gap = admit_attack_shape(reachable, shape)
+            if gap > 0.0:
                 measure, beat = _measure_beat(event_time, beats_per_bar)
                 out.append(
                     Diagnostic(
@@ -463,7 +507,7 @@ def check_shift_speed(
                         beat,
                         "SHIFT_SPEED",
                         tuple(index for index, _ in new_attacks),
-                        intrinsic_gap,
+                        gap,
                         ("shift_to_lower_position",),
                     )
                 )

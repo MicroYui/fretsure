@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -132,15 +131,6 @@ def test_mirror_admission_implies_shift_speed_pass(notes: tuple[TabNote, ...]) -
     assert not check_shift_speed(tab, optimistic(MEDIAN_HAND), tempo_bpm=90.0)
 
 
-@pytest.mark.xfail(
-    reason=(
-        "measured divergence: csp.assignment_valid implements monotonicity and "
-        "same-finger-same-fret, but not check_barre's rule that nothing lower may "
-        "be fretted inside a barre's string span (predicates.py:296-297). The "
-        "solver therefore enumerates fingerings the oracle rejects. Reconciled in W2."
-    ),
-    strict=True,
-)
 @settings(max_examples=300, deadline=None)
 @given(_tab_notes())
 def test_assignment_valid_matches_frame_local_predicates(notes: tuple[TabNote, ...]) -> None:
