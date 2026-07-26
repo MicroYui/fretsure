@@ -18,6 +18,7 @@ import argparse
 import json
 import sys
 from collections import Counter
+from collections.abc import Mapping, Sequence
 from fractions import Fraction
 from pathlib import Path
 from typing import Final, cast
@@ -35,10 +36,22 @@ from fretsure.tab import Tab
 
 ROOT: Final = Path(__file__).resolve().parents[1]
 CORPUS_DIR: Final = ROOT / "data" / "score_corpus"
-DEFAULT_CORPUS: Final = (
+# The three artifacts this gate was frozen against.  They stay named rather
+# than discovered so that every later expansion can still be reported against
+# the same 58 scores: a moving denominator would quietly rewrite the history of
+# every measurement taken on it.
+BASELINE_CORPUS: Final = (
     CORPUS_DIR / "carcassi_op59.json",
     CORPUS_DIR / "mutopia_pd_additional.json",
     CORPUS_DIR / "mutopia_cc_by_sa.json",
+)
+DEFAULT_CORPUS: Final = (
+    *BASELINE_CORPUS,
+    *sorted(
+        path
+        for path in CORPUS_DIR.glob("mutopia_expanded_*.json")
+        if not path.name.endswith("_manifest.json")
+    ),
 )
 RESULT_SCHEMA: Final = "fretsure-repertoire-playability@0.1.0"
 
@@ -215,9 +228,30 @@ def run(paths: tuple[Path, ...], *, profile: Profile, beam: int) -> dict[str, ob
             "accepted": len(accepted),
             "outcome_counts": dict(sorted(outcomes.items())),
             "infeasible_reason_counts": dict(sorted(reasons.items())),
+            # Reported separately and always, so that a corpus expansion cannot
+            # move the number every earlier measurement was taken against.
+            "baseline_subset": _baseline_summary(records),
         },
         "accepted_ids": list(accepted),
         "examples": records,
+    }
+
+
+def _baseline_summary(records: Sequence[Mapping[str, object]]) -> dict[str, object]:
+    """The frozen 58-score slice, however much larger the corpus has become."""
+
+    baseline_ids: set[str] = set()
+    for path in BASELINE_CORPUS:
+        if not path.exists():
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        baseline_ids.update(str(example["id"]) for example in payload["examples"])
+    subset = [record for record in records if str(record["id"]) in baseline_ids]
+    accepted = [r for r in subset if r["outcome"] in ("GREEN", "AMBER")]
+    return {
+        "examples": len(subset),
+        "accepted": len(accepted),
+        "accepted_ids": sorted(str(r["id"]) for r in accepted),
     }
 
 

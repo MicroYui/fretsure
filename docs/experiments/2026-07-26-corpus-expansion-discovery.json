@@ -1,0 +1,29 @@
+{
+ "already_pinned": 39,
+ "attempted": 292,
+ "attribution": "SOURCES_EXPANDED.md",
+ "checkout_solo_guitar": 331,
+ "converted": 240,
+ "failed": 52,
+ "failure_reasons": {
+  "converter disagreed with the header license": 1,
+  "importer rejected movement 1": 1,
+  "no movement converted and parsed": 50
+ },
+ "manifests": {
+  "data/score_corpus/mutopia_expanded_permissive_manifest.json": 33,
+  "data/score_corpus/mutopia_expanded_public_domain_manifest.json": 91,
+  "data/score_corpus/mutopia_expanded_share_alike_manifest.json": 116
+ },
+ "movements": 331,
+ "schema": "fretsure-mutopia-discovery@0.1.0",
+ "skipped_during_discovery": {
+  "ensemble": 34,
+  "unrecognised_license": 3
+ },
+ "unrecognised_licenses": [
+  "o29-13.ly: 'Creative Commons \\\\\\\\texttt{http://creativecommons.org}'",
+  "recuerdos-a4.ly: ''",
+  "recuerdos-let.ly: ''"
+ ]
+}

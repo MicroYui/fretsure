@@ -73,11 +73,47 @@ def _pressed_label_count(example: ScoreCorpusExample) -> int:
     )
 
 
+def _non_negative_integer(value: Mapping[str, object], key: str) -> int:
+    """A count that is allowed to be zero.
+
+    Annotation counts pin that a rebuild produced the same thing, and "the same
+    thing" is sometimes no fingering at all: plenty of real repertoire is
+    engraved without editorial fingering.  Requiring a positive count here
+    silently excluded every such score, which biases the corpus toward heavily
+    edited editions -- exactly the kind of selection this corpus exists to avoid.
+    """
+
+    result = value.get(key)
+    if type(result) is not int or result < 0:
+        raise ValueError(f"manifest {key} must be a non-negative integer")
+    return result
+
+
 def _positive_number(value: Mapping[str, object], key: str) -> float:
     result = value.get(key)
     if type(result) not in (int, float) or float(cast(int | float, result)) <= 0:
         raise ValueError(f"manifest {key} must be a positive number")
     return float(cast(int | float, result))
+
+
+def _declared_license(result: Any) -> str | None:
+    """The licence the source states, under either field name Mutopia uses.
+
+    LilyPond scores from the 2.x era write ``copyright = "..."`` where later
+    ones write ``license = "..."``.  Reading only the newer name silently
+    excluded every older engraving, which is how this corpus ended up sourced
+    almost entirely from one typesetter.  The source bytes are already pinned by
+    digest, so this comparison is a redundancy rather than the licence's
+    guarantee -- reading the field the file actually uses simply makes the
+    redundancy correct.
+    """
+
+    metadata = result.metadata
+    for field in ("license", "copyright"):
+        value = metadata.get(field)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def _convert_source(
@@ -142,7 +178,7 @@ def build_mutopia_examples(
 
         result = _convert_source(convert_lilypond, source_text)
         declared_license = _required_string(entry, "source_license_declaration")
-        if result.metadata.get("license") != declared_license:
+        if _declared_license(result) != declared_license:
             raise ValueError(f"source license changed for {source_path.name}")
         by_index = {movement.movement_index: movement for movement in result.movements}
 
@@ -195,10 +231,10 @@ def build_mutopia_examples(
                 f"{source_path.stem}-movement-{movement_index}.musicxml",
                 metadata,
             )
-            expected_annotations = _required_integer(
+            expected_annotations = _non_negative_integer(
                 movement_spec, "annotation_count"
             )
-            expected_pressed = _required_integer(
+            expected_pressed = _non_negative_integer(
                 movement_spec, "pressed_annotation_count"
             )
             if len(example.annotations) != expected_annotations:

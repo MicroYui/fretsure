@@ -1,0 +1,2857 @@
+{
+ "conversion": {
+  "libxml2": "2.12.9",
+  "lxml": "5.3.0",
+  "python_ly": "0.9.10",
+  "script": "scripts/m1_lilypond.py",
+  "script_sha256": "857f7f8c73239016dc97d406483c0d1dccd9ab88b0b527ef9d872e0c98ef2da1",
+  "upstream": "HugoFara/graded-guitar"
+ },
+ "entries": [
+  {
+   "composer": "D. Aguado",
+   "edition": "Mutopia-2016/02/12-2041",
+   "group_id": "mutopia:aguado-op03n01",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-aguado-op03n01",
+     "index": 1,
+     "note_count": 282,
+     "pressed_annotation_count": 0,
+     "root_sha256": "6db4d66700f15b7426aed7a4af7a5eb3bb5079200b3e91a2d85f4d28294d757e",
+     "tempo_bpm": 90.0,
+     "title": "8 Petites Pi\u00e8ces for Guitar, No. 1"
+    }
+   ],
+   "path": "sources/mutopia_expanded/aguado-op03n01.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "fad09a204ecbcd34c6c31c3c898de1564fd68fc320529632328fa11660347e15",
+   "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O3/aguado-op03n01/aguado-op03n01.ly",
+   "work_id": "mutopia:aguado-op03n01"
+  },
+  {
+   "composer": "D. Aguado",
+   "edition": "Mutopia-2016/02/12-2042",
+   "group_id": "mutopia:aguado-op03n02",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-aguado-op03n02",
+     "index": 1,
+     "note_count": 309,
+     "pressed_annotation_count": 0,
+     "root_sha256": "cbc838d1ab7f5af78633590c9db54ea56ab0d1c68bfc54706740301ae64c793a",
+     "tempo_bpm": 90.0,
+     "title": "8 Petites Pi\u00e8ces for Guitar, No. 2"
+    }
+   ],
+   "path": "sources/mutopia_expanded/aguado-op03n02.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "105a3d335978944dc29f60cc949290727c2d33f990af0527e4b3ebf964d42c8d",
+   "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O3/aguado-op03n02/aguado-op03n02.ly",
+   "work_id": "mutopia:aguado-op03n02"
+  },
+  {
+   "composer": "D. Aguado",
+   "edition": "Mutopia-2016/02/12-2065",
+   "group_id": "mutopia:aguado-op03n03",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-aguado-op03n03",
+     "index": 1,
+     "note_count": 183,
+     "pressed_annotation_count": 0,
+     "root_sha256": "84931b683fe55dcae55e7743a8e6982e147ef287438b11ea2fcd831d135107aa",
+     "tempo_bpm": 90.0,
+     "title": "8 Petites Pi\u00e8ces for Guitar, No. 3"
+    }
+   ],
+   "path": "sources/mutopia_expanded/aguado-op03n03.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "eb722561c9976a396da9d8556b1074536124cd538e2f4edd15d52c188923bdc5",
+   "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O3/aguado-op03n03/aguado-op03n03.ly",
+   "work_id": "mutopia:aguado-op03n03"
+  },
+  {
+   "composer": "D. Aguado",
+   "edition": "Mutopia-2016/02/12-2043",
+   "group_id": "mutopia:aguado-op03n04",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-aguado-op03n04",
+     "index": 1,
+     "note_count": 329,
+     "pressed_annotation_count": 0,
+     "root_sha256": "a3f1be489a4c5afd635bee840b4bed0ab7c01a53958c81312406a282ed70f7bc",
+     "tempo_bpm": 90.0,
+     "title": "8 Petites Pi\u00e8ces for Guitar, No. 4"
+    }
+   ],
+   "path": "sources/mutopia_expanded/aguado-op03n04.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "06f4a76e080ee63858d580ba2cac266403c0b136837038c37954d22c52e1a3bf",
+   "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O3/aguado-op03n04/aguado-op03n04.ly",
+   "work_id": "mutopia:aguado-op03n04"
+  },
+  {
+   "composer": "D. Aguado",
+   "edition": "Mutopia-2016/02/12-2053",
+   "group_id": "mutopia:aguado-op03n05",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-aguado-op03n05",
+     "index": 1,
+     "note_count": 345,
+     "pressed_annotation_count": 0,
+     "root_sha256": "b0a5abe5324e8b0f5508fe82588aab2bd6ed4884050a501d195655e4ffa20a56",
+     "tempo_bpm": 90.0,
+     "title": "8 Petites Pi\u00e8ces for Guitar, No. 5"
+    }
+   ],
+   "path": "sources/mutopia_expanded/aguado-op03n05.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "7c14dbc687350444eb986ab8a192cf7b71f06eddfac10e3f58749a9341e77e27",
+   "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O3/aguado-op03n05/aguado-op03n05.ly",
+   "work_id": "mutopia:aguado-op03n05"
+  },
+  {
+   "composer": "D. Aguado",
+   "edition": "Mutopia-2016/02/12-2055",
+   "group_id": "mutopia:aguado-op03n07",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-aguado-op03n07",
+     "index": 1,
+     "note_count": 368,
+     "pressed_annotation_count": 0,
+     "root_sha256": "5aec72007e710618143f1b8904ad36543b92b2e9b20bdb15e2126668142299c1",
+     "tempo_bpm": 90.0,
+     "title": "8 Petites Pi\u00e8ces for Guitar, No. 7"
+    }
+   ],
+   "path": "sources/mutopia_expanded/aguado-op03n07.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "3c571c465507fd3581a4f1ccbc69b1454957a19bea77432428cd2b85714e0f3c",
+   "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O3/aguado-op03n07/aguado-op03n07.ly",
+   "work_id": "mutopia:aguado-op03n07"
+  },
+  {
+   "composer": "D. Aguado",
+   "edition": "Mutopia-2016/02/12-2056",
+   "group_id": "mutopia:aguado-op03n08",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-aguado-op03n08",
+     "index": 1,
+     "note_count": 263,
+     "pressed_annotation_count": 0,
+     "root_sha256": "70e123db4ac7979c18e8ee1a655fc6c6ec1cfa9dcc4f11d63297e49d07e5f245",
+     "tempo_bpm": 90.0,
+     "title": "8 Petites Pi\u00e8ces for Guitar, No. 8"
+    }
+   ],
+   "path": "sources/mutopia_expanded/aguado-op03n08.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "3063364f3b1a951613b3095501dc17d6f0e2f6ea4ab1f59d7a417ef65410b96c",
+   "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O3/aguado-op03n08/aguado-op03n08.ly",
+   "work_id": "mutopia:aguado-op03n08"
+  },
+  {
+   "composer": "Joseph K\u00fcffner (1776-1856)",
+   "edition": "Mutopia-2013/12/03-1887",
+   "group_id": "mutopia:air-varie",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 16,
+     "id": "mutopia-air-varie-movement-1",
+     "index": 1,
+     "note_count": 128,
+     "pressed_annotation_count": 16,
+     "root_sha256": "8b4c2e518bffbab4769334bbf1572d3bc53fe0480276619ac7bb4fa9b96fe947",
+     "tempo_bpm": 90.0,
+     "title": "air-varie"
+    },
+    {
+     "annotation_count": 14,
+     "id": "mutopia-air-varie-movement-2",
+     "index": 2,
+     "note_count": 160,
+     "pressed_annotation_count": 14,
+     "root_sha256": "57cfda0144c1ef944a5d6d3415c46b9ef8c9b71bef9af8ea5daa5d5fc4caf1f6",
+     "tempo_bpm": 90.0,
+     "title": "air-varie"
+    },
+    {
+     "annotation_count": 10,
+     "id": "mutopia-air-varie-movement-3",
+     "index": 3,
+     "note_count": 221,
+     "pressed_annotation_count": 10,
+     "root_sha256": "111659b3f758134b5dda5eaa7b58c32adbef782b9b7feb0e02acf5ba233e2c8c",
+     "tempo_bpm": 90.0,
+     "title": "air-varie"
+    }
+   ],
+   "path": "sources/mutopia_expanded/air-varie.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "cb83bba3d9e10184b3d35d88ecfbf79eef5ddd1519cc48234de5243ac24e7731",
+   "source_url": "https://www.mutopiaproject.org/ftp/KuffnerJ/air-varie/air-varie.ly",
+   "work_id": "mutopia:air-varie"
+  },
+  {
+   "composer": "Paul Antoine Vidal",
+   "edition": "Mutopia-2011/12/19-1815",
+   "group_id": "mutopia:boije-835-vidal-paul-air-des-folies-despagnes",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-boije-835-vidal-paul-air-des-folies-despagnes-movement-1",
+     "index": 1,
+     "note_count": 1222,
+     "pressed_annotation_count": 0,
+     "root_sha256": "b6c2359be20577ef1a1e8650ecd5d4cfdee6a368eac0e42f79732b441ca94c19",
+     "tempo_bpm": 90.0,
+     "title": "boije_835_Vidal_Paul_Air_Des_Folies_DEspagnes"
+    },
+    {
+     "annotation_count": 0,
+     "id": "mutopia-boije-835-vidal-paul-air-des-folies-despagnes-movement-2",
+     "index": 2,
+     "note_count": 1222,
+     "pressed_annotation_count": 0,
+     "root_sha256": "37c525e0846172db91fe7cf7dfb13786d676f6fd18ece1f7ed2f53f12da9f83e",
+     "tempo_bpm": 90.0,
+     "title": "boije_835_Vidal_Paul_Air_Des_Folies_DEspagnes"
+    }
+   ],
+   "path": "sources/mutopia_expanded/boije_835_Vidal_Paul_Air_Des_Folies_DEspagnes.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "6b20129dfaa1b7dd24870651577bd64d3078536c975fae1461e98a48fadb1977",
+   "source_url": "https://www.mutopiaproject.org/ftp/VidalPA/boije_835_Vidal_Paul_Air_Des_Folies_DEspagnes/boije_835_Vidal_Paul_Air_Des_Folies_DEspagnes.ly",
+   "work_id": "mutopia:boije-835-vidal-paul-air-des-folies-despagnes"
+  },
+  {
+   "composer": "Johann Sebastian Bach (1685-1750)",
+   "edition": "Mutopia-2008/07/30-1485",
+   "group_id": "mutopia:bwv-1006a-1g",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-bwv-1006a-1g",
+     "index": 1,
+     "note_count": 1286,
+     "pressed_annotation_count": 0,
+     "root_sha256": "c22c986686ea6a5476ce1a915aebb5cc2c2fecd7155b6d260436ba8a5d1e5a41",
+     "tempo_bpm": 90.0,
+     "title": "Suite E-Dur - BWV 1006a - Preludio"
+    }
+   ],
+   "path": "sources/mutopia_expanded/bwv-1006a_1g.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "187d857b7275d5029c8df59ad038e53577a6747f5ef8c00f1120d3fe16d2ef38",
+   "source_url": "https://www.mutopiaproject.org/ftp/BachJS/BWV1006a/bwv-1006a_1g/bwv-1006a_1g.ly",
+   "work_id": "mutopia:bwv-1006a-1g"
+  },
+  {
+   "composer": "Johann Sebastian Bach (1685-1750)",
+   "edition": "Mutopia-2008/07/30-1486",
+   "group_id": "mutopia:bwv-1006a-2g",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-bwv-1006a-2g",
+     "index": 1,
+     "note_count": 207,
+     "pressed_annotation_count": 0,
+     "root_sha256": "f35b7c071d528761d4c4d6d6e4e8ccb40b2960c83664adbe97c5b6ed5bda0923",
+     "tempo_bpm": 90.0,
+     "title": "Suite E-Dur - BWV 1006a - Loure"
+    }
+   ],
+   "path": "sources/mutopia_expanded/bwv-1006a_2g.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "c8d7874315e484619e75407e4ad2aa21c141a6058414b8458226c98a0939fbcd",
+   "source_url": "https://www.mutopiaproject.org/ftp/BachJS/BWV1006a/bwv-1006a_2g/bwv-1006a_2g.ly",
+   "work_id": "mutopia:bwv-1006a-2g"
+  },
+  {
+   "composer": "Johann Sebastian Bach (1685-1750)",
+   "edition": "Mutopia-2008/07/31-1500",
+   "group_id": "mutopia:bwv-1006a-3g",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-bwv-1006a-3g",
+     "index": 1,
+     "note_count": 843,
+     "pressed_annotation_count": 0,
+     "root_sha256": "2d68cb68f16fed74b7d1df8f87b722be466b25d3442607d2a2c85f51e389b522",
+     "tempo_bpm": 90.0,
+     "title": "Suite E-Dur - BWV 1006a - Gavotte en Rondeau"
+    }
+   ],
+   "path": "sources/mutopia_expanded/bwv-1006a_3g.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "2b88ce6817fa1cfb925b18929470c3e00167fac3d4364893e943df9b05db88a3",
+   "source_url": "https://www.mutopiaproject.org/ftp/BachJS/BWV1006a/bwv-1006a_3g/bwv-1006a_3g.ly",
+   "work_id": "mutopia:bwv-1006a-3g"
+  },
+  {
+   "composer": "Johann Sebastian Bach (1685-1750)",
+   "edition": "Mutopia-2008/07/31-1501",
+   "group_id": "mutopia:bwv-1006a-4g",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-bwv-1006a-4g",
+     "index": 1,
+     "note_count": 234,
+     "pressed_annotation_count": 0,
+     "root_sha256": "f4452fef87baa58752dfdccde8e5525f62ca604df24d7ff0cd820036af488f8c",
+     "tempo_bpm": 90.0,
+     "title": "Suite E-Dur - BWV 1006a - Menuet I"
+    }
+   ],
+   "path": "sources/mutopia_expanded/bwv-1006a_4g.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "f9fcf5e84c052154f6bc61d45be126008d9ee5f3b7a1678eb89bf9d676bbc3e0",
+   "source_url": "https://www.mutopiaproject.org/ftp/BachJS/BWV1006a/bwv-1006a_4g/bwv-1006a_4g.ly",
+   "work_id": "mutopia:bwv-1006a-4g"
+  },
+  {
+   "composer": "Johann Sebastian Bach (1685-1750)",
+   "edition": "Mutopia-2008/07/31-1502",
+   "group_id": "mutopia:bwv-1006a-5g",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-bwv-1006a-5g",
+     "index": 1,
+     "note_count": 244,
+     "pressed_annotation_count": 0,
+     "root_sha256": "5e342e2c9dcf1504350ed5904fe418fa21de1c092b2136b9b7c0c4ee9de2f84b",
+     "tempo_bpm": 90.0,
+     "title": "Suite E-Dur - BWV 1006a - Menuet II"
+    }
+   ],
+   "path": "sources/mutopia_expanded/bwv-1006a_5g.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "14d81f0981ce6ca2ec40ffb4c71583abd0a04b98359c9f097e372e5a663791d0",
+   "source_url": "https://www.mutopiaproject.org/ftp/BachJS/BWV1006a/bwv-1006a_5g/bwv-1006a_5g.ly",
+   "work_id": "mutopia:bwv-1006a-5g"
+  },
+  {
+   "composer": "Johann Sebastian Bach (1685-1750)",
+   "edition": "Mutopia-2008/07/31-1498",
+   "group_id": "mutopia:bwv-1006a-6g",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-bwv-1006a-6g",
+     "index": 1,
+     "note_count": 352,
+     "pressed_annotation_count": 0,
+     "root_sha256": "f1cbfeccdb86f4a2c14ab44e4184f7b0ba63eaef1405ab77409c3d2d5ff4acce",
+     "tempo_bpm": 90.0,
+     "title": "Suite E-Dur - BWV 1006a - Bourr\u00e9e"
+    }
+   ],
+   "path": "sources/mutopia_expanded/bwv-1006a_6g.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "f9cf52f65959d3e4a5d981b63acdefaa600e901614e94fbd4914074831bd2479",
+   "source_url": "https://www.mutopiaproject.org/ftp/BachJS/BWV1006a/bwv-1006a_6g/bwv-1006a_6g.ly",
+   "work_id": "mutopia:bwv-1006a-6g"
+  },
+  {
+   "composer": "Johann Sebastian Bach (1685-1750)",
+   "edition": "Mutopia-2008/07/31-1499",
+   "group_id": "mutopia:bwv-1006a-7g",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-bwv-1006a-7g",
+     "index": 1,
+     "note_count": 430,
+     "pressed_annotation_count": 0,
+     "root_sha256": "c96bcd8a5cf3fc2289c3a07975a53a0b1807e4202192368551059b233d32dd94",
+     "tempo_bpm": 90.0,
+     "title": "Suite E-Dur - BWV 1006a - Gigue"
+    }
+   ],
+   "path": "sources/mutopia_expanded/bwv-1006a_7g.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "bf9b4edb8015e6e7b5439a1d53dfc14a1cc577ad5d0e60dd35d40f9b71d78b78",
+   "source_url": "https://www.mutopiaproject.org/ftp/BachJS/BWV1006a/bwv-1006a_7g/bwv-1006a_7g.ly",
+   "work_id": "mutopia:bwv-1006a-7g"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2017/01/16-1836",
+   "group_id": "mutopia:carcassi-op26-01",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-carcassi-op26-01",
+     "index": 1,
+     "note_count": 588,
+     "pressed_annotation_count": 0,
+     "root_sha256": "6b3778d0cbcae007c77de85aa66409904170918b1cc5ab127275208fb8e48085",
+     "tempo_bpm": 90.0,
+     "title": "Six Caprices, No. 1"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op26-01.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "cb1e5129d59b3acb7fc61dfa8a46de1fff6c76cb74e66721c34d3eb2b4701570",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O26/carcassi-op26-01/carcassi-op26-01.ly",
+   "work_id": "mutopia:carcassi-op26-01"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/03/10-1841",
+   "group_id": "mutopia:carcassi-op26-06",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 18,
+     "id": "mutopia-carcassi-op26-06",
+     "index": 1,
+     "note_count": 1111,
+     "pressed_annotation_count": 17,
+     "root_sha256": "5232d805ebfae4cb0cdb566e86db8c2c4e6ce0642b618d319f52d067448bad88",
+     "tempo_bpm": 90.0,
+     "title": "Six Caprices, No. 6"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op26-06.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "bcc4984603d5e800d7caebe7a8de8f6199bf9d6085f87f33ab206daafcba9d5c",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O26/carcassi-op26-06/carcassi-op26-06.ly",
+   "work_id": "mutopia:carcassi-op26-06"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/08/18-1853",
+   "group_id": "mutopia:carcassi-op60-02",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 13,
+     "id": "mutopia-carcassi-op60-02",
+     "index": 1,
+     "note_count": 367,
+     "pressed_annotation_count": 13,
+     "root_sha256": "b6c6c6321310ae80282fd0c79cd43cdadc40f72cb66f1b7013505ecef0b890c0",
+     "tempo_bpm": 90.0,
+     "title": "carcassi-op60-02"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-02.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "cb7ea279ee2edd10f5962e5baa98fdf8a9f722a32cacd89c60919b48928447e7",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-02/carcassi-op60-02.ly",
+   "work_id": "mutopia:carcassi-op60-02"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/08/18-1854",
+   "group_id": "mutopia:carcassi-op60-04",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 73,
+     "id": "mutopia-carcassi-op60-04",
+     "index": 1,
+     "note_count": 306,
+     "pressed_annotation_count": 72,
+     "root_sha256": "5221616117a61042c735300573acd8f811280f99e41bbc3f05ffbdced67f2951",
+     "tempo_bpm": 90.0,
+     "title": "carcassi-op60-04"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-04.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "f253e41c37188308d5a6d06ff7f7d71cb335fb60486755445ed5e1bb9928c116",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-04/carcassi-op60-04.ly",
+   "work_id": "mutopia:carcassi-op60-04"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/09/01-1866",
+   "group_id": "mutopia:carcassi-op60-05",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 35,
+     "id": "mutopia-carcassi-op60-05",
+     "index": 1,
+     "note_count": 386,
+     "pressed_annotation_count": 34,
+     "root_sha256": "b431be788da26ac0a4f2cb5a3d8b056a36f8ef1c7538ccec89629a1a5ee8c451",
+     "tempo_bpm": 90.0,
+     "title": "carcassi-op60-05"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-05.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "28c874138e9f35e9a79c7e4e057dd7a1a0329f0825efb7bda6d8e058a5602585",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-05/carcassi-op60-05.ly",
+   "work_id": "mutopia:carcassi-op60-05"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/09/01-1867",
+   "group_id": "mutopia:carcassi-op60-06",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 40,
+     "id": "mutopia-carcassi-op60-06",
+     "index": 1,
+     "note_count": 423,
+     "pressed_annotation_count": 40,
+     "root_sha256": "072fcf4e7fe01e9691fa857510b4385875a93afbb8dad77e8a034a7d204a5e19",
+     "tempo_bpm": 90.0,
+     "title": "carcassi-op60-06"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-06.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "17c30f2a675d867e5f0655a16ee3fe7a3ecbfbb85f980b1817ad31586eaead0c",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-06/carcassi-op60-06.ly",
+   "work_id": "mutopia:carcassi-op60-06"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/09/22-1870",
+   "group_id": "mutopia:carcassi-op60-10",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 15,
+     "id": "mutopia-carcassi-op60-10",
+     "index": 1,
+     "note_count": 297,
+     "pressed_annotation_count": 15,
+     "root_sha256": "b967aeab5a2016fd2cd15977df67af1272d4e92cd43c0711a53e263cd1766ec4",
+     "tempo_bpm": 90.0,
+     "title": "carcassi-op60-10"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-10.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "50c2b71845e914dfc4e5d56010b945b94bb887633235be1cad8745e925667824",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-10/carcassi-op60-10.ly",
+   "work_id": "mutopia:carcassi-op60-10"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/09/22-1871",
+   "group_id": "mutopia:carcassi-op60-11",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 8,
+     "id": "mutopia-carcassi-op60-11",
+     "index": 1,
+     "note_count": 225,
+     "pressed_annotation_count": 8,
+     "root_sha256": "7dfb5dbfa97d964da8f13ee936dd66a977f87351b5174fdc1c25275d231eff9c",
+     "tempo_bpm": 90.0,
+     "title": "carcassi-op60-11"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-11.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "bff470762aefe65e9310cc078d3121fffb54aba775c7a7bcff52c797a5c54176",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-11/carcassi-op60-11.ly",
+   "work_id": "mutopia:carcassi-op60-11"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/09/22-1872",
+   "group_id": "mutopia:carcassi-op60-12",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 76,
+     "id": "mutopia-carcassi-op60-12",
+     "index": 1,
+     "note_count": 317,
+     "pressed_annotation_count": 75,
+     "root_sha256": "dee7122659ac3e9bae19f79a366960b7707a3c0ccf566bb9a571d7af0532bf17",
+     "tempo_bpm": 90.0,
+     "title": "carcassi-op60-12"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-12.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "b9d77ea16e76e138dd36c99dbb3c2c36f83e5e417e30d8909a5986ded40893ee",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-12/carcassi-op60-12.ly",
+   "work_id": "mutopia:carcassi-op60-12"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/09/22-1873",
+   "group_id": "mutopia:carcassi-op60-13",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 69,
+     "id": "mutopia-carcassi-op60-13",
+     "index": 1,
+     "note_count": 407,
+     "pressed_annotation_count": 54,
+     "root_sha256": "81c3363c6d340429bd321c79c5ff22ab9ef1ff3eddc7c9b0c996f9b21325a400",
+     "tempo_bpm": 90.0,
+     "title": "25 Studies: No. 13"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-13.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "3715384a90f527624a08d8078637150a59fd19ed42df7ee115b4620cf2d4c46f",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-13/carcassi-op60-13.ly",
+   "work_id": "mutopia:carcassi-op60-13"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/09/22-1874",
+   "group_id": "mutopia:carcassi-op60-14",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 14,
+     "id": "mutopia-carcassi-op60-14",
+     "index": 1,
+     "note_count": 342,
+     "pressed_annotation_count": 10,
+     "root_sha256": "42e790748287ac47acd9ceb6061622f637b3764c386b37a0b95e94d70a0de528",
+     "tempo_bpm": 90.0,
+     "title": "25 Studies: No. 14"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-14.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "627d0581661139c30b417143def234a2d786ae79f4d2ec0f332ef7e51285ecc2",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-14/carcassi-op60-14.ly",
+   "work_id": "mutopia:carcassi-op60-14"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/09/22-1875",
+   "group_id": "mutopia:carcassi-op60-16",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 27,
+     "id": "mutopia-carcassi-op60-16",
+     "index": 1,
+     "note_count": 260,
+     "pressed_annotation_count": 27,
+     "root_sha256": "ac6173ba7c1480391b2607e2ace36ff08e8f67762402b970148673c399ff2b32",
+     "tempo_bpm": 90.0,
+     "title": "25 Studies: No. 16"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-16.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "6a7c89d9071bf352a3ba7d93c23a2a1664397ac15683581b43dde86be2878c0b",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-16/carcassi-op60-16.ly",
+   "work_id": "mutopia:carcassi-op60-16"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/12/01-1883",
+   "group_id": "mutopia:carcassi-op60-17",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 51,
+     "id": "mutopia-carcassi-op60-17",
+     "index": 1,
+     "note_count": 368,
+     "pressed_annotation_count": 45,
+     "root_sha256": "05fbbea5a64295b26ac2cd95cb7121a8edafc5b163136bf708e9dae94f642e99",
+     "tempo_bpm": 90.0,
+     "title": "25 Studies: No. 17"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-17.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "fef2a826763e41e873ea6735838a9b713edb9598886465ca69d685acd3e4aeb8",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-17/carcassi-op60-17.ly",
+   "work_id": "mutopia:carcassi-op60-17"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/12/01-1884",
+   "group_id": "mutopia:carcassi-op60-18",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 23,
+     "id": "mutopia-carcassi-op60-18",
+     "index": 1,
+     "note_count": 210,
+     "pressed_annotation_count": 20,
+     "root_sha256": "013ab4743c8d9f4202d2ba88a862500f29e57a3b36e19f64279c13d3ef602995",
+     "tempo_bpm": 90.0,
+     "title": "25 Studies: No. 18"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-18.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "54455c970c02f034a388a9e800b0f7c06d04707e936ce34dabf80ff3e733f83f",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-18/carcassi-op60-18.ly",
+   "work_id": "mutopia:carcassi-op60-18"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/12/01-1885",
+   "group_id": "mutopia:carcassi-op60-19",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 10,
+     "id": "mutopia-carcassi-op60-19",
+     "index": 1,
+     "note_count": 460,
+     "pressed_annotation_count": 10,
+     "root_sha256": "47295ef8e4b50eb3dd13ee6bf3ecd80def9e475da572bc744c8977e1edf0bb96",
+     "tempo_bpm": 90.0,
+     "title": "25 Studies: No. 19"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-19.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "54b755c508e61f3c2e0d04165c30ea09f2e7194b8859f02c1cc85b04846bc916",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-19/carcassi-op60-19.ly",
+   "work_id": "mutopia:carcassi-op60-19"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/12/01-1886",
+   "group_id": "mutopia:carcassi-op60-20",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 66,
+     "id": "mutopia-carcassi-op60-20",
+     "index": 1,
+     "note_count": 340,
+     "pressed_annotation_count": 57,
+     "root_sha256": "9b49371b5df5186c4af3cda6ed6dda4751c0ee6b5e096f4c80119eeda2e79571",
+     "tempo_bpm": 90.0,
+     "title": "25 Studies: No. 20"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-20.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "c690de963e0467b88f3e5d1506a0d0480fa82d2eaa1eb4e3e17367bd927b7fd7",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-20/carcassi-op60-20.ly",
+   "work_id": "mutopia:carcassi-op60-20"
+  },
+  {
+   "composer": "Mateo Carcassi",
+   "edition": "Mutopia-2013/12/14-1893",
+   "group_id": "mutopia:carcassi-op60-21",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 13,
+     "id": "mutopia-carcassi-op60-21",
+     "index": 1,
+     "note_count": 412,
+     "pressed_annotation_count": 12,
+     "root_sha256": "34d16a8d19c5a6536b9f424b25b5202bc58d861d5a2f2d90ad086fe1da1f4286",
+     "tempo_bpm": 90.0,
+     "title": "25 Studies: No. 21"
+    }
+   ],
+   "path": "sources/mutopia_expanded/carcassi-op60-21.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "ae6d85b1ea940e5926d0c24d566183a8813d0e10d32cc6bbaacc9b896028242b",
+   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-21/carcassi-op60-21.ly",
+   "work_id": "mutopia:carcassi-op60-21"
+  },
+  {
+   "composer": "Radan Pape\u017e\u00edk",
+   "edition": "Mutopia-2013/03/09-1495",
+   "group_id": "mutopia:forsting",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-forsting",
+     "index": 1,
+     "note_count": 386,
+     "pressed_annotation_count": 0,
+     "root_sha256": "09b90746c9db2500910112637a24f4862c4a32dd214d4b74f7d746099da9e249",
+     "tempo_bpm": 90.0,
+     "title": "Recuerdos"
+    }
+   ],
+   "path": "sources/mutopia_expanded/forsting.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "75e71051d6d19d22abbec11bfd2417ca86249580a1a1c13f87044866bf9620d0",
+   "source_url": "https://www.mutopiaproject.org/ftp/PapezikR/forsting/forsting.ly",
+   "work_id": "mutopia:forsting"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2017/06/28-2182",
+   "group_id": "mutopia:giuliani-o51-03",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-o51-03",
+     "index": 1,
+     "note_count": 170,
+     "pressed_annotation_count": 0,
+     "root_sha256": "35a5beb491af6156b6f5bcc18d368ae7a8d54fad948a54dc8e09457d1aeab1bb",
+     "tempo_bpm": 90.0,
+     "title": "18 Progressive Lessons, No. 3"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-o51-03.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "bff9f8527ae6bef59c02b774c1c4c5017b285390b4d1bff6a4c6ec733481ee75",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O51/giuliani-o51-03/giuliani-o51-03.ly",
+   "work_id": "mutopia:giuliani-o51-03"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2017/06/28-2183",
+   "group_id": "mutopia:giuliani-o51-04",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-o51-04",
+     "index": 1,
+     "note_count": 120,
+     "pressed_annotation_count": 0,
+     "root_sha256": "e79b27f03bd94019507a085df9535a145e4944e5719ec4da571783f7a0b2703b",
+     "tempo_bpm": 90.0,
+     "title": "18 Progressive Lessons, No. 4"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-o51-04.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "320b1b167df87bca88a04984420e94f7bcbeddc79b85afdcf76b35679b012a4b",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O51/giuliani-o51-04/giuliani-o51-04.ly",
+   "work_id": "mutopia:giuliani-o51-04"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2017/06/28-2184",
+   "group_id": "mutopia:giuliani-o51-05",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-o51-05",
+     "index": 1,
+     "note_count": 116,
+     "pressed_annotation_count": 0,
+     "root_sha256": "52964a7fc6e45b380983cab0a1d77d71bee156abe9e4f70d6aeb56f8d119207a",
+     "tempo_bpm": 90.0,
+     "title": "18 Progressive Lessons, No. 5"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-o51-05.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "acb022d7888e6e9f23092328b5110f01241542fd2c34aabaa5372a6ebde53d55",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O51/giuliani-o51-05/giuliani-o51-05.ly",
+   "work_id": "mutopia:giuliani-o51-05"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2017/06/28-2185",
+   "group_id": "mutopia:giuliani-o51-06",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-o51-06",
+     "index": 1,
+     "note_count": 188,
+     "pressed_annotation_count": 0,
+     "root_sha256": "b62fc01a29c704f48c822cc3358a0b276e9ef6f169ae169eb363997750277206",
+     "tempo_bpm": 90.0,
+     "title": "18 Progressive Lessons, No. 6"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-o51-06.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "fb495f86ac239d23a83b88c525bdbb696053d6a50473a75ddb1d97edaf1c9232",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O51/giuliani-o51-06/giuliani-o51-06.ly",
+   "work_id": "mutopia:giuliani-o51-06"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/08/12-2003",
+   "group_id": "mutopia:giuliani-op59n01",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n01",
+     "index": 1,
+     "note_count": 243,
+     "pressed_annotation_count": 0,
+     "root_sha256": "373c07afb3b4c3ce2665f95e0ccb9f24f9cd987db72ae3b9094ec0503344b6a7",
+     "tempo_bpm": 90.0,
+     "title": "giuliani-op59n01"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n01.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "4898c2b711e27173494581a3a69a68a6bec01f664058128fd3b5b0133bf9bef4",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n01/giuliani-op59n01.ly",
+   "work_id": "mutopia:giuliani-op59n01"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/04/03-2004",
+   "group_id": "mutopia:giuliani-op59n02",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n02",
+     "index": 1,
+     "note_count": 325,
+     "pressed_annotation_count": 0,
+     "root_sha256": "581c64d8e66441018e85a4b6392f15f423003d073ed82c77f0b09efcab70e2f7",
+     "tempo_bpm": 90.0,
+     "title": "giuliani-op59n02"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n02.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "e2b43b96ba94dcb5f549f0a869ad08cfc618fc5e07e65f1db30494ed478a04cf",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n02/giuliani-op59n02.ly",
+   "work_id": "mutopia:giuliani-op59n02"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/04/03-2005",
+   "group_id": "mutopia:giuliani-op59n03",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n03",
+     "index": 1,
+     "note_count": 280,
+     "pressed_annotation_count": 0,
+     "root_sha256": "a37081b7cde5f1e04aefc12b823827538c20cb5534078bc0bd4be4788563759c",
+     "tempo_bpm": 90.0,
+     "title": "giuliani-op59n03"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n03.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "6adf04ac5d1c7f5398ece0a54c8652b6ceda7f9045123b293b0b74c9c03c0df0",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n03/giuliani-op59n03.ly",
+   "work_id": "mutopia:giuliani-op59n03"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/04/15-2007",
+   "group_id": "mutopia:giuliani-op59n04",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n04",
+     "index": 1,
+     "note_count": 273,
+     "pressed_annotation_count": 0,
+     "root_sha256": "60a82f92aab467c6055f8444af39b06b65c2a76dc7bdfefc26a6708215f0bede",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: 4"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n04.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "3eaa7a0577de685705f9875e84e10e071711a75820e24b74b7b2c20da5145e36",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n04/giuliani-op59n04.ly",
+   "work_id": "mutopia:giuliani-op59n04"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/04/15-2008",
+   "group_id": "mutopia:giuliani-op59n05",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n05",
+     "index": 1,
+     "note_count": 297,
+     "pressed_annotation_count": 0,
+     "root_sha256": "842674e6a96c5fb799de13894696178a915e77354a03e04269db76bb1aef969b",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: No. 5"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n05.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "5b834ec476cc312369115d0d7109a000acdd82d3e1b813356bffe7a0c9bda24c",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n05/giuliani-op59n05.ly",
+   "work_id": "mutopia:giuliani-op59n05"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/06/11-2013",
+   "group_id": "mutopia:giuliani-op59n06",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n06",
+     "index": 1,
+     "note_count": 259,
+     "pressed_annotation_count": 0,
+     "root_sha256": "4d640d6aa5dbcfd392da41d49e4662367aae1c5c2fd9e1f3f2e2c2b9984fd1be",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: No. 6"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n06.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "3ccfd8e219524dfee1ea648f62162c625061a891dde4b5ab4c366cfb916208f8",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n06/giuliani-op59n06.ly",
+   "work_id": "mutopia:giuliani-op59n06"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/05/03-2010",
+   "group_id": "mutopia:giuliani-op59n07",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n07",
+     "index": 1,
+     "note_count": 334,
+     "pressed_annotation_count": 0,
+     "root_sha256": "688e384adbde231e833dcfca9a7e5370e0abe4785c9b8c9be0b4393fc19bbdb6",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: No. 7"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n07.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "dee3e21d02e07e427d074202e61dc3dea87979b58045e680e2d2cd2538f4f7ef",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n07/giuliani-op59n07.ly",
+   "work_id": "mutopia:giuliani-op59n07"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/05/31-2011",
+   "group_id": "mutopia:giuliani-op59n08",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n08",
+     "index": 1,
+     "note_count": 270,
+     "pressed_annotation_count": 0,
+     "root_sha256": "10e85f02780fef4c2c84afe89cdba95eef6e0e902d88f4870c6c46675fbbec8c",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: No. 8"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n08.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "e33918e843f84d99921ed15ee77da355320e4b4d8f9dea17d5f2012ed40abd2a",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n08/giuliani-op59n08.ly",
+   "work_id": "mutopia:giuliani-op59n08"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/06/22-2018",
+   "group_id": "mutopia:giuliani-op59n09",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n09",
+     "index": 1,
+     "note_count": 256,
+     "pressed_annotation_count": 0,
+     "root_sha256": "aacea416fb19c89739965c465d7f1e4f2fad6ae801440f1389a2d47870502e48",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: No. 9"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n09.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "6932c65d3431771dc5e23028253b3e652104d87b15b7c9a79bf3bb36fea54e26",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n09/giuliani-op59n09.ly",
+   "work_id": "mutopia:giuliani-op59n09"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/06/22-2019",
+   "group_id": "mutopia:giuliani-op59n10",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n10",
+     "index": 1,
+     "note_count": 282,
+     "pressed_annotation_count": 0,
+     "root_sha256": "a8cd8936b90c1b325d17d9d2a52d49878eccd3839ba855d8d613218f23573205",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: No. 10"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n10.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "20d40a1c9d217f24558c91e3d025debc462b701c3e4122ec370a7b45d454e3d0",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n10/giuliani-op59n10.ly",
+   "work_id": "mutopia:giuliani-op59n10"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/06/26-2028",
+   "group_id": "mutopia:giuliani-op59n11",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n11",
+     "index": 1,
+     "note_count": 336,
+     "pressed_annotation_count": 0,
+     "root_sha256": "87db5f548227d5a014850f6cd7747ea4374eb70a688a9a1b1cc2e81cfd0863f6",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: No. 11"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n11.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "7eacc2cbe07ebd939d471752506f0b0acd614ad61b062b946e46741295279a00",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n11/giuliani-op59n11.ly",
+   "work_id": "mutopia:giuliani-op59n11"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/07/06-2031",
+   "group_id": "mutopia:giuliani-op59n13",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n13",
+     "index": 1,
+     "note_count": 173,
+     "pressed_annotation_count": 0,
+     "root_sha256": "e5284a84baeb7234d5a42eb3368499d93b125e9afcdc33d98781a4f15ba5554c",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: No. 13"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n13.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "c8afb460b31033573b66d1505b8c260ad0557632774ff9a1bd88bd57264f4013",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n13/giuliani-op59n13.ly",
+   "work_id": "mutopia:giuliani-op59n13"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/08/04-2039",
+   "group_id": "mutopia:giuliani-op59n15",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n15",
+     "index": 1,
+     "note_count": 449,
+     "pressed_annotation_count": 0,
+     "root_sha256": "fe5f621a5638870bbef2a7030eb89d69353fbc1954b5b2800fd72542b4e1c51e",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: No. 15"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n15.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "845abc8e6846d230495a48e1c994030d8e246ba98a70af4a04d2b57cf86d0f2c",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n15/giuliani-op59n15.ly",
+   "work_id": "mutopia:giuliani-op59n15"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/08/12-2040",
+   "group_id": "mutopia:giuliani-op59n16",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giuliani-op59n16",
+     "index": 1,
+     "note_count": 407,
+     "pressed_annotation_count": 0,
+     "root_sha256": "9b00e9f0df8c9552ed722f6a482a648c8eb56f5583c83087b2af7ff1a3a1a64f",
+     "tempo_bpm": 90.0,
+     "title": "16 Studies for the Guitar: No. 16"
+    }
+   ],
+   "path": "sources/mutopia_expanded/giuliani-op59n16.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "5e8c0a5bf73b8eb5c65d7ea6ef2d4844d3427a56f3906b30c4ba8c9a11c73296",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O59/giuliani-op59n16/giuliani-op59n16.ly",
+   "work_id": "mutopia:giuliani-op59n16"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/12/23-1796",
+   "group_id": "mutopia:giulianiop100no1",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no1",
+     "index": 1,
+     "note_count": 129,
+     "pressed_annotation_count": 0,
+     "root_sha256": "d21a1443b64fcc1eae67c4af058bfcf82c7e0582e2b60872fb1346b7b93ced7e",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 1"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No1.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "2210643e4f9010f0d4a4475cd78529c27487990d799a7c8292b4e836d0d31483",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No1/GiulianiOp100No1.ly",
+   "work_id": "mutopia:giulianiop100no1"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/12/23-1805",
+   "group_id": "mutopia:giulianiop100no10",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no10",
+     "index": 1,
+     "note_count": 378,
+     "pressed_annotation_count": 0,
+     "root_sha256": "8af765af78068c7d1dae2876b93edd30c351a053d2146623ec7c04353d84ec3f",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 10"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No10.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "a1f64f990fc39491f51abe32d2a0eb8555f7635095d4a9af58e06527ca456f39",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No10/GiulianiOp100No10.ly",
+   "work_id": "mutopia:giulianiop100no10"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2017/02/15-1807",
+   "group_id": "mutopia:giulianiop100no11",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no11",
+     "index": 1,
+     "note_count": 523,
+     "pressed_annotation_count": 0,
+     "root_sha256": "10628cacafc86b626da795a7049fc836df06c81ce4645d92f9f22dfd7872e8ad",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 11"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No11.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "b3de3c637e617b898b10726762b606ed7188d06bbc1d94b4bad6465d28fbb2b9",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No11/GiulianiOp100No11.ly",
+   "work_id": "mutopia:giulianiop100no11"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2011/12/12-1808",
+   "group_id": "mutopia:giulianiop100no12",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no12",
+     "index": 1,
+     "note_count": 544,
+     "pressed_annotation_count": 0,
+     "root_sha256": "e75ba32454a5f0f833ae6695aaa41a6f8c261bd9b31c31c74f805e362450db61",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 12"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No12.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "65f2561cb77d2ec2f611ff14aef7c1178cf8c8d9a5b67902170bf8b9796d5b11",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No12/GiulianiOp100No12.ly",
+   "work_id": "mutopia:giulianiop100no12"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2011/12/12-1809",
+   "group_id": "mutopia:giulianiop100no13",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no13",
+     "index": 1,
+     "note_count": 503,
+     "pressed_annotation_count": 0,
+     "root_sha256": "8b62467a8794d277f26cefb5167c33404e7bb809429c9db40f33d55e884a07ec",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 13"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No13.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "8aee89068767b1213a1eedbcffe7de11ffca75483eda5fe61e58362de2f9ae6c",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No13/GiulianiOp100No13.ly",
+   "work_id": "mutopia:giulianiop100no13"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2011/12/19-1811",
+   "group_id": "mutopia:giulianiop100no14",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no14",
+     "index": 1,
+     "note_count": 557,
+     "pressed_annotation_count": 0,
+     "root_sha256": "4c942defa1530b8e83d68e5b37c43c823785c932951546850271e236d021f1c4",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 14"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No14.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "3e1dd734bc9ef02892731afd9bd1661d4a9f03cb30c678f0e39b21ef8284a2ad",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No14/GiulianiOp100No14.ly",
+   "work_id": "mutopia:giulianiop100no14"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2011/12/19-1812",
+   "group_id": "mutopia:giulianiop100no15",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no15",
+     "index": 1,
+     "note_count": 664,
+     "pressed_annotation_count": 0,
+     "root_sha256": "cd421d5bce29fad5fdacaf43cda60a0d09ff2781bcafbb3c95b507042628ab4c",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 15"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No15.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "36017ce0ebdabe73d4afed075a56cf502bc8b7cc97d762f9bd807561e57bbb8d",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No15/GiulianiOp100No15.ly",
+   "work_id": "mutopia:giulianiop100no15"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2012/01/14-1816",
+   "group_id": "mutopia:giulianiop100no16",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no16",
+     "index": 1,
+     "note_count": 784,
+     "pressed_annotation_count": 0,
+     "root_sha256": "8cdf4e535701301939caae1039a4ee38cb58c258d47cd10d31b6fee8ba86f358",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 16"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No16.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "a050054745a6bc862873b239b5c7f3787ae5f6fd9ad0464ebd65e7a7d920a37d",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No16/GiulianiOp100No16.ly",
+   "work_id": "mutopia:giulianiop100no16"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2012/01/14-1817",
+   "group_id": "mutopia:giulianiop100no17",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no17",
+     "index": 1,
+     "note_count": 91,
+     "pressed_annotation_count": 0,
+     "root_sha256": "746e0dd014c717bbe305e8e0a5fa5e2b050912da66db28735d1240271185b49a",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 17"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No17.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "b20a43c5ca468243e04b2424a885d8560a0345f24f14796dee95d41735da3834",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No17/GiulianiOp100No17.ly",
+   "work_id": "mutopia:giulianiop100no17"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2012/01/14-1818",
+   "group_id": "mutopia:giulianiop100no18",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no18",
+     "index": 1,
+     "note_count": 198,
+     "pressed_annotation_count": 0,
+     "root_sha256": "28c8ff70089b5595df4debdc8322af67227750cc3e54ee6e8d97f75eb4e065a5",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 18"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No18.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "8972351902527b1d5d3bd25819904e7945b0fd920d809745ac6e330d836b2c47",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No18/GiulianiOp100No18.ly",
+   "work_id": "mutopia:giulianiop100no18"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2012/01/14-1819",
+   "group_id": "mutopia:giulianiop100no19",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no19",
+     "index": 1,
+     "note_count": 203,
+     "pressed_annotation_count": 0,
+     "root_sha256": "09a66fca8fb2a22e410154b0b22fff1dc1711f02319631804d72bfff4c34f4b7",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 19"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No19.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "a2b21069f31e9becf3dde02477b430c0448572bffc5babb7434bf0d3453d7f2e",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No19/GiulianiOp100No19.ly",
+   "work_id": "mutopia:giulianiop100no19"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/12/23-1797",
+   "group_id": "mutopia:giulianiop100no2",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no2",
+     "index": 1,
+     "note_count": 232,
+     "pressed_annotation_count": 0,
+     "root_sha256": "a489c7043923872bd2cb743f58b56f5b293964fe984a9951eeb7a3b6d9a34cab",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 2"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No2.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "e2018d07802c2f6b9c279666d89c09c0c532baf03ae8c6fa268835626bdf03f1",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No2/GiulianiOp100No2.ly",
+   "work_id": "mutopia:giulianiop100no2"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2012/01/14-1820",
+   "group_id": "mutopia:giulianiop100no20",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no20",
+     "index": 1,
+     "note_count": 146,
+     "pressed_annotation_count": 0,
+     "root_sha256": "0816148c1662a07067441441710e50b7d0ff9c84c50c64e65b1603f224293fb5",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 20"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No20.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "b37d26f0ccc1943540512da21a5968b1b6ebb278c86d905c769dca71316a5449",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No20/GiulianiOp100No20.ly",
+   "work_id": "mutopia:giulianiop100no20"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2012/01/14-1821",
+   "group_id": "mutopia:giulianiop100no21",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no21",
+     "index": 1,
+     "note_count": 118,
+     "pressed_annotation_count": 0,
+     "root_sha256": "980bd3784f248f6be0eb468cc86880bd86866595da39303a727aaf07d2f60248",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 21"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No21.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "14861cb25c31eac903e49671a47167f136294f341296af699bcf5d59619491c3",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No21/GiulianiOp100No21.ly",
+   "work_id": "mutopia:giulianiop100no21"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2012/01/14-1822",
+   "group_id": "mutopia:giulianiop100no22",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no22",
+     "index": 1,
+     "note_count": 298,
+     "pressed_annotation_count": 0,
+     "root_sha256": "19419a842a2d2794dad99dd3a9e57c5869e5baca900682f76a70a64419eb215a",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 22"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No22.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "119b0ea6ba53dc3d760e54384208ac126c6b78ff474a7c4a784728e333e9b094",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No22/GiulianiOp100No22.ly",
+   "work_id": "mutopia:giulianiop100no22"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2012/01/14-1823",
+   "group_id": "mutopia:giulianiop100no23",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no23",
+     "index": 1,
+     "note_count": 346,
+     "pressed_annotation_count": 0,
+     "root_sha256": "6f248f35cd75b19f2a46008a8db3a4f582b5de3756ecd3a1e7f8b196c215ca3d",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 23"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No23.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "9764e23ab7932c826a3619960dc6498ce88af71d0820b3c7f1537a48a8901aa1",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No23/GiulianiOp100No23.ly",
+   "work_id": "mutopia:giulianiop100no23"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2012/01/14-1824",
+   "group_id": "mutopia:giulianiop100no24",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no24",
+     "index": 1,
+     "note_count": 516,
+     "pressed_annotation_count": 0,
+     "root_sha256": "6abc905ff21f8fc07575dea54f08ec7d3d0f314a9529aa4e9b134dd98cd881d7",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 24"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No24.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "a00f7f56b68d4ef06de8461dee9a80109fc9a172efbb3fbadc4ab69826f246ff",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No24/GiulianiOp100No24.ly",
+   "work_id": "mutopia:giulianiop100no24"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/12/23-1798",
+   "group_id": "mutopia:giulianiop100no3",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no3",
+     "index": 1,
+     "note_count": 249,
+     "pressed_annotation_count": 0,
+     "root_sha256": "733c3c1c1020a3e5c0d3dc92ec2f36b3f4a5c76e0da25669b581fb8055a10aa7",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 3"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No3.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "6218ed53fa970c8ce04f8c10ec6d42ff6e01b14c202e854ddf3ebbe8138ce5b1",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No3/GiulianiOp100No3.ly",
+   "work_id": "mutopia:giulianiop100no3"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/12/23-1799",
+   "group_id": "mutopia:giulianiop100no4",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no4",
+     "index": 1,
+     "note_count": 411,
+     "pressed_annotation_count": 0,
+     "root_sha256": "329bf92148050dad0f6eefe48c78a0b91c90505be9188eac613b52b5df83c5b6",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 4"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No4.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "c87d8e3a70996a144a7f8c60b0232c2c746fc693d01714464121195087280b47",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No4/GiulianiOp100No4.ly",
+   "work_id": "mutopia:giulianiop100no4"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/12/23-1800",
+   "group_id": "mutopia:giulianiop100no5",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no5",
+     "index": 1,
+     "note_count": 328,
+     "pressed_annotation_count": 0,
+     "root_sha256": "77b41bdb1ad6da7ad243a3cb87d22e5ae0ef5e7c8defb62e21379121ed782485",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 5"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No5.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "1d71016e5c9c32fe9ca19575d65e54e287de09cdfa67a5ca4383c89d71e6f9ba",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No5/GiulianiOp100No5.ly",
+   "work_id": "mutopia:giulianiop100no5"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/12/23-1801",
+   "group_id": "mutopia:giulianiop100no6",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no6",
+     "index": 1,
+     "note_count": 244,
+     "pressed_annotation_count": 0,
+     "root_sha256": "04830a7db63f0150785845920cd473dd6fcd76510c675658d49f1e8261a3fabb",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 6"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No6.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "a3ef8cbbbdfbe3aea24e4476f48188ade96e90da2c4b5b87f9afcbbf63ba19e4",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No6/GiulianiOp100No6.ly",
+   "work_id": "mutopia:giulianiop100no6"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/12/23-1802",
+   "group_id": "mutopia:giulianiop100no7",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no7",
+     "index": 1,
+     "note_count": 388,
+     "pressed_annotation_count": 0,
+     "root_sha256": "f642b111c67063fb67753e989b29e0b9f7ddf7f17a3fc3aa243091f2ab801e21",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 7"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No7.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "4b8f36deff558b991135b2e87ebacad864a10eb9dbe7578750768f1d87695a86",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No7/GiulianiOp100No7.ly",
+   "work_id": "mutopia:giulianiop100no7"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/12/23-1803",
+   "group_id": "mutopia:giulianiop100no8",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no8",
+     "index": 1,
+     "note_count": 187,
+     "pressed_annotation_count": 0,
+     "root_sha256": "b954007fcd2a447d87d0e843a7132ab54c19a17fcb282e1d0e4502f78a0243e0",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 8"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No8.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "b50e0e51aca41498d34913671a73859de5f8fd9eb1a3b5195b649c733ff71486",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No8/GiulianiOp100No8.ly",
+   "work_id": "mutopia:giulianiop100no8"
+  },
+  {
+   "composer": "Mauro Giuliani",
+   "edition": "Mutopia-2015/12/23-1804",
+   "group_id": "mutopia:giulianiop100no9",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-giulianiop100no9",
+     "index": 1,
+     "note_count": 268,
+     "pressed_annotation_count": 0,
+     "root_sha256": "542d2ec4cdbb7cbdb0a5fa930822dc650ac8a96b943efa4808d06e60cc3aad06",
+     "tempo_bpm": 90.0,
+     "title": "24 Studies for the Guitar, No. 9"
+    }
+   ],
+   "path": "sources/mutopia_expanded/GiulianiOp100No9.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "18dc0869096a8e438f5ce5af74d132df8462321a522b2bd14f0db34e1ea6328c",
+   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No9/GiulianiOp100No9.ly",
+   "work_id": "mutopia:giulianiop100no9"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2009/04/11-1645",
+   "group_id": "mutopia:guitar-skole-no-02",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 38,
+     "id": "mutopia-guitar-skole-no-02",
+     "index": 1,
+     "note_count": 171,
+     "pressed_annotation_count": 38,
+     "root_sha256": "24933a14f795d912963374d15212b1bf379f847c7c29efceadaeef321e6fd473",
+     "tempo_bpm": 90.0,
+     "title": "guitar-skole-no-02"
+    }
+   ],
+   "path": "sources/mutopia_expanded/guitar-skole-no-02.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "4900d88dcac91b690033f9b6a8d754bd5a265beb409130fe701ed17d82cd5153",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/guitar-skole-no-02/guitar-skole-no-02-lys/guitar-skole-no-02.ly",
+   "work_id": "mutopia:guitar-skole-no-02"
+  },
+  {
+   "composer": "D. Joly",
+   "edition": "Mutopia-2012/01/14-1825",
+   "group_id": "mutopia:jolyd-tyrolienne",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 24,
+     "id": "mutopia-jolyd-tyrolienne-movement-1",
+     "index": 1,
+     "note_count": 221,
+     "pressed_annotation_count": 21,
+     "root_sha256": "573e2b107a8e9fa2024a07a4df957422037ccebad2a4ded48fcbb9facf752121",
+     "tempo_bpm": 90.0,
+     "title": "JolyD_Tyrolienne"
+    },
+    {
+     "annotation_count": 24,
+     "id": "mutopia-jolyd-tyrolienne-movement-2",
+     "index": 2,
+     "note_count": 221,
+     "pressed_annotation_count": 21,
+     "root_sha256": "e03f877226c5653567ffcfacb13afcb9b5169ffb191e4b487fd5e4237164eb21",
+     "tempo_bpm": 90.0,
+     "title": "JolyD_Tyrolienne"
+    }
+   ],
+   "path": "sources/mutopia_expanded/JolyD_Tyrolienne.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "cdfb24eefe7761fe17085b5a0f0c1c09b7b51b34ad2375a385e751e538260616",
+   "source_url": "https://www.mutopiaproject.org/ftp/JolyD/JolyD_Tyrolienne/JolyD_Tyrolienne.ly",
+   "work_id": "mutopia:jolyd-tyrolienne"
+  },
+  {
+   "composer": "Fernando Sor (1778-1839)",
+   "edition": "Mutopia-2013/03/23-454",
+   "group_id": "mutopia:sor-op-1-4",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op-1-4",
+     "index": 1,
+     "note_count": 163,
+     "pressed_annotation_count": 0,
+     "root_sha256": "008fca188d4b8283b17a9b0c3332cc96668cef5df3620c87e5ada54d6704a356",
+     "tempo_bpm": 90.0,
+     "title": "Divertissements pour la guitare, n\u00b04"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op_1_4.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "ab5c357ca5bafaa430f0c50a1ac5c3d63dc6face767e408b059c1e4f8f191647",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O1/sor_op_1_4/sor_op_1_4.ly",
+   "work_id": "mutopia:sor-op-1-4"
+  },
+  {
+   "composer": "Fernando Sor (1778-1839)",
+   "edition": "Mutopia-2013/03/23-455",
+   "group_id": "mutopia:sor-op-1-5-1",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op-1-5-1",
+     "index": 1,
+     "note_count": 166,
+     "pressed_annotation_count": 0,
+     "root_sha256": "21c6d2b2760708820e28e36906a6cf2ed4b18fded5293e6e23624959706ccb60",
+     "tempo_bpm": 90.0,
+     "title": "Divertissements pour la guitare, n\u00b05.1"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op_1_5_1.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "2b079b424479391578fe43c169c475afacf3378c6e6c9e6ceb1cf9b933e5dcbb",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O1/sor_op_1_5_1/sor_op_1_5_1.ly",
+   "work_id": "mutopia:sor-op-1-5-1"
+  },
+  {
+   "composer": "Fernando Sor (1778-1839)",
+   "edition": "Mutopia-2013/03/23-457",
+   "group_id": "mutopia:sor-op-1-5-3",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op-1-5-3",
+     "index": 1,
+     "note_count": 319,
+     "pressed_annotation_count": 0,
+     "root_sha256": "261f22023aedc536ddeda778db46de1cbe07d1ca42de65e6725672e99a83cb82",
+     "tempo_bpm": 90.0,
+     "title": "Divertissements pour la guitare, n\u00b05.3"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op_1_5_3.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "cf9045057a7e3ed535883d2b493171db32c8494367102dcb757f8d34f0e2f588",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O1/sor_op_1_5_3/sor_op_1_5_3.ly",
+   "work_id": "mutopia:sor-op-1-5-3"
+  },
+  {
+   "composer": "Fernando Sor (1778-1839)",
+   "edition": "Mutopia-2013/03/23-458",
+   "group_id": "mutopia:sor-op-1-6",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op-1-6",
+     "index": 1,
+     "note_count": 453,
+     "pressed_annotation_count": 0,
+     "root_sha256": "addde852df0d164598e4c7d13132591a9c5fab23e3fe491926acd394eb2e8a42",
+     "tempo_bpm": 90.0,
+     "title": "Divertissements pour la guitare, n\u00b06"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op_1_6.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "4e8492532d86f12d063c99a85f4e0bb7a3a2364f977f29fba075f16beffa3e7a",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O1/sor_op_1_6/sor_op_1_6.ly",
+   "work_id": "mutopia:sor-op-1-6"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2015/09/06-413",
+   "group_id": "mutopia:sor-op1-1",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op1-1",
+     "index": 1,
+     "note_count": 216,
+     "pressed_annotation_count": 0,
+     "root_sha256": "92d447f1f59e770c961772905bd027b2b51879245ef4ba6b78ecb4e509b0ab09",
+     "tempo_bpm": 90.0,
+     "title": "Divertissements pour la guitare, n\u00b01 Andante"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op1_1.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "38a179540a0b6568704073abdee196a4eea68a78e7a3894545624fa6b0a22215",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O1/sor_op1_1/sor_op1_1.ly",
+   "work_id": "mutopia:sor-op1-1"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2015/09/06-452",
+   "group_id": "mutopia:sor-op1-2",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op1-2",
+     "index": 1,
+     "note_count": 300,
+     "pressed_annotation_count": 0,
+     "root_sha256": "46d59fbe8f3303e07d5206de744105d7bb46239cc15b0fa24456dbb8535eb83b",
+     "tempo_bpm": 90.0,
+     "title": "Divertissements pour la guitare, n\u00b02 Waltz"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op1_2.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "109e3abbcdd31e3eb19ff6c7ffbfb56927c0044e9f93edbb69751244ea4f4ad1",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O1/sor_op1_2/sor_op1_2.ly",
+   "work_id": "mutopia:sor-op1-2"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2016/11/02-453",
+   "group_id": "mutopia:sor-op1-3",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op1-3",
+     "index": 1,
+     "note_count": 1028,
+     "pressed_annotation_count": 0,
+     "root_sha256": "fcdfe42b3de1fea3d5912df101bad0369ee4962672f4c11949022b0778f38e94",
+     "tempo_bpm": 90.0,
+     "title": "Divertissements pour la guitare, n\u00b03 Allegretto"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op1_3.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "57ae7a6346d0270e27e54098583e6fdbe0e62248b2d40cd41cf71c3db3c1c5d5",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O1/sor_op1_3/sor_op1_3.ly",
+   "work_id": "mutopia:sor-op1-3"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mark Van den Borre",
+   "group_id": "mutopia:sor-op2-1",
+   "license": "CC-BY-SA-2.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op2-1",
+     "index": 1,
+     "note_count": 113,
+     "pressed_annotation_count": 0,
+     "root_sha256": "9a4248c5de95f3c393cf9da0647c8617b0ecc8f585f40ee5949376b9a14905a5",
+     "tempo_bpm": 90.0,
+     "title": "Six divertissements pour la guitarre, n\u00b01 Minuetto"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op2_1.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 2.0",
+   "source_sha256": "5fcf592ef9aa2c7d067e24bef4f3c6c75f634c770b8d044dec22f43f97dfbcd8",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O2/sor_op2_1/sor_op2_1.ly",
+   "work_id": "mutopia:sor-op2-1"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mark Van den Borre",
+   "group_id": "mutopia:sor-op2-2",
+   "license": "CC-BY-SA-2.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op2-2",
+     "index": 1,
+     "note_count": 217,
+     "pressed_annotation_count": 0,
+     "root_sha256": "9c09a5cdd48edbddf2a3ab70ce91f4e25bf7848459cf4f6566c25138b7fb67ce",
+     "tempo_bpm": 90.0,
+     "title": "Six divertissements pour la guitarre, n\u00b02 Waltz"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op2_2.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 2.0",
+   "source_sha256": "6ac2cf9b1a7d18ce9da161cd6acd5ebedacdfdfb18991b2af0db3185a1bb6bc3",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O2/sor_op2_2/sor_op2_2.ly",
+   "work_id": "mutopia:sor-op2-2"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mark Van den Borre",
+   "group_id": "mutopia:sor-op2-3",
+   "license": "CC-BY-SA-2.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op2-3-movement-1",
+     "index": 1,
+     "note_count": 505,
+     "pressed_annotation_count": 0,
+     "root_sha256": "8edde82f0d3534e7e32d8182498c43337951e152db51894186e9de44a61418a4",
+     "tempo_bpm": 90.0,
+     "title": "Six divertissements pour la guitarre, n\u00b03 Andantino"
+    },
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op2-3-movement-2",
+     "index": 2,
+     "note_count": 505,
+     "pressed_annotation_count": 0,
+     "root_sha256": "6bb4deabb4d7c9f2f457d761f2d817aa53364f90bbb164e37f66179daeb505da",
+     "tempo_bpm": 90.0,
+     "title": "Six divertissements pour la guitarre, n\u00b03 Andantino"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op2_3.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 2.0",
+   "source_sha256": "ecb06c3da2e46e26f57abcf895dae8b36a460a336bb5ff9b71cb4fa6c656e3e2",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O2/sor_op2_3/sor_op2_3.ly",
+   "work_id": "mutopia:sor-op2-3"
+  },
+  {
+   "composer": "Fernando Sor (1778-1839)",
+   "edition": "Mutopia-2005/08/14-243",
+   "group_id": "mutopia:sor-op2-nr4",
+   "license": "CC-BY-SA-2.5",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.5/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op2-nr4",
+     "index": 1,
+     "note_count": 181,
+     "pressed_annotation_count": 0,
+     "root_sha256": "6d050a7a47ade02baf1c94232328da2767bb86222ec35198e53c9182aeb2700b",
+     "tempo_bpm": 90.0,
+     "title": "Menuetto"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op2_nr4.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 2.5",
+   "source_sha256": "826ade660fd75756fdcb1dfa4f92879c84afc11eb70ea559f39777276f5b4dff",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O2/sor_op2_nr4/sor_op2_nr4.ly",
+   "work_id": "mutopia:sor-op2-nr4"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2005/08/14-591",
+   "group_id": "mutopia:sor-op2-nr6",
+   "license": "CC-BY-SA-2.5",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.5/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op2-nr6",
+     "index": 1,
+     "note_count": 1020,
+     "pressed_annotation_count": 0,
+     "root_sha256": "68c34e9367038a1d51b39c5f57a1371389e02da9f4d8d97a2be17988dbabbe24",
+     "tempo_bpm": 90.0,
+     "title": "Six Divertissements op. 2 n\ufffd6 Siciliana"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op2_nr6.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 2.5",
+   "source_sha256": "29e8fa1214cf024a3d721bca5a3d7e07777ba06009073408611fe9a42fb9425f",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O2/sor_op2_nr6/sor_op2_nr6.ly",
+   "work_id": "mutopia:sor-op2-nr6"
+  },
+  {
+   "composer": "Fernando Sor (1778-1839)",
+   "edition": "Mutopia-2006/01/01-646",
+   "group_id": "mutopia:sor-op5-5",
+   "license": "CC-BY-SA-2.5",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.5/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sor-op5-5",
+     "index": 1,
+     "note_count": 564,
+     "pressed_annotation_count": 0,
+     "root_sha256": "74a59f0342b7b3c1117f55846644d1f134235cb580963ff76e9c7da34c8ff991",
+     "tempo_bpm": 90.0,
+     "title": "Andante Largo"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor-op5-5.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 2.5",
+   "source_sha256": "c6728800cd5e54a67d04c99325c7bc934bfb2191f398bd20cc921c95e2aab849",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O5/sor-op5-5/sor-op5-5.ly",
+   "work_id": "mutopia:sor-op5-5"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2006/02/10-667",
+   "group_id": "mutopia:sor-op60-02",
+   "license": "CC-BY-SA-2.5",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.5/",
+   "movements": [
+    {
+     "annotation_count": 68,
+     "id": "mutopia-sor-op60-02",
+     "index": 1,
+     "note_count": 135,
+     "pressed_annotation_count": 68,
+     "root_sha256": "21eef2dde9c8dc8d8e92649c8491a4d766835d80feeaa0d14356c28053f930fd",
+     "tempo_bpm": 90.0,
+     "title": "25 Le\u00e7ons Progressives, no 2"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op60-02.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 2.5",
+   "source_sha256": "433550e4f1582924c0bd2ee308071944613697cecc276d24caffcc9680fdd3af",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O60/sor_op60-02/sor_op60-02.ly",
+   "work_id": "mutopia:sor-op60-02"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/03/23-673",
+   "group_id": "mutopia:sor-op60-05",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 111,
+     "id": "mutopia-sor-op60-05",
+     "index": 1,
+     "note_count": 211,
+     "pressed_annotation_count": 102,
+     "root_sha256": "ec7008e7773464e91701e084400c8aa06cb8b2a00d552d13fe4702cef1bc4c2f",
+     "tempo_bpm": 90.0,
+     "title": "25 Le\u00e7ons Progressives, no 5"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op60-05.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "7f1a8652268cb535c4a7dc2d2caf9a6464e5c80e85a83d61602de441cb653ab6",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O60/sor_op60-05/sor_op60-05.ly",
+   "work_id": "mutopia:sor-op60-05"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2010/04/04-1746",
+   "group_id": "mutopia:sor-op60-06",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 66,
+     "id": "mutopia-sor-op60-06",
+     "index": 1,
+     "note_count": 141,
+     "pressed_annotation_count": 63,
+     "root_sha256": "5abc5a9f6aa9306c37e40fc2f386da90638752263281e31b8d36bbbcdce8c46d",
+     "tempo_bpm": 90.0,
+     "title": "25 Progressive Studies, No. 6"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op60-06.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "55962d7b28d5d6c210c674dbb07cba9e97e614065f34aec415f36a99a1b33345",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O60/sor_op60-06/sor_op60-06.ly",
+   "work_id": "mutopia:sor-op60-06"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2010/04/04-1747",
+   "group_id": "mutopia:sor-op60-07",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 76,
+     "id": "mutopia-sor-op60-07",
+     "index": 1,
+     "note_count": 214,
+     "pressed_annotation_count": 74,
+     "root_sha256": "40586eef6ce3a77e71f9df5d48290312e49122fcabf70f26fc1b280b215cab4b",
+     "tempo_bpm": 90.0,
+     "title": "25 Progressive Studies, No. 7"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op60-07.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "2f35fb6c37956c2996cec2a5031e2b2d2805bea05fe5c713cea2fb9842bd9f6d",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O60/sor_op60-07/sor_op60-07.ly",
+   "work_id": "mutopia:sor-op60-07"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2010/04/04-1748",
+   "group_id": "mutopia:sor-op60-08",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 10,
+     "id": "mutopia-sor-op60-08",
+     "index": 1,
+     "note_count": 43,
+     "pressed_annotation_count": 10,
+     "root_sha256": "530204ee9ac198bafe37a66d16e6d0ebde4c7f8f508ce83b9b3bad637b60b245",
+     "tempo_bpm": 90.0,
+     "title": "25 Progressive Studies, No. 8"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op60-08.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "eda35161c036c7972a505acf092c6870ceedba004f8b495666b8893fa447f20b",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O60/sor_op60-08/sor_op60-08.ly",
+   "work_id": "mutopia:sor-op60-08"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2010/04/04-1749",
+   "group_id": "mutopia:sor-op60-09",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 2,
+     "id": "mutopia-sor-op60-09",
+     "index": 1,
+     "note_count": 56,
+     "pressed_annotation_count": 2,
+     "root_sha256": "7d51e2505af09a50a54bfe2295b29247599ec5184f2f06f88a71e195306e7472",
+     "tempo_bpm": 90.0,
+     "title": "25 Progressive Studies, No. 9"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op60-09.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "2f8ad876c0a3abb999c761acbfcae9818349289e30cf0a6c78aa7f1099c9ae81",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O60/sor_op60-09/sor_op60-09.ly",
+   "work_id": "mutopia:sor-op60-09"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2010/04/04-1750",
+   "group_id": "mutopia:sor-op60-10",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 40,
+     "id": "mutopia-sor-op60-10",
+     "index": 1,
+     "note_count": 125,
+     "pressed_annotation_count": 37,
+     "root_sha256": "4a55bd9bec8531b5a670c90fb7f4c7fb05031f6359864d6529f4d9134e1b03a7",
+     "tempo_bpm": 90.0,
+     "title": "25 Progressive Studies, No. 10"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op60-10.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "311c69c0d93c39de490e33b19ea880ed90a1c77f91b3d9fffaa22cca685b6bbc",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O60/sor_op60-10/sor_op60-10.ly",
+   "work_id": "mutopia:sor-op60-10"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2010/04/04-1751",
+   "group_id": "mutopia:sor-op60-11",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 67,
+     "id": "mutopia-sor-op60-11",
+     "index": 1,
+     "note_count": 203,
+     "pressed_annotation_count": 62,
+     "root_sha256": "0ed135457f87c32479cb7e36f0a88da07c552f6e2cb1e8135be9afda300dd389",
+     "tempo_bpm": 90.0,
+     "title": "25 Progressive Studies, No. 11"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op60-11.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "8166853c94555927bf8bb7049e285b435626f08ca7aee50938711d0a027955b0",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O60/sor_op60-11/sor_op60-11.ly",
+   "work_id": "mutopia:sor-op60-11"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2010/04/04-1752",
+   "group_id": "mutopia:sor-op60-12",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 88,
+     "id": "mutopia-sor-op60-12",
+     "index": 1,
+     "note_count": 167,
+     "pressed_annotation_count": 81,
+     "root_sha256": "c04bf953be569018251f404f7fba5af133e7cb7f3855c6a58ea687134deca778",
+     "tempo_bpm": 90.0,
+     "title": "25 Progressive Studies, No. 12"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op60-12.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "04e0a2114946804b7b228faa8a2ec4fabbf92f59bdeedeb1d4406b252ef2dcd6",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O60/sor_op60-12/sor_op60-12.ly",
+   "work_id": "mutopia:sor-op60-12"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2010/04/04-1753",
+   "group_id": "mutopia:sor-op60-13",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 41,
+     "id": "mutopia-sor-op60-13",
+     "index": 1,
+     "note_count": 169,
+     "pressed_annotation_count": 40,
+     "root_sha256": "84d778f06be8df114adde442b32f21e3431c7e1f64dcc4db7e2dde4f005b4a87",
+     "tempo_bpm": 90.0,
+     "title": "25 Progressive Studies, No. 13"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sor_op60-13.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "3132a32c60cf5dd6fc786e87ffcefe159ed25b19f8ca81b9e7129fb66d77d03b",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O60/sor_op60-13/sor_op60-13.ly",
+   "work_id": "mutopia:sor-op60-13"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2015/09/07-1810",
+   "group_id": "mutopia:sorf-andantino",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sorf-andantino",
+     "index": 1,
+     "note_count": 277,
+     "pressed_annotation_count": 0,
+     "root_sha256": "53f31672e273627e19707f0208d18cfb81dad4c768e7dd4342ee4b8178dc0610",
+     "tempo_bpm": 90.0,
+     "title": "Andantino"
+    }
+   ],
+   "path": "sources/mutopia_expanded/SorF_Andantino.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "c476df24cbf9ec6974865ad24df8a7d8fe91abc74395366e7bd9ee6e60243711",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/SorF_Andantino/SorF_Andantino.ly",
+   "work_id": "mutopia:sorf-andantino"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/08/18-1849",
+   "group_id": "mutopia:sorf-op35-no1",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 81,
+     "id": "mutopia-sorf-op35-no1",
+     "index": 1,
+     "note_count": 173,
+     "pressed_annotation_count": 66,
+     "root_sha256": "5d8d495dd3d591b3a95ba7e6784a1890cb533cfdc6e2c8b3fd70baf1155e815a",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 1"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no1.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "941aaad10df6e28ec3d6eb7cb48315c330595598f0e90053ffd8931009b1f561",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no1/sorf_op35_no1.ly",
+   "work_id": "mutopia:sorf-op35-no1"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2014/01/04-1897",
+   "group_id": "mutopia:sorf-op35-no10",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 95,
+     "id": "mutopia-sorf-op35-no10",
+     "index": 1,
+     "note_count": 320,
+     "pressed_annotation_count": 89,
+     "root_sha256": "8665e0ad8700f1ddf066d0fa28bf5c8e5d9bc1014ea8e70a375818591259fdcf",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 10"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no10.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "987e892813922439f87092cc7acfeefcae305ec3f778ef2d7eeb95361aa89c14",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no10/sorf_op35_no10.ly",
+   "work_id": "mutopia:sorf-op35-no10"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/08/18-1851",
+   "group_id": "mutopia:sorf-op35-no2",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 51,
+     "id": "mutopia-sorf-op35-no2",
+     "index": 1,
+     "note_count": 125,
+     "pressed_annotation_count": 45,
+     "root_sha256": "f3f8e58144ae00e5c0556c8aafcccb2ece089e1ad1da2302b5ad8d3ec5fbe811",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 2"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no2.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "1f66feafb74c32cd699004aa9ec3a7093b66314766348f5c55f881c8d814570c",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no2/sorf_op35_no2.ly",
+   "work_id": "mutopia:sorf-op35-no2"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/08/18-1850",
+   "group_id": "mutopia:sorf-op35-no22",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 86,
+     "id": "mutopia-sorf-op35-no22-movement-1",
+     "index": 1,
+     "note_count": 305,
+     "pressed_annotation_count": 75,
+     "root_sha256": "b4391e77b80323efc93c334556e31b82f7ff7f374614350d593c34cec9d735f9",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 22"
+    },
+    {
+     "annotation_count": 86,
+     "id": "mutopia-sorf-op35-no22-movement-2",
+     "index": 2,
+     "note_count": 305,
+     "pressed_annotation_count": 75,
+     "root_sha256": "14b6a4262a9706db4506323786aea75f754162a3968c41e0c474b791a125086d",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 22"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no22.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "a2dfb39a40b2dd8b406cce4894af20dcd5e5312e815825170e2fbec40c5ca217",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no22/sorf_op35_no22.ly",
+   "work_id": "mutopia:sorf-op35-no22"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/08/18-1852",
+   "group_id": "mutopia:sorf-op35-no3",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 58,
+     "id": "mutopia-sorf-op35-no3",
+     "index": 1,
+     "note_count": 188,
+     "pressed_annotation_count": 49,
+     "root_sha256": "768acf481870babd4a462618259a5eabee4190d952821bcb20f9c1a90b7cab3c",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 3"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no3.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "b6b6c24219ab0249ee86336cf984b19f37727ed53d2abfd66d10b65fb6abdd5b",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no3/sorf_op35_no3.ly",
+   "work_id": "mutopia:sorf-op35-no3"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/09/01-1868",
+   "group_id": "mutopia:sorf-op35-no4",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 150,
+     "id": "mutopia-sorf-op35-no4",
+     "index": 1,
+     "note_count": 256,
+     "pressed_annotation_count": 122,
+     "root_sha256": "66bb6f3911db5cb75e5eaf3dfc3e89d31ae63458b978a9aafa8fe77ffc9caf0a",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 4"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no4.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "d386c114beb642a81f6d96f92b88ec0d91e56c79edf5dab97988bbc91894e5ce",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no4/sorf_op35_no4.ly",
+   "work_id": "mutopia:sorf-op35-no4"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/09/01-1869",
+   "group_id": "mutopia:sorf-op35-no5",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 108,
+     "id": "mutopia-sorf-op35-no5",
+     "index": 1,
+     "note_count": 325,
+     "pressed_annotation_count": 95,
+     "root_sha256": "f22844c7b2eb94d949296d04e552382eaf120009fda733db24724b13713a5138",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 5"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no5.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "d9c73e2c5b49d3a97e09080f4e41a1bb202f19f56f1183ba3aa94ffc99f965ec",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no5/sorf_op35_no5.ly",
+   "work_id": "mutopia:sorf-op35-no5"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/12/01-1876",
+   "group_id": "mutopia:sorf-op35-no6",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 77,
+     "id": "mutopia-sorf-op35-no6",
+     "index": 1,
+     "note_count": 187,
+     "pressed_annotation_count": 65,
+     "root_sha256": "d90944ad46a9ad3cb7862fdfee618482c352e4fcba61f316e98cf0a67e23f065",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 6"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no6.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "ba18ae799318578e56b59767461c3fe0647480a0e65ef032e4ae33b3fd1abc97",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no6/sorf_op35_no6.ly",
+   "work_id": "mutopia:sorf-op35-no6"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/12/01-1877",
+   "group_id": "mutopia:sorf-op35-no7",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 141,
+     "id": "mutopia-sorf-op35-no7",
+     "index": 1,
+     "note_count": 748,
+     "pressed_annotation_count": 132,
+     "root_sha256": "ca038099695bd4ea5c57a8ab07fec704129ae2e79b7dceb680cef77ca24fcc38",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 7"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no7.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "656455fb60f62aff7d88b27bdf14118eed6f502706d74f2691829d0cf99c0c7d",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no7/sorf_op35_no7.ly",
+   "work_id": "mutopia:sorf-op35-no7"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/12/01-1878",
+   "group_id": "mutopia:sorf-op35-no8",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 98,
+     "id": "mutopia-sorf-op35-no8",
+     "index": 1,
+     "note_count": 336,
+     "pressed_annotation_count": 78,
+     "root_sha256": "fde8b412a57cda40d1d032e0d29c1cfa27cfe6388c41ed42120f69a906e492ff",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 8"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no8.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "022da9c77446f8a2f8b37a3f8bb0983c49e83631e24d0fb9c573464f2c9c96d6",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no8/sorf_op35_no8.ly",
+   "work_id": "mutopia:sorf-op35-no8"
+  },
+  {
+   "composer": "Fernando Sor",
+   "edition": "Mutopia-2013/12/01-1882",
+   "group_id": "mutopia:sorf-op35-no9",
+   "license": "CC-BY-SA-3.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "movements": [
+    {
+     "annotation_count": 196,
+     "id": "mutopia-sorf-op35-no9",
+     "index": 1,
+     "note_count": 468,
+     "pressed_annotation_count": 168,
+     "root_sha256": "94a5c6bc54a573c1b0916638d6bdeec1f31946f33e07408ae67184d7a7af5b3a",
+     "tempo_bpm": 90.0,
+     "title": "Op. 35, Study No. 9"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf_op35_no9.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
+   "source_sha256": "13f6773f70ad9560d84b9039b12fdf5cbda46f7c46223fa44ae143c4126aaafd",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no9/sorf_op35_no9.ly",
+   "work_id": "mutopia:sorf-op35-no9"
+  },
+  {
+   "composer": "F. Sor",
+   "edition": "Mutopia-2016/04/11-2112",
+   "group_id": "mutopia:sorf-op45n04",
+   "license": "CC-BY-SA-4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-sorf-op45n04",
+     "index": 1,
+     "note_count": 561,
+     "pressed_annotation_count": 0,
+     "root_sha256": "7da65ae3461d3cf5d2de2676de6b4a44798157c3210ddbb537040fdbe060d66f",
+     "tempo_bpm": 90.0,
+     "title": "Six Petites Pi\u00e8ces, No. 4"
+    }
+   ],
+   "path": "sources/mutopia_expanded/sorf-op45n04.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 4.0",
+   "source_sha256": "cd1ffbf7bb53558eb61c581aa28654b43d778e2bd933f38c439342f22e2dcf33",
+   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O45/sorf-op45n04/sorf-op45n04.ly",
+   "work_id": "mutopia:sorf-op45n04"
+  },
+  {
+   "composer": "Anonymous",
+   "edition": "Mutopia-2006/08/03-795",
+   "group_id": "mutopia:spanish-romance",
+   "license": "CC-BY-SA-2.5",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.5/",
+   "movements": [
+    {
+     "annotation_count": 0,
+     "id": "mutopia-spanish-romance",
+     "index": 1,
+     "note_count": 387,
+     "pressed_annotation_count": 0,
+     "root_sha256": "7d512c5f991f5f5e8c27a99660c3a63b226a21097becedd3cdc55f6bbfcc5a3a",
+     "tempo_bpm": 90.0,
+     "title": "Spanish Romance"
+    }
+   ],
+   "path": "sources/mutopia_expanded/spanish-romance.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 2.5",
+   "source_sha256": "9632ce8235fce99d6e3bfa738bc24c0308e5a7abf7b3d4d744f63e519c74829f",
+   "source_url": "https://www.mutopiaproject.org/ftp/Anonymous/spanish-romance/spanish-romance.ly",
+   "work_id": "mutopia:spanish-romance"
+  },
+  {
+   "composer": "GruberFX",
+   "edition": "Mutopia-2005/01/21-521",
+   "group_id": "mutopia:stille-nacht",
+   "license": "CC-BY-SA-2.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+   "movements": [
+    {
+     "annotation_count": 12,
+     "id": "mutopia-stille-nacht",
+     "index": 1,
+     "note_count": 142,
+     "pressed_annotation_count": 12,
+     "root_sha256": "4beba32502c4a25902b21ea4633e9c541c5550158f2f955ae9801e4bf4c315df",
+     "tempo_bpm": 90.0,
+     "title": "Silent Night"
+    }
+   ],
+   "path": "sources/mutopia_expanded/stille-nacht.ly",
+   "source_license_declaration": "Creative Commons Attribution-ShareAlike 2.0",
+   "source_sha256": "3d058f234c38a7cf2941242eed8967441b92aaefc33e686dde4df9fe419903fc",
+   "source_url": "https://www.mutopiaproject.org/ftp/GruberFX/stille-nacht/stille-nacht.ly",
+   "work_id": "mutopia:stille-nacht"
+  }
+ ],
+ "schema": "fretsure-mutopia-lilypond-manifest@0.1.0"
+}
