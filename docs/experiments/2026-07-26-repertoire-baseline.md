@@ -368,3 +368,64 @@ cap is still RED, and the 1,849 negative tabs are verdict-for-verdict
 unchanged. `fingering-solver@0.6.0` → `0.7.0`. The field round-trips through
 Tab JSON (written only when non-zero), the agent trace, the HTTP wire, the web
 client and the text export.
+
+### W6 — the hand model is a placeholder, but loosening it is a bad trade: 26 → 26
+
+`median@0.1` was never fitted to anything; its own docstring says the numbers
+are v1 placeholders and only their ordering was ever asserted. Fitting them to
+the repertoire is the obvious next step, and it is also exactly how a verifier
+becomes a rubber stamp, so every move was priced on both sides at once:
+the 58 published scores against the 1,718 raw-LLM tabs plus the mutation
+triggers. A GREEN on that negative set is a false *certification*, not merely a
+loss of caution, so it is counted separately from AMBER throughout.
+
+| move | repertoire | false GREEN of 1,718 |
+|---|---|---|
+| baseline `median@0.1` | 26 | 6 (0.35%) |
+| `v_shift` + `r_max` ×1.1 | 26 | 6 |
+| `hand_span` + `reach` ×1.1 | **27** | **19 (1.11%)** |
+| all four ×1.05 | **25** | 7 |
+| `hand_span` ×1.25 | **25** | — |
+
+No single coordinate buys anything. The one piece that is available
+(`aguado-op11n01`) comes entirely from hand span and reach, and it costs
+thirteen additional false certifications — a 3.2× increase in the measured
+false-accept rate to gain one piece in fifty-eight. **That is not a trade this
+project should make**, so no loosened profile ships and `median@0.1` remains
+the default. What ships instead is `scripts/measure_profile_frontier.py`, which
+re-runs the whole measurement and reports the curve rather than a number.
+
+Three findings matter more than the exchange rate.
+
+**A scalar hand width cannot separate the two sets.** Thirteen negatives have
+fret span as their *only* defect, with overages of 9.3, 12.1, 12.1, 12.1, 12.1,
+13.6, 18.8, 22.1, 22.1, 22.1, 40.0, 45.2 and 49.7 mm past what the median hand
+allows. The repertoire frames that a 10% wider hand unlocks need +12.7 to
++14.7 mm. Six of the thirteen lie inside that same band: published Aguado and
+raw model output overlap *in the margin*. Widening the hand until the repertoire
+fits necessarily admits them too. That is a statement about the rule's shape --
+`d_max = factor(gap) x span` over Euclidean fingertip distance -- and no
+constant fixes it.
+
+**Acceptance is not monotone in the profile.** `hand_span` ×1.25 loses
+`prelude-16` and `carcassi-op26-05`; all four at ×1.05 loses one. A bigger hand
+reorders the beam and discards paths that currently work, so a calibration
+reporting only "accepted went up" would partly be measuring its own noise.
+
+**"No measured cost" is not "no cost."** `SHIFT_SPEED` is the most common
+violation in the negative set -- 1,629 of 1,640 RED tabs, and the sole reason
+for 161 of them -- yet loosening it by 3× moves nothing. The model's shift
+violations are gross, never marginal, so that set holds no near-boundary
+evidence about shift speed and cannot validate a ten-percent change to it.
+Reporting `v_shift` as "free" would be reporting the absence of a measurement.
+
+Two limits were also measured rather than assumed:
+
+* an **impossible hand** (250 mm span, 200 mm reach, 5 m/s shift, 50 Hz) solves
+  13 of the 23 beam deaths and still fails the other 10. So roughly half that
+  bucket is hand-model-limited in principle, at values no hand has, and half is
+  not hand-limited at all;
+* the deferred **drop-D metadata** fix was re-tested now that W3 and W5b exist.
+  All three D2 pieces still fail under drop-D — `carcassi-op60-23` merely
+  changes which reason it fails for. The deferral was correct and is now closed
+  as measured rather than pending.
