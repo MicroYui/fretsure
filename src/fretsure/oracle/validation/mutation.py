@@ -77,6 +77,16 @@ _STRING_SUSTAIN = _t(
     [TabNote(F(0), F(2), 0, 3, 1, "p"), TabNote(F(1), F(1), 0, 5, 2, "i")]
 )
 _RH_REPEAT = _t([TabNote(F(0), F(1), 0, 0, 0, "p"), TabNote(F(1, 32), F(1), 0, 0, 0, "p")])
+# Note: the "at most four simultaneous plucks" rule has no mutant, because for a
+# well-formed tab it is not independently observable.  ``right_finger`` has four
+# possible values, so a fifth simultaneous note must reuse a finger and trips the
+# one-finger-one-string rule regardless.  Deleting the cap changes the diagnostic
+# text, never a verdict.  See tests/oracle/test_predicates_rh.py for the direct
+# assertion, and note that lifting the cap alone would not make a six-string
+# chord representable.
+# Thumb on a higher string than the index finger: the right hand cannot cross
+# itself, so finger rank must ascend with string index.
+_RH_ORDER = _t([TabNote(F(0), F(1), 0, 0, 0, "i"), TabNote(F(0), F(1), 1, 0, 0, "p")])
 
 # Perturbed profiles that neutralize a single constraint (fault injection).
 _HUGE_SPAN = replace(MEDIAN_HAND, hand_span_mm=MAX_HAND_SPAN_MM)
@@ -124,6 +134,16 @@ def _barre_active_sustain_ignored(tab: Tab, profile: Profile) -> list[Diagnostic
     return check_barre(_release_at_next_attack(tab), profile)
 
 
+def _rh_string_order_ignored(tab: Tab, profile: Profile) -> list[Diagnostic]:
+    """Drop only the finger-rank-ascends-with-string rule."""
+
+    return [
+        diagnostic
+        for diagnostic in check_right_hand(tab, profile)
+        if diagnostic.suggested_relaxations != ("refinger",)
+    ]
+
+
 # (name, real predicate, mutant, trigger tabs)
 MUTANTS: list[tuple[str, Pred, Pred, tuple[Tab, ...]]] = [
     ("range_deleted", check_range, _deleted, (_RANGE,)),
@@ -136,6 +156,7 @@ MUTANTS: list[tuple[str, Pred, Pred, tuple[Tab, ...]]] = [
     ),
     ("shift_speed_disabled", check_shift_speed, _under(check_shift_speed, _HUGE_SHIFT), (_SHIFT,)),
     ("rh_repeat_ignored", check_right_hand, _under(check_right_hand, _HUGE_RMAX), (_RH_REPEAT,)),
+    ("rh_string_order_ignored", check_right_hand, _rh_string_order_ignored, (_RH_ORDER,)),
     ("one_string_one_note_deleted", check_one_string_one_note, _deleted, (_ONE_STRING,)),
     ("finger_count_deleted", check_finger_count, _deleted, (_FINGER_COUNT,)),
     ("finger_monotonic_deleted", check_finger_monotonic, _deleted, (_MONOTONIC,)),

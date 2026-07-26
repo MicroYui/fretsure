@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
-from dataclasses import astuple
 from decimal import Decimal, localcontext
 from fractions import Fraction
 from functools import lru_cache
@@ -41,8 +40,30 @@ _FRET_BUCKETS: Final = (
     ("f8p", 8, 10_000),
 )
 
+# The ranker was fit on exactly these fifteen quality fields, in this order.
+# Deriving the list from ``QualityCost.__dataclass_fields__`` would silently
+# re-scope a frozen model the moment the solver's objective gains a term, so the
+# names are frozen here and cross-checked against the dataclass below.
+PUBLISHED_FINGERING_QUALITY_FIELDS: Final = (
+    "awkward_fingering_events",
+    "left_hand_effort",
+    "refingering_count",
+    "barre_burden",
+    "finger_crossover_burden",
+    "fret_height_burden",
+    "position_deviation",
+    "position_shift_count",
+    "position_shift_distance",
+    "max_fret",
+    "fret_exposure",
+    "shift_count",
+    "shift_distance_um",
+    "finger_load",
+    "string_crossings",
+)
+
 PUBLISHED_FINGERING_FEATURE_NAMES: Final = (
-    *QualityCost.__dataclass_fields__,
+    *PUBLISHED_FINGERING_QUALITY_FIELDS,
     *(f"finger{finger}_count" for finger in range(1, 5)),
     *(
         f"finger{finger}_x_{bucket}"
@@ -50,6 +71,11 @@ PUBLISHED_FINGERING_FEATURE_NAMES: Final = (
         for bucket, _lower, _upper in _FRET_BUCKETS
     ),
 )
+
+if not set(PUBLISHED_FINGERING_QUALITY_FIELDS) <= set(QualityCost.__dataclass_fields__):
+    raise RuntimeError(
+        "published fingering ranker names a quality field the solver no longer computes"
+    )
 
 
 class _Model(NamedTuple):
@@ -65,7 +91,11 @@ def published_fingering_features(
 ) -> tuple[int | Fraction, ...]:
     """Return the identity-free finalist features used by the frozen model."""
 
-    values: list[int | Fraction] = list(astuple(quality))
+    # Named lookup, not ``astuple``: the model was fit on fifteen specific terms
+    # and must keep reading those even when the objective grows a new one.
+    values: list[int | Fraction] = [
+        getattr(quality, name) for name in PUBLISHED_FINGERING_QUALITY_FIELDS
+    ]
     values.extend(
         sum(note.left_finger == finger for note in tab.notes)
         for finger in range(1, 5)

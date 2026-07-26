@@ -1,0 +1,1580 @@
+{
+ "accepted_ids": [
+  "mutopia-carcassi-op59-prelude-01",
+  "mutopia-carcassi-op59-prelude-02",
+  "mutopia-carcassi-op59-prelude-03",
+  "mutopia-carcassi-op59-prelude-04",
+  "mutopia-carcassi-op59-prelude-05",
+  "mutopia-carcassi-op59-prelude-07",
+  "mutopia-carcassi-op59-prelude-08",
+  "mutopia-carcassi-op59-prelude-09",
+  "mutopia-carcassi-op59-prelude-11",
+  "mutopia-carcassi-op59-prelude-12",
+  "mutopia-carcassi-op59-prelude-14",
+  "mutopia-cc-by-sa-aminor-study",
+  "mutopia-cc-by-sa-sorf-op45n03-movement-3"
+ ],
+ "aggregate": {
+  "accepted": 13,
+  "examples": 58,
+  "infeasible_reason_counts": {
+   "frame has more attacks than available right-hand fingers": 3,
+   "no candidate passes the final full-oracle gate": 11,
+   "no feasible frame config": 7,
+   "no non-red extension within beam": 16,
+   "score-level solver segment budget is exhausted": 8
+  },
+  "outcome_counts": {
+   "AMBER": 6,
+   "GREEN": 7,
+   "INFEASIBLE": 45
+  }
+ },
+ "configuration": {
+  "beam": 16,
+  "corpus": [
+   "carcassi_op59.json",
+   "mutopia_pd_additional.json",
+   "mutopia_cc_by_sa.json"
+  ],
+  "profile_fingerprint": "fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62",
+  "profile_version": "median@0.1",
+  "sustain_retention_floor": "9/10"
+ },
+ "examples": [
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [
+    "FRET_SPAN"
+   ],
+   "id": "mutopia-carcassi-op59-prelude-01",
+   "notes": 60,
+   "outcome": "AMBER",
+   "split": "train",
+   "sustain": {
+    "melody_notated_beats": "23",
+    "melody_realized_beats": "23",
+    "melody_retention": "1",
+    "notated_beats": "57",
+    "realized_beats": "57",
+    "retention": "1"
+   },
+   "title": "Prelude 1 in C Major",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [],
+   "id": "mutopia-carcassi-op59-prelude-02",
+   "notes": 122,
+   "outcome": "AMBER",
+   "split": "train",
+   "sustain": {
+    "melody_notated_beats": "103/4",
+    "melody_realized_beats": "103/4",
+    "melody_retention": "1",
+    "notated_beats": "227/4",
+    "realized_beats": "227/4",
+    "retention": "1"
+   },
+   "title": "Prelude 2 in A Minor",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [],
+   "id": "mutopia-carcassi-op59-prelude-03",
+   "notes": 97,
+   "outcome": "GREEN",
+   "split": "test",
+   "sustain": {
+    "melody_notated_beats": "18",
+    "melody_realized_beats": "18",
+    "melody_retention": "1",
+    "notated_beats": "44",
+    "realized_beats": "44",
+    "retention": "1"
+   },
+   "title": "Prelude 3 in G Major",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [],
+   "id": "mutopia-carcassi-op59-prelude-04",
+   "notes": 92,
+   "outcome": "GREEN",
+   "split": "train",
+   "sustain": {
+    "melody_notated_beats": "39/2",
+    "melody_realized_beats": "39/2",
+    "melody_retention": "1",
+    "notated_beats": "43",
+    "realized_beats": "43",
+    "retention": "1"
+   },
+   "title": "Prelude 4 in E Minor",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [],
+   "id": "mutopia-carcassi-op59-prelude-05",
+   "notes": 121,
+   "outcome": "GREEN",
+   "split": "train",
+   "sustain": {
+    "melody_notated_beats": "105/4",
+    "melody_realized_beats": "105/4",
+    "melody_retention": "1",
+    "notated_beats": "229/4",
+    "realized_beats": "229/4",
+    "retention": "1"
+   },
+   "title": "Prelude 5 in D Major",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-carcassi-op59-prelude-06",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "5",
+    "pitches": [
+     47
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 155,
+   "outcome": "INFEASIBLE",
+   "split": "dev",
+   "title": "Prelude 6 in B Minor",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [],
+   "id": "mutopia-carcassi-op59-prelude-07",
+   "notes": 94,
+   "outcome": "GREEN",
+   "split": "dev",
+   "sustain": {
+    "melody_notated_beats": "20",
+    "melody_realized_beats": "20",
+    "melody_retention": "1",
+    "notated_beats": "89/2",
+    "realized_beats": "89/2",
+    "retention": "1"
+   },
+   "title": "Prelude 7 in A Major",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [],
+   "id": "mutopia-carcassi-op59-prelude-08",
+   "notes": 112,
+   "outcome": "GREEN",
+   "split": "train",
+   "sustain": {
+    "melody_notated_beats": "105/4",
+    "melody_realized_beats": "105/4",
+    "melody_retention": "1",
+    "notated_beats": "233/4",
+    "realized_beats": "233/4",
+    "retention": "1"
+   },
+   "title": "Prelude 8 in F-sharp Minor",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [],
+   "id": "mutopia-carcassi-op59-prelude-09",
+   "notes": 123,
+   "outcome": "AMBER",
+   "split": "train",
+   "sustain": {
+    "melody_notated_beats": "121/4",
+    "melody_realized_beats": "121/4",
+    "melody_retention": "1",
+    "notated_beats": "249/4",
+    "realized_beats": "249/4",
+    "retention": "1"
+   },
+   "title": "Prelude 9 in E Major",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-carcassi-op59-prelude-10",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "57",
+    "pitches": [
+     73
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 103,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Prelude 10 in C-sharp Minor",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [],
+   "id": "mutopia-carcassi-op59-prelude-11",
+   "notes": 91,
+   "outcome": "GREEN",
+   "split": "train",
+   "sustain": {
+    "melody_notated_beats": "75/4",
+    "melody_realized_beats": "75/4",
+    "melody_retention": "1",
+    "notated_beats": "169/4",
+    "realized_beats": "169/4",
+    "retention": "1"
+   },
+   "title": "Prelude 11 in F Major",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [],
+   "id": "mutopia-carcassi-op59-prelude-12",
+   "notes": 188,
+   "outcome": "GREEN",
+   "split": "train",
+   "sustain": {
+    "melody_notated_beats": "38",
+    "melody_realized_beats": "38",
+    "melody_retention": "1",
+    "notated_beats": "87",
+    "realized_beats": "87",
+    "retention": "1"
+   },
+   "title": "Prelude 12 in D Minor",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-carcassi-op59-prelude-13",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "45",
+    "pitches": [
+     46
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 79,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Prelude 13 in B-flat Major",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "diagnostic_types": [
+    "SHIFT_SPEED"
+   ],
+   "id": "mutopia-carcassi-op59-prelude-14",
+   "notes": 95,
+   "outcome": "AMBER",
+   "split": "test",
+   "sustain": {
+    "melody_notated_beats": "36",
+    "melody_realized_beats": "36",
+    "melody_retention": "1",
+    "notated_beats": "167/2",
+    "realized_beats": "167/2",
+    "retention": "1"
+   },
+   "title": "Prelude 14 in G Minor",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-carcassi-op59-prelude-15",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "17/4",
+    "pitches": [
+     60
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 102,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Prelude 15 in E-flat Major",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-carcassi-op59-prelude-16",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "55/4",
+    "pitches": [
+     67
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 111,
+   "outcome": "INFEASIBLE",
+   "split": "test",
+   "title": "Prelude 16 in C Minor",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Johannes Brahms",
+   "id": "mutopia-brahms-op39-no3",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "9/2",
+    "pitches": [
+     57
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 152,
+   "outcome": "INFEASIBLE",
+   "split": "test",
+   "title": "Vals no. 3, Op. 39",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Johannes Brahms",
+   "id": "mutopia-brahms-op39-no9",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "23",
+    "pitches": [
+     52,
+     56
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 144,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Vals no. 9, Op. 39",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Gabriel Faur\u00e9",
+   "id": "mutopia-faure-op78-sicilienne",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "4",
+    "pitches": [
+     70
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 219,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Sicilienne, Op. 78",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Johann Kaspar Mertz",
+   "id": "mutopia-mertz-etude-a-minor",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "17/4",
+    "pitches": [
+     57
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 222,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Etude in A minor",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Francisco T\u00e1rrega",
+   "id": "mutopia-tarrega-claro-de-luna",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "443/3",
+    "pitches": [
+     60
+    ],
+    "reason": "score-level solver segment budget is exhausted"
+   },
+   "notes": 1001,
+   "outcome": "INFEASIBLE",
+   "split": "dev",
+   "title": "Claro de Luna",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-aguado-op11n01",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "14",
+    "pitches": [
+     45,
+     61,
+     68,
+     69
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 332,
+   "outcome": "INFEASIBLE",
+   "split": "test",
+   "title": "Les Favorites, Op. 11 No. 1",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-aguado-op11n02",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "195/2",
+    "pitches": [
+     54,
+     62
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 201,
+   "outcome": "INFEASIBLE",
+   "split": "test",
+   "title": "Les Favorites, Op. 11 No. 2",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-aguado-op11n03",
+   "infeasible": {
+    "code": "NO_FRAME_CONFIG",
+    "onset": "2",
+    "pitches": [
+     52,
+     54,
+     57
+    ],
+    "reason": "no feasible frame config"
+   },
+   "notes": 319,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Les Favorites, Op. 11 No. 3",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-aguado-op11n04",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "51",
+    "pitches": [
+     62
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 262,
+   "outcome": "INFEASIBLE",
+   "split": "dev",
+   "title": "Les Favorites, Op. 11 No. 4",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-aguado-op11n05",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "4",
+    "pitches": [
+     47,
+     62
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 243,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Les Favorites, Op. 11 No. 5",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-aguado-op11n06",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "27/2",
+    "pitches": [
+     47
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 276,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Les Favorites, Op. 11 No. 6",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-aguado-op11n07",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "5",
+    "pitches": [
+     57,
+     60,
+     66
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 259,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Les Favorites, Op. 11 No. 7",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-aguado-op11n08",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "1/2",
+    "pitches": [
+     55,
+     59,
+     62,
+     67
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 310,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Les Favorites, Op. 11 No. 8",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-aguado-op11n09",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "30",
+    "pitches": [
+     45,
+     61,
+     68,
+     69
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 335,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Les Favorites, Op. 11 No. 9",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-aguado-op11n10",
+   "infeasible": {
+    "code": "NO_FRAME_CONFIG",
+    "onset": "8",
+    "pitches": [
+     60,
+     62,
+     63,
+     65
+    ],
+    "reason": "no feasible frame config"
+   },
+   "notes": 194,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Les Favorites, Op. 11 No. 10",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "diagnostic_types": [
+    "SHIFT_SPEED"
+   ],
+   "id": "mutopia-cc-by-sa-aminor-study",
+   "notes": 240,
+   "outcome": "AMBER",
+   "split": "test",
+   "sustain": {
+    "melody_notated_beats": "89/2",
+    "melody_realized_beats": "89/2",
+    "melody_retention": "1",
+    "notated_beats": "213/2",
+    "realized_beats": "213/2",
+    "retention": "1"
+   },
+   "title": "Study in A Minor",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Francisco T\u00e1rrega",
+   "id": "mutopia-cc-by-sa-capricho-arabe",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "15",
+    "pitches": [
+     55,
+     58
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 1013,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Capricho \u00c1rabe",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-cc-by-sa-carcassi-op26-03",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "205/2",
+    "pitches": [
+     55
+    ],
+    "reason": "score-level solver segment budget is exhausted"
+   },
+   "notes": 415,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Six Caprices, Op. 26 No. 3",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-cc-by-sa-carcassi-op26-04",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "83/4",
+    "pitches": [
+     62
+    ],
+    "reason": "score-level solver segment budget is exhausted"
+   },
+   "notes": 957,
+   "outcome": "INFEASIBLE",
+   "split": "test",
+   "title": "Six Caprices, Op. 26 No. 4",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-cc-by-sa-carcassi-op26-05",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "315/4",
+    "pitches": [
+     61
+    ],
+    "reason": "score-level solver segment budget is exhausted"
+   },
+   "notes": 916,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Six Caprices, Op. 26 No. 5",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-cc-by-sa-carcassi-op60-22",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "17/2",
+    "pitches": [
+     47
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 102,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Etude 22, Op. 60, No. 22",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-cc-by-sa-carcassi-op60-23",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "383/2",
+    "pitches": [
+     62
+    ],
+    "reason": "score-level solver segment budget is exhausted"
+   },
+   "notes": 406,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Etude 23, Op. 60, No. 23",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-cc-by-sa-carcassi-op60-24",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "93/4",
+    "pitches": [
+     73
+    ],
+    "reason": "score-level solver segment budget is exhausted"
+   },
+   "notes": 674,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Etude 24, Op. 60, No. 24",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Matteo Carcassi",
+   "id": "mutopia-cc-by-sa-carcassi-op60-25",
+   "infeasible": {
+    "code": "NO_FRAME_CONFIG",
+    "onset": "4",
+    "pitches": [
+     40,
+     43
+    ],
+    "reason": "no feasible frame config"
+   },
+   "notes": 810,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Etude 25, Op. 60, No. 25",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Dionisio Aguado",
+   "id": "mutopia-cc-by-sa-g-major-allegro",
+   "infeasible": {
+    "code": "NO_FRAME_CONFIG",
+    "onset": "21",
+    "pitches": [
+     50,
+     57,
+     60,
+     62
+    ],
+    "reason": "no feasible frame config"
+   },
+   "notes": 338,
+   "outcome": "INFEASIBLE",
+   "split": "test",
+   "title": "Allegro",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no11",
+   "infeasible": {
+    "code": "NO_FRAME_CONFIG",
+    "onset": "0",
+    "pitches": [
+     45,
+     61,
+     62,
+     65
+    ],
+    "reason": "no feasible frame config"
+   },
+   "notes": 115,
+   "outcome": "INFEASIBLE",
+   "split": "dev",
+   "title": "24 Studies for the Guitar, Op. 35 No. 11",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no13",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "63/4",
+    "pitches": [
+     55
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 334,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "24 Studies for the Guitar, Op. 35 No. 13",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no15",
+   "infeasible": {
+    "code": "NO_FRAME_CONFIG",
+    "onset": "4",
+    "pitches": [
+     45,
+     66,
+     68,
+     69
+    ],
+    "reason": "no feasible frame config"
+   },
+   "notes": 242,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "24 Studies for the Guitar, Op. 35 No. 15",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "19/2",
+    "pitches": [
+     62,
+     65
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 468,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "24 Studies for the Guitar, Op. 35 No. 16",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no17",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "29",
+    "pitches": [
+     54,
+     62
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 266,
+   "outcome": "INFEASIBLE",
+   "split": "dev",
+   "title": "24 Studies for the Guitar, Op. 35 No. 17",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no18",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "15",
+    "pitches": [
+     52,
+     55,
+     64
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 308,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "24 Studies for the Guitar, Op. 35 No. 18",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no19",
+   "infeasible": {
+    "code": "NO_FRAME_CONFIG",
+    "onset": "0",
+    "pitches": [
+     53,
+     55,
+     60,
+     62,
+     64
+    ],
+    "reason": "frame has more attacks than available right-hand fingers"
+   },
+   "notes": 360,
+   "outcome": "INFEASIBLE",
+   "split": "dev",
+   "title": "24 Studies for the Guitar, Op. 35 No. 19",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no20",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "171",
+    "pitches": [
+     66
+    ],
+    "reason": "score-level solver segment budget is exhausted"
+   },
+   "notes": 595,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "24 Studies for the Guitar, Op. 35 No. 20",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no21",
+   "infeasible": {
+    "code": "NO_FRAME_CONFIG",
+    "onset": "0",
+    "pitches": [
+     40,
+     54,
+     56,
+     57,
+     59,
+     61,
+     62,
+     64,
+     66,
+     68,
+     69
+    ],
+    "reason": "frame has more attacks than available right-hand fingers"
+   },
+   "notes": 169,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "24 Studies for the Guitar, Op. 35 No. 21",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no23",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "35/4",
+    "pitches": [
+     42
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 212,
+   "outcome": "INFEASIBLE",
+   "split": "test",
+   "title": "24 Studies for the Guitar, Op. 35 No. 23",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op35-no24",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "61/2",
+    "pitches": [
+     59
+    ],
+    "reason": "score-level solver segment budget is exhausted"
+   },
+   "notes": 799,
+   "outcome": "INFEASIBLE",
+   "split": "dev",
+   "title": "24 Studies for the Guitar, Op. 35 No. 24",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op45n01",
+   "infeasible": {
+    "code": "NO_FRAME_CONFIG",
+    "onset": "45",
+    "pitches": [
+     55,
+     59,
+     60,
+     66,
+     67
+    ],
+    "reason": "frame has more attacks than available right-hand fingers"
+   },
+   "notes": 337,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Six Petites Pi\u00e8ces, Op. 45 No. 1",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op45n02",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "24",
+    "pitches": [
+     50
+    ],
+    "reason": "no candidate passes the final full-oracle gate"
+   },
+   "notes": 395,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Six Petites Pi\u00e8ces, Op. 45 No. 2",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op45n03-movement-2",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "1/2",
+    "pitches": [
+     48
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 162,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Six Petites Pi\u00e8ces, Op. 45 No. 3 \u2014 Variation I",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "diagnostic_types": [
+    "FRET_SPAN",
+    "SHIFT_SPEED"
+   ],
+   "id": "mutopia-cc-by-sa-sorf-op45n03-movement-3",
+   "notes": 124,
+   "outcome": "AMBER",
+   "split": "train",
+   "sustain": {
+    "melody_notated_beats": "67/2",
+    "melody_realized_beats": "67/2",
+    "melody_retention": "1",
+    "notated_beats": "70",
+    "realized_beats": "70",
+    "retention": "1"
+   },
+   "title": "Six Petites Pi\u00e8ces, Op. 45 No. 3 \u2014 Variation II",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op45n03-movement-4",
+   "infeasible": {
+    "code": "NO_NON_RED_EXTENSION",
+    "onset": "5/2",
+    "pitches": [
+     64,
+     71
+    ],
+    "reason": "no non-red extension within beam"
+   },
+   "notes": 213,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Six Petites Pi\u00e8ces, Op. 45 No. 3 \u2014 Variation III",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  },
+  {
+   "capo": 0,
+   "composer": "Fernando Sor",
+   "id": "mutopia-cc-by-sa-sorf-op45n05",
+   "infeasible": {
+    "code": "NO_FRAME_CONFIG",
+    "onset": "57/4",
+    "pitches": [
+     47,
+     78
+    ],
+    "reason": "no feasible frame config"
+   },
+   "notes": 760,
+   "outcome": "INFEASIBLE",
+   "split": "train",
+   "title": "Six Petites Pi\u00e8ces, Op. 45 No. 5",
+   "tuning": [
+    40,
+    45,
+    50,
+    55,
+    59,
+    64
+   ]
+  }
+ ],
+ "schema": "fretsure-repertoire-playability@0.1.0",
+ "versions": {
+  "checker": "oracle@0.3.0",
+  "fingering_solver": "fingering-solver@0.6.0",
+  "input_schema": "tab-input@0.2.0",
+  "left_hand_model": "left-hand-ergonomics@0.1.0",
+  "score_solver": "score-solver@0.4.0"
+ }
+}
