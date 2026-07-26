@@ -78,6 +78,11 @@ class TabNote:
     fret: int  # 0 = open
     left_finger: int  # 0..4, 0 = open
     right_finger: RightFinger
+    # Notes sharing a positive group at one onset are one right-hand gesture --
+    # a roll or a strum -- rather than that many independent plucks.  Zero, the
+    # default, means an ordinary pluck, so a tab that never mentions the field
+    # is judged exactly as it was before the field existed.
+    attack_group: int = 0
 
 
 @dataclass(frozen=True)
@@ -92,6 +97,8 @@ Frame = tuple[TabNote, ...]
 
 _ROOT_FIELDS = ("tuning", "capo", "notes")
 _NOTE_FIELDS = ("onset", "duration", "string", "fret", "left_finger", "right_finger")
+# Written only when non-zero, so an ungrouped tab round-trips byte for byte.
+_OPTIONAL_NOTE_FIELDS = ("attack_group",)
 _PATH_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 _CANONICAL_FRACTION = re.compile(
     r"(?P<numerator>0|-?[1-9][0-9]*)/(?P<denominator>[1-9][0-9]*)\Z"
@@ -100,6 +107,7 @@ _TAB_JSON_FIXED_BYTES = len('{"tuning":[],"capo":,"notes":[]}')
 _NOTE_JSON_FIXED_BYTES = len(
     '{"onset":,"duration":,"string":,"fret":,"left_finger":,"right_finger":}'
 )
+_ATTACK_GROUP_JSON_FIXED_BYTES = len(',"attack_group":')
 
 
 class _JSONObjectPairs:
@@ -298,8 +306,13 @@ def _canonical_json_string_bytes(
     return string, encoded_bytes
 
 
-def _check_fields(obj: dict[str, object], path: str, required: tuple[str, ...]) -> None:
-    allowed = frozenset(required)
+def _check_fields(
+    obj: dict[str, object],
+    path: str,
+    required: tuple[str, ...],
+    optional: tuple[str, ...] = (),
+) -> None:
+    allowed = frozenset(required) | frozenset(optional)
     for key in obj:
         if key not in allowed:
             raise TabSchemaError(
@@ -416,7 +429,7 @@ def frames(tab: Tab) -> list[Frame]:
     ]
 
 
-_NormalizedNote = tuple[str, str, int, int, int, str]
+_NormalizedNote = tuple[str, str, int, int, int, str, int]
 
 
 def _normalize_note_for_json(
@@ -448,6 +461,10 @@ def _normalize_note_for_json(
         _read_serialization_field(value, "left_finger", f"{path}.left_finger"),
         f"{path}.left_finger",
     )
+    attack_group, attack_group_token = _integer_to_token(
+        _read_serialization_field(value, "attack_group", f"{path}.attack_group"),
+        f"{path}.attack_group",
+    )
 
     non_right_finger_bytes = (
         _NOTE_JSON_FIXED_BYTES
@@ -458,6 +475,11 @@ def _normalize_note_for_json(
         + len(string_token)
         + len(fret_token)
         + len(left_finger_token)
+        + (
+            0
+            if attack_group == 0
+            else _ATTACK_GROUP_JSON_FIXED_BYTES + len(attack_group_token)
+        )
     )
     if non_right_finger_bytes > remaining:
         raise _serialized_size_error()
@@ -467,7 +489,7 @@ def _normalize_note_for_json(
         remaining=remaining - non_right_finger_bytes,
     )
     return (
-        (onset, duration, string, fret, left_finger, right_finger),
+        (onset, duration, string, fret, left_finger, right_finger, attack_group),
         non_right_finger_bytes + right_finger_bytes,
     )
 
@@ -544,17 +566,18 @@ def tab_to_json(tab: Tab) -> str:
             remaining=MAX_TAB_JSON_BYTES - normalized_encoded_size,
         )
         normalized_encoded_size += note_bytes
-        onset, duration, string, fret, left_finger, right_finger = normalized
-        notes.append(
-            {
-                "onset": onset,
-                "duration": duration,
-                "string": string,
-                "fret": fret,
-                "left_finger": left_finger,
-                "right_finger": right_finger,
-            }
-        )
+        onset, duration, string, fret, left_finger, right_finger, attack_group = normalized
+        note_obj: dict[str, object] = {
+            "onset": onset,
+            "duration": duration,
+            "string": string,
+            "fret": fret,
+            "left_finger": left_finger,
+            "right_finger": right_finger,
+        }
+        if attack_group != 0:
+            note_obj["attack_group"] = attack_group
+        notes.append(note_obj)
 
     obj = {
         "tuning": tuning_value,
@@ -659,7 +682,7 @@ def tab_from_json(s: str) -> Tab:
     for index, value in enumerate(note_values):
         path = f"$.notes[{index}]"
         note = _require_object(value, path)
-        _check_fields(note, path, _NOTE_FIELDS)
+        _check_fields(note, path, _NOTE_FIELDS, _OPTIONAL_NOTE_FIELDS)
         right_finger = _require_string(note["right_finger"], f"{path}.right_finger")
         notes.append(
             TabNote(
@@ -669,6 +692,11 @@ def tab_from_json(s: str) -> Tab:
                 fret=_require_integer(note["fret"], f"{path}.fret"),
                 left_finger=_require_integer(note["left_finger"], f"{path}.left_finger"),
                 right_finger=cast(RightFinger, right_finger),
+                attack_group=(
+                    0
+                    if "attack_group" not in note
+                    else _require_integer(note["attack_group"], f"{path}.attack_group")
+                ),
             )
         )
     return Tab(notes=tuple(notes), tuning=tuning, capo=capo)

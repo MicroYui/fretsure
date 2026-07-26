@@ -3,7 +3,7 @@
 The oracle makes a **narrow, bounded** claim. Read this before trusting a GREEN.
 
 > **Current empirical status (2026-07-24):** GREEN is currently a deterministic,
-> model-relative certification against `oracle@0.3.0`, `tab-input@0.2.0`, and a
+> model-relative certification against `oracle@0.4.0`, `tab-input@0.3.0`, and a
 > versioned, fingerprinted profile. The
 > real human-played gold set has **not** been collected; the repository contains only
 > six constructed sample labels for exercising the statistics pipeline. Therefore no
@@ -23,7 +23,7 @@ The oracle makes a **narrow, bounded** claim. Read this before trusting a GREEN.
 ## What GREEN means
 
 > For a valid ordinary six-string `Tab`, **GREEN** means that
-> `oracle@0.3.0` found the exhibited fingering feasible under the parameters it
+> `oracle@0.4.0` found the exhibited fingering feasible under the parameters it
 > actually consumes: hand span, hand-centre reach, shift-speed ceiling,
 > right-finger repeat-rate ceiling, scale length and max fret from the selected profile, plus capo and the
 > call-time tempo. `beats_per_bar` affects diagnostic measure/beat localization only,
@@ -73,9 +73,9 @@ bound; no such empirical rate is currently available.
 
 ## Public input-domain contract
 
-`oracle@0.3.0` is defined for **valid, ordinary six-string `Tab` values**. The public
+`oracle@0.4.0` is defined for **valid, ordinary six-string `Tab` values**. The public
 entry point enforces that boundary before any geometric or temporal predicate runs.
-`tab-input@0.2.0` requires exact built-in containers and scalar types, six strictly
+`tab-input@0.3.0` requires exact built-in containers and scalar types, six strictly
 ascending MIDI tuning pitches, a bounded capo, non-negative exact-`Fraction` onsets,
 positive exact-`Fraction` durations, string/fret/finger domains, bounded note/frame
 counts, a valid `Profile`, and an exact built-in `int`/`float` finite tempo in the
@@ -101,7 +101,7 @@ weighted input-specific work units. Work estimation includes configuration gener
 state extensions, diversity selection, path reconstruction, and the final checker's
 three profiles plus sorting/frame-pair costs. Its bounded search can conservatively
 return typed `Infeasible`; that is not proof that no fingering exists. Every returned
-`Tab` still passes a complete final `oracle@0.3.0` check, so incompleteness cannot leak
+`Tab` still passes a complete final `oracle@0.4.0` check, so incompleteness cannot leak
 a RED result.
 
 The `score-input@0.1.0` router selects the actual importer from the inert suffix and
@@ -260,7 +260,7 @@ Technique-aware AMBER diagnostics are a future requirement, not a current capabi
 
 The current distribution package is `0.6.0`. Every oracle verdict carries `checker_version`, `profile_version`, a canonical
 profile SHA-256 fingerprint, and `input_schema_version`; current values are
-`oracle@0.3.0` and `tab-input@0.2.0`, while the bundled preset remains
+`oracle@0.4.0` and `tab-input@0.3.0`, while the bundled preset remains
 `median@0.1` with fingerprint
 `fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62`.
 Current CLI/product output names `fidelity@0.3.0` and `score-input@0.1.0` plus the
@@ -276,7 +276,7 @@ member/container version. Public contracts are `agent-trace@0.3.0`,
 `editable-arrangement-target@0.1.0` and `section-regeneration@0.1.0`. Exact benchmark
 reproduction still requires the Git commit and corpus artifact hash. In particular, the 2026-07-10/11
 LLM benchmark tables remain stamped `oracle@0.1.0` plus a legacy/unversioned fidelity
-snapshot; they are not results under the current `oracle@0.3.0` / `fidelity@0.3.0`
+snapshot; they are not results under the current `oracle@0.4.0` / `fidelity@0.3.0`
 checker pair.
 
 ## Gold/statistics trust boundary

@@ -79,14 +79,35 @@ _STRING_SUSTAIN = _t(
 _RH_REPEAT = _t([TabNote(F(0), F(1), 0, 0, 0, "p"), TabNote(F(1, 32), F(1), 0, 0, 0, "p")])
 # Note: the "at most four simultaneous plucks" rule has no mutant, because for a
 # well-formed tab it is not independently observable.  ``right_finger`` has four
-# possible values, so a fifth simultaneous note must reuse a finger and trips the
-# one-finger-one-string rule regardless.  Deleting the cap changes the diagnostic
-# text, never a verdict.  See tests/oracle/test_predicates_rh.py for the direct
-# assertion, and note that lifting the cap alone would not make a six-string
-# chord representable.
+# possible values, so a fifth simultaneous *pluck* must reuse a finger and trips
+# the one-finger-one-string rule regardless.  Deleting the cap changes the
+# diagnostic text, never a verdict.  See tests/oracle/test_predicates_rh.py for
+# the direct assertion; what makes a six-string chord representable is the
+# gesture model below, not a larger cap.  Grouping does not change this: five
+# gestures need five fingers just as five plucks do, so the cap has no mutant
+# in either world.  The gesture rules that *are* load-bearing -- one finger per
+# sweep, and no gap in the strings it crosses -- do have one.
 # Thumb on a higher string than the index finger: the right hand cannot cross
 # itself, so finger rank must ascend with string index.
 _RH_ORDER = _t([TabNote(F(0), F(1), 0, 0, 0, "i"), TabNote(F(0), F(1), 1, 0, 0, "p")])
+
+# A sweep that skips a string is not a motion a hand makes: the thumb crosses
+# strings 0 and 2 while leaving 1 unplayed.
+_SWEEP_GAP = _t(
+    [
+        TabNote(F(0), F(1), 0, 0, 0, "p", 1),
+        TabNote(F(0), F(1), 2, 0, 0, "p", 1),
+    ]
+)
+
+# One gesture is one finger.  Two fingers labelled as a single sweep is two
+# motions wearing one name.
+_SWEEP_SPLIT_FINGER = _t(
+    [
+        TabNote(F(0), F(1), 0, 0, 0, "p", 1),
+        TabNote(F(0), F(1), 1, 0, 0, "i", 1),
+    ]
+)
 
 # Perturbed profiles that neutralize a single constraint (fault injection).
 _HUGE_SPAN = replace(MEDIAN_HAND, hand_span_mm=MAX_HAND_SPAN_MM)
@@ -144,6 +165,19 @@ def _rh_string_order_ignored(tab: Tab, profile: Profile) -> list[Diagnostic]:
     ]
 
 
+def _sweep_admitted_with_any_shape(tab: Tab, profile: Profile) -> list[Diagnostic]:
+    """Treat every attack group as a valid gesture, however it is shaped."""
+
+    return [
+        diagnostic
+        for diagnostic in check_right_hand(tab, profile)
+        if not (
+            diagnostic.suggested_relaxations == ("refinger",)
+            and any(tab.notes[index].attack_group != 0 for index in diagnostic.offending_notes)
+        )
+    ]
+
+
 # (name, real predicate, mutant, trigger tabs)
 MUTANTS: list[tuple[str, Pred, Pred, tuple[Tab, ...]]] = [
     ("range_deleted", check_range, _deleted, (_RANGE,)),
@@ -157,6 +191,12 @@ MUTANTS: list[tuple[str, Pred, Pred, tuple[Tab, ...]]] = [
     ("shift_speed_disabled", check_shift_speed, _under(check_shift_speed, _HUGE_SHIFT), (_SHIFT,)),
     ("rh_repeat_ignored", check_right_hand, _under(check_right_hand, _HUGE_RMAX), (_RH_REPEAT,)),
     ("rh_string_order_ignored", check_right_hand, _rh_string_order_ignored, (_RH_ORDER,)),
+    (
+        "rh_sweep_shape_ignored",
+        check_right_hand,
+        _sweep_admitted_with_any_shape,
+        (_SWEEP_GAP, _SWEEP_SPLIT_FINGER),
+    ),
     ("one_string_one_note_deleted", check_one_string_one_note, _deleted, (_ONE_STRING,)),
     ("finger_count_deleted", check_finger_count, _deleted, (_FINGER_COUNT,)),
     ("finger_monotonic_deleted", check_finger_monotonic, _deleted, (_MONOTONIC,)),

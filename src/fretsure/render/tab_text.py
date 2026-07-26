@@ -70,7 +70,7 @@ def render_tab_text(tab: Tab) -> str:
         "Canonical fingering table (original Tab note order):",
         (
             "note_index\tonset\tduration\tguitar_string\tcanonical_string"
-            "\tfret\tleft_finger\tright_finger"
+            "\tfret\tleft_finger\tright_finger\tattack_group"
         ),
     ]
     lines.extend(
@@ -84,6 +84,7 @@ def render_tab_text(tab: Tab) -> str:
                 str(note.fret),
                 str(note.left_finger),
                 note.right_finger,
+                str(note.attack_group),
             )
         )
         for index, note in enumerate(canonical.notes)

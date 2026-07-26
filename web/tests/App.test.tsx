@@ -243,10 +243,10 @@ describe("Fretsure product flow", () => {
     expect(screen.queryByText("C major")).not.toBeInTheDocument();
     expect(screen.queryByText("A minor")).not.toBeInTheDocument();
     expect(screen.getAllByText("musicxml@0.4.0").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/fingering-solver@0\.6\.0/)).toHaveTextContent(
+    expect(screen.getByText(/fingering-solver@0\.7\.0/)).toHaveTextContent(
       "score-solver@0.4.0",
     );
-    expect(screen.getByText(/fingering-solver@0\.6\.0/)).toHaveTextContent(
+    expect(screen.getByText(/fingering-solver@0\.7\.0/)).toHaveTextContent(
       "left-hand-ergonomics@0.1.0",
     );
 

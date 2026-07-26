@@ -79,7 +79,7 @@ def _codes(error: OracleInputError) -> set[OracleInputCode]:
 
 
 def test_input_schema_is_semantically_versioned() -> None:
-    assert ORACLE_INPUT_SCHEMA_VERSION == "tab-input@0.2.0"
+    assert ORACLE_INPUT_SCHEMA_VERSION == "tab-input@0.3.0"
 
 
 def test_empty_tab_is_invalid_not_green_or_red() -> None:

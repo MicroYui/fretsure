@@ -145,6 +145,12 @@ export interface CanonicalTabNote {
   fret: number;
   left_finger: number;
   right_finger: "p" | "i" | "m" | "a";
+  /**
+   * Notes sharing a positive group at one onset are one right-hand gesture --
+   * a roll or a strum -- rather than that many independent plucks.  Absent on
+   * every ordinary pluck, and on every tab produced before gestures existed.
+   */
+  attack_group?: number;
 }
 
 export interface CanonicalTab {

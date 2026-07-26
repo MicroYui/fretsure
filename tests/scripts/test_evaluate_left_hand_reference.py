@@ -35,10 +35,10 @@ def test_carcassi_public_domain_reference_meets_frozen_threshold() -> None:
     assert report["minimum_exact_matches"] == 17
     assert report["difficulty_independent"] is True
     assert report["versions"] == {
-        "fingering_solver": "fingering-solver@0.6.0",
+        "fingering_solver": "fingering-solver@0.7.0",
         "score_solver": "score-solver@0.6.0",
         "left_hand_model": "left-hand-ergonomics@0.1.0",
-        "oracle": "oracle@0.3.0",
+        "oracle": "oracle@0.4.0",
         "profile": "median@0.1",
         "profile_fingerprint": ("fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62"),
     }

@@ -4,9 +4,9 @@
 `musicxml@0.4.0` / `midi@0.1.0`，service=`fretsure-service@0.3.0`、
 API=`fretsure-api@0.3.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.3.0`、
 trace=`agent-trace@0.3.0`，faithfulness=`fidelity@0.3.0`、fingering=
-`fingering-solver@0.6.0`、score solver=`score-solver@0.6.0`、公开谱排序=
+`fingering-solver@0.7.0`、score solver=`score-solver@0.6.0`、公开谱排序=
 `published-fingering-ranker@0.1.0`、出版分级=`published-grade-estimator@0.1.0`。这里的 `GREEN` 始终是
-`oracle@0.3.0` + 指定 profile 下的版本化模型证据，不是真人保证；faithfulness 是另一道独立门。
+`oracle@0.4.0` + 指定 profile 下的版本化模型证据，不是真人保证；faithfulness 是另一道独立门。
 
 ## 本地 Web 与 API
 
@@ -142,8 +142,10 @@ MIDI 导出是确定性的 format-0 SMF：480 PPQN、单轨、单 MIDI channel�
 
 Tab text 导出直接读取同一份 canonical Tab，不从 MIDI 音高反推。文件上半部分是 high-e 在上的标准
 六线 ASCII tab；下半部分按原 Tab note 顺序逐行保留 exact onset/duration、常规吉他弦号 1..6、内部
-canonical string 0..5、fret、left_finger 与 right_finger，因此视觉谱面与求解器给出的双手指法可以
-交叉核对。`left_finger=0` 表示空弦，右手使用 `p/i/m/a`。
+canonical string 0..5、fret、left_finger、right_finger 与 attack_group，因此视觉谱面与求解器给出的
+双手指法可以交叉核对。`left_finger=0` 表示空弦，右手使用 `p/i/m/a`；`attack_group=0` 是普通拨弦，
+同一 onset 上共享同一正数 group 的音是**一次扫弦/滚奏手势**（一根手指扫过一段相邻的弦），
+按一次右手事件计。Tab JSON 只在非零时写出该字段，因此不含手势的谱面逐字节与旧格式相同。
 
 MusicXML 导出使用 4.0 `score-partwise`、六线 TAB clef/staff tuning、精确 integer divisions、多声部、
 跨小节 ties，以及 `technical` 中的 string/fret/fingering/pluck。Guitar Pro 导出是真实 GP5 5.1 binary，

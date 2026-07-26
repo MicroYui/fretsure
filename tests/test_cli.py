@@ -64,7 +64,7 @@ def test_cli_success_prints_full_product_result_and_writes_trace(
     assert "GREEN" in captured.out
     assert "model-relative GREEN certification" in captured.out
     assert "profile SHA-256" in captured.out
-    assert "input schema tab-input@0.2.0" in captured.out
+    assert "input schema tab-input@0.3.0" in captured.out
     assert "checker fidelity@0.3.0" in captured.out
     assert "symbolic score to versioned-model-checked fingerstyle tab" in captured.out
     assert "SCORE ROUTER      : score-input@0.1.0" in captured.out
@@ -75,8 +75,8 @@ def test_cli_success_prints_full_product_result_and_writes_trace(
     ]
     metadata = trace_rows[0]["data"]
     assert metadata["llm_model_id"] == "constant-stub"
-    assert metadata["checker_version"] == "oracle@0.3.0"
-    assert metadata["input_schema_version"] == "tab-input@0.2.0"
+    assert metadata["checker_version"] == "oracle@0.4.0"
+    assert metadata["input_schema_version"] == "tab-input@0.3.0"
     assert metadata["fidelity_checker_version"] == "fidelity@0.3.0"
     assert len(metadata["profile_fingerprint"]) == 64
 

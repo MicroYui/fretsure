@@ -36,8 +36,8 @@ const CURRENT_SCORE_INPUT_VERSION = "score-input@0.1.0";
 const CURRENT_FIDELITY_VERSION = "fidelity@0.3.0";
 const CURRENT_DIFFICULTY_VERSION = "difficulty@0.1.0";
 const CURRENT_TRACE_VERSION = "agent-trace@0.3.0";
-const CURRENT_ORACLE_VERSION = "oracle@0.3.0";
-const CURRENT_FINGERING_SOLVER_VERSION = "fingering-solver@0.6.0";
+const CURRENT_ORACLE_VERSION = "oracle@0.4.0";
+const CURRENT_FINGERING_SOLVER_VERSION = "fingering-solver@0.7.0";
 const CURRENT_SCORE_SOLVER_VERSION = "score-solver@0.4.0";
 const CURRENT_LEFT_HAND_MODEL_VERSION = "left-hand-ergonomics@0.1.0";
 const CURRENT_PUBLISHED_FINGERING_RANKER_VERSION = "published-fingering-ranker@0.1.0";
@@ -122,6 +122,18 @@ function isPercentileRecord(value: unknown): value is Record<string, number> {
 function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
   const actual = Object.keys(value);
   return actual.length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+}
+
+function hasKeys(
+  value: Record<string, unknown>,
+  required: readonly string[],
+  optional: readonly string[],
+): boolean {
+  const actual = Object.keys(value);
+  return (
+    actual.every((key) => required.includes(key) || optional.includes(key)) &&
+    required.every((key) => Object.hasOwn(value, key))
+  );
 }
 
 function hasUniqueStrings(values: readonly string[]): boolean {
@@ -543,6 +555,9 @@ const TAB_NOTE_KEYS = [
   "left_finger",
   "right_finger",
 ] as const;
+// Written only when a note belongs to a gesture, so an ungrouped tab carries
+// exactly the keys it always did.
+const OPTIONAL_TAB_NOTE_KEYS = ["attack_group"] as const;
 const FAITHFULNESS_KEYS = [
   "melody_f1",
   "bass_root_accuracy",
@@ -770,7 +785,7 @@ function isCanonicalTab(value: unknown): value is CanonicalTab {
     value.notes.every(
       (note) =>
         isRecord(note) &&
-        hasExactKeys(note, TAB_NOTE_KEYS) &&
+        hasKeys(note, TAB_NOTE_KEYS, OPTIONAL_TAB_NOTE_KEYS) &&
         isString(note.onset) &&
         FRACTION.test(note.onset) &&
         isString(note.duration) &&
@@ -784,7 +799,8 @@ function isCanonicalTab(value: unknown): value is CanonicalTab {
         (note.right_finger === "p" ||
           note.right_finger === "i" ||
           note.right_finger === "m" ||
-          note.right_finger === "a"),
+          note.right_finger === "a") &&
+        (!Object.hasOwn(note, "attack_group") || isIntegerAtLeast(note.attack_group, 0)),
     )
   );
 }
@@ -1564,6 +1580,7 @@ export function canonicalTabJSON(tab: CanonicalTab): string {
       fret: note.fret,
       left_finger: note.left_finger,
       right_finger: note.right_finger,
+      ...(note.attack_group === undefined ? {} : { attack_group: note.attack_group }),
     })),
   });
 }

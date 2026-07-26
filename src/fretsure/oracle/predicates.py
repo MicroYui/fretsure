@@ -10,6 +10,7 @@ Note indices in diagnostics are global indices into ``tab.notes``.
 
 import heapq
 from collections.abc import Sequence
+from dataclasses import dataclass
 from fractions import Fraction
 
 from fretsure.geometry import d_max, euclid, fingertip_xy, press_x
@@ -618,51 +619,121 @@ def check_sustain(
     return out
 
 
+@dataclass(frozen=True, slots=True)
+class RightHandEvent:
+    """One right-hand motion: a pluck, or a sweep across adjacent strings."""
+
+    finger: str
+    indices: tuple[int, ...]
+    lowest_string: int
+    highest_string: int
+
+
+def right_hand_events(
+    notes: Sequence[tuple[int, TabNote]],
+) -> tuple[tuple[RightHandEvent, ...], set[int]]:
+    """Collapse one frame's notes into the motions a right hand actually makes.
+
+    Ungrouped notes are plucks, one event each, which is what every tab written
+    before attack groups existed contains -- so those frames come out of here
+    exactly as they went in.  A positive group becomes one sweep, and is only
+    admitted as a gesture if it is a motion a hand could make: at least two
+    strings, one finger, and no gap in the run of strings crossed.
+    """
+
+    events: list[RightHandEvent] = []
+    malformed: set[int] = set()
+    groups: dict[int, list[tuple[int, TabNote]]] = {}
+    for idx, note in notes:
+        if note.attack_group == 0:
+            events.append(RightHandEvent(note.right_finger, (idx,), note.string, note.string))
+        else:
+            groups.setdefault(note.attack_group, []).append((idx, note))
+
+    for members in groups.values():
+        indices = tuple(sorted(idx for idx, _ in members))
+        strings = sorted(note.string for _, note in members)
+        fingers = {note.right_finger for _, note in members}
+        contiguous = strings == list(range(strings[0], strings[0] + len(strings)))
+        if len(members) < 2 or len(fingers) != 1 or len(set(strings)) != len(strings):
+            malformed.update(indices)
+            continue
+        if not contiguous:
+            malformed.update(indices)
+            continue
+        events.append(RightHandEvent(fingers.pop(), indices, strings[0], strings[-1]))
+    return tuple(events), malformed
+
+
 def check_right_hand(
     tab: Tab, profile: Profile, *, tempo_bpm: float = 90.0, beats_per_bar: int = 4
 ) -> list[Diagnostic]:
-    """Right-hand (p-i-m-a) feasibility: one finger per plucked string in a
-    frame, thumb-to-ring following ascending string index, at most four
-    simultaneous plucks, and no single finger repeating faster than ``r_max``."""
+    """Right-hand (p-i-m-a) feasibility.
+
+    One finger per plucked string in a frame, thumb-to-ring following ascending
+    string index, at most four simultaneous *events*, and no single finger
+    repeating faster than ``r_max``.
+
+    An event is normally one pluck, but notes sharing a positive
+    ``attack_group`` at one onset are a single gesture: one finger sweeping a
+    run of adjacent strings, which is how a guitarist plays a strummed or
+    rolled chord.  A gesture costs one finger and one repetition, not one per
+    string -- counting a six-string strum as six simultaneous plucks is what
+    made every open chord unrepresentable.  The sweep must be one finger over
+    contiguous strings; a gesture with a gap in it is not a motion a hand makes.
+    """
     out: list[Diagnostic] = []
     last_used: dict[str, Fraction] = {}
     for onset, notes in _indexed_frames(tab):
         measure, beat = _measure_beat(onset, beats_per_bar)
+        events, malformed = right_hand_events(notes)
 
-        if len(notes) > 4:
+        if malformed:
+            out.append(
+                Diagnostic(
+                    measure,
+                    beat,
+                    "RIGHT_HAND",
+                    tuple(sorted(malformed)),
+                    0.0,
+                    ("refinger",),
+                )
+            )
+
+        if len(events) > 4:
             out.append(
                 Diagnostic(
                     measure,
                     beat,
                     "RIGHT_HAND",
                     tuple(idx for idx, _ in notes),
-                    float(len(notes) - 4),
+                    float(len(events) - 4),
                     ("drop_inner",),
                 )
             )
 
         bad: set[int] = set()
-        by_finger: dict[str, list[int]] = {}
-        for idx, n in notes:
-            by_finger.setdefault(n.right_finger, []).append(idx)
-        for idxs in by_finger.values():
-            if len(idxs) > 1:  # one finger cannot pluck two strings at once
-                bad.update(idxs)
-        for ia, na in notes:
-            for ib, nb in notes:
-                if ia == ib:
+        by_finger: dict[str, list[RightHandEvent]] = {}
+        for event in events:
+            by_finger.setdefault(event.finger, []).append(event)
+        for shared in by_finger.values():
+            if len(shared) > 1:  # one finger cannot pluck two strings at once
+                bad.update(idx for event in shared for idx in event.indices)
+        for first in events:
+            for second in events:
+                if first is second:
                     continue
-                ra = _RIGHT_RANK.get(na.right_finger, 0)
-                rb = _RIGHT_RANK.get(nb.right_finger, 0)
-                if na.string < nb.string and ra > rb:
-                    bad.update((ia, ib))
+                ra = _RIGHT_RANK.get(first.finger, 0)
+                rb = _RIGHT_RANK.get(second.finger, 0)
+                if first.highest_string < second.lowest_string and ra > rb:
+                    bad.update((*first.indices, *second.indices))
         if bad:
             out.append(
                 Diagnostic(measure, beat, "RIGHT_HAND", tuple(sorted(bad)), 0.0, ("refinger",))
             )
 
-        for idx, n in notes:
-            prev = last_used.get(n.right_finger)
+        for event in events:
+            prev = last_used.get(event.finger)
             if prev is not None:
                 dt = float(onset - prev) * 60.0 / tempo_bpm
                 if 0 < dt < 1.0 / profile.r_max_hz:
@@ -671,11 +742,11 @@ def check_right_hand(
                             measure,
                             beat,
                             "RIGHT_HAND",
-                            (idx,),
+                            (event.indices[0],),
                             1.0 / dt - profile.r_max_hz,
                             ("simplify_rhythm",),
                         )
                     )
-        for _, n in notes:
-            last_used[n.right_finger] = onset
+        for event in events:
+            last_used[event.finger] = onset
     return out

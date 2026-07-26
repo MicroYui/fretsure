@@ -31,7 +31,7 @@ from fretsure.tab import (
     TabNote,
 )
 
-ORACLE_INPUT_SCHEMA_VERSION = "tab-input@0.2.0"
+ORACLE_INPUT_SCHEMA_VERSION = "tab-input@0.3.0"
 
 # These match the importer envelope.  The JSON adapter exports the same values;
 # keeping the semantic validator bounded also protects direct Python callers.
@@ -111,6 +111,7 @@ class OracleInputCode(StrEnum):
     FRET_RANGE = "FRET_RANGE"
     LEFT_FINGER = "LEFT_FINGER"
     RIGHT_FINGER = "RIGHT_FINGER"
+    ATTACK_GROUP = "ATTACK_GROUP"
     SOUNDING_PITCH_RANGE = "SOUNDING_PITCH_RANGE"
     SOLVER_NOTES_TYPE = "SOLVER_NOTES_TYPE"
     PITCH = "PITCH"
@@ -224,6 +225,7 @@ def _snapshot_tab_note(note: object) -> object:
         cast(int, _read_field(note, "fret")),
         cast(int, _read_field(note, "left_finger")),
         cast(RightFinger, _read_field(note, "right_finger")),
+        cast(int, _read_field(note, "attack_group")),
     )
 
 
@@ -686,6 +688,20 @@ def _tab_note_diagnostics(
                 OracleInputCode.RIGHT_FINGER,
                 f"{base}.right_finger",
                 "must be one of p, i, m, a",
+            )
+        )
+
+    # A gesture cannot span more strings than the instrument has, so the group
+    # label is bounded by the same envelope as everything else at this boundary.
+    attack_group = _read_field(note, "attack_group")
+    if attack_group is not _MISSING and (
+        type(attack_group) is not int or not 0 <= attack_group <= MAX_TAB_NOTES
+    ):
+        diagnostics.append(
+            _diagnostic(
+                OracleInputCode.ATTACK_GROUP,
+                f"{base}.attack_group",
+                f"must be an exact integer in 0..{MAX_TAB_NOTES}",
             )
         )
 

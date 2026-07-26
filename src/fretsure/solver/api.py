@@ -37,6 +37,7 @@ from fretsure.oracle.predicates import (
     check_fret_span,
     fretted_interval,
     hand_shape,
+    right_hand_events,
     travel_reachable,
 )
 from fretsure.oracle.profiles import Profile, optimistic, pessimistic
@@ -65,7 +66,7 @@ from fretsure.solver.technique import (
 )
 from fretsure.tab import RightFinger, Tab, TabNote
 
-FINGERING_SOLVER_VERSION = "fingering-solver@0.6.0"
+FINGERING_SOLVER_VERSION = "fingering-solver@0.7.0"
 
 
 class InfeasibleCode(StrEnum):
@@ -482,32 +483,37 @@ def _advance_oracle_state(
         return None
 
     # frame_configs guarantees this too, but keeping the transition check local
-    # makes the finite-state contract explicit and fail-closed.
-    if len(added) > len(_RIGHT_ORDER):
+    # makes the finite-state contract explicit and fail-closed.  Grouped notes
+    # are one sweep and therefore one event, so the ceiling is on motions rather
+    # than on strings; the mirror derives the events with the predicate's own
+    # helper rather than re-deriving the rule and drifting from it.
+    events, malformed = right_hand_events(tuple(enumerate(added)))
+    if malformed or len(events) > len(_RIGHT_ORDER):
         return None
     used_right: set[RightFinger] = set()
     prior_string = -1
     prior_rank = -1
     right_history = list(prior.right_last_used)
-    for note in sorted(added, key=lambda item: item.string):
-        rank = _RIGHT_RANK.get(note.right_finger)
+    for event in sorted(events, key=lambda item: item.lowest_string):
+        finger = cast(RightFinger, event.finger)
+        rank = _RIGHT_RANK.get(finger)
         if (
             rank is None
-            or note.right_finger in used_right
-            or note.string <= prior_string
+            or finger in used_right
+            or event.lowest_string <= prior_string
             or rank < prior_rank
         ):
             return None
-        used_right.add(note.right_finger)
-        prior_string = note.string
+        used_right.add(finger)
+        prior_string = event.highest_string
         prior_rank = rank
         last_used = right_history[rank]
         if last_used is not None:
             elapsed_seconds = float(onset - last_used) * 60.0 / tempo_bpm
             if 0 < elapsed_seconds < 1.0 / profile.r_max_hz:
                 return None
-    for note in added:
-        right_history[_RIGHT_RANK[note.right_finger]] = onset
+    for event in events:
+        right_history[_RIGHT_RANK[cast(RightFinger, event.finger)]] = onset
 
     shift = _advance_shift_state(
         prior,
@@ -607,12 +613,15 @@ def _solve_fingering_with_green_pool(
         fnotes = by_onset[onset]
         pitches = pitches_at_onset[onset]
         durs = {fn.pitch: fn.duration for fn in fnotes}
-        if len(pitches) > len(_RIGHT_ORDER):
+        if len(pitches) > len(tuning):
+            # More notes than the instrument has strings, which no technique
+            # plays -- the thumb may sweep several strings, but nothing gets a
+            # string to sound two pitches at once.
             return _FingeringSearchOutcome(
                 Infeasible(
                     code=InfeasibleCode.NO_FRAME_CONFIG,
                     onset=onset,
-                    reason="frame has more attacks than available right-hand fingers",
+                    reason="frame has more attacks than the instrument has strings",
                     pitches=pitches,
                 ),
                 (),
@@ -660,7 +669,15 @@ def _solve_fingering_with_green_pool(
         for state in states:
             for cfg in cfgs:
                 added = tuple(
-                    TabNote(onset, durs[p.pitch], p.string, p.fret, p.left_finger, p.right_finger)
+                    TabNote(
+                        onset,
+                        durs[p.pitch],
+                        p.string,
+                        p.fret,
+                        p.left_finger,
+                        p.right_finger,
+                        p.attack_group,
+                    )
                     for p in cfg.placements
                 )
                 oracle_state = _advance_oracle_state(

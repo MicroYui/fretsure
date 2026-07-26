@@ -315,3 +315,56 @@ Remaining, fully attributed:
 | no non-red extension within beam | 21 | profile calibration (W6) |
 | no feasible frame config | 8 | profile calibration (W6) |
 | frame has more attacks than fingers | 3 | rolled chords (W4) |
+
+### W4 — a strummed chord was not representable at all: 26 → 26
+
+The right hand admitted at most four simultaneous plucks, and a five- or
+six-note chord is exactly that many. So the verifier's answer for an open E
+minor — six strings, the first chord in every beginner's method book — was RED,
+and there was no way to write it that would not be. That is not a calibration
+problem. The model had no vocabulary for the motion.
+
+`TabNote` gains an optional `attack_group`. Notes sharing a positive group at
+one onset are **one gesture**: a finger sweeping a run of adjacent strings,
+costing one right-hand event and one repetition rather than one per string.
+Zero, the default, is an ordinary pluck, so a tab that never mentions the field
+is judged exactly as it was before the field existed — which is what keeps the
+negative-tab guard meaningful rather than merely re-passing.
+
+| chord | verdict |
+|---|---|
+| open Em, thumb sweeps strings 0–2, i-m-a on 3–5 | **GREEN** |
+| the same six notes as six independent plucks | RED |
+| a sweep skipping a string | RED |
+| two fingers sharing one group label | RED |
+| a "group" of one note | RED |
+| the same shape with an impossible left hand | RED |
+
+Grouping names a motion; it does not create fingers. Five gestures need five
+fingers just as five plucks do, so the four-event cap still has no mutant that
+can be killed — the same redundancy already recorded for the pluck cap. What is
+load-bearing, and does have a mutant, is that a sweep is one finger crossing
+strings with no gap in the run.
+
+**On the repertoire gate this bought nothing: 26 → 26.** Of the three pieces
+failing for too many attacks, only one was ever a technique gap; the other two
+demand 7 and 11 notes at a single onset, and a six-string instrument plays
+neither however the hand is labelled. So the honest change to that bucket is
+what it is now called:
+
+| bucket | before | after |
+|---|---|---|
+| frame has more attacks than fingers | 3 | — |
+| frame has more attacks than the instrument has strings | — | **1** |
+| no non-red extension within beam | 21 | 23 |
+
+The two freed pieces now die later, inside the beam, for a physical reason
+rather than a vocabulary one. That is W6's bucket.
+
+`oracle@0.3.0` → `0.4.0` and `tab-input@0.2.0` → `0.3.0`, the only planned
+oracle bump in this milestone, and it *adds* a representable technique rather
+than loosening a rule: every tab that was RED for a reason other than the pluck
+cap is still RED, and the 1,849 negative tabs are verdict-for-verdict
+unchanged. `fingering-solver@0.6.0` → `0.7.0`. The field round-trips through
+Tab JSON (written only when non-zero), the agent trace, the HTTP wire, the web
+client and the text export.

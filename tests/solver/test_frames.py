@@ -55,9 +55,30 @@ def test_single_note_offers_multiple_right_fingers() -> None:
     assert len(rights) >= 2
 
 
-def test_over_four_notes_empty() -> None:
-    # five distinct pitches -> every config has 5 plucks > 4 -> none feasible
-    assert frame_configs((40, 45, 50, 55, 59), STANDARD_TUNING, 0, MEDIAN_HAND) == []
+def test_five_notes_are_one_thumb_sweep_plus_three_plucks() -> None:
+    # Five distinct pitches are not five plucks: the thumb sweeps the lowest
+    # run of strings as one gesture, which is how the chord is actually played.
+    cfgs = frame_configs((40, 45, 50, 55, 59), STANDARD_TUNING, 0, MEDIAN_HAND)
+    assert cfgs
+    for cfg in cfgs:
+        swept = [p for p in cfg.placements if p.attack_group != 0]
+        plucked = [p for p in cfg.placements if p.attack_group == 0]
+        assert {p.right_finger for p in swept} == {"p"}
+        assert [p.right_finger for p in plucked] == ["i", "m", "a"]
+        strings = sorted(p.string for p in swept)
+        assert strings == list(range(strings[0], strings[0] + len(strings)))
+        assert max(strings) < min(p.string for p in plucked)
+
+
+def test_a_sweep_that_would_skip_a_string_has_no_assignment() -> None:
+    """A five-note frame whose low strings are not adjacent is not a gesture."""
+
+    # E2 and A2 are strings 0 and 1; forcing the rest high leaves no contiguous
+    # low run for the thumb, so the frame is reported infeasible rather than
+    # assigned a motion no hand makes.
+    for cfg in frame_configs((40, 45, 50, 55, 59), STANDARD_TUNING, 0, MEDIAN_HAND):
+        swept = sorted(p.string for p in cfg.placements if p.attack_group != 0)
+        assert swept == list(range(swept[0], swept[0] + len(swept)))
 
 
 def test_over_four_notes_short_circuit_before_candidate_product(

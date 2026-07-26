@@ -988,6 +988,7 @@ def edit_left_finger_json(
         selected.fret,
         left_finger,
         selected.right_finger,
+        selected.attack_group,
     )
     attempted = Tab(tuple(notes), tab.tuning, tab.capo)
     attempted_oracle = check_playability(

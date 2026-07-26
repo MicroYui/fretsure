@@ -594,7 +594,9 @@ def _validate_tab_checkpoint_state(state: dict[str, object], *, path: str) -> in
         if type(value) is not dict:
             raise TraceInputError(note_path, "Tab note must be an exact object")
         note = cast(dict[str, object], value)
-        if frozenset(note) != {
+        # attack_group is written only when non-zero, so a trace recorded
+        # before gestures existed still matches its schema exactly.
+        if frozenset(note) - {"attack_group"} != {
             "onset",
             "duration",
             "string",
@@ -626,6 +628,12 @@ def _validate_tab_checkpoint_state(state: dict[str, object], *, path: str) -> in
             path=f"{note_path}.right_finger",
             allowed=frozenset({"p", "i", "m", "a"}),
         )
+        if "attack_group" in note:
+            _bounded_integer(
+                note["attack_group"],
+                path=f"{note_path}.attack_group",
+                maximum=MAX_TRACE_DOMAIN_NOTES,
+            )
     return len(notes)
 
 

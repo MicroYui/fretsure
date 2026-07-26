@@ -13,6 +13,7 @@ violations across frames.
 """
 
 import itertools
+from collections.abc import Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import TypeVar
@@ -34,6 +35,38 @@ from fretsure.tab import RightFinger, Tab, TabNote
 _RIGHT_ORDER: tuple[RightFinger, ...] = ("p", "i", "m", "a")
 
 
+_RightSelection = tuple[tuple[RightFinger, int], ...]
+
+
+def _right_hand_selections(size: int, strings: Sequence[int]) -> list[_RightSelection]:
+    """Right-hand assignments for one ascending frame, as (finger, group) pairs.
+
+    Up to four notes this is the familiar choice of which fingers to use, and
+    the group is zero throughout -- the same set of assignments the solver has
+    always produced.  Beyond four the thumb sweeps the lowest run of strings as
+    a single gesture and i-m-a take the top three, which is how a guitarist
+    plays a five- or six-note chord.  The swept strings must be adjacent: a
+    sweep that skips a string is not a motion a hand makes, so such a frame
+    simply has no assignment rather than a forced one.
+    """
+
+    if size <= len(_RIGHT_ORDER):
+        return [
+            tuple((finger, 0) for finger in selection)
+            for selection in itertools.combinations(_RIGHT_ORDER, size)
+        ]
+    swept = size - (len(_RIGHT_ORDER) - 1)
+    run = list(strings[:swept])
+    if run != list(range(run[0], run[0] + swept)):
+        return []
+    return [
+        (
+            *(("p", 1) for _ in range(swept)),
+            *((finger, 0) for finger in _RIGHT_ORDER[1:]),
+        )
+    ]
+
+
 @dataclass(frozen=True)
 class Placement:
     pitch: int
@@ -41,6 +74,10 @@ class Placement:
     fret: int
     left_finger: int
     right_finger: RightFinger
+    # Positive when this note is one string of a thumb sweep rather than an
+    # independent pluck.  Zero everywhere a frame fits on four fingers, which is
+    # every frame the solver could build before.
+    attack_group: int = 0
 
 
 @dataclass(frozen=True)
@@ -48,7 +85,7 @@ class FrameConfig:
     placements: tuple[Placement, ...]  # ascending string order
 
 
-_ConfigKey = tuple[tuple[int, int, int, str], ...]
+_ConfigKey = tuple[tuple[int, int, int, str, int], ...]
 _GeometryKey = tuple[tuple[int, int], ...]
 _LeftKey = tuple[int, ...]
 _ConfigSortKey = tuple[int, int, int, int, int, int, _ConfigKey]
@@ -73,7 +110,15 @@ class _GeometryBucket:
 
 def _single_frame_tab(placements: tuple[Placement, ...], tuning: tuple[int, ...], capo: int) -> Tab:
     notes = tuple(
-        TabNote(Fraction(0), Fraction(1), p.string, p.fret, p.left_finger, p.right_finger)
+        TabNote(
+            Fraction(0),
+            Fraction(1),
+            p.string,
+            p.fret,
+            p.left_finger,
+            p.right_finger,
+            p.attack_group,
+        )
         for p in placements
     )
     return Tab(notes, tuning, capo)
@@ -105,7 +150,9 @@ def _single_frame_static_passes(
 
 
 def _candidate(placements: tuple[Placement, ...]) -> _ConfigCandidate:
-    key: _ConfigKey = tuple((p.string, p.fret, p.left_finger, p.right_finger) for p in placements)
+    key: _ConfigKey = tuple(
+        (p.string, p.fret, p.left_finger, p.right_finger, p.attack_group) for p in placements
+    )
     left_key = tuple(p.left_finger for p in placements)
     left_sort = static_assignment_sort_key(placements)
     return _ConfigCandidate(
@@ -147,10 +194,12 @@ def frame_configs(
 ) -> list[FrameConfig]:
     if not pitches:
         return [FrameConfig(())]
-    if len(pitches) > len(_RIGHT_ORDER):
+    if len(pitches) > len(tuning):
         # This is an ordinary, valid-but-infeasible target, not malformed input.
         # Reject before candidate-list construction: even a 16-note attack must
-        # never reach the candidate Cartesian product.
+        # never reach the candidate Cartesian product.  The instrument's string
+        # count is the real ceiling -- four fingers stopped being it once the
+        # thumb was allowed to sweep.
         return []
     if limit <= 0:
         return []
@@ -184,9 +233,17 @@ def frame_configs(
 
             # verify the left hand + within-frame right hand once, with a canonical
             # ascending right-finger selection; barre-behind etc. are rejected here.
+            selections = _right_hand_selections(len(order), [combo[k][0] for k in order])
+            if not selections:
+                continue
             base = tuple(
                 Placement(
-                    pitches[k], combo[k][0], combo[k][1], finger_of.get(k, 0), _RIGHT_ORDER[i]
+                    pitches[k],
+                    combo[k][0],
+                    combo[k][1],
+                    finger_of.get(k, 0),
+                    selections[0][i][0],
+                    selections[0][i][1],
                 )
                 for i, k in enumerate(order)
             )
@@ -198,10 +255,15 @@ def frame_configs(
             ):
                 continue
 
-            for right_sel in itertools.combinations(_RIGHT_ORDER, len(order)):
+            for right_sel in selections:
                 placements = tuple(
                     Placement(
-                        pitches[k], combo[k][0], combo[k][1], finger_of.get(k, 0), right_sel[i]
+                        pitches[k],
+                        combo[k][0],
+                        combo[k][1],
+                        finger_of.get(k, 0),
+                        right_sel[i][0],
+                        right_sel[i][1],
                     )
                     for i, k in enumerate(order)
                 )
