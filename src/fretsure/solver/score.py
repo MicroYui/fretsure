@@ -30,10 +30,11 @@ from fretsure.solver.api import (
     _SolverContinuation,
 )
 from fretsure.solver.score_supervision import PUBLISHED_FINGERING_MIN_ONSETS
+from fretsure.solver.sustain import sustain_relaxations
 from fretsure.solver.technique import DEFAULT_TECHNIQUE_PROFILE, technique_profile
 from fretsure.tab import Tab
 
-SCORE_SOLVER_VERSION = "score-solver@0.5.0"
+SCORE_SOLVER_VERSION = "score-solver@0.6.0"
 # A long score legitimately needs more independent searches than a short one, and
 # four was arbitrary: it rejected ten of fifty-eight published pieces for running
 # out of splits rather than for anything a hand could not do.  Raising it is the
@@ -194,16 +195,54 @@ def solve_fingering_score(
         profile,
         tempo_bpm=tempo_bpm,
     )
+    # The score exactly as written is always the first rung, so a score that
+    # solves without giving anything up takes exactly the path it always took.
+    # Later rungs let the accompanying voices go as early as the target itself
+    # permits, which is the only way early release buys travel time: the hand
+    # has to be free before the frame that needs it, not at it.
+    first_failure: Infeasible | None = None
+    for attempt in sustain_relaxations(exact_notes):
+        solved = _solve_relaxation(
+            attempt,
+            exact_tuning,
+            exact_capo,
+            exact_profile,
+            tempo_bpm=exact_tempo_bpm,
+            beats_per_bar=beats_per_bar,
+            beam=beam,
+            technique_profile_name=preference.id,
+        )
+        if isinstance(solved, Tab):
+            return solved
+        # Report the score as written, not the last thing tried.
+        first_failure = first_failure or solved
+    assert first_failure is not None  # the ladder always has a first rung
+    return first_failure
+
+
+def _solve_relaxation(
+    exact_notes: tuple[Note, ...],
+    exact_tuning: tuple[int, ...],
+    exact_capo: int,
+    exact_profile: Profile,
+    *,
+    tempo_bpm: float,
+    beats_per_bar: int,
+    beam: int,
+    technique_profile_name: str,
+) -> Tab | Infeasible:
+    """Solve one rung of the sustain ladder under the full-history oracle gate."""
+
     result = _solve_parts(
         exact_notes,
         exact_tuning,
         exact_capo,
         exact_profile,
-        tempo_bpm=exact_tempo_bpm,
+        tempo_bpm=tempo_bpm,
         beats_per_bar=beats_per_bar,
         beam=beam,
         segment_budget=MAX_SCORE_SOLVER_SEGMENTS,
-        technique_profile_name=preference.id,
+        technique_profile_name=technique_profile_name,
     )
     if isinstance(result, Infeasible):
         return result
@@ -221,7 +260,7 @@ def solve_fingering_score(
     oracle = check_playability(
         combined,
         exact_profile,
-        tempo_bpm=exact_tempo_bpm,
+        tempo_bpm=tempo_bpm,
         beats_per_bar=beats_per_bar,
     )
     if oracle.verdict != "RED":

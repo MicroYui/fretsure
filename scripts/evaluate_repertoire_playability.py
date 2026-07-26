@@ -30,6 +30,7 @@ from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 from fretsure.solver.api import FINGERING_SOLVER_VERSION, Infeasible
 from fretsure.solver.left_hand import LEFT_HAND_MODEL_VERSION
 from fretsure.solver.score import SCORE_SOLVER_VERSION, solve_fingering_score
+from fretsure.solver.sustain import SUSTAIN_RETENTION_FLOOR
 from fretsure.tab import Tab
 
 ROOT: Final = Path(__file__).resolve().parents[1]
@@ -40,7 +41,6 @@ DEFAULT_CORPUS: Final = (
     CORPUS_DIR / "mutopia_cc_by_sa.json",
 )
 RESULT_SCHEMA: Final = "fretsure-repertoire-playability@0.1.0"
-SUSTAIN_RETENTION_FLOOR: Final = Fraction(9, 10)
 
 
 def _fraction(value: object, path: str) -> Fraction:

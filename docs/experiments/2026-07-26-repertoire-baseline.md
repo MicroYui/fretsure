@@ -244,3 +244,74 @@ fully attributed:
 | no non-red extension within beam | 24 | the sustain model (W3) and profile calibration (W6) |
 | no feasible frame config | 8 | profile calibration (W6) |
 | frame has more attacks than fingers | 3 | rolled chords (W4) |
+
+### W3 — sustain has to be let go before the hand needs it: 23 → 26
+
+A fretted note only sounds while its finger stays down, so the oracle reads a
+notated duration as a physical hold. That is right for the verifier and wrong
+for the source: engravers write voice-leading, and a player lifts when the hand
+must move. Twenty-one of the twenty-four beam deaths are pieces asking a hand to
+hold a bass pedal it was never expected to hold.
+
+The obvious design is to let go inside the beam — try holding, and on refusal
+compute the smallest set of releases that admits the frame. It was built, and it
+is worth recording why it does not work. Instrumented on `brahms-op39-no9`, the
+solver found 304 release opportunities across the whole search and the oracle
+refused every one:
+
+| release opportunities | hold admitted | release admitted |
+|---|---|---|
+| 304 | 0 | 0 |
+
+Releasing at the frame that fails frees the *shape* but not one millisecond of
+travel, because the hand was pinned to that instant by the very note being let
+go. Freedom has to be taken before it is needed, and a beam that discovers the
+need three frames later cannot reach back. Measured directly: releasing inside
+the beam bought **0** pieces once the ladder below existed, so the machinery —
+release variants, a reserved beam budget, a `released_sustain_beats` cost field,
+the diversity key extension — was deleted rather than kept for its story.
+
+What ships is a ladder of whole-score attempts. The score exactly as written is
+always the first rung, so anything that solved before takes the path it always
+took. Later rungs let the accompanying voices go progressively early, ordered by
+how much sustain they give up, least first:
+
+| rung | melody | bass / harmony |
+|---|---|---|
+| as written | full | full |
+| ↓ | full | ¾ of written, floored at the next attack |
+| ↓ | full | ½ |
+| ↓ | full | the derived minimum |
+
+Three rules bound the freedom, and all three are derived from the target rather
+than declared by a caller — an input that could assert its own minimum hold
+would be able to buy playability for free:
+
+* every note sounds at least through the next attack, so adjacent-frame geometry
+  stays fully constrained and the model cannot degenerate into ignoring sustain;
+* a melody note has no freedom at all. Measured twice: releasing melody buys
+  nothing, and holding it keeps melody-F1 invariant by construction;
+* a bass note may go to half its written value and no further, which is what
+  keeps a chord's root sounding when `bass_root_accuracy` asks for it.
+
+**The retention floor is structural here, not a report.** A rung holding less
+than 0.90 of what was written is never offered, because an unbounded ladder
+would eventually accept every score by simply not sustaining it. The floor bites
+immediately: `carcassi-op59-prelude-16` solves at 0.742 retention and is
+therefore *refused*, staying in the failure column rather than being counted as
+a win. That is the whole point of having the floor.
+
+Accepted 23 → **26** (GREEN 13, AMBER 13). Nothing lost. Worst retention 0.921,
+and the only two pieces below 1.000 on melody (0.984, 0.995) are W1's
+repeated-pitch repair, not release — the ladder gave up zero melody beats.
+Negative-tab verdicts unchanged, mutation suite unchanged, frozen Carcassi
+reference still 17/21. `score-solver@0.5.0` → `0.6.0`, `sustain-model@0.1.0` →
+`0.2.0`; `oracle@0.3.0` untouched.
+
+Remaining, fully attributed:
+
+| remaining failure | count | owner |
+|---|---|---|
+| no non-red extension within beam | 21 | profile calibration (W6) |
+| no feasible frame config | 8 | profile calibration (W6) |
+| frame has more attacks than fingers | 3 | rolled chords (W4) |
