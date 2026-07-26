@@ -30,7 +30,7 @@ from fractions import Fraction
 from pathlib import Path
 from typing import BinaryIO
 
-from fretsure.importers import (  # type: ignore[import-untyped]
+from fretsure.importers import (
     ImportFailure,
     ImportSuccess,
     import_midi,
