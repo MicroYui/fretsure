@@ -54,6 +54,7 @@ from fretsure.solver.score_supervision import (
     PUBLISHED_FINGERING_MIN_ONSETS,
     select_score_supervised_green_index,
 )
+from fretsure.solver.sustain import repair_repeated_pitch_holds
 from fretsure.solver.technique import (
     DEFAULT_TECHNIQUE_PROFILE,
     technique_profile,
@@ -509,6 +510,10 @@ def _solve_fingering_with_green_pool(
         tempo_bpm=tempo_bpm,
         beam=beam,
     )
+    # A pitch attacked again has necessarily stopped sounding; holding both would
+    # ask the hand for something no instrument does.  Validation stays a pure
+    # gate, so the repair is an explicit step after it.
+    notes = repair_repeated_pitch_holds(notes)
     by_onset: dict[Fraction, list[Note]] = defaultdict(list)
     for n in notes:
         by_onset[n.onset].append(n)

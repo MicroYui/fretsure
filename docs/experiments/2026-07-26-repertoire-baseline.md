@@ -98,3 +98,49 @@ A false-negative rate measured here is a rate *for that idiom*. It says nothing
 about the false-accept rate on machine-generated arrangements, because published
 scores contain almost no unplayable examples — that direction needs a human
 playing Fretsure's own output, and the one such data point on record is `PARTIAL`.
+
+---
+
+## Progress against this baseline
+
+Each entry is one commit, measured on the same gate with all four guards green.
+
+### W1 — repeated-pitch hold repair: 13 → 15
+
+A pitch attacked again has necessarily stopped sounding, so a target asking to
+hold both at once asks for something no instrument does.
+`solver/sustain.py::repair_repeated_pitch_holds` ends the earlier instance at the
+later attack, applied after `ensure_solver_input` so validation stays a pure gate.
+
+The clip cannot cost faithfulness: the pitch is still sounding at the moment the
+overlap would have begun, because that moment is exactly when it was re-attacked.
+
+Gained: `mutopia-cc-by-sa-aguado-op11n02`, `mutopia-cc-by-sa-carcassi-op60-22`.
+Lost: none. Worst overall sustain retention 0.952, worst melody retention 0.997.
+
+Three neighbouring repairs were measured and **rejected** rather than shipped:
+
+| variant | solved | target retention |
+|---|---|---|
+| repeated pitch only (shipped) | 15 | 0.991 |
+| + clip melody at the next melody attack | 15 | 0.990 |
+| + clip harmony at the next harmony attack | 15 | 0.989 |
+| + clip bass at the next bass attack | 18 | 0.952 |
+
+Clipping melody or harmony buys nothing. Clipping every held bass buys three
+pieces but is not a bug fix: `bass` in this corpus means "not in the primary
+voice", and two low voices ringing together is ordinary guitar writing. Those
+three pieces are W3's to earn, by releasing only where the hand actually needs
+it and paying for it in the objective.
+
+### Deferred, with reasons
+
+- **Three pieces need drop-D** (`capricho-arabe`, `faure-op78-sicilienne`,
+  `carcassi-op60-23` all reach D2) but the corpus records standard tuning for
+  every example. Solving them in drop D was measured: it changes no outcome,
+  because they fail for other reasons. Fixing the metadata means rebuilding
+  through an external `python-ly` checkout under `/private/tmp` and invalidating
+  the frozen corpus digests, for zero measured gain. Recorded, not done.
+- **Two Sor pieces carry 7- and 11-note simultaneities** (`sorf-op35-no21`,
+  `sorf-op45n01`) — rolled chords flattened onto one onset by the converter.
+  They become representable once W4 lands.
