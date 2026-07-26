@@ -429,3 +429,31 @@ Two limits were also measured rather than assumed:
   All three D2 pieces still fail under drop-D — `carcassi-op60-23` merely
   changes which reason it fails for. The deferral was correct and is now closed
   as measured rather than pending.
+
+### W7 — what the benchmark says, measured for free
+
+The milestone's last question was whether it is worth paying to re-run
+benchmark v2 with a stronger proposer. That can be answered without spending
+anything: run the deterministic B2 path over the same 503 items — no inference
+call at all — before and after, with identical measurement code.
+
+| | solved | GREEN | AMBER | final-gate failures | beam deaths |
+|---|---|---|---|---|---|
+| before (`ad24de8`) | 215/503 | 120 | 95 | **37** | 180 |
+| after (`20cc429`) | **220/503** | **124** | 96 | **0** | 212 |
+
+W2's reconciliation shows up here as well: the bucket where the incremental
+mirror admitted paths the full oracle then rejected is gone, 37 → 0.
+
+But the headline moved by +5 items, one percentage point, against a repertoire
+gate that doubled. That gap is the result. The deterministic path used to solve
+42.7% of the procedural corpus and 22.4% of published repertoire; it now solves
+43.7% and 44.8%. **The synthetic corpus was not exercising what real music
+exercises** — which is why 503 generated items never surfaced these failures and
+58 published scores surfaced all of them in a day.
+
+So: **do not pay to re-run the benchmark yet.** It would mostly re-measure a
+corpus that does not probe the stack where it is weak. Fixing the corpus comes
+first. That is a judgement from these numbers, not a measurement of a re-run.
+
+Full receipt: [`../REPERTOIRE_MILESTONE_ACCEPTANCE.md`](../REPERTOIRE_MILESTONE_ACCEPTANCE.md).

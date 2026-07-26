@@ -38,7 +38,12 @@ from typing import Final
 
 from fretsure.ir import Note
 from fretsure.oracle.core import CHECKER_VERSION, check_playability
-from fretsure.oracle.profiles import MEDIAN_HAND, Profile, validated_profile_snapshot
+from fretsure.oracle.profiles import (
+    _REAL_BOUNDS,
+    MEDIAN_HAND,
+    Profile,
+    validated_profile_snapshot,
+)
 from fretsure.oracle.validation.mutation import MUTANTS
 from fretsure.solver.score import solve_fingering_score
 from fretsure.tab import Tab
@@ -98,13 +103,20 @@ def solves(example: dict[str, object], profile: Profile) -> bool:
 
 
 def loosened(subset: str, scale: float) -> Profile:
-    """Scale one coordinate subset, clamped to the public profile domain."""
+    """Scale one coordinate subset, clamped to the public profile domain.
 
-    fields = SUBSETS[subset]
+    Clamping rather than raising keeps a sweep honest at its far end: a scale
+    that would leave the advertised ordinary-guitar model reports the model's
+    own ceiling, which is the most that could ever be claimed anyway.
+    """
+
     probe = replace(
         MEDIAN_HAND,
         version=f"frontier/{subset}/{scale}",
-        **{field: getattr(MEDIAN_HAND, field) * scale for field in fields},
+        **{
+            field: min(getattr(MEDIAN_HAND, field) * scale, _REAL_BOUNDS[field][1])
+            for field in SUBSETS[subset]
+        },
     )
     return validated_profile_snapshot(probe)
 

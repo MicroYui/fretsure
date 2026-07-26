@@ -1,0 +1,21 @@
+{
+ "checker_version": "oracle@0.4.0",
+ "fingering_solver_version": "fingering-solver@0.7.0",
+ "infeasible_reason": {
+  "no feasible frame config": 70,
+  "no non-red extension within beam": 212,
+  "pitch 36 unreachable on this tuning/capo": 1
+ },
+ "items": 503,
+ "oracle_verdict_when_solved": {
+  "AMBER": 96,
+  "GREEN": 124
+ },
+ "profile": "median@0.1",
+ "schema": "fretsure-deterministic-baseline@0.1.0",
+ "solved": 220,
+ "status": {
+  "INFEASIBLE": 283,
+  "TAB": 220
+ }
+}
