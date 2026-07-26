@@ -209,3 +209,38 @@ still exhaust it and are reported as such rather than hidden.
 `score-solver@0.4.0` → `0.5.0`, and `MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS`
 doubles with it. Nothing lost, retention unchanged (0.921 / 0.984), negative-tab
 verdicts unchanged.
+
+### W5b — compute cannot buy this: 21 → 23
+
+With cost explicitly removed as a constraint, every bounded-search limit was
+swept against the thirty-seven pieces still failing. Almost all of them buy
+nothing:
+
+| knob | additional pieces solved (of 37) |
+|---|---|
+| beam 16 → 32 | 0 |
+| beam 16 → 64 | 0 (and pushes 16 pieces into segment exhaustion) |
+| frame configurations 48 → 192 | 0 |
+| frame fingerings 64 → 256 | 0 |
+| final full checks 16 → 64 | 0 |
+| per-search work units 4× | **+2** |
+| score segments 8 → 32 | **+2** |
+
+The last two win the *same* two pieces (`carcassi-op26-04`, `sorf-op35-no24`)
+and do not stack: the whole compute ceiling is two pieces. Raising the segment
+count was chosen over the per-search budget because the latter is the public
+`solve_fingering` contract that the interactive path also runs under.
+
+**This is the useful result: the search bounds are not what limits quality.**
+Twenty-four pieces fail with "no non-red extension within beam" — the search
+explores and finds nothing the physical model accepts. That is not a budget
+problem, and no amount of compute fixes it.
+
+Accepted 23/58, and the segment-budget bucket is now empty. What remains is
+fully attributed:
+
+| remaining failure | count | owner |
+|---|---|---|
+| no non-red extension within beam | 24 | the sustain model (W3) and profile calibration (W6) |
+| no feasible frame config | 8 | profile calibration (W6) |
+| frame has more attacks than fingers | 3 | rolled chords (W4) |

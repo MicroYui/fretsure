@@ -152,7 +152,7 @@ def test_score_composition_has_an_explicit_aggregate_segment_gate(
     result = solve_fingering_score(notes, tuning, 0, profile)
 
     # The advertised bound is a contract, so the number is pinned here too.
-    assert MAX_SCORE_SOLVER_SEGMENTS == 8
+    assert MAX_SCORE_SOLVER_SEGMENTS == 32
     assert MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS == (
         MAX_SCORE_SOLVER_SEGMENTS * MAX_SOLVER_WORK_UNITS
     )

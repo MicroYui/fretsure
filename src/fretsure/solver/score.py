@@ -36,10 +36,11 @@ from fretsure.tab import Tab
 SCORE_SOLVER_VERSION = "score-solver@0.5.0"
 # A long score legitimately needs more independent searches than a short one, and
 # four was arbitrary: it rejected ten of fifty-eight published pieces for running
-# out of splits rather than for anything a hand could not do.  Eight clears that
-# bucket down to two; sixteen buys one further piece for four times the admitted
-# work, which is not a trade worth advertising.
-MAX_SCORE_SOLVER_SEGMENTS = 8
+# out of splits rather than for anything a hand could not do.  Raising it is the
+# only compute knob that buys any repertoire at all -- widening the beam, the
+# per-frame configurations, the per-frame fingerings or the final full checks all
+# measured at zero.  Thirty-two is where that gain stops.
+MAX_SCORE_SOLVER_SEGMENTS = 32
 # Sum of the conservative work estimates for admitted leaf searches. Rejected
 # oversized preflight calls and the final full-history oracle are control work,
 # not additional admitted solver searches.
