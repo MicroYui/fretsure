@@ -3,7 +3,7 @@
 状态：Plan 7B 软件与离线证据门已闭合；不主张普适真人保证。当前生产 stamps 为：
 
 - `fingering-solver@0.6.0`
-- `score-solver@0.4.0`
+- `score-solver@0.5.0`
 - `left-hand-ergonomics@0.1.0`
 - `published-fingering-ranker@0.1.0`
 - `oracle@0.3.0`

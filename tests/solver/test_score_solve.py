@@ -102,7 +102,10 @@ def test_score_composition_preserves_the_strict_solver_object_boundary() -> None
 def test_score_composition_has_an_explicit_aggregate_segment_gate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    notes = tuple(Note(F(index), F(1, 4), 40, "melody") for index in range(5))
+    notes = tuple(
+        Note(F(index), F(1, 4), 40, "melody")
+        for index in range(MAX_SCORE_SOLVER_SEGMENTS + 1)
+    )
     tuning = (40, 45, 50, 55, 59, 64)
     profile = _stress_case()[2]
     successful_segments = 0
@@ -148,8 +151,11 @@ def test_score_composition_has_an_explicit_aggregate_segment_gate(
 
     result = solve_fingering_score(notes, tuning, 0, profile)
 
-    assert MAX_SCORE_SOLVER_SEGMENTS == 4
-    assert MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS == 4 * MAX_SOLVER_WORK_UNITS
+    # The advertised bound is a contract, so the number is pinned here too.
+    assert MAX_SCORE_SOLVER_SEGMENTS == 8
+    assert MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS == (
+        MAX_SCORE_SOLVER_SEGMENTS * MAX_SOLVER_WORK_UNITS
+    )
     assert isinstance(result, Infeasible)
     assert result.reason == "score-level solver segment budget is exhausted"
     assert successful_segments <= MAX_SCORE_SOLVER_SEGMENTS

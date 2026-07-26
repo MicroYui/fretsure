@@ -191,7 +191,7 @@ def test_arrangement_wire_stamps_actual_model_and_all_public_contracts(
     assert stamps["oracle_input_schema_version"] == "tab-input@0.2.0"
     assert stamps["fidelity_checker_version"] == "fidelity@0.3.0"
     assert stamps["fingering_solver_version"] == "fingering-solver@0.6.0"
-    assert stamps["score_solver_version"] == "score-solver@0.4.0"
+    assert stamps["score_solver_version"] == "score-solver@0.5.0"
     assert stamps["left_hand_model_version"] == "left-hand-ergonomics@0.1.0"
     assert stamps["arrangement_style_registry_version"] == (
         "arrangement-style-registry@0.2.0"
@@ -359,7 +359,7 @@ def test_capabilities_wire_is_transport_neutral_and_honest() -> None:
     assert wire["stamps"]["package_version"] == "0.6.0"  # type: ignore[index]
     assert wire["stamps"]["score_input_version"] == "score-input@0.1.0"  # type: ignore[index]
     assert wire["stamps"]["fingering_solver_version"] == "fingering-solver@0.6.0"  # type: ignore[index]
-    assert wire["stamps"]["score_solver_version"] == "score-solver@0.4.0"  # type: ignore[index]
+    assert wire["stamps"]["score_solver_version"] == "score-solver@0.5.0"  # type: ignore[index]
     assert wire["stamps"]["left_hand_model_version"] == "left-hand-ergonomics@0.1.0"  # type: ignore[index]
     assert wire["stamps"]["arrangement_style_profile_version"] == (  # type: ignore[index]
         "guitarset-style-profiles@0.1.0"

@@ -186,3 +186,26 @@ One frozen expectation was re-frozen knowingly:
 `test_decimal_runtime_reproduces_frozen_development_selection` pinned a specific
 index into the GREEN finalist pool, and the pool is whatever the search kept.
 The selection is still a certified GREEN finalist with zero awkward events.
+
+### W5 — the segment budget was arbitrary: 18 → 21
+
+`MAX_SCORE_SOLVER_SEGMENTS = 4` bounded how many independent bounded searches one
+score may consume. It rejected ten of the fifty-eight pieces for running out of
+splits — a statement about the search budget, not about anything a hand cannot
+do. W2 made it worse (8 → 10) because an exact mirror costs more per extension.
+
+Measured before choosing:
+
+| segments | accepted | budget-exhausted failures |
+|---|---|---|
+| 4 | 18 | 10 |
+| **8 (shipped)** | **21** | **2** |
+| 16 | 22 | 1 |
+
+Eight clears the bucket; sixteen buys one further piece for four times the
+advertised aggregate work, which is not a trade worth advertising. Two pieces
+still exhaust it and are reported as such rather than hidden.
+
+`score-solver@0.4.0` → `0.5.0`, and `MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS`
+doubles with it. Nothing lost, retention unchanged (0.921 / 0.984), negative-tab
+verdicts unchanged.
