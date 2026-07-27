@@ -163,6 +163,41 @@ def _read_field(
         )
 
 
+def span_reach_inconsistency(profile: Profile) -> ProfileValidationIssue | None:
+    """``hand_span_mm`` and ``reach_mm`` are one quantity written twice.
+
+    ``hand_span_mm`` is the greatest distance between the 1 and 4 fingertips;
+    ``reach_mm`` is how far a finger reaches either side of the hand centre.  A
+    hand that spans S covers exactly S, so ``2 * reach_mm == hand_span_mm`` is an
+    identity, not a coincidence of the placeholder numbers.
+
+    Nothing enforced it, and the shipped large profile had already drifted apart
+    by a millimetre.  Letting them diverge does not merely look untidy: the two
+    feed different predicates -- pairwise fingertip distance and the hand-centre
+    window -- so a profile whose reach exceeds half its span describes a hand
+    that can cover more ground than its own fingers can span, and certificates
+    issued under it would not correspond to any hand.
+
+    This is deliberately *not* part of ``validate_profile``.  The mutation suite
+    earns its keep by building profiles that are incoherent on purpose, each
+    neutralising one constraint so that a predicate can be shown to be
+    load-bearing; refusing to construct those would trade a real test for a
+    tidier invariant.  The shipped profiles are held to it by test instead.
+    """
+
+    expected = 2.0 * profile.reach_mm
+    if math.isclose(profile.hand_span_mm, expected, rel_tol=1e-9, abs_tol=1e-9):
+        return None
+    return ProfileValidationIssue(
+        "PROFILE_SPAN_REACH_INCONSISTENT",
+        "$.reach_mm",
+        (
+            f"reach_mm must be half of hand_span_mm: expected "
+            f"{profile.hand_span_mm / 2.0}, got {profile.reach_mm}"
+        ),
+    )
+
+
 def validate_profile(profile: object) -> tuple[ProfileValidationIssue, ...]:
     """Validate an untrusted profile without mutating it or raising.
 
@@ -317,7 +352,12 @@ def profile_fingerprint(profile: Profile) -> str:
 
 SMALL_HAND = Profile("small@0.1", 90.0, 45.0, 450.0, 7.0, DEFAULT_STRING_LENGTH_MM)
 MEDIAN_HAND = Profile("median@0.1", 100.0, 50.0, 500.0, 8.0, DEFAULT_STRING_LENGTH_MM)
-LARGE_HAND = Profile("large@0.1", 115.0, 58.0, 560.0, 9.0, DEFAULT_STRING_LENGTH_MM)
+# reach_mm is half of hand_span_mm by definition -- see _span_reach_issue.  This
+# profile shipped at 58.0 against a 115 mm span, describing a hand 1 mm wider
+# than the one it claimed.  Measured to move no verdict (d_max is the tighter
+# of the two limits either way), so this is a coherence repair, not a fix to
+# behaviour.
+LARGE_HAND = Profile("large@0.2", 115.0, 57.5, 560.0, 9.0, DEFAULT_STRING_LENGTH_MM)
 
 _PESS = 0.9
 _OPT = 1.1

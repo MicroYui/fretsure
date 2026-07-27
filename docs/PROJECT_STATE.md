@@ -48,6 +48,21 @@ bug 造成的，不是选型；②`annotation_count` 必须为正，把**没有�
 正确修法（改为对解析后内容取摘要）属契约变更、单独提。详见
 [`experiments/2026-07-26-corpus-expansion.md`](experiments/2026-07-26-corpus-expansion.md)。
 
+**纵向约束重复已测（2026-07-27）**：`d_max` 与 `2 × reach_mm` 是同一物理量的两种写法。
+冗余是**单向**且可证明的——266 个失败帧里 `d_max` 单独拒绝 16 个（6%）、reach 单独拒绝 **0** 个；
+只要 `H = 2R`，`d_max` 可行必然蕴含 reach 可行，静态跨度那一半是死代码，而 `d_max` 更紧（多带跨弦分量）。
+reach 的真正贡献在**时间**维度（跨帧传播 + 持续按弦），那是 `d_max` 完全不建模的部分。
+前沿：`reach=52.5` 在负例上**逐位免费**，但曲目门 123 → **125（+7 丢 5）**，倒退违反守卫 2，
+且增益性质是 **beam 扰动**而非模型变好（60 得到的 3 首在 70 又丢）——**否决**。
+已发布的只有两项一致性修复（零判决变化）：`large@0.1 → large@0.2`（`2×reach=116 ≠ 115`，
+small/median 本来精确一致）与 `span_reach_inconsistency()` + 出厂 profile 受测；故意**不**接入
+`validate_profile`，因为变异套件需要构造故意不自洽的 profile 来证明谓词承重。详见
+[`experiments/2026-07-27-longitudinal-limit-duplication.md`](experiments/2026-07-27-longitudinal-limit-duplication.md)。
+
+**订正**：先前「放宽 `d_max` 完全惰性」只在 58 首上成立。389 首上去掉 `d_max` 能买约 7% 的失败曲目，
+而 16 个 DMAX_ONLY 帧里 **13 个绑定在相邻指对（gap 1、系数 0.5）**、只有 3 个是 gap 3——
+per-pair 表概念没错，是当初测错了指对。该路仍有真实张力（负例在相邻指对最小余量 0.54mm），保持开放。
+
 **per-pair `d_max` 已测并否决**：`d_max` 不是卡点。`check_shift_speed` 的 `fretted_interval` 施加了
 第二条**不分手指**的纵向限制（宽 `2 × reach_mm`，乐观下 110mm，与 `d_max(1,4)` 数值恰好相同），
 最宽指对是 1–4 时它先卡死。实测 `1-4` 放宽到 1.10/1.50 曲目均为 26/58 纹丝不动；推到 1.20 反而

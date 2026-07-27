@@ -23,6 +23,7 @@ from fretsure.oracle.profiles import (
     optimistic,
     pessimistic,
     profile_fingerprint,
+    span_reach_inconsistency,
     validate_profile,
 )
 
@@ -400,3 +401,31 @@ def test_revalidation_rejects_non_normalized_fraction_inserted_by_mutation() -> 
     assert issues[0].code == "PROFILE_NUMERIC_TYPE"
     with pytest.raises(ValueError, match="PROFILE_NUMERIC_TYPE"):
         canonical_profile_bytes(profile)
+
+
+def test_shipped_profiles_span_exactly_what_their_reach_covers() -> None:
+    """`hand_span_mm` and `reach_mm` are one quantity written twice.
+
+    A hand whose fingers span S covers exactly S, so `2 * reach_mm` must equal
+    `hand_span_mm`.  Nothing enforces this at construction -- the mutation suite
+    needs to build deliberately incoherent profiles to prove each predicate is
+    load-bearing -- so the shipped profiles are held to it here instead.  The
+    large profile shipped 1 mm apart until 2026-07-27, describing a hand wider
+    than the one it claimed; it moved no verdict, because `d_max` is the tighter
+    of the two limits either way, but a profile that does not describe a hand
+    cannot certify one.
+    """
+
+    for profile in (SMALL_HAND, MEDIAN_HAND, LARGE_HAND):
+        for derived in (profile, optimistic(profile), pessimistic(profile)):
+            assert span_reach_inconsistency(derived) is None, derived.version
+
+
+def test_the_span_reach_identity_is_checkable_and_names_the_expected_value() -> None:
+    drifted = replace(MEDIAN_HAND, version="drifted@0.1", reach_mm=80.0)
+    issue = span_reach_inconsistency(drifted)
+
+    assert issue is not None
+    assert issue.code == "PROFILE_SPAN_REACH_INCONSISTENT"
+    assert issue.path == "$.reach_mm"
+    assert "50.0" in issue.message
