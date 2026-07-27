@@ -30,7 +30,11 @@ from fretsure.oracle.input import ORACLE_INPUT_SCHEMA_VERSION, SolverInputError
 from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 from fretsure.solver.api import FINGERING_SOLVER_VERSION, Infeasible
 from fretsure.solver.left_hand import LEFT_HAND_MODEL_VERSION
-from fretsure.solver.score import SCORE_SOLVER_VERSION, solve_fingering_score
+from fretsure.solver.score import (
+    SCORE_SOLVER_VERSION,
+    solve_fingering_score,
+    solve_fingering_score_choosing_capo,
+)
 from fretsure.solver.sustain import SUSTAIN_RETENTION_FLOOR
 from fretsure.tab import Tab
 
@@ -128,6 +132,7 @@ def evaluate_example(
     *,
     profile: Profile,
     beam: int,
+    choose_capo: bool = False,
 ) -> dict[str, object]:
     example_id = str(example.get("id"))
     notes = _notes(example, example_id)
@@ -152,8 +157,13 @@ def evaluate_example(
         "tuning": list(tuning),
         "capo": capo,
     }
+    # Off by default and reported as a separate number, never replacing the
+    # recorded one: choosing a capo is a real arranging liberty, and a gate that
+    # silently started taking it would make every earlier measurement
+    # incomparable.
+    solver = solve_fingering_score_choosing_capo if choose_capo else solve_fingering_score
     try:
-        solved = solve_fingering_score(
+        solved = solver(
             notes,
             tuning,
             capo,
@@ -192,12 +202,22 @@ def evaluate_example(
     return record
 
 
-def run(paths: tuple[Path, ...], *, profile: Profile, beam: int) -> dict[str, object]:
+def run(
+    paths: tuple[Path, ...],
+    *,
+    profile: Profile,
+    beam: int,
+    choose_capo: bool = False,
+) -> dict[str, object]:
     records: list[dict[str, object]] = []
     for path in paths:
         document = json.loads(path.read_text(encoding="utf-8"))
         for example in document["examples"]:
-            records.append(evaluate_example(example, profile=profile, beam=beam))
+            records.append(
+                evaluate_example(
+                    example, profile=profile, beam=beam, choose_capo=choose_capo
+                )
+            )
     outcomes = Counter(str(record["outcome"]) for record in records)
     reasons: Counter[str] = Counter()
     for record in records:
@@ -215,6 +235,7 @@ def run(paths: tuple[Path, ...], *, profile: Profile, beam: int) -> dict[str, ob
             "profile_fingerprint": profile.fingerprint,
             "corpus": [path.name for path in paths],
             "sustain_retention_floor": str(SUSTAIN_RETENTION_FLOOR),
+            "choose_capo": choose_capo,
         },
         "versions": {
             "checker": CHECKER_VERSION,
@@ -262,6 +283,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--corpus", type=Path, action="append")
     parser.add_argument("--beam", type=int, default=16)
+    parser.add_argument(
+        "--choose-capo",
+        action="store_true",
+        help="let a refused score try other capo positions; reported separately",
+    )
     parser.add_argument("--output", type=Path)
     parser.add_argument(
         "--summary-only",
@@ -275,7 +301,9 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     paths = tuple(args.corpus) if args.corpus else DEFAULT_CORPUS
     try:
-        report = run(paths, profile=MEDIAN_HAND, beam=args.beam)
+        report = run(
+            paths, profile=MEDIAN_HAND, beam=args.beam, choose_capo=args.choose_capo
+        )
     except (OSError, ValueError, KeyError) as error:
         print(f"repertoire evaluation failed: {error}", file=sys.stderr)
         return 2

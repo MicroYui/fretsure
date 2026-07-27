@@ -36,7 +36,7 @@ def test_carcassi_public_domain_reference_meets_frozen_threshold() -> None:
     assert report["difficulty_independent"] is True
     assert report["versions"] == {
         "fingering_solver": "fingering-solver@0.7.0",
-        "score_solver": "score-solver@0.6.0",
+        "score_solver": "score-solver@0.7.0",
         "left_hand_model": "left-hand-ergonomics@0.1.0",
         "oracle": "oracle@0.5.0",
         "profile": "median@0.1",
