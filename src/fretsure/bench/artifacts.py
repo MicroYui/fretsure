@@ -2586,9 +2586,7 @@ def sanitize_observations(
             "response_id_sha256": None if stub else provider.response_id_sha256,
             "stage": intent.stage.value,
             "stage_ordinal": intent.stage_ordinal,
-            "system_sha256": intent.system_sha256,
             "temperature": intent.temperature,
-            "user_sha256": intent.user_sha256,
         }
         private_calls.append(canonical_json_bytes(private))
         public_calls.append(canonical_json_bytes(common))
@@ -2683,9 +2681,7 @@ def _intent_to_dict(value: CallIntent) -> dict[str, object]:
         "sample_index": value.sample_index,
         "stage": value.stage.value,
         "stage_ordinal": value.stage_ordinal,
-        "system_sha256": value.system_sha256,
         "temperature": value.temperature,
-        "user_sha256": value.user_sha256,
     }
 
 
@@ -2704,8 +2700,6 @@ def _intent_from_dict(value: object) -> CallIntent:
             "stage",
             "stage_ordinal",
             "requested_model_id",
-            "system_sha256",
-            "user_sha256",
             "request_sha256",
             "max_tokens",
             "temperature",
@@ -2748,8 +2742,6 @@ def _intent_from_dict(value: object) -> CallIntent:
             obj["stage_ordinal"], "wal.call_intent.stage_ordinal", minimum=0, maximum=1_000_000
         ),
         cast(str, _model_id(obj["requested_model_id"], "wal.requested_model_id", optional=False)),
-        _sha256(obj["system_sha256"], "wal.call_intent.system_sha256"),
-        _sha256(obj["user_sha256"], "wal.call_intent.user_sha256"),
         _sha256(obj["request_sha256"], "wal.call_intent.request_sha256"),
         _require_int(obj["max_tokens"], "wal.call_intent.max_tokens", minimum=1, maximum=16_384),
         temperature,

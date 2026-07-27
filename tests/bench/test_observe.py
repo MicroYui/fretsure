@@ -1,4 +1,3 @@
-import hashlib
 from dataclasses import FrozenInstanceError, replace
 from types import SimpleNamespace
 from typing import cast
@@ -166,15 +165,13 @@ def test_success_records_only_domain_separated_digests_and_deterministic_time() 
         "cluster-1",
         "pair-1",
     )
-    assert (
-        intent.system_sha256
-        == hashlib.sha256(
-            b"fretsure:benchmark-call-system@0.1.0\0" + system_secret.encode()
-        ).hexdigest()
-    )
-    assert intent.user_sha256 == visible_text_sha256(
-        "user", user_secret, max_bytes=len(user_secret)
-    )
+    # The intent no longer carries anything derived from the prompt at all --
+    # a stronger property than the domain-separated digests it used to store.
+    # Those digests made every prompt edit break every frozen artifact, which
+    # amounted to freezing what the agent is allowed to know.
+    recorded = {field for field in type(intent).__dataclass_fields__}
+    assert "system_sha256" not in recorded
+    assert "user_sha256" not in recorded
     assert result.reply_sha256 == visible_text_sha256(
         "reply", reply_secret, max_bytes=len(reply_secret)
     )

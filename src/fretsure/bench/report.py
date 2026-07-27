@@ -1084,14 +1084,12 @@ def _call_to_dict(value: _JoinedCall) -> dict[str, object]:
         "stage": value.intent.stage.value,
         "stage_ordinal": value.intent.stage_ordinal,
         "status": value.result.status,
-        "system_sha256": value.intent.system_sha256,
         "usage": {
             "cache_creation_input_tokens": (value.result.provider.cache_creation_input_tokens),
             "cache_read_input_tokens": value.result.provider.cache_read_input_tokens,
             "input_tokens": value.result.provider.input_tokens,
             "output_tokens": value.result.provider.output_tokens,
         },
-        "user_sha256": value.intent.user_sha256,
     }
 
 
@@ -2134,8 +2132,6 @@ def _parse_work(
                     "provider_attempts",
                     "requested_model_id",
                     "returned_model_id",
-                    "system_sha256",
-                    "user_sha256",
                     "request_sha256",
                     "reply_sha256",
                     "status",
@@ -2188,8 +2184,6 @@ def _parse_work(
             f"{path}.returned_model_id",
             nullable=True,
         )
-        _sha(call["system_sha256"], f"{path}.system_sha256")
-        _sha(call["user_sha256"], f"{path}.user_sha256")
         _sha(call["request_sha256"], f"{path}.request_sha256")
         _sha(call["reply_sha256"], f"{path}.reply_sha256", nullable=True)
         status = _text(call["status"], f"{path}.status")
@@ -2555,8 +2549,6 @@ def _raw_from_row(
                 "provider_attempts",
                 "requested_model_id",
                 "returned_model_id",
-                "system_sha256",
-                "user_sha256",
                 "request_sha256",
                 "reply_sha256",
                 "status",
@@ -2603,8 +2595,6 @@ def _raw_from_row(
     )
     _text(call["requested_model_id"], "raw.outcome.call.requested_model_id")
     _text(call["returned_model_id"], "raw.outcome.call.returned_model_id", nullable=True)
-    _sha(call["system_sha256"], "raw.outcome.call.system_sha256")
-    _sha(call["user_sha256"], "raw.outcome.call.user_sha256")
     _sha(call["request_sha256"], "raw.outcome.call.request_sha256")
     reply_sha = _sha(call["reply_sha256"], "raw.outcome.call.reply_sha256", nullable=True)
     call_status = _text(call["status"], "raw.outcome.call.status")

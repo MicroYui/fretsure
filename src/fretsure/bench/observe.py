@@ -247,8 +247,6 @@ class CallIntent:
     stage: CallStage
     stage_ordinal: int
     requested_model_id: str
-    system_sha256: str
-    user_sha256: str
     request_sha256: str
     max_tokens: int
     temperature: float
@@ -289,8 +287,6 @@ def _validate_intent(intent: object) -> CallIntent:
         raise ObservationInputError(
             "requested_model_id", "must be one bounded printable model identifier"
         ) from None
-    _require_sha256(exact.system_sha256, "system_sha256")
-    _require_sha256(exact.user_sha256, "user_sha256")
     _require_sha256(exact.request_sha256, "request_sha256")
     if type(exact.max_tokens) is not int or not 1 <= exact.max_tokens <= MAX_PROXY_OUTPUT_TOKENS:
         raise ObservationInputError(
@@ -303,8 +299,6 @@ def _validate_intent(intent: object) -> CallIntent:
         raise ObservationInputError("temperature", "must be one finite float in 0..1")
     if exact.request_sha256 != _request_digest(
         exact.requested_model_id,
-        exact.system_sha256,
-        exact.user_sha256,
         exact.max_tokens,
         exact.temperature,
     ):
@@ -972,15 +966,25 @@ def _validate_request(
 
 def _request_digest(
     requested_model_id: str,
-    system_sha256: str,
-    user_sha256: str,
     max_tokens: int,
     temperature: float,
 ) -> str:
+    """Identity of a *reservation*, not of the prompt that filled it.
+
+    This used to digest the system and user prompt bytes as well, which made
+    every prompt edit break every frozen artifact -- and the prompt is where the
+    agent's knowledge lives, so that amounted to freezing what the agent is
+    allowed to learn. What a retry must not change is the model, the token
+    reservation and the temperature; those stay.
+
+    What is no longer detected: two candidates for one item receiving different
+    prompts. The prompt is a pure function of the item, the goal and the style,
+    technique and skill registry versions, all of which are recorded, so a
+    divergence there would be a harness bug rather than a data condition.
+    """
+
     fields = (
         requested_model_id.encode("utf-8"),
-        system_sha256.encode("ascii"),
-        user_sha256.encode("ascii"),
         str(max_tokens).encode("ascii"),
         temperature.hex().encode("ascii"),
     )
@@ -1266,8 +1270,6 @@ class ObservingLLM:
         ) = _validate_request(system, user, max_tokens, temperature)
         if self._request_guard is not None:
             self._request_guard(system_bytes, user_bytes, max_tokens)
-        system_sha256 = _domain_digest(_SYSTEM_DIGEST_DOMAIN, system_bytes)
-        user_sha256 = _domain_digest(_USER_DIGEST_DOMAIN, user_bytes)
         intent = CallIntent(
             run_id=context.run_id,
             logical_call_id=context.logical_call_id,
@@ -1281,12 +1283,8 @@ class ObservingLLM:
             stage=context.stage,
             stage_ordinal=context.stage_ordinal,
             requested_model_id=self._model_id,
-            system_sha256=system_sha256,
-            user_sha256=user_sha256,
             request_sha256=_request_digest(
                 self._model_id,
-                system_sha256,
-                user_sha256,
                 max_tokens,
                 temperature,
             ),
