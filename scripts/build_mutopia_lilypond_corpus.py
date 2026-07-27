@@ -29,7 +29,7 @@ from fretsure.score_corpus import (
     score_corpus_json_bytes,
 )
 
-MANIFEST_SCHEMA: Final = "fretsure-mutopia-lilypond-manifest@0.1.0"
+MANIFEST_SCHEMA: Final = "fretsure-mutopia-lilypond-manifest@0.2.0"
 DEFAULT_SPLIT_SEED: Final = "mutopia-cc-by-sa-v1"
 
 
@@ -94,6 +94,52 @@ def _positive_number(value: Mapping[str, object], key: str) -> float:
     if type(result) not in (int, float) or float(cast(int | float, result)) <= 0:
         raise ValueError(f"manifest {key} must be a positive number")
     return float(cast(int | float, result))
+
+
+def content_sha256(example: ScoreCorpusExample) -> str:
+    """A digest of the music, independent of how the XML happened to serialise.
+
+    The manifest used to bind on ``root_sha256``, the digest of the intermediate
+    MusicXML the converter emits.  That turned out to depend on the libxml2 build
+    lxml links against -- not only on the pinned ``lxml`` and ``python-ly`` -- so
+    the shipped corpus could not be rebuilt on another machine even though the
+    music was identical note for note.  A digest that is too tight is not extra
+    safety; it is a check that fires on the wrong thing and trains people to
+    ignore it.
+
+    This covers exactly what a rebuild must preserve: every note, every printed
+    fingering annotation, and the instrument configuration.  Titles and credits
+    are not included because they come from the manifest rather than the
+    conversion, and are already pinned there.
+    """
+
+    payload = {
+        "notes": [
+            [
+                [note.onset.numerator, note.onset.denominator],
+                [note.duration.numerator, note.duration.denominator],
+                note.pitch,
+                note.voice,
+            ]
+            for note in example.notes
+        ],
+        "annotations": [
+            [
+                [a.onset.numerator, a.onset.denominator],
+                a.pitch,
+                list(a.accepted_fingers),
+                a.string,
+                a.fret,
+            ]
+            for a in example.annotations
+        ],
+        "tuning": list(example.tuning),
+        "capo": example.capo,
+        "time_signature": list(example.time_signature),
+        "tempo_bpm": example.tempo_bpm,
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return _sha256(canonical.encode("utf-8"))
 
 
 def _declared_license(result: Any) -> str | None:
@@ -201,14 +247,11 @@ def build_mutopia_examples(
                     f"{movement.failure_reason}"
                 )
 
-            expected_root_sha = _required_string(movement_spec, "root_sha256")
+            # Recorded as build provenance, deliberately not binding: it is the
+            # digest of a derived intermediate whose byte form depends on the
+            # XML library build.  ``content_sha256`` below is what a rebuild must
+            # reproduce.
             actual_root_sha = _sha256(movement.musicxml_bytes)
-            if actual_root_sha != expected_root_sha:
-                raise ValueError(
-                    f"converted root digest mismatch for {source_path.name} "
-                    f"movement {movement_index}: expected {expected_root_sha}, "
-                    f"got {actual_root_sha}"
-                )
             if actual_root_sha in selected_roots:
                 raise ValueError(f"duplicate converted movement: {actual_root_sha}")
             selected_roots.add(actual_root_sha)
@@ -237,6 +280,19 @@ def build_mutopia_examples(
             expected_pressed = _non_negative_integer(
                 movement_spec, "pressed_annotation_count"
             )
+            expected_content = _required_string(movement_spec, "content_sha256")
+            actual_content = content_sha256(example)
+            if actual_content != expected_content:
+                raise ValueError(
+                    f"converted content digest mismatch for {identifier}: "
+                    f"expected {expected_content}, got {actual_content}"
+                )
+            expected_notes = _non_negative_integer(movement_spec, "note_count")
+            if len(example.notes) != expected_notes:
+                raise ValueError(
+                    f"note count changed for {identifier}: "
+                    f"expected {expected_notes}, got {len(example.notes)}"
+                )
             if len(example.annotations) != expected_annotations:
                 raise ValueError(
                     f"annotation count changed for {identifier}: "

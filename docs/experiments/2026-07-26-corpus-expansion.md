@@ -76,11 +76,21 @@ builder from `HEAD`. It was also verified to be **cosmetic**: converting
 shipped artifact note-for-note (332/332), with identical annotation and pressed
 counts (19/19). Only the XML serialisation differs.
 
-So the check is tighter than the property it protects. `libxml2` is now recorded
-in the new manifests' conversion block, making the dependency visible. The
-correct repair is to digest the *parsed* example rather than the intermediate
-serialisation; that changes a shipped manifest schema and is left as separate
-work rather than folded in here.
+So the check is tighter than the property it protects. **Fixed on 2026-07-27**:
+the manifest now binds on `content_sha256`, a digest over the notes, printed
+fingering annotations, tuning, capo, time signature and tempo — everything a
+rebuild must preserve, and nothing about how the XML happened to serialise.
+`root_sha256` is gone from the manifest schema entirely (`@0.1.0` → `@0.2.0`):
+for this corpus it was a digest of a *derived intermediate*, not provenance, and
+nothing ever read it back. The previously-unvalidated `note_count` is now
+checked too.
+
+Result: all four artifacts (368 examples) rebuild and verify here, where
+`mutopia_cc_by_sa.json` previously failed outright. Byte-identity across
+environments remains unreachable because `ScoreCorpusExample` embeds the build
+fingerprint, and that field is load-bearing provenance elsewhere in the project
+(contamination detection uses it for imported sources). Content identity is the
+guarantee, and it now holds anywhere.
 
 ## What did not convert
 

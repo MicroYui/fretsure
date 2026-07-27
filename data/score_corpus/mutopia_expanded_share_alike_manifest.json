@@ -17,11 +17,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "fd544e9a0ad51f390fae490797b91ca6e10c6e76378adfdde76e29998401b9d6",
      "id": "mutopia-aguado-op03n01",
      "index": 1,
      "note_count": 282,
      "pressed_annotation_count": 0,
-     "root_sha256": "6db4d66700f15b7426aed7a4af7a5eb3bb5079200b3e91a2d85f4d28294d757e",
      "tempo_bpm": 90.0,
      "title": "8 Petites Pi\u00e8ces for Guitar, No. 1"
     }
@@ -41,11 +41,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "aed6139dda94ca56655cd5f6049b2ac5bb9ce430838a185d96a2975a885aeed8",
      "id": "mutopia-aguado-op03n02",
      "index": 1,
      "note_count": 309,
      "pressed_annotation_count": 0,
-     "root_sha256": "cbc838d1ab7f5af78633590c9db54ea56ab0d1c68bfc54706740301ae64c793a",
      "tempo_bpm": 90.0,
      "title": "8 Petites Pi\u00e8ces for Guitar, No. 2"
     }
@@ -65,11 +65,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "c95a90eeb7bf426c6827a6e7c7621624f687b6b3aff044faa21a6aeb118c6960",
      "id": "mutopia-aguado-op03n03",
      "index": 1,
      "note_count": 183,
      "pressed_annotation_count": 0,
-     "root_sha256": "84931b683fe55dcae55e7743a8e6982e147ef287438b11ea2fcd831d135107aa",
      "tempo_bpm": 90.0,
      "title": "8 Petites Pi\u00e8ces for Guitar, No. 3"
     }
@@ -89,11 +89,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "862b922e9c20f889c075fc5befa030e6df1ba63fc9135de4f91e2bcd4baa4116",
      "id": "mutopia-aguado-op03n04",
      "index": 1,
      "note_count": 329,
      "pressed_annotation_count": 0,
-     "root_sha256": "a3f1be489a4c5afd635bee840b4bed0ab7c01a53958c81312406a282ed70f7bc",
      "tempo_bpm": 90.0,
      "title": "8 Petites Pi\u00e8ces for Guitar, No. 4"
     }
@@ -113,11 +113,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "9c57338b31b45d2b3e38a754f04e2d6e55a9a57cc8b417e81b768793386d37f8",
      "id": "mutopia-aguado-op03n05",
      "index": 1,
      "note_count": 345,
      "pressed_annotation_count": 0,
-     "root_sha256": "b0a5abe5324e8b0f5508fe82588aab2bd6ed4884050a501d195655e4ffa20a56",
      "tempo_bpm": 90.0,
      "title": "8 Petites Pi\u00e8ces for Guitar, No. 5"
     }
@@ -137,11 +137,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "5c84ed11f69dfc3aebd76bca4ca3936c77d1b3e460179f07b96311f810886228",
      "id": "mutopia-aguado-op03n07",
      "index": 1,
      "note_count": 368,
      "pressed_annotation_count": 0,
-     "root_sha256": "5aec72007e710618143f1b8904ad36543b92b2e9b20bdb15e2126668142299c1",
      "tempo_bpm": 90.0,
      "title": "8 Petites Pi\u00e8ces for Guitar, No. 7"
     }
@@ -161,11 +161,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "d7a0e8cdf11d856fc12ddfe345695efcc947fa986af2190bceb1211407133171",
      "id": "mutopia-aguado-op03n08",
      "index": 1,
      "note_count": 263,
      "pressed_annotation_count": 0,
-     "root_sha256": "70e123db4ac7979c18e8ee1a655fc6c6ec1cfa9dcc4f11d63297e49d07e5f245",
      "tempo_bpm": 90.0,
      "title": "8 Petites Pi\u00e8ces for Guitar, No. 8"
     }
@@ -185,31 +185,31 @@
    "movements": [
     {
      "annotation_count": 16,
+     "content_sha256": "a71d563b1914e513471aa16c39c92b0ae49fd6fa32f7072b3abde51e8d30c277",
      "id": "mutopia-air-varie-movement-1",
      "index": 1,
      "note_count": 128,
      "pressed_annotation_count": 16,
-     "root_sha256": "8b4c2e518bffbab4769334bbf1572d3bc53fe0480276619ac7bb4fa9b96fe947",
      "tempo_bpm": 90.0,
      "title": "air-varie"
     },
     {
      "annotation_count": 14,
+     "content_sha256": "8885723df278dd2c3d3f7cd5fd6acfd3d53443f87ea394bb7fa06d043036ce48",
      "id": "mutopia-air-varie-movement-2",
      "index": 2,
      "note_count": 160,
      "pressed_annotation_count": 14,
-     "root_sha256": "57cfda0144c1ef944a5d6d3415c46b9ef8c9b71bef9af8ea5daa5d5fc4caf1f6",
      "tempo_bpm": 90.0,
      "title": "air-varie"
     },
     {
      "annotation_count": 10,
+     "content_sha256": "5360b69cf463da9889bbb1a640794a6d42f402efb3048675ab563667ce8b9386",
      "id": "mutopia-air-varie-movement-3",
      "index": 3,
      "note_count": 221,
      "pressed_annotation_count": 10,
-     "root_sha256": "111659b3f758134b5dda5eaa7b58c32adbef782b9b7feb0e02acf5ba233e2c8c",
      "tempo_bpm": 90.0,
      "title": "air-varie"
     }
@@ -229,21 +229,21 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "73d70835311b9f03309ce7c9a77e5de0a3162b3d39355327028249abaa91696a",
      "id": "mutopia-boije-835-vidal-paul-air-des-folies-despagnes-movement-1",
      "index": 1,
      "note_count": 1222,
      "pressed_annotation_count": 0,
-     "root_sha256": "b6c2359be20577ef1a1e8650ecd5d4cfdee6a368eac0e42f79732b441ca94c19",
      "tempo_bpm": 90.0,
      "title": "boije_835_Vidal_Paul_Air_Des_Folies_DEspagnes"
     },
     {
      "annotation_count": 0,
+     "content_sha256": "73d70835311b9f03309ce7c9a77e5de0a3162b3d39355327028249abaa91696a",
      "id": "mutopia-boije-835-vidal-paul-air-des-folies-despagnes-movement-2",
      "index": 2,
      "note_count": 1222,
      "pressed_annotation_count": 0,
-     "root_sha256": "37c525e0846172db91fe7cf7dfb13786d676f6fd18ece1f7ed2f53f12da9f83e",
      "tempo_bpm": 90.0,
      "title": "boije_835_Vidal_Paul_Air_Des_Folies_DEspagnes"
     }
@@ -263,11 +263,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "77254b3b36f04ccd0dffb392452a48dd307aa997c420878af6c37145cf8105be",
      "id": "mutopia-bwv-1006a-1g",
      "index": 1,
      "note_count": 1286,
      "pressed_annotation_count": 0,
-     "root_sha256": "c22c986686ea6a5476ce1a915aebb5cc2c2fecd7155b6d260436ba8a5d1e5a41",
      "tempo_bpm": 90.0,
      "title": "Suite E-Dur - BWV 1006a - Preludio"
     }
@@ -287,11 +287,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "17a5da4ee56d46df337a6d6678ed310f78f224631b569608a5612ffb262b71f2",
      "id": "mutopia-bwv-1006a-2g",
      "index": 1,
      "note_count": 207,
      "pressed_annotation_count": 0,
-     "root_sha256": "f35b7c071d528761d4c4d6d6e4e8ccb40b2960c83664adbe97c5b6ed5bda0923",
      "tempo_bpm": 90.0,
      "title": "Suite E-Dur - BWV 1006a - Loure"
     }
@@ -311,11 +311,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "8dfcda2e39b526aa275c8e344f2047239b517739b3781259118131b20d044c3b",
      "id": "mutopia-bwv-1006a-3g",
      "index": 1,
      "note_count": 843,
      "pressed_annotation_count": 0,
-     "root_sha256": "2d68cb68f16fed74b7d1df8f87b722be466b25d3442607d2a2c85f51e389b522",
      "tempo_bpm": 90.0,
      "title": "Suite E-Dur - BWV 1006a - Gavotte en Rondeau"
     }
@@ -335,11 +335,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "f191a8d870943b169f9299ee9051b44c389f4c3130ebfeb595068afe237623a5",
      "id": "mutopia-bwv-1006a-4g",
      "index": 1,
      "note_count": 234,
      "pressed_annotation_count": 0,
-     "root_sha256": "f4452fef87baa58752dfdccde8e5525f62ca604df24d7ff0cd820036af488f8c",
      "tempo_bpm": 90.0,
      "title": "Suite E-Dur - BWV 1006a - Menuet I"
     }
@@ -359,11 +359,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "28e7665dc37a772d402afa1d922821c9af146fb12e32af49c98df7c3b9f325c7",
      "id": "mutopia-bwv-1006a-5g",
      "index": 1,
      "note_count": 244,
      "pressed_annotation_count": 0,
-     "root_sha256": "5e342e2c9dcf1504350ed5904fe418fa21de1c092b2136b9b7c0c4ee9de2f84b",
      "tempo_bpm": 90.0,
      "title": "Suite E-Dur - BWV 1006a - Menuet II"
     }
@@ -383,11 +383,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "a7ee0b89aeae7ca8793025921eebebc4fddeb628639760343b1825cb75181c8c",
      "id": "mutopia-bwv-1006a-6g",
      "index": 1,
      "note_count": 352,
      "pressed_annotation_count": 0,
-     "root_sha256": "f1cbfeccdb86f4a2c14ab44e4184f7b0ba63eaef1405ab77409c3d2d5ff4acce",
      "tempo_bpm": 90.0,
      "title": "Suite E-Dur - BWV 1006a - Bourr\u00e9e"
     }
@@ -407,11 +407,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "d1918b809a459b9c58273d53932ba2d4c521e32d8c17eb7026555c8a4aee569a",
      "id": "mutopia-bwv-1006a-7g",
      "index": 1,
      "note_count": 430,
      "pressed_annotation_count": 0,
-     "root_sha256": "c96bcd8a5cf3fc2289c3a07975a53a0b1807e4202192368551059b233d32dd94",
      "tempo_bpm": 90.0,
      "title": "Suite E-Dur - BWV 1006a - Gigue"
     }
@@ -431,11 +431,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "aaade50a80c609c7baf947cf6bfa493366a1c1a667773a9c852dd2bd579532c4",
      "id": "mutopia-carcassi-op26-01",
      "index": 1,
      "note_count": 588,
      "pressed_annotation_count": 0,
-     "root_sha256": "6b3778d0cbcae007c77de85aa66409904170918b1cc5ab127275208fb8e48085",
      "tempo_bpm": 90.0,
      "title": "Six Caprices, No. 1"
     }
@@ -455,11 +455,11 @@
    "movements": [
     {
      "annotation_count": 18,
+     "content_sha256": "0cb205dbd21fe7102b77427f91db2595f63b0d28e7bb403161fe977d55de3c89",
      "id": "mutopia-carcassi-op26-06",
      "index": 1,
      "note_count": 1111,
      "pressed_annotation_count": 17,
-     "root_sha256": "5232d805ebfae4cb0cdb566e86db8c2c4e6ce0642b618d319f52d067448bad88",
      "tempo_bpm": 90.0,
      "title": "Six Caprices, No. 6"
     }
@@ -479,11 +479,11 @@
    "movements": [
     {
      "annotation_count": 13,
+     "content_sha256": "83a60ec1e2c8518999abd56270da4128cce00e45033bba2626d21f261993dd93",
      "id": "mutopia-carcassi-op60-02",
      "index": 1,
      "note_count": 367,
      "pressed_annotation_count": 13,
-     "root_sha256": "b6c6c6321310ae80282fd0c79cd43cdadc40f72cb66f1b7013505ecef0b890c0",
      "tempo_bpm": 90.0,
      "title": "carcassi-op60-02"
     }
@@ -503,11 +503,11 @@
    "movements": [
     {
      "annotation_count": 73,
+     "content_sha256": "1512fdb80e4cac3b8d94cd16cd75a9f1d10f70d687a2d171f34f78dafb16cbf2",
      "id": "mutopia-carcassi-op60-04",
      "index": 1,
      "note_count": 306,
      "pressed_annotation_count": 72,
-     "root_sha256": "5221616117a61042c735300573acd8f811280f99e41bbc3f05ffbdced67f2951",
      "tempo_bpm": 90.0,
      "title": "carcassi-op60-04"
     }
@@ -527,11 +527,11 @@
    "movements": [
     {
      "annotation_count": 35,
+     "content_sha256": "f418414f7b1f3471c62c986a6b39574d23d11fdb1a5fec930383ad306bf85a9a",
      "id": "mutopia-carcassi-op60-05",
      "index": 1,
      "note_count": 386,
      "pressed_annotation_count": 34,
-     "root_sha256": "b431be788da26ac0a4f2cb5a3d8b056a36f8ef1c7538ccec89629a1a5ee8c451",
      "tempo_bpm": 90.0,
      "title": "carcassi-op60-05"
     }
@@ -551,11 +551,11 @@
    "movements": [
     {
      "annotation_count": 40,
+     "content_sha256": "06c7bc3d66c72348a2790535e1ff528ae82b3eb353aaa83062cdfed2baf5ee03",
      "id": "mutopia-carcassi-op60-06",
      "index": 1,
      "note_count": 423,
      "pressed_annotation_count": 40,
-     "root_sha256": "072fcf4e7fe01e9691fa857510b4385875a93afbb8dad77e8a034a7d204a5e19",
      "tempo_bpm": 90.0,
      "title": "carcassi-op60-06"
     }
@@ -575,11 +575,11 @@
    "movements": [
     {
      "annotation_count": 15,
+     "content_sha256": "6090c83295462fb0a424e8da0cf1b921ed71e7107ddd16fa04cb51e04e30f199",
      "id": "mutopia-carcassi-op60-10",
      "index": 1,
      "note_count": 297,
      "pressed_annotation_count": 15,
-     "root_sha256": "b967aeab5a2016fd2cd15977df67af1272d4e92cd43c0711a53e263cd1766ec4",
      "tempo_bpm": 90.0,
      "title": "carcassi-op60-10"
     }
@@ -599,11 +599,11 @@
    "movements": [
     {
      "annotation_count": 8,
+     "content_sha256": "97c9c6768c1512574607d29cd0fdaebc3ef41ef2ed085e14155f7af05d67b73e",
      "id": "mutopia-carcassi-op60-11",
      "index": 1,
      "note_count": 225,
      "pressed_annotation_count": 8,
-     "root_sha256": "7dfb5dbfa97d964da8f13ee936dd66a977f87351b5174fdc1c25275d231eff9c",
      "tempo_bpm": 90.0,
      "title": "carcassi-op60-11"
     }
@@ -623,11 +623,11 @@
    "movements": [
     {
      "annotation_count": 76,
+     "content_sha256": "7d3a5ca219fe02b314ff2026ab4ccd8449cd0e871af8bcd7c1040c53f6a23bec",
      "id": "mutopia-carcassi-op60-12",
      "index": 1,
      "note_count": 317,
      "pressed_annotation_count": 75,
-     "root_sha256": "dee7122659ac3e9bae19f79a366960b7707a3c0ccf566bb9a571d7af0532bf17",
      "tempo_bpm": 90.0,
      "title": "carcassi-op60-12"
     }
@@ -647,11 +647,11 @@
    "movements": [
     {
      "annotation_count": 69,
+     "content_sha256": "d17f698fd54f4a2b610461e628859ecb6a18e9116296aa8104426201a38c94dc",
      "id": "mutopia-carcassi-op60-13",
      "index": 1,
      "note_count": 407,
      "pressed_annotation_count": 54,
-     "root_sha256": "81c3363c6d340429bd321c79c5ff22ab9ef1ff3eddc7c9b0c996f9b21325a400",
      "tempo_bpm": 90.0,
      "title": "25 Studies: No. 13"
     }
@@ -671,11 +671,11 @@
    "movements": [
     {
      "annotation_count": 14,
+     "content_sha256": "a1ea493acb056280e094dbc08324f245ecc2ece145c8930eb725ae78792a4252",
      "id": "mutopia-carcassi-op60-14",
      "index": 1,
      "note_count": 342,
      "pressed_annotation_count": 10,
-     "root_sha256": "42e790748287ac47acd9ceb6061622f637b3764c386b37a0b95e94d70a0de528",
      "tempo_bpm": 90.0,
      "title": "25 Studies: No. 14"
     }
@@ -695,11 +695,11 @@
    "movements": [
     {
      "annotation_count": 27,
+     "content_sha256": "31ee705c9673d8d1f1db97f4ed784801636e674e7acf49d1328ee920a5599141",
      "id": "mutopia-carcassi-op60-16",
      "index": 1,
      "note_count": 260,
      "pressed_annotation_count": 27,
-     "root_sha256": "ac6173ba7c1480391b2607e2ace36ff08e8f67762402b970148673c399ff2b32",
      "tempo_bpm": 90.0,
      "title": "25 Studies: No. 16"
     }
@@ -719,11 +719,11 @@
    "movements": [
     {
      "annotation_count": 51,
+     "content_sha256": "147702112f656ab3b4e0d20a64f312cdbdc858070fac113a570fc5c1458d3ee7",
      "id": "mutopia-carcassi-op60-17",
      "index": 1,
      "note_count": 368,
      "pressed_annotation_count": 45,
-     "root_sha256": "05fbbea5a64295b26ac2cd95cb7121a8edafc5b163136bf708e9dae94f642e99",
      "tempo_bpm": 90.0,
      "title": "25 Studies: No. 17"
     }
@@ -743,11 +743,11 @@
    "movements": [
     {
      "annotation_count": 23,
+     "content_sha256": "ade8932efad2ad513db3b0b1b19a95ef70d060958e02ed48894d628afdd05529",
      "id": "mutopia-carcassi-op60-18",
      "index": 1,
      "note_count": 210,
      "pressed_annotation_count": 20,
-     "root_sha256": "013ab4743c8d9f4202d2ba88a862500f29e57a3b36e19f64279c13d3ef602995",
      "tempo_bpm": 90.0,
      "title": "25 Studies: No. 18"
     }
@@ -767,11 +767,11 @@
    "movements": [
     {
      "annotation_count": 10,
+     "content_sha256": "e9f3e9608e8a1f7616ba0342b68e4c5ff136579226f59e9572ad89ae9c57e80f",
      "id": "mutopia-carcassi-op60-19",
      "index": 1,
      "note_count": 460,
      "pressed_annotation_count": 10,
-     "root_sha256": "47295ef8e4b50eb3dd13ee6bf3ecd80def9e475da572bc744c8977e1edf0bb96",
      "tempo_bpm": 90.0,
      "title": "25 Studies: No. 19"
     }
@@ -791,11 +791,11 @@
    "movements": [
     {
      "annotation_count": 66,
+     "content_sha256": "3e0c10e969277e2131294ca4cf88d2952a8e3324207e84d029002fce9448cb8f",
      "id": "mutopia-carcassi-op60-20",
      "index": 1,
      "note_count": 340,
      "pressed_annotation_count": 57,
-     "root_sha256": "9b49371b5df5186c4af3cda6ed6dda4751c0ee6b5e096f4c80119eeda2e79571",
      "tempo_bpm": 90.0,
      "title": "25 Studies: No. 20"
     }
@@ -815,11 +815,11 @@
    "movements": [
     {
      "annotation_count": 13,
+     "content_sha256": "458b2b29080053be17e59228cdaef27eda6ed2038dfa9f2235f2ee5d69818382",
      "id": "mutopia-carcassi-op60-21",
      "index": 1,
      "note_count": 412,
      "pressed_annotation_count": 12,
-     "root_sha256": "34d16a8d19c5a6536b9f424b25b5202bc58d861d5a2f2d90ad086fe1da1f4286",
      "tempo_bpm": 90.0,
      "title": "25 Studies: No. 21"
     }
@@ -839,11 +839,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "201ce211edc6bd93e217bbccfeff0bfbf2d34657e48bbe0cfeba383911515d23",
      "id": "mutopia-forsting",
      "index": 1,
      "note_count": 386,
      "pressed_annotation_count": 0,
-     "root_sha256": "09b90746c9db2500910112637a24f4862c4a32dd214d4b74f7d746099da9e249",
      "tempo_bpm": 90.0,
      "title": "Recuerdos"
     }
@@ -863,11 +863,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "4f810a53d44b037935a85350f4f269756d69ebf0a7d941444215dcb282fe6802",
      "id": "mutopia-giuliani-o51-03",
      "index": 1,
      "note_count": 170,
      "pressed_annotation_count": 0,
-     "root_sha256": "35a5beb491af6156b6f5bcc18d368ae7a8d54fad948a54dc8e09457d1aeab1bb",
      "tempo_bpm": 90.0,
      "title": "18 Progressive Lessons, No. 3"
     }
@@ -887,11 +887,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "e922b72fad17192ff878224623c83b3412a04a8c435b08b405d9a378069158c7",
      "id": "mutopia-giuliani-o51-04",
      "index": 1,
      "note_count": 120,
      "pressed_annotation_count": 0,
-     "root_sha256": "e79b27f03bd94019507a085df9535a145e4944e5719ec4da571783f7a0b2703b",
      "tempo_bpm": 90.0,
      "title": "18 Progressive Lessons, No. 4"
     }
@@ -911,11 +911,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "f3f75054b906656b121b57ff778701bd9b867621499eb17d9191cba0f13741c4",
      "id": "mutopia-giuliani-o51-05",
      "index": 1,
      "note_count": 116,
      "pressed_annotation_count": 0,
-     "root_sha256": "52964a7fc6e45b380983cab0a1d77d71bee156abe9e4f70d6aeb56f8d119207a",
      "tempo_bpm": 90.0,
      "title": "18 Progressive Lessons, No. 5"
     }
@@ -935,11 +935,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "3fce294fb97baad0afa4328cbaef2403694a0f1f797f4a397699c3b353478352",
      "id": "mutopia-giuliani-o51-06",
      "index": 1,
      "note_count": 188,
      "pressed_annotation_count": 0,
-     "root_sha256": "b62fc01a29c704f48c822cc3358a0b276e9ef6f169ae169eb363997750277206",
      "tempo_bpm": 90.0,
      "title": "18 Progressive Lessons, No. 6"
     }
@@ -959,11 +959,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "50933a0e293aa7abbcf8df124f4f5d6c19524c8a14bc7e8fc742e78c7c9fed36",
      "id": "mutopia-giuliani-op59n01",
      "index": 1,
      "note_count": 243,
      "pressed_annotation_count": 0,
-     "root_sha256": "373c07afb3b4c3ce2665f95e0ccb9f24f9cd987db72ae3b9094ec0503344b6a7",
      "tempo_bpm": 90.0,
      "title": "giuliani-op59n01"
     }
@@ -983,11 +983,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "85acc4a77c81f7b7fc6617d19d789110c8e2c2996ec697a5aae4cfc4f2da59c7",
      "id": "mutopia-giuliani-op59n02",
      "index": 1,
      "note_count": 325,
      "pressed_annotation_count": 0,
-     "root_sha256": "581c64d8e66441018e85a4b6392f15f423003d073ed82c77f0b09efcab70e2f7",
      "tempo_bpm": 90.0,
      "title": "giuliani-op59n02"
     }
@@ -1007,11 +1007,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "6110e4c7a39a19c905f52bc7a7189815baf12be13b6694185c798c04454de2a1",
      "id": "mutopia-giuliani-op59n03",
      "index": 1,
      "note_count": 280,
      "pressed_annotation_count": 0,
-     "root_sha256": "a37081b7cde5f1e04aefc12b823827538c20cb5534078bc0bd4be4788563759c",
      "tempo_bpm": 90.0,
      "title": "giuliani-op59n03"
     }
@@ -1031,11 +1031,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "c5761ea605219a1910b077dc2c10b35d62c0e03e2c1b453124d68b923a442266",
      "id": "mutopia-giuliani-op59n04",
      "index": 1,
      "note_count": 273,
      "pressed_annotation_count": 0,
-     "root_sha256": "60a82f92aab467c6055f8444af39b06b65c2a76dc7bdfefc26a6708215f0bede",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: 4"
     }
@@ -1055,11 +1055,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "4738e465ad6aa673597da5bcffbc26a659192ee58e149a4d22dacc04ff50592e",
      "id": "mutopia-giuliani-op59n05",
      "index": 1,
      "note_count": 297,
      "pressed_annotation_count": 0,
-     "root_sha256": "842674e6a96c5fb799de13894696178a915e77354a03e04269db76bb1aef969b",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: No. 5"
     }
@@ -1079,11 +1079,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "ef87fd427b31fcb1b955fcdd0b33ab74df02c953a268f17ce90b7d71d19e4ee6",
      "id": "mutopia-giuliani-op59n06",
      "index": 1,
      "note_count": 259,
      "pressed_annotation_count": 0,
-     "root_sha256": "4d640d6aa5dbcfd392da41d49e4662367aae1c5c2fd9e1f3f2e2c2b9984fd1be",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: No. 6"
     }
@@ -1103,11 +1103,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "750eee524b23d7bf7d146723354a1b4ba7ac439dac13f24e332a34989b48f080",
      "id": "mutopia-giuliani-op59n07",
      "index": 1,
      "note_count": 334,
      "pressed_annotation_count": 0,
-     "root_sha256": "688e384adbde231e833dcfca9a7e5370e0abe4785c9b8c9be0b4393fc19bbdb6",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: No. 7"
     }
@@ -1127,11 +1127,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "691b5c252e2d0f085a5f528cda99f3a2d0d05c6780eeeed3bd914d24fd3d5ca6",
      "id": "mutopia-giuliani-op59n08",
      "index": 1,
      "note_count": 270,
      "pressed_annotation_count": 0,
-     "root_sha256": "10e85f02780fef4c2c84afe89cdba95eef6e0e902d88f4870c6c46675fbbec8c",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: No. 8"
     }
@@ -1151,11 +1151,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "5d06456aef1b02a8d6ed01f9cc5ad4379760f12e397346a50d1e2ff414a774cb",
      "id": "mutopia-giuliani-op59n09",
      "index": 1,
      "note_count": 256,
      "pressed_annotation_count": 0,
-     "root_sha256": "aacea416fb19c89739965c465d7f1e4f2fad6ae801440f1389a2d47870502e48",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: No. 9"
     }
@@ -1175,11 +1175,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "2066ad13e4fa0bb8084e9d54bb000e2e79279b4c0b4da7ac73b7a015dfa1c7ab",
      "id": "mutopia-giuliani-op59n10",
      "index": 1,
      "note_count": 282,
      "pressed_annotation_count": 0,
-     "root_sha256": "a8cd8936b90c1b325d17d9d2a52d49878eccd3839ba855d8d613218f23573205",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: No. 10"
     }
@@ -1199,11 +1199,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "aeb24b9d958726e54e477e6ffa51be2c660aab38c62671574b18cb3ee3e2ba29",
      "id": "mutopia-giuliani-op59n11",
      "index": 1,
      "note_count": 336,
      "pressed_annotation_count": 0,
-     "root_sha256": "87db5f548227d5a014850f6cd7747ea4374eb70a688a9a1b1cc2e81cfd0863f6",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: No. 11"
     }
@@ -1223,11 +1223,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "245515d39446abb13a569154972be237dd020caf71153f705d308b7d19a0f435",
      "id": "mutopia-giuliani-op59n13",
      "index": 1,
      "note_count": 173,
      "pressed_annotation_count": 0,
-     "root_sha256": "e5284a84baeb7234d5a42eb3368499d93b125e9afcdc33d98781a4f15ba5554c",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: No. 13"
     }
@@ -1247,11 +1247,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "974b000ba6fdba3aeb91c53bde3eb28e6e5cb1b6934bed5df9f084309de705ad",
      "id": "mutopia-giuliani-op59n15",
      "index": 1,
      "note_count": 449,
      "pressed_annotation_count": 0,
-     "root_sha256": "fe5f621a5638870bbef2a7030eb89d69353fbc1954b5b2800fd72542b4e1c51e",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: No. 15"
     }
@@ -1271,11 +1271,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "b340f770f4e7872d2d5466dd120a4796e0d4287970809b320799e2b26942ced8",
      "id": "mutopia-giuliani-op59n16",
      "index": 1,
      "note_count": 407,
      "pressed_annotation_count": 0,
-     "root_sha256": "9b00e9f0df8c9552ed722f6a482a648c8eb56f5583c83087b2af7ff1a3a1a64f",
      "tempo_bpm": 90.0,
      "title": "16 Studies for the Guitar: No. 16"
     }
@@ -1295,11 +1295,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "6f5fb5cf4e4c5de37174e91b57e3f2ced3950825e4ed79b96bb50c6bc0f83d46",
      "id": "mutopia-giulianiop100no1",
      "index": 1,
      "note_count": 129,
      "pressed_annotation_count": 0,
-     "root_sha256": "d21a1443b64fcc1eae67c4af058bfcf82c7e0582e2b60872fb1346b7b93ced7e",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 1"
     }
@@ -1319,11 +1319,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "ef965c766ace87c2dfa7bf97b16d8bc676f76eb4564f19bc3b134779eb0a3cc1",
      "id": "mutopia-giulianiop100no10",
      "index": 1,
      "note_count": 378,
      "pressed_annotation_count": 0,
-     "root_sha256": "8af765af78068c7d1dae2876b93edd30c351a053d2146623ec7c04353d84ec3f",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 10"
     }
@@ -1343,11 +1343,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "a5ea3971504b91f7236d238caff5221da5ffd9bf2cd1b814d91e11b3493b44b3",
      "id": "mutopia-giulianiop100no11",
      "index": 1,
      "note_count": 523,
      "pressed_annotation_count": 0,
-     "root_sha256": "10628cacafc86b626da795a7049fc836df06c81ce4645d92f9f22dfd7872e8ad",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 11"
     }
@@ -1367,11 +1367,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "d6bdc443f494adb3c26af690641d194985e1673faf77e7c523b629f5926505ba",
      "id": "mutopia-giulianiop100no12",
      "index": 1,
      "note_count": 544,
      "pressed_annotation_count": 0,
-     "root_sha256": "e75ba32454a5f0f833ae6695aaa41a6f8c261bd9b31c31c74f805e362450db61",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 12"
     }
@@ -1391,11 +1391,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "97a1e44952f8dcd05aa269aa3aec5ff27bb32ede2f6f8c7a29a3a5a102a055ce",
      "id": "mutopia-giulianiop100no13",
      "index": 1,
      "note_count": 503,
      "pressed_annotation_count": 0,
-     "root_sha256": "8b62467a8794d277f26cefb5167c33404e7bb809429c9db40f33d55e884a07ec",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 13"
     }
@@ -1415,11 +1415,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "23bc6634adabb3b50802ed27f6b11b54b71b146fdc2fbdf4ee51a5534824230d",
      "id": "mutopia-giulianiop100no14",
      "index": 1,
      "note_count": 557,
      "pressed_annotation_count": 0,
-     "root_sha256": "4c942defa1530b8e83d68e5b37c43c823785c932951546850271e236d021f1c4",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 14"
     }
@@ -1439,11 +1439,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "de3b1a343472c3e106fc23713a1a0bb3df39a7b47db120769e9f2ef281f0c0bf",
      "id": "mutopia-giulianiop100no15",
      "index": 1,
      "note_count": 664,
      "pressed_annotation_count": 0,
-     "root_sha256": "cd421d5bce29fad5fdacaf43cda60a0d09ff2781bcafbb3c95b507042628ab4c",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 15"
     }
@@ -1463,11 +1463,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "68d0388846d6533edf86622b5c38cb8ea4047bfd2dcac3f882ff8963a0132f07",
      "id": "mutopia-giulianiop100no16",
      "index": 1,
      "note_count": 784,
      "pressed_annotation_count": 0,
-     "root_sha256": "8cdf4e535701301939caae1039a4ee38cb58c258d47cd10d31b6fee8ba86f358",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 16"
     }
@@ -1487,11 +1487,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "f38f7f942e1dda046545b4d0394f5779b9f0190cbeed7ce388dce420b79ae892",
      "id": "mutopia-giulianiop100no17",
      "index": 1,
      "note_count": 91,
      "pressed_annotation_count": 0,
-     "root_sha256": "746e0dd014c717bbe305e8e0a5fa5e2b050912da66db28735d1240271185b49a",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 17"
     }
@@ -1511,11 +1511,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "35a46c4682124abbf53e05e41e81f9bada79449ee4e6541136e555f6d61caa0f",
      "id": "mutopia-giulianiop100no18",
      "index": 1,
      "note_count": 198,
      "pressed_annotation_count": 0,
-     "root_sha256": "28c8ff70089b5595df4debdc8322af67227750cc3e54ee6e8d97f75eb4e065a5",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 18"
     }
@@ -1535,11 +1535,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "27631e45c696dcf179545828bc17af6add0a8471134c54638e8aa1813cb63e58",
      "id": "mutopia-giulianiop100no19",
      "index": 1,
      "note_count": 203,
      "pressed_annotation_count": 0,
-     "root_sha256": "09a66fca8fb2a22e410154b0b22fff1dc1711f02319631804d72bfff4c34f4b7",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 19"
     }
@@ -1559,11 +1559,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "d705c02c805f3f7a0e4bd86ef6bca30645b5eabb9492c81d81b35da9a078b6e4",
      "id": "mutopia-giulianiop100no2",
      "index": 1,
      "note_count": 232,
      "pressed_annotation_count": 0,
-     "root_sha256": "a489c7043923872bd2cb743f58b56f5b293964fe984a9951eeb7a3b6d9a34cab",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 2"
     }
@@ -1583,11 +1583,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "9d37a59cf951be2ddd451635868a61995fd7eadd83ed42c9e4f7a21a52b4c4f4",
      "id": "mutopia-giulianiop100no20",
      "index": 1,
      "note_count": 146,
      "pressed_annotation_count": 0,
-     "root_sha256": "0816148c1662a07067441441710e50b7d0ff9c84c50c64e65b1603f224293fb5",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 20"
     }
@@ -1607,11 +1607,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "e4546190c9e0a51854aee2f39cca46928c38be521af1a7e639a3c6687cfdc7b1",
      "id": "mutopia-giulianiop100no21",
      "index": 1,
      "note_count": 118,
      "pressed_annotation_count": 0,
-     "root_sha256": "980bd3784f248f6be0eb468cc86880bd86866595da39303a727aaf07d2f60248",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 21"
     }
@@ -1631,11 +1631,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "3507a2535c3e99dcbdee595b80ef13ea8b5ac5c00fbfeb2d53354e74aeac1daa",
      "id": "mutopia-giulianiop100no22",
      "index": 1,
      "note_count": 298,
      "pressed_annotation_count": 0,
-     "root_sha256": "19419a842a2d2794dad99dd3a9e57c5869e5baca900682f76a70a64419eb215a",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 22"
     }
@@ -1655,11 +1655,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "a14c02d7df77065d67ab9d6cce2a931c90897c5de811603d6cc66848de5e309e",
      "id": "mutopia-giulianiop100no23",
      "index": 1,
      "note_count": 346,
      "pressed_annotation_count": 0,
-     "root_sha256": "6f248f35cd75b19f2a46008a8db3a4f582b5de3756ecd3a1e7f8b196c215ca3d",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 23"
     }
@@ -1679,11 +1679,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "a5be8a5c69542c3792e1e6f3a84b76f3545fbe015f86f7aaf205fd1acc4fd45b",
      "id": "mutopia-giulianiop100no24",
      "index": 1,
      "note_count": 516,
      "pressed_annotation_count": 0,
-     "root_sha256": "6abc905ff21f8fc07575dea54f08ec7d3d0f314a9529aa4e9b134dd98cd881d7",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 24"
     }
@@ -1703,11 +1703,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "af8c854b1cc98d076edc6e482877bb6fe0c62ee8a76aa013621b71dd277d6d84",
      "id": "mutopia-giulianiop100no3",
      "index": 1,
      "note_count": 249,
      "pressed_annotation_count": 0,
-     "root_sha256": "733c3c1c1020a3e5c0d3dc92ec2f36b3f4a5c76e0da25669b581fb8055a10aa7",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 3"
     }
@@ -1727,11 +1727,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "0af9b58b70397ca52e92c47f8910f8ac7dd57c825f260b3f4af50f4099e3376e",
      "id": "mutopia-giulianiop100no4",
      "index": 1,
      "note_count": 411,
      "pressed_annotation_count": 0,
-     "root_sha256": "329bf92148050dad0f6eefe48c78a0b91c90505be9188eac613b52b5df83c5b6",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 4"
     }
@@ -1751,11 +1751,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "f394e5cec72ec35cf0538330b7e15e188dd9e2524e2f0f162ea50d3f49391ca2",
      "id": "mutopia-giulianiop100no5",
      "index": 1,
      "note_count": 328,
      "pressed_annotation_count": 0,
-     "root_sha256": "77b41bdb1ad6da7ad243a3cb87d22e5ae0ef5e7c8defb62e21379121ed782485",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 5"
     }
@@ -1775,11 +1775,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "703d82ae1dd996c8e226820d4fbeb30076a41fdc8f54b62b9a33198b5394fb58",
      "id": "mutopia-giulianiop100no6",
      "index": 1,
      "note_count": 244,
      "pressed_annotation_count": 0,
-     "root_sha256": "04830a7db63f0150785845920cd473dd6fcd76510c675658d49f1e8261a3fabb",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 6"
     }
@@ -1799,11 +1799,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "f2fa9a40612ab7feb7b00018af68c9e75b6ceb5ab8a4d35bc4303d47b075c64a",
      "id": "mutopia-giulianiop100no7",
      "index": 1,
      "note_count": 388,
      "pressed_annotation_count": 0,
-     "root_sha256": "f642b111c67063fb67753e989b29e0b9f7ddf7f17a3fc3aa243091f2ab801e21",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 7"
     }
@@ -1823,11 +1823,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "c446e968aaf2df764ef75d2184245782bd163b6e3ee1d99494a531d3ed127260",
      "id": "mutopia-giulianiop100no8",
      "index": 1,
      "note_count": 187,
      "pressed_annotation_count": 0,
-     "root_sha256": "b954007fcd2a447d87d0e843a7132ab54c19a17fcb282e1d0e4502f78a0243e0",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 8"
     }
@@ -1847,11 +1847,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "5e853e1955a34c8b1b6ddacaae266ce65ec9711acaaa7ef1b0954505a76763e2",
      "id": "mutopia-giulianiop100no9",
      "index": 1,
      "note_count": 268,
      "pressed_annotation_count": 0,
-     "root_sha256": "542d2ec4cdbb7cbdb0a5fa930822dc650ac8a96b943efa4808d06e60cc3aad06",
      "tempo_bpm": 90.0,
      "title": "24 Studies for the Guitar, No. 9"
     }
@@ -1871,11 +1871,11 @@
    "movements": [
     {
      "annotation_count": 38,
+     "content_sha256": "f5030fc540d80c6fa2e0ff765215dc0343a2ecda86b318a38f7ee81d280f7290",
      "id": "mutopia-guitar-skole-no-02",
      "index": 1,
      "note_count": 171,
      "pressed_annotation_count": 38,
-     "root_sha256": "24933a14f795d912963374d15212b1bf379f847c7c29efceadaeef321e6fd473",
      "tempo_bpm": 90.0,
      "title": "guitar-skole-no-02"
     }
@@ -1895,21 +1895,21 @@
    "movements": [
     {
      "annotation_count": 24,
+     "content_sha256": "af81b2279e080727b681e8999b6faec3e4195ddb1d862720cf0ec14e8a68fa64",
      "id": "mutopia-jolyd-tyrolienne-movement-1",
      "index": 1,
      "note_count": 221,
      "pressed_annotation_count": 21,
-     "root_sha256": "573e2b107a8e9fa2024a07a4df957422037ccebad2a4ded48fcbb9facf752121",
      "tempo_bpm": 90.0,
      "title": "JolyD_Tyrolienne"
     },
     {
      "annotation_count": 24,
+     "content_sha256": "af81b2279e080727b681e8999b6faec3e4195ddb1d862720cf0ec14e8a68fa64",
      "id": "mutopia-jolyd-tyrolienne-movement-2",
      "index": 2,
      "note_count": 221,
      "pressed_annotation_count": 21,
-     "root_sha256": "e03f877226c5653567ffcfacb13afcb9b5169ffb191e4b487fd5e4237164eb21",
      "tempo_bpm": 90.0,
      "title": "JolyD_Tyrolienne"
     }
@@ -1929,11 +1929,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "f7a6fd37294caa4d6f0426af8e8c8b10a797a9abbb774ed80e9b62de38bc02ec",
      "id": "mutopia-sor-op-1-4",
      "index": 1,
      "note_count": 163,
      "pressed_annotation_count": 0,
-     "root_sha256": "008fca188d4b8283b17a9b0c3332cc96668cef5df3620c87e5ada54d6704a356",
      "tempo_bpm": 90.0,
      "title": "Divertissements pour la guitare, n\u00b04"
     }
@@ -1953,11 +1953,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "5054084d7751d8a14cb24ea7487aa46ad6f106202fbd827a915ddca35226f487",
      "id": "mutopia-sor-op-1-5-1",
      "index": 1,
      "note_count": 166,
      "pressed_annotation_count": 0,
-     "root_sha256": "21c6d2b2760708820e28e36906a6cf2ed4b18fded5293e6e23624959706ccb60",
      "tempo_bpm": 90.0,
      "title": "Divertissements pour la guitare, n\u00b05.1"
     }
@@ -1977,11 +1977,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "b1dfd901522b7635d84393d39ed1724fc930b28f58fb7572a962ae2fc4557730",
      "id": "mutopia-sor-op-1-5-3",
      "index": 1,
      "note_count": 319,
      "pressed_annotation_count": 0,
-     "root_sha256": "261f22023aedc536ddeda778db46de1cbe07d1ca42de65e6725672e99a83cb82",
      "tempo_bpm": 90.0,
      "title": "Divertissements pour la guitare, n\u00b05.3"
     }
@@ -2001,11 +2001,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "dee8364843ca4ebf20242ad87941cc7959d4e2af88fab73a6ac3cbec1e1e1515",
      "id": "mutopia-sor-op-1-6",
      "index": 1,
      "note_count": 453,
      "pressed_annotation_count": 0,
-     "root_sha256": "addde852df0d164598e4c7d13132591a9c5fab23e3fe491926acd394eb2e8a42",
      "tempo_bpm": 90.0,
      "title": "Divertissements pour la guitare, n\u00b06"
     }
@@ -2025,11 +2025,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "9fca43bd07ffd56a46819200850f041099282a763d98c9c1d87238b348755140",
      "id": "mutopia-sor-op1-1",
      "index": 1,
      "note_count": 216,
      "pressed_annotation_count": 0,
-     "root_sha256": "92d447f1f59e770c961772905bd027b2b51879245ef4ba6b78ecb4e509b0ab09",
      "tempo_bpm": 90.0,
      "title": "Divertissements pour la guitare, n\u00b01 Andante"
     }
@@ -2049,11 +2049,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "7a2386b97c3c5264a49cc1224f3025e8fd55b742ad818df0ee5a423a8d2a9a18",
      "id": "mutopia-sor-op1-2",
      "index": 1,
      "note_count": 300,
      "pressed_annotation_count": 0,
-     "root_sha256": "46d59fbe8f3303e07d5206de744105d7bb46239cc15b0fa24456dbb8535eb83b",
      "tempo_bpm": 90.0,
      "title": "Divertissements pour la guitare, n\u00b02 Waltz"
     }
@@ -2073,11 +2073,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "134f797c8974ddbbb80751f1c3eac53d1464ccd7b37df3b4de6cd71b99010c8b",
      "id": "mutopia-sor-op1-3",
      "index": 1,
      "note_count": 1028,
      "pressed_annotation_count": 0,
-     "root_sha256": "fcdfe42b3de1fea3d5912df101bad0369ee4962672f4c11949022b0778f38e94",
      "tempo_bpm": 90.0,
      "title": "Divertissements pour la guitare, n\u00b03 Allegretto"
     }
@@ -2097,11 +2097,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "9efea9760d2e99b7370c2f61d795981ff4178d31e70a60a947c1281263060c8d",
      "id": "mutopia-sor-op2-1",
      "index": 1,
      "note_count": 113,
      "pressed_annotation_count": 0,
-     "root_sha256": "9a4248c5de95f3c393cf9da0647c8617b0ecc8f585f40ee5949376b9a14905a5",
      "tempo_bpm": 90.0,
      "title": "Six divertissements pour la guitarre, n\u00b01 Minuetto"
     }
@@ -2121,11 +2121,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "c980f78ac32a926f94f6fac974235885c7a4b2cfc6cb2452bd499b7e53f110a0",
      "id": "mutopia-sor-op2-2",
      "index": 1,
      "note_count": 217,
      "pressed_annotation_count": 0,
-     "root_sha256": "9c09a5cdd48edbddf2a3ab70ce91f4e25bf7848459cf4f6566c25138b7fb67ce",
      "tempo_bpm": 90.0,
      "title": "Six divertissements pour la guitarre, n\u00b02 Waltz"
     }
@@ -2145,21 +2145,21 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "139d1a84f3efd63d76596af856070008a784d5cd4a8371c9bf59af7ced2d1df5",
      "id": "mutopia-sor-op2-3-movement-1",
      "index": 1,
      "note_count": 505,
      "pressed_annotation_count": 0,
-     "root_sha256": "8edde82f0d3534e7e32d8182498c43337951e152db51894186e9de44a61418a4",
      "tempo_bpm": 90.0,
      "title": "Six divertissements pour la guitarre, n\u00b03 Andantino"
     },
     {
      "annotation_count": 0,
+     "content_sha256": "139d1a84f3efd63d76596af856070008a784d5cd4a8371c9bf59af7ced2d1df5",
      "id": "mutopia-sor-op2-3-movement-2",
      "index": 2,
      "note_count": 505,
      "pressed_annotation_count": 0,
-     "root_sha256": "6bb4deabb4d7c9f2f457d761f2d817aa53364f90bbb164e37f66179daeb505da",
      "tempo_bpm": 90.0,
      "title": "Six divertissements pour la guitarre, n\u00b03 Andantino"
     }
@@ -2179,11 +2179,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "ba302b5a8ecf3356dc4fc96426cfb273bee87f519618f0829e9090a712be0321",
      "id": "mutopia-sor-op2-nr4",
      "index": 1,
      "note_count": 181,
      "pressed_annotation_count": 0,
-     "root_sha256": "6d050a7a47ade02baf1c94232328da2767bb86222ec35198e53c9182aeb2700b",
      "tempo_bpm": 90.0,
      "title": "Menuetto"
     }
@@ -2203,11 +2203,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "4d598afb059b5102c6369e99c294a39e5d1a8d6ac071edc29d1e5299a8c9386c",
      "id": "mutopia-sor-op2-nr6",
      "index": 1,
      "note_count": 1020,
      "pressed_annotation_count": 0,
-     "root_sha256": "68c34e9367038a1d51b39c5f57a1371389e02da9f4d8d97a2be17988dbabbe24",
      "tempo_bpm": 90.0,
      "title": "Six Divertissements op. 2 n\ufffd6 Siciliana"
     }
@@ -2227,11 +2227,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "a472599cd531ed02df49632aef0a1bc4d1951b0d88a67a60f6c130fcfe0c1230",
      "id": "mutopia-sor-op5-5",
      "index": 1,
      "note_count": 564,
      "pressed_annotation_count": 0,
-     "root_sha256": "74a59f0342b7b3c1117f55846644d1f134235cb580963ff76e9c7da34c8ff991",
      "tempo_bpm": 90.0,
      "title": "Andante Largo"
     }
@@ -2251,11 +2251,11 @@
    "movements": [
     {
      "annotation_count": 68,
+     "content_sha256": "8b35cda6f7eded30c0cefddc6262ead285f64b7bf340d4cabe523f18a1afb2fd",
      "id": "mutopia-sor-op60-02",
      "index": 1,
      "note_count": 135,
      "pressed_annotation_count": 68,
-     "root_sha256": "21eef2dde9c8dc8d8e92649c8491a4d766835d80feeaa0d14356c28053f930fd",
      "tempo_bpm": 90.0,
      "title": "25 Le\u00e7ons Progressives, no 2"
     }
@@ -2275,11 +2275,11 @@
    "movements": [
     {
      "annotation_count": 111,
+     "content_sha256": "f1cf84af888639a3092a5884872517eb14f8c200ce22ad39f547dc15471bfc01",
      "id": "mutopia-sor-op60-05",
      "index": 1,
      "note_count": 211,
      "pressed_annotation_count": 102,
-     "root_sha256": "ec7008e7773464e91701e084400c8aa06cb8b2a00d552d13fe4702cef1bc4c2f",
      "tempo_bpm": 90.0,
      "title": "25 Le\u00e7ons Progressives, no 5"
     }
@@ -2299,11 +2299,11 @@
    "movements": [
     {
      "annotation_count": 66,
+     "content_sha256": "bc748a0bb96bb92cdcff92597229a8d9915a159bac22877b0a3a331347a4517f",
      "id": "mutopia-sor-op60-06",
      "index": 1,
      "note_count": 141,
      "pressed_annotation_count": 63,
-     "root_sha256": "5abc5a9f6aa9306c37e40fc2f386da90638752263281e31b8d36bbbcdce8c46d",
      "tempo_bpm": 90.0,
      "title": "25 Progressive Studies, No. 6"
     }
@@ -2323,11 +2323,11 @@
    "movements": [
     {
      "annotation_count": 76,
+     "content_sha256": "7f21d9bc966fffceff52f7964ec52f64b0c2e98d3ff67d45ce04f64122870e78",
      "id": "mutopia-sor-op60-07",
      "index": 1,
      "note_count": 214,
      "pressed_annotation_count": 74,
-     "root_sha256": "40586eef6ce3a77e71f9df5d48290312e49122fcabf70f26fc1b280b215cab4b",
      "tempo_bpm": 90.0,
      "title": "25 Progressive Studies, No. 7"
     }
@@ -2347,11 +2347,11 @@
    "movements": [
     {
      "annotation_count": 10,
+     "content_sha256": "818be5b63d576e7f3659aa83dec61997850b92ae785dcfb96a5f4088e05bfb7e",
      "id": "mutopia-sor-op60-08",
      "index": 1,
      "note_count": 43,
      "pressed_annotation_count": 10,
-     "root_sha256": "530204ee9ac198bafe37a66d16e6d0ebde4c7f8f508ce83b9b3bad637b60b245",
      "tempo_bpm": 90.0,
      "title": "25 Progressive Studies, No. 8"
     }
@@ -2371,11 +2371,11 @@
    "movements": [
     {
      "annotation_count": 2,
+     "content_sha256": "8e58205caff5ef7e1a9a4afa50d868e79e021f0982ae7618c0fd318bf83e97c4",
      "id": "mutopia-sor-op60-09",
      "index": 1,
      "note_count": 56,
      "pressed_annotation_count": 2,
-     "root_sha256": "7d51e2505af09a50a54bfe2295b29247599ec5184f2f06f88a71e195306e7472",
      "tempo_bpm": 90.0,
      "title": "25 Progressive Studies, No. 9"
     }
@@ -2395,11 +2395,11 @@
    "movements": [
     {
      "annotation_count": 40,
+     "content_sha256": "794a2d748386fd730be42857a3b6021e6418c6647ab3afdab3d6cfb7d275957c",
      "id": "mutopia-sor-op60-10",
      "index": 1,
      "note_count": 125,
      "pressed_annotation_count": 37,
-     "root_sha256": "4a55bd9bec8531b5a670c90fb7f4c7fb05031f6359864d6529f4d9134e1b03a7",
      "tempo_bpm": 90.0,
      "title": "25 Progressive Studies, No. 10"
     }
@@ -2419,11 +2419,11 @@
    "movements": [
     {
      "annotation_count": 67,
+     "content_sha256": "ff801d46581c55722e7b89f6ad2134db44b27fee2d2e1bb05edb1fca1dc0b714",
      "id": "mutopia-sor-op60-11",
      "index": 1,
      "note_count": 203,
      "pressed_annotation_count": 62,
-     "root_sha256": "0ed135457f87c32479cb7e36f0a88da07c552f6e2cb1e8135be9afda300dd389",
      "tempo_bpm": 90.0,
      "title": "25 Progressive Studies, No. 11"
     }
@@ -2443,11 +2443,11 @@
    "movements": [
     {
      "annotation_count": 88,
+     "content_sha256": "7947d2bb389dd3f1f5aef3dcea59440d8390a17b73c1e2e26ac82f98db9a9490",
      "id": "mutopia-sor-op60-12",
      "index": 1,
      "note_count": 167,
      "pressed_annotation_count": 81,
-     "root_sha256": "c04bf953be569018251f404f7fba5af133e7cb7f3855c6a58ea687134deca778",
      "tempo_bpm": 90.0,
      "title": "25 Progressive Studies, No. 12"
     }
@@ -2467,11 +2467,11 @@
    "movements": [
     {
      "annotation_count": 41,
+     "content_sha256": "5852d56276dbdaab90217088b0a1c57d143ca57ef6115d7d1dbb9f735c2e5507",
      "id": "mutopia-sor-op60-13",
      "index": 1,
      "note_count": 169,
      "pressed_annotation_count": 40,
-     "root_sha256": "84d778f06be8df114adde442b32f21e3431c7e1f64dcc4db7e2dde4f005b4a87",
      "tempo_bpm": 90.0,
      "title": "25 Progressive Studies, No. 13"
     }
@@ -2491,11 +2491,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "a58f819c7f4c827371cfb8a8e22d66164bd93054b2d610c558daa8487c293ffb",
      "id": "mutopia-sorf-andantino",
      "index": 1,
      "note_count": 277,
      "pressed_annotation_count": 0,
-     "root_sha256": "53f31672e273627e19707f0208d18cfb81dad4c768e7dd4342ee4b8178dc0610",
      "tempo_bpm": 90.0,
      "title": "Andantino"
     }
@@ -2515,11 +2515,11 @@
    "movements": [
     {
      "annotation_count": 81,
+     "content_sha256": "4ea88f7b066bcd4b05d067f398b9405bdf4edf9938ae354c5d553b0849a18832",
      "id": "mutopia-sorf-op35-no1",
      "index": 1,
      "note_count": 173,
      "pressed_annotation_count": 66,
-     "root_sha256": "5d8d495dd3d591b3a95ba7e6784a1890cb533cfdc6e2c8b3fd70baf1155e815a",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 1"
     }
@@ -2539,11 +2539,11 @@
    "movements": [
     {
      "annotation_count": 95,
+     "content_sha256": "4ac6d60cca62c58144b00eacefadd5072cdbbe0583a87ff55769dc3348b6396b",
      "id": "mutopia-sorf-op35-no10",
      "index": 1,
      "note_count": 320,
      "pressed_annotation_count": 89,
-     "root_sha256": "8665e0ad8700f1ddf066d0fa28bf5c8e5d9bc1014ea8e70a375818591259fdcf",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 10"
     }
@@ -2563,11 +2563,11 @@
    "movements": [
     {
      "annotation_count": 51,
+     "content_sha256": "e15ab01844a732bbe9f28837b472afdf5618cf11ef4afa2bb4f5568e4fac7835",
      "id": "mutopia-sorf-op35-no2",
      "index": 1,
      "note_count": 125,
      "pressed_annotation_count": 45,
-     "root_sha256": "f3f8e58144ae00e5c0556c8aafcccb2ece089e1ad1da2302b5ad8d3ec5fbe811",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 2"
     }
@@ -2587,21 +2587,21 @@
    "movements": [
     {
      "annotation_count": 86,
+     "content_sha256": "1789956a3562d492e51d159d4c2521d6dd25e9f111106aadcb04886534129d89",
      "id": "mutopia-sorf-op35-no22-movement-1",
      "index": 1,
      "note_count": 305,
      "pressed_annotation_count": 75,
-     "root_sha256": "b4391e77b80323efc93c334556e31b82f7ff7f374614350d593c34cec9d735f9",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 22"
     },
     {
      "annotation_count": 86,
+     "content_sha256": "1789956a3562d492e51d159d4c2521d6dd25e9f111106aadcb04886534129d89",
      "id": "mutopia-sorf-op35-no22-movement-2",
      "index": 2,
      "note_count": 305,
      "pressed_annotation_count": 75,
-     "root_sha256": "14b6a4262a9706db4506323786aea75f754162a3968c41e0c474b791a125086d",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 22"
     }
@@ -2621,11 +2621,11 @@
    "movements": [
     {
      "annotation_count": 58,
+     "content_sha256": "cdce9b241ccaae335d7db665e650d17b7ca0ef50d3c3e2901f95e4fec1516387",
      "id": "mutopia-sorf-op35-no3",
      "index": 1,
      "note_count": 188,
      "pressed_annotation_count": 49,
-     "root_sha256": "768acf481870babd4a462618259a5eabee4190d952821bcb20f9c1a90b7cab3c",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 3"
     }
@@ -2645,11 +2645,11 @@
    "movements": [
     {
      "annotation_count": 150,
+     "content_sha256": "34bc959cc1258b86724bdcd07740c5cfbdd2a017d835c1b821238229f8ac47f2",
      "id": "mutopia-sorf-op35-no4",
      "index": 1,
      "note_count": 256,
      "pressed_annotation_count": 122,
-     "root_sha256": "66bb6f3911db5cb75e5eaf3dfc3e89d31ae63458b978a9aafa8fe77ffc9caf0a",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 4"
     }
@@ -2669,11 +2669,11 @@
    "movements": [
     {
      "annotation_count": 108,
+     "content_sha256": "9afd93d7208042ab252b97a183355bce405c93508e74ac1b9cbd317576cc7e03",
      "id": "mutopia-sorf-op35-no5",
      "index": 1,
      "note_count": 325,
      "pressed_annotation_count": 95,
-     "root_sha256": "f22844c7b2eb94d949296d04e552382eaf120009fda733db24724b13713a5138",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 5"
     }
@@ -2693,11 +2693,11 @@
    "movements": [
     {
      "annotation_count": 77,
+     "content_sha256": "d9a6da3e86240bd01f7dd2531e57abd420eb047b2cf4670cc2ea6be7ceade140",
      "id": "mutopia-sorf-op35-no6",
      "index": 1,
      "note_count": 187,
      "pressed_annotation_count": 65,
-     "root_sha256": "d90944ad46a9ad3cb7862fdfee618482c352e4fcba61f316e98cf0a67e23f065",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 6"
     }
@@ -2717,11 +2717,11 @@
    "movements": [
     {
      "annotation_count": 141,
+     "content_sha256": "8a566f375d59faabb13fc5a4f9465753d7a070b9caad7786f9d9ecbceae1d14a",
      "id": "mutopia-sorf-op35-no7",
      "index": 1,
      "note_count": 748,
      "pressed_annotation_count": 132,
-     "root_sha256": "ca038099695bd4ea5c57a8ab07fec704129ae2e79b7dceb680cef77ca24fcc38",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 7"
     }
@@ -2741,11 +2741,11 @@
    "movements": [
     {
      "annotation_count": 98,
+     "content_sha256": "3d857456ffc19c8288a057faab97e4f83592f8ea2224355d116545045489771c",
      "id": "mutopia-sorf-op35-no8",
      "index": 1,
      "note_count": 336,
      "pressed_annotation_count": 78,
-     "root_sha256": "fde8b412a57cda40d1d032e0d29c1cfa27cfe6388c41ed42120f69a906e492ff",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 8"
     }
@@ -2765,11 +2765,11 @@
    "movements": [
     {
      "annotation_count": 196,
+     "content_sha256": "4eacd6b62e78e85fbda06308997dd044b30fa8f2711477453cdf8d96258c8eb1",
      "id": "mutopia-sorf-op35-no9",
      "index": 1,
      "note_count": 468,
      "pressed_annotation_count": 168,
-     "root_sha256": "94a5c6bc54a573c1b0916638d6bdeec1f31946f33e07408ae67184d7a7af5b3a",
      "tempo_bpm": 90.0,
      "title": "Op. 35, Study No. 9"
     }
@@ -2789,11 +2789,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "e618ae02fc0aedf22cabdbb37ba4cbec9e6f7e01173a64cd8552561ce0af6ca5",
      "id": "mutopia-sorf-op45n04",
      "index": 1,
      "note_count": 561,
      "pressed_annotation_count": 0,
-     "root_sha256": "7da65ae3461d3cf5d2de2676de6b4a44798157c3210ddbb537040fdbe060d66f",
      "tempo_bpm": 90.0,
      "title": "Six Petites Pi\u00e8ces, No. 4"
     }
@@ -2813,11 +2813,11 @@
    "movements": [
     {
      "annotation_count": 0,
+     "content_sha256": "46be989563deeeda86cf889bd5dd5d8e38fddc037e6e004881ee9ffeba512069",
      "id": "mutopia-spanish-romance",
      "index": 1,
      "note_count": 387,
      "pressed_annotation_count": 0,
-     "root_sha256": "7d512c5f991f5f5e8c27a99660c3a63b226a21097becedd3cdc55f6bbfcc5a3a",
      "tempo_bpm": 90.0,
      "title": "Spanish Romance"
     }
@@ -2837,11 +2837,11 @@
    "movements": [
     {
      "annotation_count": 12,
+     "content_sha256": "5f8b7e4c118810a31749ea9321e8155e07bd35a64bb210a8231e04f60e17d5b8",
      "id": "mutopia-stille-nacht",
      "index": 1,
      "note_count": 142,
      "pressed_annotation_count": 12,
-     "root_sha256": "4beba32502c4a25902b21ea4633e9c541c5550158f2f955ae9801e4bf4c315df",
      "tempo_bpm": 90.0,
      "title": "Silent Night"
     }
@@ -2853,5 +2853,5 @@
    "work_id": "mutopia:stille-nacht"
   }
  ],
- "schema": "fretsure-mutopia-lilypond-manifest@0.1.0"
+ "schema": "fretsure-mutopia-lilypond-manifest@0.2.0"
 }

@@ -114,7 +114,7 @@ def test_mutopia_sharealike_corpus_is_large_licensed_and_source_complete() -> No
         "c53ae16e24ae2d512f1f7a6f72b225322135b10756a71ba2e45493ca63d5d6bb"
     )
     assert hashlib.sha256(manifest_payload).hexdigest() == (
-        "cf9158fc4cb27856c25d692616c87287ffc2aa1cc7ff104f40c22fc73767623a"
+        "d8c228a394a772582a4141de00f871e7a09040bb9ab3570add0391daa655bff4"
     )
     assert len(manifest["entries"]) == 35
     assert len(examples) == 37

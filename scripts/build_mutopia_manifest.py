@@ -49,6 +49,7 @@ from build_mutopia_lilypond_corpus import (  # noqa: E402
     _declared_license,
     _load_converter,
     _pressed_label_count,
+    content_sha256,
 )
 
 # Solo guitar only.  Anything naming a second instrument is an ensemble score
@@ -132,6 +133,7 @@ _TITLE_RE: Final = re.compile(r'mutopiatitle\s*=\s*"([^"]*)"')
 _MAINTAINER_RE: Final = re.compile(r'maintainer\s*=\s*"([^"]*)"')
 _FOOTER_RE: Final = re.compile(r'footer\s*=\s*"([^"]*)"')
 
+_VENDORED_DIR: Final = "mutopia_expanded"
 RESULT_SCHEMA: Final = "fretsure-mutopia-discovery@0.1.0"
 _MUTOPIA_FTP: Final = "https://www.mutopiaproject.org/ftp"
 
@@ -225,6 +227,12 @@ def used_source_digests(corpus_dir: Path) -> set[str]:
             if isinstance(digest, str):
                 digests.add(digest)
     for source in sorted((corpus_dir / "sources").rglob("*.ly")):
+        # Sources this script vendors are pinned by the manifests above, which
+        # is the only thing that should exclude them.  Treating the vendored
+        # copy itself as an exclusion would make its own manifest impossible to
+        # regenerate -- the second run would find nothing left to describe.
+        if source.parent.name == _VENDORED_DIR:
+            continue
         digests.add(_sha256(source.read_bytes()))
     return digests
 
@@ -290,7 +298,7 @@ def convert_candidate(
                 "index": movement.movement_index,
                 "title": candidate.title,
                 "tempo_bpm": metadata.tempo_bpm,
-                "root_sha256": root_sha,
+                "content_sha256": content_sha256(example),
                 "note_count": len(example.notes),
                 "annotation_count": len(example.annotations),
                 "pressed_annotation_count": _pressed_label_count(example),
@@ -300,7 +308,7 @@ def convert_candidate(
         return None, "no movement converted and parsed"
     slug = _slug(candidate.path.stem)
     return {
-        "path": f"sources/mutopia_expanded/{candidate.path.name}",
+        "path": f"sources/{_VENDORED_DIR}/{candidate.path.name}",
         "source_url": f"{_MUTOPIA_FTP}/{candidate.relative}",
         "source_sha256": _sha256(raw),
         "source_license_declaration": candidate.declaration,
@@ -398,7 +406,7 @@ def main() -> int:
             print(f"  {index}/{len(fresh)}", file=sys.stderr, flush=True)
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    sources_dir = args.out_dir / "sources/mutopia_expanded"
+    sources_dir = args.out_dir / "sources" / _VENDORED_DIR
     sources_dir.mkdir(parents=True, exist_ok=True)
     written: dict[str, int] = {}
     for family, entries in sorted(families.items()):
