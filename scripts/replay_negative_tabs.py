@@ -41,7 +41,20 @@ RESULT_SCHEMA: Final = "fretsure-negative-tab-replay@0.1.0"
 # standard open C and F chords stop reading as AMBER, also admitted them.  That
 # divergence is recorded rather than smoothed over -- it is the only measured
 # false-accept evidence this project has.
-EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1651, "AMBER": 61, "GREEN": 6}
+# Re-frozen 2026-07-27 for the per-pair d_max table, deliberately and with the
+# transitions recorded, because this guard exists to make exactly this kind of
+# movement impossible to do quietly:
+#
+#     AMBER -> GREEN  4
+#     RED   -> AMBER  1
+#     RED   -> GREEN  0
+#
+# The last line is the one that mattered. Nothing the oracle had confidently
+# refused became certified; the extra certifications came out of the band where
+# it had already declined to commit. Every earlier candidate in this area was
+# reported only as "false certifications rose from 6 to N" without anyone
+# checking where the N came from.
+EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1650, "AMBER": 58, "GREEN": 10}
 
 
 def load_raw_tabs(canonical: Path) -> tuple[Tab, ...]:

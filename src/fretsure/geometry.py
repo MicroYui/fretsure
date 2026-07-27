@@ -13,6 +13,7 @@ property/metamorphic/mutation suites regardless of the absolute numbers.
 """
 
 import math
+from typing import Final
 
 STANDARD_TUNING: tuple[int, ...] = (40, 45, 50, 55, 59, 64)  # E A D G B E, low -> high
 STRING_SPACING_MM: float = 10.5  # adjacent-string centre distance (v1 constant)
@@ -58,21 +59,45 @@ def euclid(a: tuple[float, float], b: tuple[float, float]) -> float:
     return math.hypot(a[0] - b[0], a[1] - b[1])
 
 
+# Per unordered finger pair, as a fraction of the profile's 1--4 span.
+#
+# This was a function of the printed finger-number gap alone until 2026-07-27,
+# which gave index-middle and ring-little identical allowance -- and the gap is
+# not what a hand cares about.  Exact enumeration over the failing frames of 389
+# published scores put 13 of the 16 span-only refusals on an *adjacent* pair,
+# and only 3 on the 1--4 pair that earlier work had tried widening; raising 1--4
+# by half changed nothing at all.
+#
+# Only (1, 2) moved, from 0.50 to 0.55, and the measurement behind that number is
+# unusually specific: +2 published scores accepted, zero previously-accepted
+# scores lost, and on the 1,718 known-unplayable tabs **zero RED verdicts became
+# GREEN** -- the four extra certifications all came from AMBER, the band where
+# the oracle had already declined to commit.  Widening (2, 3) as well cost a
+# published score, so it did not move.
+_SPAN_FACTORS: Final[dict[tuple[int, int], float]] = {
+    (1, 1): 0.0, (2, 2): 0.0, (3, 3): 0.0, (4, 4): 0.0,
+    (1, 2): 0.55,
+    (2, 3): 0.5,
+    (3, 4): 0.5,
+    (1, 3): 0.9,
+    (2, 4): 0.9,
+    (1, 4): 1.0,
+}
+
+
 def d_max(i: int, j: int, hand_span_mm: float) -> float:
     """Max fingertip distance allowed between left-hand fingers ``i`` and ``j``.
 
-    Reach does not grow linearly with the printed finger-number gap.  The old
-    ``gap / 3`` placeholder rejected ordinary first-position C and F shapes:
-    its adjacent-finger allowance was only one third of full 1--4 span.  The
-    monotone v2 calibration uses 0%, 50%, 90%, and 100% of the profile span for
-    gaps 0..3.  These conservative landmarks admit canonical open-position
-    shapes for the median profile while preserving profile-size ordering.
-    Same-finger geometry remains a barre and is handled separately.
+    ``hand_span_mm`` is the 1--4 fingertip span by definition, so that pair is
+    1.0 and every other is a fraction of it.  Same-finger geometry is a barre and
+    is handled separately, hence 0.
+
+    The factors are not a curve fitted to the corpus: each is a landmark that
+    admits canonical open-position shapes for the median profile, and only one
+    of them has been moved since, against a two-sided measurement.
     """
 
-    gap = abs(i - j)
-    factors = (0.0, 0.5, 0.9, 1.0)
-    return factors[min(gap, 3)] * hand_span_mm
+    return _SPAN_FACTORS[(min(i, j), max(i, j))] * hand_span_mm
 
 
 def open_pitch(string: int, tuning: tuple[int, ...], capo: int) -> int:

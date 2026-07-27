@@ -118,3 +118,43 @@ The dead intrinsic-span half of the reach check was **not** deleted. Its
 deadness is conditional on other predicates holding — same-finger notes are kept
 at one fret by the barre rule, not by `d_max` — so removing it from a verifier
 would trade a corner case for a few lines. It is documented instead.
+
+## Postscript: the adjacent pair, which is the one that paid — 2026-07-27
+
+The correction above said the tight term is the adjacent-finger allowance, not
+the 1–4 span that had been tried. Sweeping it on the full 389-score corpus, both
+sides:
+
+| table | repertoire | gained | lost | negatives `{RED, AMBER, GREEN}` |
+|---|---|---|---|---|
+| baseline | 123 | — | — | `{1651, 61, 6}` |
+| **`(1,2)` → 0.55** | **125** | 2 | **0** | `{1650, 58, 10}` |
+| `(1,2)` → 0.60 | 125 | 2 | 0 | `{1649, 59, 10}` |
+| `(1,2)`+`(2,3)` → 0.55 | 124 | 2 | 1 | `{1650, 58, 10}` |
+| `(1,2)`+`(2,3)` → 0.60 | 124 | 2 | 1 | `{1649, 49, 20}` |
+| `(1,2)`+`(2,3)` → 0.70 | 126 | 5 | 2 | `{1642, 54, 22}` |
+
+Touching `(2,3)` always costs a published score. `(1,2)` alone does not.
+
+**The number that decided it was not the GREEN count.** Every earlier candidate
+in this area was reported as "false certifications rose from 6 to N" and none of
+them was ever traced. Tracing this one:
+
+```
+AMBER -> GREEN  4
+RED   -> AMBER  1
+RED   -> GREEN  0
+```
+
+Nothing the oracle had confidently refused became certified. The four extra
+certifications came out of the band where it had already declined to commit,
+which is a different act from overturning a refusal — and it is the distinction
+that separates this from the profile-wide loosening declined in W6, where the
+same summary statistic hid an unexamined mix.
+
+Shipped as `oracle@0.4.0 → 0.5.0`: `d_max` becomes a per-pair table, with `(1,2)`
+at 0.55 and every other pair unchanged. Repertoire 123 → **125** of 389, the
+frozen 58-score subset unmoved at 26, mutation suite 14/14, 2,783 tests passing.
+
+That is the entire harvest of this direction, and it is +2 of 264 remaining
+failures. The ceiling is not in these constants.

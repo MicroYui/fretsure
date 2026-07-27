@@ -181,9 +181,13 @@ def test_decimal_runtime_reproduces_frozen_development_selection() -> None:
     )
 
     # The index is a property of the pool, and the pool is whatever the search
-    # kept.  Re-frozen when the incremental mirror became an exact replica of
-    # check_shift_speed: rejecting doomed paths earlier changes which states
-    # survive the beam.  What must hold is that the ranker still moves off the
-    # incumbent to a certified GREEN finalist inside its effort guard.
-    assert selected == 2
+    # kept.  Re-frozen twice now: first when the incremental mirror became an
+    # exact replica of check_shift_speed, and again for the per-pair d_max table,
+    # since a different index-middle allowance admits different frame
+    # configurations and so a different set of states survives the beam.  What
+    # must hold is not the number but that the ranker still moves off the
+    # incumbent to a certified GREEN finalist inside its effort guard, which is
+    # asserted directly below rather than implied by the index.
+    assert selected != 0
+    assert selected == 1
     assert outcome.green_pool[selected].quality.awkward_fingering_events == 0

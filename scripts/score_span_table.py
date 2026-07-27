@@ -39,12 +39,18 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from replay_negative_tabs import DEFAULT_BUNDLE, load_raw_tabs  # noqa: E402
 
-RESULT_SCHEMA: Final = "fretsure-span-table-score@0.1.0"
-CORPUS_FILES: Final = (
-    "carcassi_op59.json",
-    "mutopia_pd_additional.json",
-    "mutopia_cc_by_sa.json",
+# Discovered rather than listed, so this cannot silently keep scoring the
+# easier 58-score slice after the corpus grows -- which is exactly how the
+# original set came to look thirteen points better than published repertoire is.
+CORPUS_FILES: Final = tuple(
+    sorted(
+        path.name
+        for path in (ROOT / "data/score_corpus").glob("*.json")
+        if not path.name.endswith("_manifest.json")
+    )
 )
+
+RESULT_SCHEMA: Final = "fretsure-span-table-score@0.1.0"
 
 
 def current_factors() -> dict[str, float]:
