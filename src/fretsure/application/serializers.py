@@ -9,6 +9,7 @@ from typing import cast
 
 import fretsure
 import fretsure.agent.trace as trace_module
+from fretsure.agent.skills import ARRANGEMENT_SKILL_REGISTRY_VERSION
 from fretsure.application.contracts import (
     PROFILE_REGISTRY_VERSION,
     SERVICE_VERSION,
@@ -408,6 +409,7 @@ def _base_stamps(profile: Profile) -> Wire:
         "arrangement_style_profile_version": STYLE_PROFILE_VERSION,
         "arrangement_style_profile_sha256": STYLE_PROFILE_SHA256,
         "technique_profile_registry_version": TECHNIQUE_PROFILE_REGISTRY_VERSION,
+        "arrangement_skill_registry_version": ARRANGEMENT_SKILL_REGISTRY_VERSION,
         "profile_version": snapshot.version,
         "profile_fingerprint": snapshot.fingerprint,
         "oracle_checker_version": CHECKER_VERSION,

@@ -15,6 +15,7 @@ from fractions import Fraction
 from typing import cast
 
 from fretsure.agent.model_calls import ModelCallScopeFactory, model_call_scope
+from fretsure.agent.skills import skill_guidance
 from fretsure.arrange.propose import propose_style
 from fretsure.arrange.styles import DEFAULT_ARRANGEMENT_STYLE, arrangement_style
 from fretsure.difficulty.tiers import difficulty_tier
@@ -530,7 +531,7 @@ def propose_arrangement_outcome(
         f"Effective arrangement tempo: {goal.tempo_bpm} BPM.\n\n"
         f"Playable range on this tuning: MIDI {low}-{high} "
         f"(the lowest playable note is {low}; never write a note below {low}). "
-        f"Keep at most 4 notes sounding at the same onset. "
+        f"{skill_guidance()} "
         f"Keep the texture sparse: output at most {target_note_limit} target notes "
         f"total, including melody. Do not harmonize every melody attack; normally add "
         f"at most one new bass or inner-harmony attack per source melody attack. "

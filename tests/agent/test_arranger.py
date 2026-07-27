@@ -23,6 +23,7 @@ from fretsure.agent.arranger import (
     propose_arrangement,
     propose_arrangement_outcome,
 )
+from fretsure.agent.skills import skill_guidance
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.importers import ImportSuccess, import_musicxml
 from fretsure.ir import ChordSymbol, IRInputError, Meta, MusicIR, Note
@@ -261,7 +262,7 @@ def test_public_source_context_and_token_policy_preserve_proposal_request_bytes(
         "Effective arrangement tempo: 90.0 BPM.\n\n"
         "Playable range on this tuning: MIDI 40-86 "
         "(the lowest playable note is 40; never write a note below 40). "
-        "Keep at most 4 notes sounding at the same onset. "
+        f"{skill_guidance()} "
         "Keep the texture sparse: output at most 3 target notes total, including melody. "
         "Do not harmonize every melody attack; normally add at most one new bass or "
         "inner-harmony attack per source melody attack. Reserve denser frames for "
