@@ -50,8 +50,16 @@ comes from that half.
 |---|---|---|
 | **50.0 (shipped)** | **123** | `{1651, 61, 6}` |
 | 52.5 | **125** | `{1651, 61, 6}` — bit-identical |
-| 55.0 | — | `{1644, 62, 12}` — false certifications **double** |
+| **53.0** | — | `{1644, 62, 12}` — false certifications **double** |
+| 55.0 | — | `{1644, 62, 12}` |
 | 70.0 | — | `{1537, 167, 14}` |
+
+**Corrected 2026-07-27**: this table first placed the cliff at 55.0, because 53.0
+was never sampled. It is at or below **53.0** — the "free" setting at 52.5 sits
+**0.5 mm, one percent**, below a doubling of the only false-accept evidence this
+project has. Found by an agent re-checking the claim (which put it at 53.75, also
+too high) and pinned by bisection. A frontier is only as trustworthy as its
+sampling grid, and a coarse grid flatters whatever point you were hoping for.
 
 `reach = 52.5` is free on the negative set. It is still **declined**, because
 the `+2` net is `7 gained and 5 lost`: `carcassi-op59-prelude-10`,
