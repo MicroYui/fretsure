@@ -111,8 +111,15 @@ outcomes.
   is promoted as a single reliability claim.
 
 The full numerical scorecard, including negative effects and exact intervals, is in
-[`BENCHMARK_RESULTS.md`](BENCHMARK_RESULTS.md). The aggregate canonical JSON is
-[`report.json`](experiments/benchmark-v2-formal-attempt-004/report.json).
+[`BENCHMARK_RESULTS.md`](BENCHMARK_RESULTS.md) and
+[`report.md`](experiments/benchmark-v2-formal-attempt-004/report.md).
+
+The byte-exact canonical JSON (`report.json`, `artifact-index.json`,
+`receipt.json`) was removed on 2026-07-27. It could no longer be reproduced by
+the current code — the versions it was stamped against have all moved — so it
+was a hash chain nothing could check, not evidence. The conclusions it supported
+are unchanged and stated here and in `BENCHMARK_RESULTS.md`; those are the
+record. The owner-held replay package is unaffected.
 
 ## 4. Current-model collection acceptance
 
@@ -171,13 +178,14 @@ Python 3.11.15, Darwin/arm64 environment. A different platform may reproduce the
 domain result without producing byte-identical files; cross-platform equality is not
 claimed.
 
-The public repository contains only a payload-free README/index, the COMPLETE receipt,
-and the aggregate report in JSON/Markdown; it contains no replay inputs. The
+The public repository contains only a payload-free README and the aggregate report
+in Markdown; it contains no replay inputs. The JSON index and receipt were removed
+on 2026-07-27 as unverifiable (see section 3). The
 owner-controlled replay package contains config, sanitized observations, receipt,
 report, and independently compressed rows/blobs. Its seven stored files total
 33,682,168 bytes. The exact stored/raw hashes, zstd 1.5.7 command, logical locator,
 retention/access policy, and exact replay commands are recorded in the
-[`artifact index`](experiments/benchmark-v2-formal-attempt-004/artifact-index.json).
+artifact index (removed 2026-07-27).
 
 Public redistribution of the full package remains OPEN because
 `LicenseRef-FretSure-Generated-Benchmark-v2` has no accompanying terms and no
