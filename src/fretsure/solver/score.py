@@ -210,6 +210,78 @@ def capo_candidates(
     return tuple(ordered)
 
 
+DEFAULT_BEAM_LADDER: Final[tuple[int, ...]] = (32, 64)
+
+
+def solve_fingering_score_with_escalation(
+    notes: Sequence[Note],
+    tuning: tuple[int, ...],
+    capo: int,
+    profile: Profile,
+    *,
+    tempo_bpm: float = 90.0,
+    beats_per_bar: int = 4,
+    beam: int = 16,
+    technique_profile_name: str = DEFAULT_TECHNIQUE_PROFILE,
+    capo_ladder: Sequence[int] = DEFAULT_CAPO_LADDER,
+    beam_ladder: Sequence[int] = DEFAULT_BEAM_LADDER,
+) -> Tab | Infeasible:
+    """Try harder before refusing a score: other capo positions, then a wider beam.
+
+    Widening is worth trying for a reason that is not obvious and was initially
+    diagnosed wrong.  Within one frame the beam is already monotone in its
+    width -- ``_select_diverse_partition`` uses ``limit`` only to stop, so what a
+    beam of 32 keeps is a prefix of what 64 keeps from the same candidates.  The
+    non-monotonicity is one level up: a wider beam lets more prefixes survive the
+    *previous* frame, so the next frame ranks a larger pool, and cheap prefixes
+    that will not complete can crowd out ones that would have.  Cost does not
+    predict completability.
+
+    That is why this widens rather than, say, reserving slots for the cheapest
+    states: reserving would lean harder on the ranking that is doing the
+    damage.  Measured on 80 refused scores, beam 32 recovers 7 and beam 64
+    recovers 5 -- with only 4 in common, and three that 32 solves being lost at
+    64.  Different widths simply explore differently, so the union is worth more
+    than either.
+
+    Cheapest ladder first.  Choosing a capo recovers 52 published scores and
+    costs one extra solve per position; widening recovers about four more per
+    eighty and costs a great deal more per attempt, so it goes last and only for
+    scores that nothing else saved.
+    """
+
+    solved = solve_fingering_score_choosing_capo(
+        notes,
+        tuning,
+        capo,
+        profile,
+        tempo_bpm=tempo_bpm,
+        beats_per_bar=beats_per_bar,
+        beam=beam,
+        technique_profile_name=technique_profile_name,
+        ladder=capo_ladder,
+    )
+    if isinstance(solved, Tab):
+        return solved
+    for width in beam_ladder:
+        if width <= beam:
+            continue
+        wider = solve_fingering_score(
+            notes,
+            tuning,
+            capo,
+            profile,
+            tempo_bpm=tempo_bpm,
+            beats_per_bar=beats_per_bar,
+            beam=width,
+            technique_profile_name=technique_profile_name,
+        )
+        if isinstance(wider, Tab):
+            return wider
+    # Report the score as it was asked for, not the last thing attempted.
+    return solved
+
+
 def solve_fingering_score_choosing_capo(
     notes: Sequence[Note],
     tuning: tuple[int, ...],
@@ -360,9 +432,11 @@ def _solve_relaxation(
 __all__ = [
     "MAX_SCORE_SOLVER_AGGREGATE_WORK_UNITS",
     "MAX_SCORE_SOLVER_SEGMENTS",
+    "DEFAULT_BEAM_LADDER",
     "DEFAULT_CAPO_LADDER",
     "SCORE_SOLVER_VERSION",
     "capo_candidates",
     "solve_fingering_score_choosing_capo",
+    "solve_fingering_score_with_escalation",
     "solve_fingering_score",
 ]

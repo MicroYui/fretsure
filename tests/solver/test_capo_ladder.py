@@ -120,3 +120,48 @@ def test_a_score_no_position_can_play_reports_the_position_it_was_asked_for() ->
     )
     assert not isinstance(result, Tab)
     assert result.reason
+
+
+def test_escalation_is_inert_on_a_score_that_already_solves() -> None:
+    """Trying harder must cost nothing, and change nothing, when it is not needed."""
+
+    from fretsure.solver.score import solve_fingering_score_with_escalation
+
+    notes = _melody(64, 62, 60, 59)
+    plain = solve_fingering_score(notes, STANDARD_TUNING, 0, MEDIAN_HAND)
+    escalated = solve_fingering_score_with_escalation(
+        notes, STANDARD_TUNING, 0, MEDIAN_HAND
+    )
+    assert isinstance(plain, Tab)
+    assert escalated == plain
+
+
+def test_escalation_never_narrows_the_beam_below_what_was_asked() -> None:
+    """The ladder is for trying harder; a rung below the request is not that."""
+
+    from fretsure.solver.score import solve_fingering_score_with_escalation
+
+    impossible = tuple(
+        Note(Fraction(0), Fraction(1), pitch, "melody")
+        for pitch in (60, 62, 64, 65, 67, 69, 71)
+    )
+    # Asking for a beam wider than every rung must simply skip them all rather
+    # than quietly re-solving at something narrower.
+    result = solve_fingering_score_with_escalation(
+        impossible, STANDARD_TUNING, 0, MEDIAN_HAND, beam=128, beam_ladder=(32, 64)
+    )
+    assert not isinstance(result, Tab)
+
+
+def test_escalation_reports_the_score_that_was_submitted() -> None:
+    from fretsure.solver.score import solve_fingering_score_with_escalation
+
+    impossible = tuple(
+        Note(Fraction(0), Fraction(1), pitch, "melody")
+        for pitch in (60, 62, 64, 65, 67, 69, 71)
+    )
+    result = solve_fingering_score_with_escalation(
+        impossible, STANDARD_TUNING, 0, MEDIAN_HAND, capo_ladder=(), beam_ladder=()
+    )
+    assert not isinstance(result, Tab)
+    assert result.reason

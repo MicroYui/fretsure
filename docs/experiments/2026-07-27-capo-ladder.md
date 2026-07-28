@@ -101,9 +101,48 @@ than a statement about how strict the model is. A further 75 have no feasible
 frame configuration at any position.
 
 The beam is already known to be **non-monotone**: a wider hand model loses pieces
-it previously solved, because a wider window changes which prefixes a width-16
-beam retains. That is a search defect, it is measurable, and fixing it does not
-require touching the oracle either.
+it previously solved. That is a search defect, it is measurable, and fixing it
+does not require touching the oracle either. See the postscript.
+
+## Postscript: the beam, and a diagnosis that was wrong — 2026-07-28
+
+The obvious next suspect was the beam, since acceptance is not monotone in the
+hand model. Sweeping width over 80 refused scores:
+
+| beam | recovered of 80 |
+|---|---|
+| 16 (baseline) | 0, by definition |
+| 32 | **7** |
+| 64 | **5** |
+
+Doubling the width **loses three pieces it had solved** (`carcassi-op60-01`
+movement 2, `horetzky40` movements 1 and 2) and gains one. Pure slot shortage
+cannot do that — 64 slots hold anything 32 slots held.
+
+**The explanation given for this was wrong, and reading the code disproved it.**
+The claim was that the diversity grouping churns: more candidates means more
+groups, so round-robin spreads thinner and evicts. But `_select_diverse_partition`
+uses `limit` *only* as a stopping condition, and its addition order does not
+depend on it — so for a fixed candidate pool, what a beam of 32 keeps is a strict
+prefix of what 64 keeps. The selection is monotone.
+
+The non-monotonicity is one level up. A wider beam lets more prefixes survive the
+*previous* frame, so the next frame ranks a strictly larger pool, and prefixes
+that are cheap but will not complete can displace ones that would have. **Cost
+does not predict completability.** That is the classic beam-search failure, not
+a defect in this project's grouping key.
+
+The corrected diagnosis changes the repair. The fix first proposed — reserving
+beam slots for the globally cheapest states — would have made things *worse*, by
+leaning harder on exactly the ranking that is misleading. What is actually
+supported is that different widths explore differently, so their union beats
+either: `solve_fingering_score_with_escalation` tries the capo ladder first, then
+widens.
+
+Its harvest is modest and should not be confused with the capo's. Of the 8 pieces
+width recovers, 4 were already recovered by the capo; **4 are new**. Capo is +52;
+width is roughly +4 per 80 refused scores and costs far more per attempt, which
+is why it goes last and only for scores nothing cheaper saved.
 
 ## A process note worth keeping
 
