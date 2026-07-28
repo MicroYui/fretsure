@@ -1,0 +1,619 @@
+{
+ "tally": {
+  "editor-fingering-admitted": 103,
+  "refused-by-the-hand-model": 40,
+  "refused-only-because-of-sustain": 1
+ },
+ "offenders": [
+  {
+   "id": "mutopia-faure-op78-sicilienne",
+   "onset": "36",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "39": [
+     1
+    ],
+    "71": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-faure-op78-sicilienne",
+   "onset": "75/2",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "48": [
+     3
+    ],
+    "70": [
+     3
+    ]
+   }
+  },
+  {
+   "id": "mutopia-faure-op78-sicilienne",
+   "onset": "113/2",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "50": [
+     4
+    ],
+    "67": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-faure-op78-sicilienne",
+   "onset": "61",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "43": [
+     2
+    ],
+    "69": [
+     1
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-aguado-op11n10",
+   "onset": "41/4",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "58": [
+     2
+    ],
+    "68": [
+     1
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-capricho-arabe",
+   "onset": "75",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "53": [
+     4
+    ],
+    "70": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-capricho-arabe",
+   "onset": "76",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "52": [
+     3
+    ],
+    "69": [
+     3
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-capricho-arabe",
+   "onset": "451/2",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "53": [
+     4
+    ],
+    "59": [
+     3
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-carcassi-op60-23",
+   "onset": "57",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "51": [
+     1
+    ],
+    "64": [
+     1
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-carcassi-op60-24",
+   "onset": "213/2",
+   "kind": "geometry",
+   "sounding": 4,
+   "attacked": 4,
+   "fingers": {
+    "45": [
+     1
+    ],
+    "76": [
+     1
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no11",
+   "onset": "0",
+   "kind": "geometry",
+   "sounding": 4,
+   "attacked": 4,
+   "fingers": {
+    "61": [
+     2
+    ],
+    "65": [
+     3
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no11",
+   "onset": "3/2",
+   "kind": "sustain",
+   "sounding": 3,
+   "attacked": 2
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no11",
+   "onset": "8",
+   "kind": "geometry",
+   "sounding": 5,
+   "attacked": 5,
+   "fingers": {
+    "57": [
+     1
+    ],
+    "69": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no11",
+   "onset": "27/2",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "46": [
+     3
+    ],
+    "67": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no13",
+   "onset": "52",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "43": [
+     2
+    ],
+    "62": [
+     1
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "onset": "155/4",
+   "kind": "geometry",
+   "sounding": 4,
+   "attacked": 4,
+   "fingers": {
+    "41": [
+     1
+    ],
+    "65": [
+     2
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "onset": "163/4",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "41": [
+     1
+    ],
+    "65": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "onset": "187/4",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "41": [
+     1
+    ],
+    "65": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "onset": "229/4",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "48": [
+     3
+    ],
+    "65": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "onset": "285/4",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "48": [
+     2
+    ],
+    "69": [
+     3
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "onset": "293/4",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "53": [
+     3
+    ],
+    "65": [
+     2
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "onset": "365/4",
+   "kind": "geometry",
+   "sounding": 4,
+   "attacked": 4,
+   "fingers": {
+    "53": [
+     3
+    ],
+    "65": [
+     2
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "onset": "377/4",
+   "kind": "geometry",
+   "sounding": 4,
+   "attacked": 4,
+   "fingers": {
+    "58": [
+     2
+    ],
+    "65": [
+     1
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "onset": "385/4",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "44": [
+     2
+    ],
+    "62": [
+     3
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "onset": "401/4",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "45": [
+     3
+    ],
+    "62": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no18",
+   "onset": "62",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "43": [
+     2
+    ],
+    "66": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no19",
+   "onset": "0",
+   "kind": "geometry",
+   "sounding": 5,
+   "attacked": 5,
+   "fingers": {
+    "53": [
+     3
+    ],
+    "60": [
+     3
+    ],
+    "62": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no19",
+   "onset": "6",
+   "kind": "geometry",
+   "sounding": 5,
+   "attacked": 5,
+   "fingers": {
+    "53": [
+     2
+    ],
+    "62": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no19",
+   "onset": "128/3",
+   "kind": "geometry",
+   "sounding": 4,
+   "attacked": 4,
+   "fingers": {
+    "62": [
+     1
+    ],
+    "67": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no19",
+   "onset": "152/3",
+   "kind": "geometry",
+   "sounding": 4,
+   "attacked": 4,
+   "fingers": {
+    "62": [
+     1
+    ],
+    "67": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no19",
+   "onset": "349/6",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "64": [
+     3
+    ],
+    "67": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no20",
+   "onset": "60",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 2,
+   "fingers": {
+    "57": [
+     1
+    ],
+    "64": [
+     1
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no20",
+   "onset": "181/3",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 2,
+   "fingers": {
+    "63": [
+     3
+    ],
+    "69": [
+     2
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no20",
+   "onset": "389/3",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 2,
+   "fingers": {
+    "68": [
+     1
+    ],
+    "71": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op45n02",
+   "onset": "6",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "54": [
+     3
+    ],
+    "68": [
+     4
+    ]
+   }
+  },
+  {
+   "id": "mutopia-carcassi-op60-17",
+   "onset": "76",
+   "kind": "geometry",
+   "sounding": 4,
+   "attacked": 4,
+   "fingers": {
+    "62": [
+     3
+    ],
+    "65": [
+     1
+    ]
+   }
+  },
+  {
+   "id": "mutopia-sorf-op35-no10",
+   "onset": "64",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "52": [
+     3
+    ],
+    "53": [
+     2
+    ]
+   }
+  },
+  {
+   "id": "mutopia-sorf-op35-no3",
+   "onset": "47",
+   "kind": "geometry",
+   "sounding": 4,
+   "attacked": 4,
+   "fingers": {
+    "52": [
+     1
+    ],
+    "57": [
+     2
+    ]
+   }
+  },
+  {
+   "id": "mutopia-sorf-op35-no3",
+   "onset": "52",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "57": [
+     1
+    ],
+    "60": [
+     1
+    ]
+   }
+  },
+  {
+   "id": "mutopia-sorf-op35-no4",
+   "onset": "93",
+   "kind": "geometry",
+   "sounding": 3,
+   "attacked": 3,
+   "fingers": {
+    "43": [
+     3
+    ],
+    "60": [
+     2
+    ]
+   }
+  },
+  {
+   "id": "mutopia-sorf-op35-no8",
+   "onset": "19/2",
+   "kind": "geometry",
+   "sounding": 2,
+   "attacked": 2,
+   "fingers": {
+    "47": [
+     2
+    ],
+    "69": [
+     1
+    ]
+   }
+  }
+ ]
+}
