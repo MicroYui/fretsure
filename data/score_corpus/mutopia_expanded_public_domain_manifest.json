@@ -212,16 +212,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 1. March by Rossini."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "16da08de0bd21423f243d744028fa5c1a8bfbae3727afd0412379bf1f22e202b",
-     "id": "mutopia-horetzky1-movement-2",
-     "index": 2,
-     "note_count": 125,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 1. March by Rossini."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky1.ly",
@@ -280,16 +270,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 11. German Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "b417bdf093c68075d49995c2b0e92ea1a7c0851d259cbb95ee5e5c93c5429f99",
-     "id": "mutopia-horetzky11-movement-2",
-     "index": 2,
-     "note_count": 102,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 11. German Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky11.ly",
@@ -310,16 +290,6 @@
      "content_sha256": "d1718ff05603f78b4204611885bb2780ce5a89ca3a605fb2fb5695bf05a846d5",
      "id": "mutopia-horetzky12-movement-1",
      "index": 1,
-     "note_count": 105,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 12. Russian Hymn."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "d1718ff05603f78b4204611885bb2780ce5a89ca3a605fb2fb5695bf05a846d5",
-     "id": "mutopia-horetzky12-movement-2",
-     "index": 2,
      "note_count": 105,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -348,16 +318,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 13. John Anderson, My Jo."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "3a03297c6e35ce25e4a3531dd75c143d79a38f142bc24a677c3363fbd7941a41",
-     "id": "mutopia-horetzky13-movement-2",
-     "index": 2,
-     "note_count": 149,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 13. John Anderson, My Jo."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky13.ly",
@@ -378,16 +338,6 @@
      "content_sha256": "ac5a370a0fe8089ba9cc5519fb600addfb6e35cc9889301f5b6b20cb0a4313cd",
      "id": "mutopia-horetzky14-movement-1",
      "index": 1,
-     "note_count": 153,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 14. Tyrolian Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "ac5a370a0fe8089ba9cc5519fb600addfb6e35cc9889301f5b6b20cb0a4313cd",
-     "id": "mutopia-horetzky14-movement-2",
-     "index": 2,
      "note_count": 153,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -416,16 +366,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 15. Danish Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "289d5bc4ff948232fe5ec100d65c07c707147ce2a1ce106f800471820cec4cd8",
-     "id": "mutopia-horetzky15-movement-2",
-     "index": 2,
-     "note_count": 110,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 15. Danish Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky15.ly",
@@ -446,16 +386,6 @@
      "content_sha256": "deaece36df9926b7fe2621ea575850d19266f6e720376eff181a56ca489a7fe2",
      "id": "mutopia-horetzky16-movement-1",
      "index": 1,
-     "note_count": 103,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 16. Cherubini's Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "deaece36df9926b7fe2621ea575850d19266f6e720376eff181a56ca489a7fe2",
-     "id": "mutopia-horetzky16-movement-2",
-     "index": 2,
      "note_count": 103,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -484,16 +414,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 17. Polish Hymn."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "334989108499d7f6733a3947425b04eacbc9130879a2439ae4700196def93092",
-     "id": "mutopia-horetzky17-movement-2",
-     "index": 2,
-     "note_count": 121,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 17. Polish Hymn."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky17.ly",
@@ -518,16 +438,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 18. Kelvin Grove."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "c1e309246bbc934249f7f488b7c8e8796caa42fae3e1c1e58c9367fda21e967f",
-     "id": "mutopia-horetzky18-movement-2",
-     "index": 2,
-     "note_count": 121,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 18. Kelvin Grove."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky18.ly",
@@ -548,16 +458,6 @@
      "content_sha256": "003ceb076254e715891d2dd1b1d5cf5041ef822d5b92a93eeb69d13da688d98b",
      "id": "mutopia-horetzky19-movement-1",
      "index": 1,
-     "note_count": 145,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 19. Podolian Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "003ceb076254e715891d2dd1b1d5cf5041ef822d5b92a93eeb69d13da688d98b",
-     "id": "mutopia-horetzky19-movement-2",
-     "index": 2,
      "note_count": 145,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -620,16 +520,6 @@
      "pressed_annotation_count": 4,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 20. Fra Tante Angoscie."
-    },
-    {
-     "annotation_count": 4,
-     "content_sha256": "5770250ea735e00a834d5247936036c0402dcc39c1d09f3567dcff2fa76dbd92",
-     "id": "mutopia-horetzky20-movement-2",
-     "index": 2,
-     "note_count": 224,
-     "pressed_annotation_count": 4,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 20. Fra Tante Angoscie."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky20.ly",
@@ -650,16 +540,6 @@
      "content_sha256": "731a16c51d97206658ee0c57420595b46b8dbcda60b1c343828caa42836101f8",
      "id": "mutopia-horetzky21-movement-1",
      "index": 1,
-     "note_count": 128,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 21. Au Clair De la Lune."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "731a16c51d97206658ee0c57420595b46b8dbcda60b1c343828caa42836101f8",
-     "id": "mutopia-horetzky21-movement-2",
-     "index": 2,
      "note_count": 128,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -688,16 +568,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 22. Dutch Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "ff7fa2fcc50801a8c936313652390235e3ba6eeb13004dd0d3f975c3f3d262dd",
-     "id": "mutopia-horetzky22-movement-2",
-     "index": 2,
-     "note_count": 194,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 22. Dutch Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky22.ly",
@@ -718,16 +588,6 @@
      "content_sha256": "3cd76bebb5242d51bf00c6ac7b044d0d6df51f74568174e95b2778a37ff8da7b",
      "id": "mutopia-horetzky23-movement-1",
      "index": 1,
-     "note_count": 174,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 23. Portuguese Hymn."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "3cd76bebb5242d51bf00c6ac7b044d0d6df51f74568174e95b2778a37ff8da7b",
-     "id": "mutopia-horetzky23-movement-2",
-     "index": 2,
      "note_count": 174,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -756,16 +616,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 24. Air by Gelinek."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "83dc1686703cd4dc915fce6cec2c455168b125392245b954f05b6725f40f6135",
-     "id": "mutopia-horetzky24-movement-2",
-     "index": 2,
-     "note_count": 89,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 24. Air by Gelinek."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky24.ly",
@@ -786,16 +636,6 @@
      "content_sha256": "3c41b768c3859b6917912c2669f1674571b544868b88d7403023b1f91fdecc21",
      "id": "mutopia-horetzky25-movement-1",
      "index": 1,
-     "note_count": 78,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 25. Pyrenese Melody."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "3c41b768c3859b6917912c2669f1674571b544868b88d7403023b1f91fdecc21",
-     "id": "mutopia-horetzky25-movement-2",
-     "index": 2,
      "note_count": 78,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -824,16 +664,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 26. Polish Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "d58d3248675b6af70773eb13fdc9ece3b761b17a248c6a954bbcfca3e4c9ae25",
-     "id": "mutopia-horetzky26-movement-2",
-     "index": 2,
-     "note_count": 132,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 26. Polish Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky26.ly",
@@ -854,16 +684,6 @@
      "content_sha256": "5b52ee4772960deb7ba9d2af591665acca06299b14ebe8be9da0bdce4d992e30",
      "id": "mutopia-horetzky27-movement-1",
      "index": 1,
-     "note_count": 136,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 27. Scotch Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "5b52ee4772960deb7ba9d2af591665acca06299b14ebe8be9da0bdce4d992e30",
-     "id": "mutopia-horetzky27-movement-2",
-     "index": 2,
      "note_count": 136,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -892,16 +712,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 28. Pleyel's Hymn."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "b168bb6978cac271ede9003ec0dab4f01bbf1a4af131e35de71bc93003cad152",
-     "id": "mutopia-horetzky28-movement-2",
-     "index": 2,
-     "note_count": 96,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 28. Pleyel's Hymn."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky28.ly",
@@ -922,16 +732,6 @@
      "content_sha256": "89f4a614bea57c796a890b2714c78fed48927097b6e90d02d30121ec9618ad13",
      "id": "mutopia-horetzky29-movement-1",
      "index": 1,
-     "note_count": 298,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 29. Scotch Air. \u201cDonald.\u201d"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "89f4a614bea57c796a890b2714c78fed48927097b6e90d02d30121ec9618ad13",
-     "id": "mutopia-horetzky29-movement-2",
-     "index": 2,
      "note_count": 298,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -960,16 +760,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 3. Andante by Beethoven."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "f5c63f217d483a9d345f8e86ef471c5c8fd9dad92db4989e7e39402093b84128",
-     "id": "mutopia-horetzky3-movement-2",
-     "index": 2,
-     "note_count": 263,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 3. Andante by Beethoven."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky3.ly",
@@ -990,16 +780,6 @@
      "content_sha256": "ba6a9296f877f56d601ef7e50c00fb6e3077f6ec3f7cfb9034d84c2507e5f554",
      "id": "mutopia-horetzky30-movement-1",
      "index": 1,
-     "note_count": 110,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 30. Sicilian Mariner's Hymn"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "ba6a9296f877f56d601ef7e50c00fb6e3077f6ec3f7cfb9034d84c2507e5f554",
-     "id": "mutopia-horetzky30-movement-2",
-     "index": 2,
      "note_count": 110,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1028,16 +808,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 31. Auld Lang Syne."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "af4eaed2134669d99f052dac6d59f801581f3b089529f74b884b59a5285e3d68",
-     "id": "mutopia-horetzky31-movement-2",
-     "index": 2,
-     "note_count": 130,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 31. Auld Lang Syne."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky31.ly",
@@ -1058,16 +828,6 @@
      "content_sha256": "9bf4ffa100d8716b14a4d7670c4f315019afd69b3aa2a18da5c27b6e9536f656",
      "id": "mutopia-horetzky32-movement-1",
      "index": 1,
-     "note_count": 160,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 32. German Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "9bf4ffa100d8716b14a4d7670c4f315019afd69b3aa2a18da5c27b6e9536f656",
-     "id": "mutopia-horetzky32-movement-2",
-     "index": 2,
      "note_count": 160,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1096,16 +856,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 33. Scots Wha Hae Wi' Wallace Bled."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "3fb4e92af51f4314767c125d798035a274facce47a0d861a6a0c8b38750f51a8",
-     "id": "mutopia-horetzky33-movement-2",
-     "index": 2,
-     "note_count": 192,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 33. Scots Wha Hae Wi' Wallace Bled."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky33.ly",
@@ -1126,16 +876,6 @@
      "content_sha256": "aaac9a648027327b0857cd4bd4bf6e02fc5af806ac9e74e2f9da73423bc25e7a",
      "id": "mutopia-horetzky34-movement-1",
      "index": 1,
-     "note_count": 173,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 34. Vive Henri Quatre."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "aaac9a648027327b0857cd4bd4bf6e02fc5af806ac9e74e2f9da73423bc25e7a",
-     "id": "mutopia-horetzky34-movement-2",
-     "index": 2,
      "note_count": 173,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1164,16 +904,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 35. Air from the Ballet of Nina."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "90bed90cddb3c512403d7272d05eb35b89eb2b2e458b4a68221bcf06f77e1f91",
-     "id": "mutopia-horetzky35-movement-2",
-     "index": 2,
-     "note_count": 192,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 35. Air from the Ballet of Nina."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky35.ly",
@@ -1194,16 +924,6 @@
      "content_sha256": "026921a3415946689e2584dd885681b66ddba2a5750e9c821a7e667c01823f2d",
      "id": "mutopia-horetzky36-movement-1",
      "index": 1,
-     "note_count": 161,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 36. Danish Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "026921a3415946689e2584dd885681b66ddba2a5750e9c821a7e667c01823f2d",
-     "id": "mutopia-horetzky36-movement-2",
-     "index": 2,
      "note_count": 161,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1232,16 +952,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 37. Post Horn Waltz."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "b2f1615c47c25b59951a1f86556252f666c4eafcee119e0f467a31e124990b60",
-     "id": "mutopia-horetzky37-movement-2",
-     "index": 2,
-     "note_count": 84,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 37. Post Horn Waltz."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky37.ly",
@@ -1262,16 +972,6 @@
      "content_sha256": "5b84002420b4546ee444259ddc2a9f38c6fdddfe2e0fdfe3ce7730c487ed0541",
      "id": "mutopia-horetzky38-movement-1",
      "index": 1,
-     "note_count": 104,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 38. Old German Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "5b84002420b4546ee444259ddc2a9f38c6fdddfe2e0fdfe3ce7730c487ed0541",
-     "id": "mutopia-horetzky38-movement-2",
-     "index": 2,
      "note_count": 104,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1300,16 +1000,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 39. Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "1f6561587c193d9f6e3f8541e98d0dbd82cca63b8f2310aa9da1a06b432000ac",
-     "id": "mutopia-horetzky39-movement-2",
-     "index": 2,
-     "note_count": 164,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 39. Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky39.ly",
@@ -1330,16 +1020,6 @@
      "content_sha256": "438ac473fecfe12627e6f7674c4d9ba76e6ee37526a650987a211d2d2d1f9933",
      "id": "mutopia-horetzky4-movement-1",
      "index": 1,
-     "note_count": 113,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 4. The Last Rose of Summer."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "438ac473fecfe12627e6f7674c4d9ba76e6ee37526a650987a211d2d2d1f9933",
-     "id": "mutopia-horetzky4-movement-2",
-     "index": 2,
      "note_count": 113,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1368,16 +1048,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 40. Polish Air . Krakoviak."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "f38f0dbc10041d96f84b664e549ae0b6b70facb1f51c828407e5cf8f6c72be10",
-     "id": "mutopia-horetzky40-movement-2",
-     "index": 2,
-     "note_count": 121,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 40. Polish Air . Krakoviak."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky40.ly",
@@ -1398,16 +1068,6 @@
      "content_sha256": "526357b9c1129781979a474f467289b7995ff266faf648df101f79b81f8280e3",
      "id": "mutopia-horetzky41-movement-1",
      "index": 1,
-     "note_count": 124,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 41. Scotch Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "526357b9c1129781979a474f467289b7995ff266faf648df101f79b81f8280e3",
-     "id": "mutopia-horetzky41-movement-2",
-     "index": 2,
      "note_count": 124,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1436,16 +1096,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 42. Swedish Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "5651aafe3cbd5bdb0d42166f15b9145de1c8cf1e388dc136997dd3e4aaae5c73",
-     "id": "mutopia-horetzky42-movement-2",
-     "index": 2,
-     "note_count": 153,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 42. Swedish Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky42.ly",
@@ -1466,16 +1116,6 @@
      "content_sha256": "bc8a1606e272398fa05f3ac609135f602d4da2a16b70669e1c8170467693d928",
      "id": "mutopia-horetzky43-movement-1",
      "index": 1,
-     "note_count": 228,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 43. Danish Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "bc8a1606e272398fa05f3ac609135f602d4da2a16b70669e1c8170467693d928",
-     "id": "mutopia-horetzky43-movement-2",
-     "index": 2,
      "note_count": 228,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1504,16 +1144,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 44. Il Pleut, Il Pleut, Berg\u00e8re."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "72c45d075d121fda8d65491b93aac2060b3b13b5064feb35da32cbfcac1a1bc8",
-     "id": "mutopia-horetzky44-movement-2",
-     "index": 2,
-     "note_count": 141,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 44. Il Pleut, Il Pleut, Berg\u00e8re."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky44.ly",
@@ -1534,16 +1164,6 @@
      "content_sha256": "056de874d9c91f82758aca4e888a4631ff2ec1d40a4327a09aa229bd59bdbdb4",
      "id": "mutopia-horetzky45-movement-1",
      "index": 1,
-     "note_count": 280,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 45. Rule Britannia."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "056de874d9c91f82758aca4e888a4631ff2ec1d40a4327a09aa229bd59bdbdb4",
-     "id": "mutopia-horetzky45-movement-2",
-     "index": 2,
      "note_count": 280,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1572,16 +1192,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 46. \u201cC'est L'Amour\u201d a French Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "88daba22afd5b71d2b51db81ae785ec42b8fda1db92450d8bd42b3ac8bf5e303",
-     "id": "mutopia-horetzky46-movement-2",
-     "index": 2,
-     "note_count": 201,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 46. \u201cC'est L'Amour\u201d a French Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky46.ly",
@@ -1602,16 +1212,6 @@
      "content_sha256": "c2978f01243c7b94459c473855adc664ef0b4a872dd46154ce909baffa1b200c",
      "id": "mutopia-horetzky47-movement-1",
      "index": 1,
-     "note_count": 220,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 47. Scotch Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "c2978f01243c7b94459c473855adc664ef0b4a872dd46154ce909baffa1b200c",
-     "id": "mutopia-horetzky47-movement-2",
-     "index": 2,
      "note_count": 220,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1640,16 +1240,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 48. An Alexis."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "e7efefeb3eea6b9acba8de235a5d5595208dafd02fb01a25f7e3d60523ba0619",
-     "id": "mutopia-horetzky48-movement-2",
-     "index": 2,
-     "note_count": 169,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 48. An Alexis."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky48.ly",
@@ -1670,16 +1260,6 @@
      "content_sha256": "c7ed4bdbd3efbe7d4abf872ddb1dfafc307524473a041d4852567d66bfcfe7a3",
      "id": "mutopia-horetzky49-movement-1",
      "index": 1,
-     "note_count": 283,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 49. March by Rossini."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "c7ed4bdbd3efbe7d4abf872ddb1dfafc307524473a041d4852567d66bfcfe7a3",
-     "id": "mutopia-horetzky49-movement-2",
-     "index": 2,
      "note_count": 283,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1708,16 +1288,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 5. French Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "49194b8b479628464aee1e01c1da57038cd2894265e0ae3b69a2953d57451ea8",
-     "id": "mutopia-horetzky5-movement-2",
-     "index": 2,
-     "note_count": 177,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 5. French Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky5.ly",
@@ -1738,16 +1308,6 @@
      "content_sha256": "11dadc5a4013327cce8fbdcab3ef53d747002d3fa00251a94a7772393a6c69d0",
      "id": "mutopia-horetzky50-movement-1",
      "index": 1,
-     "note_count": 148,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 50. Je Suis Lindor."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "11dadc5a4013327cce8fbdcab3ef53d747002d3fa00251a94a7772393a6c69d0",
-     "id": "mutopia-horetzky50-movement-2",
-     "index": 2,
      "note_count": 148,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1776,16 +1336,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 51. Scotch Air. Kelso."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "4fa9ceaa306da0d5b591d4c9b772393727d2c0ccbc536f575707bff6dbd5265b",
-     "id": "mutopia-horetzky51-movement-2",
-     "index": 2,
-     "note_count": 71,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 51. Scotch Air. Kelso."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky51.ly",
@@ -1806,16 +1356,6 @@
      "content_sha256": "9652d58c0a8d3403ed1d0ee349984e4b5ed93217da680cf12669b4b533d5a924",
      "id": "mutopia-horetzky52-movement-1",
      "index": 1,
-     "note_count": 113,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 52. Polish Air. Krakoviak."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "9652d58c0a8d3403ed1d0ee349984e4b5ed93217da680cf12669b4b533d5a924",
-     "id": "mutopia-horetzky52-movement-2",
-     "index": 2,
      "note_count": 113,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1844,16 +1384,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 53. German Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "de72949f667a3dc7d726dfd0923229ae784b3c36bb360a7708892e6d98573b51",
-     "id": "mutopia-horetzky53-movement-2",
-     "index": 2,
-     "note_count": 279,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 53. German Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky53.ly",
@@ -1874,16 +1404,6 @@
      "content_sha256": "d0c09dc3059460a82055c6cb5852ad58657d961f8a6223c5bade429e6151ccef",
      "id": "mutopia-horetzky54-movement-1",
      "index": 1,
-     "note_count": 173,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 54. March by Gallenberg."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "d0c09dc3059460a82055c6cb5852ad58657d961f8a6223c5bade429e6151ccef",
-     "id": "mutopia-horetzky54-movement-2",
-     "index": 2,
      "note_count": 173,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1912,16 +1432,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 55. Rousseau's Dream."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "b1b2d693298c4d32c7113c0b44ea34cd9d0dc3d87987dd02203a7cf19ca06645",
-     "id": "mutopia-horetzky55-movement-2",
-     "index": 2,
-     "note_count": 144,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 55. Rousseau's Dream."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky55.ly",
@@ -1942,16 +1452,6 @@
      "content_sha256": "08faaf82b1f0bcec55777f9c27767c2b5b892d57446e44e2ee883b2de79e79e8",
      "id": "mutopia-horetzky56-movement-1",
      "index": 1,
-     "note_count": 235,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 56. Chanson Des Marseillois."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "08faaf82b1f0bcec55777f9c27767c2b5b892d57446e44e2ee883b2de79e79e8",
-     "id": "mutopia-horetzky56-movement-2",
-     "index": 2,
      "note_count": 235,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -1980,16 +1480,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 57. Old Saxon Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "1eec478285f8471b70c0ddb4e7236fdc9cabfe1cc23b89dd3fcba133b227e310",
-     "id": "mutopia-horetzky57-movement-2",
-     "index": 2,
-     "note_count": 115,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 57. Old Saxon Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky57.ly",
@@ -2010,16 +1500,6 @@
      "content_sha256": "251f9346860abf6a6da68dd4fc44a7211625f425ccdac4c433dea33d8dd603d3",
      "id": "mutopia-horetzky58-movement-1",
      "index": 1,
-     "note_count": 154,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 58. Sul Margine D'un Rio."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "251f9346860abf6a6da68dd4fc44a7211625f425ccdac4c433dea33d8dd603d3",
-     "id": "mutopia-horetzky58-movement-2",
-     "index": 2,
      "note_count": 154,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2048,16 +1528,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 59. Venetian Air. \u201cLa Biondina\u201d."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "7d12414554da2f678d06fee7a11a7bcba631e66945c214fea0390aafebf8077e",
-     "id": "mutopia-horetzky59-movement-2",
-     "index": 2,
-     "note_count": 233,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 59. Venetian Air. \u201cLa Biondina\u201d."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky59.ly",
@@ -2078,16 +1548,6 @@
      "content_sha256": "5bccdbcefcca8f332e98e447479cc048f9c77cb0b8e2bb6025220d823b2c357f",
      "id": "mutopia-horetzky6-movement-1",
      "index": 1,
-     "note_count": 143,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 6. Un Noel."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "5bccdbcefcca8f332e98e447479cc048f9c77cb0b8e2bb6025220d823b2c357f",
-     "id": "mutopia-horetzky6-movement-2",
-     "index": 2,
      "note_count": 143,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2116,16 +1576,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 60. Care Pupille By Blangini."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "fae82b26a800cda789c320f87e80e9c0948fdf639e9353e71608d9abdd627017",
-     "id": "mutopia-horetzky60-movement-2",
-     "index": 2,
-     "note_count": 407,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 60. Care Pupille By Blangini."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky60.ly",
@@ -2146,16 +1596,6 @@
      "content_sha256": "abdd328e2f34b1bf8ae7ff3ae2b9e4a13c9e8bb19aa5b7f97709d80c3a67584c",
      "id": "mutopia-horetzky7-movement-1",
      "index": 1,
-     "note_count": 229,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 7. Le Petit Tambour."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "abdd328e2f34b1bf8ae7ff3ae2b9e4a13c9e8bb19aa5b7f97709d80c3a67584c",
-     "id": "mutopia-horetzky7-movement-2",
-     "index": 2,
      "note_count": 229,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2184,16 +1624,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 8. Russian Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "6db3d65e72f483aa41353ca65d1819cab528cd7258ad965e755c581a5913982b",
-     "id": "mutopia-horetzky8-movement-2",
-     "index": 2,
-     "note_count": 103,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 8. Russian Air."
     }
    ],
    "path": "sources/mutopia_expanded/horetzky8.ly",
@@ -2214,16 +1644,6 @@
      "content_sha256": "170075ead263605d95d242baae617f80b09e661f7d60a013f74e9dd3e132541f",
      "id": "mutopia-horetzky9-movement-1",
      "index": 1,
-     "note_count": 142,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 9. Polish National Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "170075ead263605d95d242baae617f80b09e661f7d60a013f74e9dd3e132541f",
-     "id": "mutopia-horetzky9-movement-2",
-     "index": 2,
      "note_count": 142,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2252,16 +1672,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "Twelve Monferrine: No. 1"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "f336aa856ab5c5c62a7e059a5018fce8e937cdd92c410c1006c6c801372acefd",
-     "id": "mutopia-knjze12monfera-movement-2",
-     "index": 2,
-     "note_count": 140,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 1"
     }
    ],
    "path": "sources/mutopia_expanded/knjze12monferA.ly",
@@ -2282,16 +1692,6 @@
      "content_sha256": "068c7ab98f8d3619e06391ced2fd3f124b22c5b6fe85af6872943866e4bd2e3c",
      "id": "mutopia-knjze12monferb-movement-1",
      "index": 1,
-     "note_count": 176,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 2"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "068c7ab98f8d3619e06391ced2fd3f124b22c5b6fe85af6872943866e4bd2e3c",
-     "id": "mutopia-knjze12monferb-movement-2",
-     "index": 2,
      "note_count": 176,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2320,16 +1720,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "Twelve Monferrine: No. 3"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "a1dc48a5a3ae60d2ff5bb6b84a39fb20422f55d9c684ed03c0b195ba90e45d51",
-     "id": "mutopia-knjze12monferc-movement-2",
-     "index": 2,
-     "note_count": 166,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 3"
     }
    ],
    "path": "sources/mutopia_expanded/knjze12monferC.ly",
@@ -2350,16 +1740,6 @@
      "content_sha256": "8005549a5ca93c7c8864cf3af83904ffa1c8a5f2bbd36c851cb50180a29245d6",
      "id": "mutopia-knjze12monferd-movement-1",
      "index": 1,
-     "note_count": 150,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 4"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "8005549a5ca93c7c8864cf3af83904ffa1c8a5f2bbd36c851cb50180a29245d6",
-     "id": "mutopia-knjze12monferd-movement-2",
-     "index": 2,
      "note_count": 150,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2388,16 +1768,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "Twelve Monferrine: No. 5"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "062b0f20b0e8eb995015a2b1cb801633d623abeeade1640ca273eca11eb3a17f",
-     "id": "mutopia-knjze12monfere-movement-2",
-     "index": 2,
-     "note_count": 164,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 5"
     }
    ],
    "path": "sources/mutopia_expanded/knjze12monferE.ly",
@@ -2418,16 +1788,6 @@
      "content_sha256": "13f35fd5c9412058124476c3d2f3b2d1e80f648eccdf1ad63a67156aeb288c55",
      "id": "mutopia-knjze12monferf-movement-1",
      "index": 1,
-     "note_count": 160,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 6"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "13f35fd5c9412058124476c3d2f3b2d1e80f648eccdf1ad63a67156aeb288c55",
-     "id": "mutopia-knjze12monferf-movement-2",
-     "index": 2,
      "note_count": 160,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2456,16 +1816,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "Twelve Monferrine: No. 7"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "8994920a44ef7d20592f7b9905d343091413f12e2d894668774575f55e582338",
-     "id": "mutopia-knjze12monferg-movement-2",
-     "index": 2,
-     "note_count": 177,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 7"
     }
    ],
    "path": "sources/mutopia_expanded/knjze12monferG.ly",
@@ -2486,16 +1836,6 @@
      "content_sha256": "76c054b25d90cac530e10b178b592ba13460de4ef7be375377f26327967add9f",
      "id": "mutopia-knjze12monferh-movement-1",
      "index": 1,
-     "note_count": 185,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 8"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "76c054b25d90cac530e10b178b592ba13460de4ef7be375377f26327967add9f",
-     "id": "mutopia-knjze12monferh-movement-2",
-     "index": 2,
      "note_count": 185,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2524,16 +1864,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "Twelve Monferrine: No. 9"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "52de40e90ab5c26de050b1651627bf75ef3af8e1f703bb350aae74e9ad55eb88",
-     "id": "mutopia-knjze12monferi-movement-2",
-     "index": 2,
-     "note_count": 173,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 9"
     }
    ],
    "path": "sources/mutopia_expanded/knjze12monferI.ly",
@@ -2554,16 +1884,6 @@
      "content_sha256": "2d8fe30e9c49ae938218b34ede28ff501e035bd8ebacaca9442750bd128ec03b",
      "id": "mutopia-knjze12monferj-movement-1",
      "index": 1,
-     "note_count": 164,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 10"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "2d8fe30e9c49ae938218b34ede28ff501e035bd8ebacaca9442750bd128ec03b",
-     "id": "mutopia-knjze12monferj-movement-2",
-     "index": 2,
      "note_count": 164,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2592,16 +1912,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "Twelve Monferrine: No. 11"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "823dc4761934cf71e2a01c5d37bf519ed33959adba5b12b26b1fd554acd33559",
-     "id": "mutopia-knjze12monferk-movement-2",
-     "index": 2,
-     "note_count": 174,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 11"
     }
    ],
    "path": "sources/mutopia_expanded/knjze12monferK.ly",
@@ -2622,16 +1932,6 @@
      "content_sha256": "09f3ce33632d4bf2aa01717e34ab3ef45d83f628965d66ac23af011441ea2e2b",
      "id": "mutopia-knjze12monferl-movement-1",
      "index": 1,
-     "note_count": 170,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Twelve Monferrine: No. 12"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "09f3ce33632d4bf2aa01717e34ab3ef45d83f628965d66ac23af011441ea2e2b",
-     "id": "mutopia-knjze12monferl-movement-2",
-     "index": 2,
      "note_count": 170,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2660,16 +1960,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 2. Rondo"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "13a21d57fc6fc261c4bc2580e17ddd482c5b397425bbff3bdf092f55da771048",
-     "id": "mutopia-matiegka2-movement-2",
-     "index": 2,
-     "note_count": 967,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 2. Rondo"
     }
    ],
    "path": "sources/mutopia_expanded/Matiegka2.ly",
@@ -2690,16 +1980,6 @@
      "content_sha256": "7d2835c0ec73e412f35e918f7f78db4afecdedfce9c304811d0c0506119179b9",
      "id": "mutopia-matiegka3-movement-1",
      "index": 1,
-     "note_count": 690,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 3. Andante"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "7d2835c0ec73e412f35e918f7f78db4afecdedfce9c304811d0c0506119179b9",
-     "id": "mutopia-matiegka3-movement-2",
-     "index": 2,
      "note_count": 690,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2728,16 +2008,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "N\u00ba. 4. Menuetto."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "a3f06a2b4b705fbf2e161f71e2173ce9c381f1dab13637b48349eaec22caaff4",
-     "id": "mutopia-matiegka4-movement-2",
-     "index": 2,
-     "note_count": 1046,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 4. Menuetto."
     }
    ],
    "path": "sources/mutopia_expanded/Matiegka4.ly",
@@ -2758,16 +2028,6 @@
      "content_sha256": "a9fe4851808f8fec2a92c7418666457427a54902070320668c0736ba36677905",
      "id": "mutopia-matiegka5-movement-1",
      "index": 1,
-     "note_count": 1559,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 5. Siciliano."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "a9fe4851808f8fec2a92c7418666457427a54902070320668c0736ba36677905",
-     "id": "mutopia-matiegka5-movement-2",
-     "index": 2,
      "note_count": 1559,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2796,16 +2056,6 @@
      "pressed_annotation_count": 185,
      "tempo_bpm": 90.0,
      "title": "Recuerdos de la Luna"
-    },
-    {
-     "annotation_count": 205,
-     "content_sha256": "06dd6478fb07b4899d32b9aa72f3fe95c2b680d7b67a1bd3ce9478efd3602abd",
-     "id": "mutopia-recuerdos-luna-movement-2",
-     "index": 2,
-     "note_count": 482,
-     "pressed_annotation_count": 185,
-     "tempo_bpm": 90.0,
-     "title": "Recuerdos de la Luna"
     }
    ],
    "path": "sources/mutopia_expanded/recuerdos-luna.ly",
@@ -2826,16 +2076,6 @@
      "content_sha256": "2b2dca3a1de57b7d6e807b5bb198b831df16d2fb51aeab8d82d9e05bdcef4a1f",
      "id": "mutopia-sixstudiesa-movement-1",
      "index": 1,
-     "note_count": 508,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Six Progressive Studies: No. I"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "2b2dca3a1de57b7d6e807b5bb198b831df16d2fb51aeab8d82d9e05bdcef4a1f",
-     "id": "mutopia-sixstudiesa-movement-2",
-     "index": 2,
      "note_count": 508,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2864,16 +2104,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "Six Progressive Studies: No. II"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "7a0603a011c6183226bd4b8ac09946c17543a86f3730e7b51645948777308617",
-     "id": "mutopia-sixstudiesb-movement-2",
-     "index": 2,
-     "note_count": 357,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Six Progressive Studies: No. II"
     }
    ],
    "path": "sources/mutopia_expanded/SixStudiesB.ly",
@@ -2894,16 +2124,6 @@
      "content_sha256": "421a8142963fa291c140350b804ace59fee15923d950efbc9a7ac78e31254aa1",
      "id": "mutopia-sixstudiesc-movement-1",
      "index": 1,
-     "note_count": 419,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Six Progressive Studies: No. III"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "421a8142963fa291c140350b804ace59fee15923d950efbc9a7ac78e31254aa1",
-     "id": "mutopia-sixstudiesc-movement-2",
-     "index": 2,
      "note_count": 419,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2932,16 +2152,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "Six Progressive Studies: No. IV"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "5dae3f14b231c5871fdb706fe52464203af4da1ee1b9c700038eb47a4743e49b",
-     "id": "mutopia-sixstudiesd-movement-2",
-     "index": 2,
-     "note_count": 306,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Six Progressive Studies: No. IV"
     }
    ],
    "path": "sources/mutopia_expanded/SixStudiesD.ly",
@@ -2962,16 +2172,6 @@
      "content_sha256": "c9c6209216c7fcc5559ff5b6bdff21e0d8dc1a5036ff4d65a2ddfc60578511f2",
      "id": "mutopia-sixstudiese-movement-1",
      "index": 1,
-     "note_count": 349,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Six Progressive Studies: No. V"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "c9c6209216c7fcc5559ff5b6bdff21e0d8dc1a5036ff4d65a2ddfc60578511f2",
-     "id": "mutopia-sixstudiese-movement-2",
-     "index": 2,
      "note_count": 349,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -3007,40 +2207,6 @@
    "source_sha256": "6f0a9006cc333bc36089bee384bfbbc393a8e6938690ae096e1ee58d19dbf9fa",
    "source_url": "https://www.mutopiaproject.org/ftp/WorrallH/SpanishFandango1882/SpanishFandango1882.ly",
    "work_id": "mutopia:spanishfandango1882"
-  },
-  {
-   "composer": "Matteo Carcassi",
-   "edition": "Mutopia-2017/11/05-2204",
-   "group_id": "mutopia:twominorpreludes",
-   "license": "PD",
-   "license_url": "",
-   "movements": [
-    {
-     "annotation_count": 24,
-     "content_sha256": "02abfc32a3f99abe06f83346570667084e90129691c71711ea9523243d56854a",
-     "id": "mutopia-twominorpreludes-movement-1",
-     "index": 1,
-     "note_count": 122,
-     "pressed_annotation_count": 24,
-     "tempo_bpm": 90.0,
-     "title": "Two Minor Preludes from M\u00e9thode compl\u00e8te pour Guitare"
-    },
-    {
-     "annotation_count": 19,
-     "content_sha256": "2f9f59d15e6546db5d74c6f0ec7da4bac34f965884baf1d6f005c770cbd45c89",
-     "id": "mutopia-twominorpreludes-movement-2",
-     "index": 2,
-     "note_count": 92,
-     "pressed_annotation_count": 19,
-     "tempo_bpm": 90.0,
-     "title": "Two Minor Preludes from M\u00e9thode compl\u00e8te pour Guitare"
-    }
-   ],
-   "path": "sources/mutopia_expanded/TwoMinorPreludes.ly",
-   "source_license_declaration": "Public Domain",
-   "source_sha256": "de476d619403d7b90834e74f291b4ebb9db87ae615e64f921ca0b1f0e2c19f56",
-   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O59/TwoMinorPreludes/TwoMinorPreludes.ly",
-   "work_id": "mutopia:twominorpreludes"
   }
  ],
  "schema": "fretsure-mutopia-lilypond-manifest@0.2.0"

@@ -236,16 +236,6 @@
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
      "title": "boije_835_Vidal_Paul_Air_Des_Folies_DEspagnes"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "73d70835311b9f03309ce7c9a77e5de0a3162b3d39355327028249abaa91696a",
-     "id": "mutopia-boije-835-vidal-paul-air-des-folies-despagnes-movement-2",
-     "index": 2,
-     "note_count": 1222,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "boije_835_Vidal_Paul_Air_Des_Folies_DEspagnes"
     }
    ],
    "path": "sources/mutopia_expanded/boije_835_Vidal_Paul_Air_Des_Folies_DEspagnes.ly",
@@ -1902,16 +1892,6 @@
      "pressed_annotation_count": 21,
      "tempo_bpm": 90.0,
      "title": "JolyD_Tyrolienne"
-    },
-    {
-     "annotation_count": 24,
-     "content_sha256": "af81b2279e080727b681e8999b6faec3e4195ddb1d862720cf0ec14e8a68fa64",
-     "id": "mutopia-jolyd-tyrolienne-movement-2",
-     "index": 2,
-     "note_count": 221,
-     "pressed_annotation_count": 21,
-     "tempo_bpm": 90.0,
-     "title": "JolyD_Tyrolienne"
     }
    ],
    "path": "sources/mutopia_expanded/JolyD_Tyrolienne.ly",
@@ -2148,16 +2128,6 @@
      "content_sha256": "139d1a84f3efd63d76596af856070008a784d5cd4a8371c9bf59af7ced2d1df5",
      "id": "mutopia-sor-op2-3-movement-1",
      "index": 1,
-     "note_count": 505,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Six divertissements pour la guitarre, n\u00b03 Andantino"
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "139d1a84f3efd63d76596af856070008a784d5cd4a8371c9bf59af7ced2d1df5",
-     "id": "mutopia-sor-op2-3-movement-2",
-     "index": 2,
      "note_count": 505,
      "pressed_annotation_count": 0,
      "tempo_bpm": 90.0,
@@ -2590,16 +2560,6 @@
      "content_sha256": "1789956a3562d492e51d159d4c2521d6dd25e9f111106aadcb04886534129d89",
      "id": "mutopia-sorf-op35-no22-movement-1",
      "index": 1,
-     "note_count": 305,
-     "pressed_annotation_count": 75,
-     "tempo_bpm": 90.0,
-     "title": "Op. 35, Study No. 22"
-    },
-    {
-     "annotation_count": 86,
-     "content_sha256": "1789956a3562d492e51d159d4c2521d6dd25e9f111106aadcb04886534129d89",
-     "id": "mutopia-sorf-op35-no22-movement-2",
-     "index": 2,
      "note_count": 305,
      "pressed_annotation_count": 75,
      "tempo_bpm": 90.0,

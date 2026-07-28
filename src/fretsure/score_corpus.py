@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import xml.etree.ElementTree as ET
+from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
@@ -442,6 +443,103 @@ def _fraction_json(value: Fraction) -> list[int]:
     return [value.numerator, value.denominator]
 
 
+def _musical_identity(
+    notes: list[list[object]],
+    annotations: list[list[object]],
+    tuning: list[int],
+    capo: int,
+    time_signature: list[int],
+    tempo_bpm: float,
+) -> str:
+    """The digest itself, over primitives, so it has exactly one definition.
+
+    Two callers need this: the manifest builder, which holds parsed examples,
+    and any consumer checking the shipped corpus, which holds JSON rows.  A
+    second implementation would be a second rule set to keep in agreement, and
+    this project has already paid for one of those.
+    """
+
+    payload = {
+        "notes": notes,
+        "annotations": annotations,
+        "tuning": tuning,
+        "capo": capo,
+        "time_signature": time_signature,
+        "tempo_bpm": tempo_bpm,
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def musical_identity(example: ScoreCorpusExample) -> str:
+    """What the piece *is*, independent of how it was encoded or where it came from.
+
+    Provenance -- title, source URL, licence, the intermediate MusicXML bytes --
+    is deliberately excluded, because the same music reaching the corpus by two
+    routes is one piece and must be counted once.  Deduping on the MusicXML
+    instead let 86 pieces in twice: Mutopia sources conventionally carry a
+    ``\\score`` wrapping ``\\layout`` and another wrapping ``\\midi``, holding the
+    same notes and serialising to different bytes.
+    """
+
+    return _musical_identity(
+        [
+            [
+                _fraction_json(note.onset),
+                _fraction_json(note.duration),
+                note.pitch,
+                note.voice,
+            ]
+            for note in example.notes
+        ],
+        [
+            [
+                _fraction_json(annotation.onset),
+                annotation.pitch,
+                list(annotation.accepted_fingers),
+                annotation.string,
+                annotation.fret,
+            ]
+            for annotation in example.annotations
+        ],
+        list(example.tuning),
+        example.capo,
+        list(example.time_signature),
+        example.tempo_bpm,
+    )
+
+
+def musical_identity_of_row(row: Mapping[str, object]) -> str:
+    """The same digest for a row of a shipped corpus artifact.
+
+    Consumers read the corpus as JSON rather than as parsed examples, and the
+    duplicate-freeness of what actually ships is the property worth checking.
+    """
+
+    notes = cast(list[Mapping[str, object]], row["notes"])
+    annotations = cast(list[Mapping[str, object]], row.get("annotations") or [])
+    return _musical_identity(
+        [
+            [note["onset"], note["duration"], note["pitch"], note["voice"]]
+            for note in notes
+        ],
+        [
+            [
+                annotation["onset"],
+                annotation["pitch"],
+                list(cast(list[int], annotation["accepted_fingers"])),
+                annotation["string"],
+                annotation["fret"],
+            ]
+            for annotation in annotations
+        ],
+        list(cast(list[int], row["tuning"])),
+        cast(int, row["capo"]),
+        list(cast(list[int], row["time_signature"])),
+        cast(float, row["tempo_bpm"]),
+    )
+
+
 def score_corpus_json_bytes(
     examples: tuple[ScoreCorpusExample, ...],
     *,
@@ -601,6 +699,8 @@ __all__ = [
     "ScoreCorpusMetadata",
     "build_score_corpus_from_manifest",
     "grouped_splits",
+    "musical_identity",
+    "musical_identity_of_row",
     "parse_score_corpus_source",
     "score_corpus_json_bytes",
 ]

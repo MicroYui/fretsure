@@ -52,6 +52,8 @@ from build_mutopia_lilypond_corpus import (  # noqa: E402
     content_sha256,
 )
 
+from fretsure.score_corpus import musical_identity_of_row  # noqa: E402
+
 # Solo guitar only.  Anything naming a second instrument is an ensemble score
 # and outside the single-part importer contract.
 _SOLO_INSTRUMENTS: Final = frozenset({"Guitar", "Classical Guitar"})
@@ -237,6 +239,27 @@ def used_source_digests(corpus_dir: Path) -> set[str]:
     return digests
 
 
+def shipped_content_digests(corpus_dir: Path) -> set[str]:
+    """Musical identities already in the shipped corpus, whoever built them.
+
+    Two of the six corpus artifacts predate this script and have no manifest, so
+    reading manifests alone would miss them -- and it did: ``twominorpreludes``
+    shipped as a second copy of two Carcassi op.59 preludes that were already in
+    the frozen baseline.  Seeding from the corpus itself closes that, and closes
+    it in the direction that protects the baseline, since a piece already there
+    is the one that survives.
+    """
+
+    digests: set[str] = set()
+    for path in sorted(corpus_dir.glob("*.json")):
+        if path.name.endswith("_manifest.json"):
+            continue
+        document = json.loads(path.read_text(encoding="utf-8"))
+        for row in document.get("examples", []):
+            digests.add(musical_identity_of_row(row))
+    return digests
+
+
 def _slug(value: str) -> str:
     cleaned = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return cleaned or "untitled"
@@ -246,8 +269,19 @@ def convert_candidate(
     candidate: Candidate,
     convert_lilypond: Any,
     seen_roots: set[str],
+    seen_content: set[str],
 ) -> tuple[dict[str, object] | None, str | None]:
-    """Convert one source and pin exactly what came out, or say why it did not."""
+    """Convert one source and pin exactly what came out, or say why it did not.
+
+    Two digests are checked, and the second is the one that matters.  Deduping on
+    the intermediate MusicXML alone let 86 pieces into the corpus twice, because
+    Mutopia sources conventionally carry two ``\\score`` blocks -- one wrapping
+    ``\\layout`` for engraving and one wrapping ``\\midi`` for playback -- holding
+    the same music.  They serialise to different bytes, so a byte digest sees two
+    movements where a musician sees one, and the corpus reported 389 pieces when
+    it held 303.  ``content_sha256`` covers the notes rather than the encoding,
+    which is the identity a duplicate has to be judged on.
+    """
 
     raw = candidate.path.read_bytes()
     try:
@@ -291,14 +325,21 @@ def convert_candidate(
             )
         except Exception as exc:  # noqa: BLE001 - importer contract rejection is data
             return None, f"importer rejected movement {movement.movement_index}: {exc}"[:200]
+        content_sha = content_sha256(example)
+        if content_sha in seen_content:
+            # The `\layout` and `\midi` renderings of one piece reach here as two
+            # movements with identical music.  Whichever arrives first is the
+            # piece; the rest are the same piece spelled differently.
+            continue
         seen_roots.add(root_sha)
+        seen_content.add(content_sha)
         movements.append(
             {
                 "id": identifier,
                 "index": movement.movement_index,
                 "title": candidate.title,
                 "tempo_bpm": metadata.tempo_bpm,
-                "content_sha256": content_sha256(example),
+                "content_sha256": content_sha,
                 "note_count": len(example.notes),
                 "annotation_count": len(example.annotations),
                 "pressed_annotation_count": _pressed_label_count(example),
@@ -394,10 +435,13 @@ def main() -> int:
     }
 
     seen_roots: set[str] = set()
+    seen_content: set[str] = shipped_content_digests(args.out_dir)
     families: dict[str, list[dict[str, object]]] = {}
     failures: list[dict[str, str]] = []
     for index, candidate in enumerate(fresh, start=1):
-        entry, reason = convert_candidate(candidate, convert_lilypond, seen_roots)
+        entry, reason = convert_candidate(
+            candidate, convert_lilypond, seen_roots, seen_content
+        )
         if entry is None:
             failures.append({"path": candidate.relative, "reason": reason or "unknown"})
         else:

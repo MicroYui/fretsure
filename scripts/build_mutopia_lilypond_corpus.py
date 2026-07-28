@@ -25,6 +25,7 @@ from typing import Any, Final, cast
 from fretsure.score_corpus import (
     ScoreCorpusExample,
     ScoreCorpusMetadata,
+    musical_identity,
     parse_score_corpus_source,
     score_corpus_json_bytes,
 )
@@ -107,39 +108,12 @@ def content_sha256(example: ScoreCorpusExample) -> str:
     safety; it is a check that fires on the wrong thing and trains people to
     ignore it.
 
-    This covers exactly what a rebuild must preserve: every note, every printed
-    fingering annotation, and the instrument configuration.  Titles and credits
-    are not included because they come from the manifest rather than the
-    conversion, and are already pinned there.
+    The digest now lives in ``fretsure.score_corpus`` because consumers need it
+    too -- they hold JSON rows rather than parsed examples, and duplicate-freeness
+    of the shipped corpus is checked against the same identity this pins.
     """
 
-    payload = {
-        "notes": [
-            [
-                [note.onset.numerator, note.onset.denominator],
-                [note.duration.numerator, note.duration.denominator],
-                note.pitch,
-                note.voice,
-            ]
-            for note in example.notes
-        ],
-        "annotations": [
-            [
-                [a.onset.numerator, a.onset.denominator],
-                a.pitch,
-                list(a.accepted_fingers),
-                a.string,
-                a.fret,
-            ]
-            for a in example.annotations
-        ],
-        "tuning": list(example.tuning),
-        "capo": example.capo,
-        "time_signature": list(example.time_signature),
-        "tempo_bpm": example.tempo_bpm,
-    }
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    return _sha256(canonical.encode("utf-8"))
+    return musical_identity(example)
 
 
 def _declared_license(result: Any) -> str | None:
