@@ -137,24 +137,39 @@ silently inflates the refusal count with failures that belong to the importer.
 
 Less than it looked like it would, and the measurement says so.
 
-Re-running the repertoire gate on the deduplicated corpus:
+Re-running the repertoire gate at each stage, `median@0.1` with the capo ladder:
 
-| corpus | accepted | rate | GREEN |
-|---|---|---|---|
-| 389 rows (with duplicates) | 177 | 45.5% | 99 |
-| **303 pieces** | **139** | **45.9%** | 81 |
+| corpus | pieces | accepted | rate | GREEN |
+|---|---|---|---|---|
+| 389 rows (with duplicates) | 389 | 177 | 45.5% | 99 |
+| deduplicated | 303 | 139 | 45.9% | 81 |
+| **+ role split + quarantine** | **292** | **143** | **49.0%** | 83 |
 
-The rate moved 0.4 points. Of the 86 duplicates, 38 were accepted and 48
-refused — against a base rate of 45.5%, almost exactly representative. So the
-inflated denominator was **not** inflating the headline number, and any
-suggestion that the published rates were badly wrong is not supported. The
-baseline subset returns 26 of 58, identical to every earlier run, which is the
-check that the two corpora are comparable at all.
+Attributing the three steps separately:
 
-What the defect did invalidate is narrower and still real:
+- **Deduplication moved the rate 0.4 points.** Of the 86 duplicates, 38 were
+  accepted and 48 refused — against a base rate of 45.5%, almost exactly
+  representative. The inflated denominator was **not** inflating the headline
+  number, and any suggestion that the published rates were badly wrong is not
+  supported.
+- **Quarantine moved it 1.7 points, all denominator.** The eleven removed rows
+  ask for more simultaneous attacks than there are strings, so no assignment of
+  distinct strings exists and every one of them was already a refusal. Removing
+  known-misparsed refusals raises a rate without improving anything.
+- **The role split accepted 4 more pieces**, 139 to 143 over the same 292. That
+  one is a real gain: inner voices previously carried the bass floor of half
+  their written value and now carry `harmony`'s freedom, so the sustain ladder
+  has somewhere to go. **It cost nothing in the verifier** — not one oracle rule
+  or constant moved — which puts it in the same category as the capo ladder
+  rather than in the trade-offs that bought +2 across five attempts.
 
-- **The size of the corpus.** 303 pieces, not 389. Any claim about breadth of
-  coverage counted 86 pieces twice.
+Beam deaths fall 106 → 99 and no-feasible-frame 52 → 46, both partly from the
+removed rows and partly from the four newly solved.
+
+What the defects did invalidate is narrower and still real:
+
+- **The size of the corpus.** 292 pieces, not 389. Any claim about breadth of
+  coverage counted 86 pieces twice and 11 that were never parsed correctly.
 - **The grouped split.** Identical music could land in train and in test, which
   is a leakage path for anything trained on this corpus.
 - **Per-piece attribution.** Every count of the form "N pieces fail for reason
@@ -164,6 +179,11 @@ The increments survive as counts, since a duplicate appears on both sides of a
 before/after comparison: the capo ladder's +52, the per-pair `d_max` +2 and the
 beam's +4 are unaffected in kind, though each would now be quoted over a
 smaller corpus.
+
+**The baseline is 56, not 58.** No duplicate was removed from it, but two of the
+quarantined rows were baseline pieces. Both were refused in every historical
+run, so the accepted count is unchanged at 26; it is the denominator that was
+two larger than the music justified.
 
 Specifically retracted: the conclusion in
 `2026-07-28-no-feasible-frame-config.md` that "13 are physically impossible" and

@@ -1,0 +1,47 @@
+{
+ "accepted": 143,
+ "baseline_subset": {
+  "accepted": 26,
+  "accepted_ids": [
+   "mutopia-brahms-op39-no9",
+   "mutopia-carcassi-op59-prelude-01",
+   "mutopia-carcassi-op59-prelude-02",
+   "mutopia-carcassi-op59-prelude-03",
+   "mutopia-carcassi-op59-prelude-04",
+   "mutopia-carcassi-op59-prelude-05",
+   "mutopia-carcassi-op59-prelude-07",
+   "mutopia-carcassi-op59-prelude-08",
+   "mutopia-carcassi-op59-prelude-09",
+   "mutopia-carcassi-op59-prelude-10",
+   "mutopia-carcassi-op59-prelude-11",
+   "mutopia-carcassi-op59-prelude-12",
+   "mutopia-carcassi-op59-prelude-13",
+   "mutopia-carcassi-op59-prelude-14",
+   "mutopia-cc-by-sa-aguado-op11n02",
+   "mutopia-cc-by-sa-aguado-op11n04",
+   "mutopia-cc-by-sa-aguado-op11n06",
+   "mutopia-cc-by-sa-aguado-op11n07",
+   "mutopia-cc-by-sa-aminor-study",
+   "mutopia-cc-by-sa-carcassi-op26-03",
+   "mutopia-cc-by-sa-carcassi-op26-04",
+   "mutopia-cc-by-sa-carcassi-op60-22",
+   "mutopia-cc-by-sa-sorf-op35-no17",
+   "mutopia-cc-by-sa-sorf-op35-no24",
+   "mutopia-cc-by-sa-sorf-op45n03-movement-2",
+   "mutopia-cc-by-sa-sorf-op45n03-movement-3"
+  ],
+  "examples": 56
+ },
+ "examples": 292,
+ "infeasible_reason_counts": {
+  "no feasible frame config": 46,
+  "no non-red extension within beam": 99,
+  "pitch 39 unreachable on this tuning/capo": 1,
+  "pitch 88 unreachable on this tuning/capo": 3
+ },
+ "outcome_counts": {
+  "AMBER": 60,
+  "GREEN": 83,
+  "INFEASIBLE": 149
+ }
+}

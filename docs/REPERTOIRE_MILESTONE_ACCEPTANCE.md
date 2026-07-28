@@ -3,6 +3,14 @@
 **Date:** 2026-07-26 · **Branch:** `main` · **Scope:** make the verification stack
 accept real guitar repertoire without making it accept anything else.
 
+> **Corrected 2026-07-28.** The 58-score baseline is 56. Two of its members —
+> `sorf-op35-no21` and `sorf-op45n01` — ask for more simultaneous attacks than
+> the guitar has strings, which no assignment of distinct strings can satisfy,
+> so the importer no longer accepts them. Both were refused in every run here,
+> so **the accepted counts below are unchanged**; the denominator was two larger
+> than the music justified. See
+> [`experiments/2026-07-28-corpus-defects.md`](experiments/2026-07-28-corpus-defects.md).
+
 ## The problem this milestone attacked
 
 The deterministic pipeline rejected **45 of 58** published classical guitar

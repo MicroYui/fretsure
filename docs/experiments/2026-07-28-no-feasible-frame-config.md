@@ -1,5 +1,23 @@
 # The frames with no fingering are mostly real — 2026-07-28
 
+
+> **Corrected 2026-07-28.** Every `/389` figure below was divided by a corpus
+> that counted 86 pieces twice and carried 11 that were never parsed correctly;
+> the corrected size is 292. The *rates* survive nearly unchanged (45.9% deduped
+> against 45.5% before), because the duplicates split between accepted and
+> refused almost exactly at the base rate — what does not survive is the corpus
+> size, the grouped split, and any per-piece attribution. See
+> [`2026-07-28-corpus-defects.md`](2026-07-28-corpus-defects.md). The numbers
+> below are left as measured rather than rewritten.
+>
+> **This document's conclusion is retracted, not merely re-based.** It found 13
+> scores "physically impossible" and concluded from that, among other things,
+> that the bucket is genuine with no cheap win in it. Those 13 are published
+> studies guitarists play; it is the import that is wrong, and calling them
+> impossible was a statement about the corpus dressed as a statement about the
+> music. The bucket falls 52 → 46 on the corrected corpus and **has not been
+> re-attributed**, so nothing below should be relied on for what refuses what.
+
 ## Why this bucket looked promising
 
 After the capo ladder, 212 of 389 published scores are still refused. The largest
