@@ -86,24 +86,35 @@ def test_ids_are_unique_across_artifacts() -> None:
 
 
 def test_the_frozen_baseline_is_intact() -> None:
-    """Deduplication had to be resolved in the baseline's favour, and was."""
+    """Deduplication was resolved in the baseline's favour, and quarantine was not.
+
+    No duplicate was ever removed from the baseline -- all 86 fell in the two
+    expanded artifacts. Two baseline pieces did leave, for the other reason:
+    `sorf-op35-no21` and `sorf-op45n01` ask for more simultaneous attacks than
+    the guitar has strings, so the importer no longer accepts them.
+
+    That means the baseline is 56 and every historical figure quoted "of 58" was
+    measured over a set containing two misparsed rows. Both were refused in
+    every run, so the accepted counts carry over unchanged; it is the
+    denominator that was two larger than the music justified.
+    """
 
     counts = {path.name: len(json.loads(path.read_text())["examples"]) for path in _corpus_paths()}
-    assert [counts[name] for name in BASELINE] == [16, 5, 37]
-    assert sum(counts[name] for name in BASELINE) == 58
+    assert [counts[name] for name in BASELINE] == [16, 5, 35]
+    assert sum(counts[name] for name in BASELINE) == 56
 
 
 def test_the_corpus_is_the_size_it_reports() -> None:
     """The number every rate is divided by.
 
-    Pinned because it moved silently once: 389 rows, 303 pieces. If an expansion
-    changes this, the acceptance rates in docs/ must be recomputed rather than
-    carried forward.
+    Pinned because it moved silently once: 389 rows, 303 pieces, then 292 after
+    the misparsed rows were refused. If an expansion changes this, the
+    acceptance rates in docs/ must be recomputed rather than carried forward.
     """
 
     rows = _rows()
-    assert len(rows) == 303
-    assert len({musical_identity_of_row(row) for _, row in rows}) == 303
+    assert len(rows) == 292
+    assert len({musical_identity_of_row(row) for _, row in rows}) == 292
 
 
 def test_every_manifest_movement_still_has_its_corpus_row() -> None:

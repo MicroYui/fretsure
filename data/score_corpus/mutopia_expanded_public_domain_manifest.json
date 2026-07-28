@@ -205,7 +205,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "16da08de0bd21423f243d744028fa5c1a8bfbae3727afd0412379bf1f22e202b",
+     "content_sha256": "bb16358eaed0552be00d4d26d80ec6be1e8383d710a8c38e5a45837ca9be856c",
      "id": "mutopia-horetzky1-movement-1",
      "index": 1,
      "note_count": 125,
@@ -229,7 +229,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "e8781212dffd20e1f2381844fd658e92c9362259f08a5ca7ef10fcc7d9298af0",
+     "content_sha256": "5b00b401181b4e728777aff6c07e06f977d77d970767730429310fb6dca3b99c",
      "id": "mutopia-horetzky10-movement-1",
      "index": 1,
      "note_count": 127,
@@ -239,7 +239,7 @@
     },
     {
      "annotation_count": 0,
-     "content_sha256": "3cc91fd0fabaa18a66b6494427da087ee1ef69b824bbd0b2ecfbc0d9a44b65d3",
+     "content_sha256": "c35a380691b3f82739305841c23e0b17a7928469b1ca68d8d04b6d001a31ad26",
      "id": "mutopia-horetzky10-movement-2",
      "index": 2,
      "note_count": 53,
@@ -263,7 +263,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "b417bdf093c68075d49995c2b0e92ea1a7c0851d259cbb95ee5e5c93c5429f99",
+     "content_sha256": "7f67ffbf5e047ee4021c5075a6759cdee2cf87f7b1441a0c4ba0e35a3f1c676a",
      "id": "mutopia-horetzky11-movement-1",
      "index": 1,
      "note_count": 102,
@@ -287,7 +287,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "d1718ff05603f78b4204611885bb2780ce5a89ca3a605fb2fb5695bf05a846d5",
+     "content_sha256": "7d8002e1047257d4e3482d7abf0fa5c14bb915481dad4370308bb4f6c261ba37",
      "id": "mutopia-horetzky12-movement-1",
      "index": 1,
      "note_count": 105,
@@ -311,7 +311,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "3a03297c6e35ce25e4a3531dd75c143d79a38f142bc24a677c3363fbd7941a41",
+     "content_sha256": "7668dcd0e8c3ee8c3a4b8760c96d07755c37a39949be05882f700bebe7217354",
      "id": "mutopia-horetzky13-movement-1",
      "index": 1,
      "note_count": 149,
@@ -335,7 +335,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "ac5a370a0fe8089ba9cc5519fb600addfb6e35cc9889301f5b6b20cb0a4313cd",
+     "content_sha256": "0d2d9aad98ab1df6154b29a4a7335a485d7a51c7aa5fc4fe43f2711ec3f57f1c",
      "id": "mutopia-horetzky14-movement-1",
      "index": 1,
      "note_count": 153,
@@ -359,7 +359,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "289d5bc4ff948232fe5ec100d65c07c707147ce2a1ce106f800471820cec4cd8",
+     "content_sha256": "ff3af65757d7c7110afb50af61d54f2c7b78ec7bb8923911e151c00afc396103",
      "id": "mutopia-horetzky15-movement-1",
      "index": 1,
      "note_count": 110,
@@ -383,7 +383,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "deaece36df9926b7fe2621ea575850d19266f6e720376eff181a56ca489a7fe2",
+     "content_sha256": "0221cf7e415473d69a7cd46ae081e408e949ea357bf27ee4b6e8824cc8a2c58f",
      "id": "mutopia-horetzky16-movement-1",
      "index": 1,
      "note_count": 103,
@@ -407,7 +407,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "334989108499d7f6733a3947425b04eacbc9130879a2439ae4700196def93092",
+     "content_sha256": "89699086407be7abb74a56437ab3904291e9f55828d02c0d1ec1b05e6283b673",
      "id": "mutopia-horetzky17-movement-1",
      "index": 1,
      "note_count": 121,
@@ -431,7 +431,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "c1e309246bbc934249f7f488b7c8e8796caa42fae3e1c1e58c9367fda21e967f",
+     "content_sha256": "e70beb24dd8013f49decd31a4faca7cf1e44f82002be50d49c9899c16a8275da",
      "id": "mutopia-horetzky18-movement-1",
      "index": 1,
      "note_count": 121,
@@ -455,7 +455,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "003ceb076254e715891d2dd1b1d5cf5041ef822d5b92a93eeb69d13da688d98b",
+     "content_sha256": "058cb676bfd4c2c88c70ce273d94827b08416d15b5c23f0b605ac4699654bce9",
      "id": "mutopia-horetzky19-movement-1",
      "index": 1,
      "note_count": 145,
@@ -479,17 +479,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "eacb4513656e73fc56c53cf1e8fc13f4268d9d511fe2025c6c8fbb58bb26ee81",
-     "id": "mutopia-horetzky2-movement-1",
-     "index": 1,
-     "note_count": 152,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 2. Russian Air."
-    },
-    {
-     "annotation_count": 0,
-     "content_sha256": "4dff9f77810a5a9976db56c2df26e5d49037985bde8dcba4a6ae0bae1623f0cb",
+     "content_sha256": "1127727cdcfad8c7fe6c664eee7def4ae7480af340f57934c73110793c122790",
      "id": "mutopia-horetzky2-movement-2",
      "index": 2,
      "note_count": 132,
@@ -513,7 +503,7 @@
    "movements": [
     {
      "annotation_count": 4,
-     "content_sha256": "5770250ea735e00a834d5247936036c0402dcc39c1d09f3567dcff2fa76dbd92",
+     "content_sha256": "57a39cc59c1c8245141fa88d203ab027fd92ce5e8f46feddc37f456652a24fa2",
      "id": "mutopia-horetzky20-movement-1",
      "index": 1,
      "note_count": 224,
@@ -537,7 +527,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "731a16c51d97206658ee0c57420595b46b8dbcda60b1c343828caa42836101f8",
+     "content_sha256": "2e0627719355cbc5a8a26f54781685f083b82bc9c2ccfa9fa215d9a4417d9f1d",
      "id": "mutopia-horetzky21-movement-1",
      "index": 1,
      "note_count": 128,
@@ -561,7 +551,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "ff7fa2fcc50801a8c936313652390235e3ba6eeb13004dd0d3f975c3f3d262dd",
+     "content_sha256": "3e23412051c1601f0dea032902e222d047c332b1e68e17a22a07649bdfa4b1dd",
      "id": "mutopia-horetzky22-movement-1",
      "index": 1,
      "note_count": 194,
@@ -585,7 +575,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "3cd76bebb5242d51bf00c6ac7b044d0d6df51f74568174e95b2778a37ff8da7b",
+     "content_sha256": "9c6f38e3c0a5d586658f6ffebafcdc2ad8e04d432397a35823d5db983f7e9941",
      "id": "mutopia-horetzky23-movement-1",
      "index": 1,
      "note_count": 174,
@@ -609,7 +599,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "83dc1686703cd4dc915fce6cec2c455168b125392245b954f05b6725f40f6135",
+     "content_sha256": "8f5f7bba58a4d8e0f5ffcdd2f6c69b11dd08abfaa1f111ec7af128644b713f2a",
      "id": "mutopia-horetzky24-movement-1",
      "index": 1,
      "note_count": 89,
@@ -633,7 +623,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "3c41b768c3859b6917912c2669f1674571b544868b88d7403023b1f91fdecc21",
+     "content_sha256": "a94d8077b1c31e76ba3eac461389470ffb534fc533c705f9b43e839a1da6a1ee",
      "id": "mutopia-horetzky25-movement-1",
      "index": 1,
      "note_count": 78,
@@ -657,7 +647,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "d58d3248675b6af70773eb13fdc9ece3b761b17a248c6a954bbcfca3e4c9ae25",
+     "content_sha256": "e4359fd0ead875a6ca97ca340c5e00446e1fa2ed18f72614f9b9b9809935d0e4",
      "id": "mutopia-horetzky26-movement-1",
      "index": 1,
      "note_count": 132,
@@ -681,7 +671,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "5b52ee4772960deb7ba9d2af591665acca06299b14ebe8be9da0bdce4d992e30",
+     "content_sha256": "179aadf23256e4d74a7c9cea59a813e7e721e87b66bbb581ee18df297fe9360a",
      "id": "mutopia-horetzky27-movement-1",
      "index": 1,
      "note_count": 136,
@@ -705,7 +695,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "b168bb6978cac271ede9003ec0dab4f01bbf1a4af131e35de71bc93003cad152",
+     "content_sha256": "d759aaa418392995868022e5e1cd08eae4f5b2ab260e7202ed3dd9c3d341164e",
      "id": "mutopia-horetzky28-movement-1",
      "index": 1,
      "note_count": 96,
@@ -729,7 +719,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "89f4a614bea57c796a890b2714c78fed48927097b6e90d02d30121ec9618ad13",
+     "content_sha256": "b2393cee2000226731e35a8a922f4366be603792430ec40e049998d5df68a921",
      "id": "mutopia-horetzky29-movement-1",
      "index": 1,
      "note_count": 298,
@@ -753,7 +743,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "f5c63f217d483a9d345f8e86ef471c5c8fd9dad92db4989e7e39402093b84128",
+     "content_sha256": "fdb8c7b214691d447f7e4c0574444d7359627df5a294b81f91f89f9e2ac5cdd0",
      "id": "mutopia-horetzky3-movement-1",
      "index": 1,
      "note_count": 263,
@@ -777,7 +767,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "ba6a9296f877f56d601ef7e50c00fb6e3077f6ec3f7cfb9034d84c2507e5f554",
+     "content_sha256": "7f2943061899590cc18e76718a7b43f127feb75be0079bc4d424c39b40bdf65f",
      "id": "mutopia-horetzky30-movement-1",
      "index": 1,
      "note_count": 110,
@@ -801,7 +791,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "af4eaed2134669d99f052dac6d59f801581f3b089529f74b884b59a5285e3d68",
+     "content_sha256": "7dfe88e6ee50bb83393bb007588fe4b50561857c26a6b745375a09a15b434f2c",
      "id": "mutopia-horetzky31-movement-1",
      "index": 1,
      "note_count": 130,
@@ -825,7 +815,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "9bf4ffa100d8716b14a4d7670c4f315019afd69b3aa2a18da5c27b6e9536f656",
+     "content_sha256": "441ddff72b2945334d1a4b94e7910d2e3dcb4435876dc60a50c949b3517d13ff",
      "id": "mutopia-horetzky32-movement-1",
      "index": 1,
      "note_count": 160,
@@ -849,7 +839,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "3fb4e92af51f4314767c125d798035a274facce47a0d861a6a0c8b38750f51a8",
+     "content_sha256": "4662e6640349142e2a8d649cfe9191b20eb450732814acbd4b25f4452d7285f8",
      "id": "mutopia-horetzky33-movement-1",
      "index": 1,
      "note_count": 192,
@@ -866,30 +856,6 @@
   },
   {
    "composer": "Felix Horetzky",
-   "edition": "Mutopia-2007/11/10-1124",
-   "group_id": "mutopia:horetzky34",
-   "license": "PD",
-   "license_url": "",
-   "movements": [
-    {
-     "annotation_count": 0,
-     "content_sha256": "aaac9a648027327b0857cd4bd4bf6e02fc5af806ac9e74e2f9da73423bc25e7a",
-     "id": "mutopia-horetzky34-movement-1",
-     "index": 1,
-     "note_count": 173,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 34. Vive Henri Quatre."
-    }
-   ],
-   "path": "sources/mutopia_expanded/horetzky34.ly",
-   "source_license_declaration": "Public Domain",
-   "source_sha256": "6a72803f1fe7374b4e137e12b830b512f6653d37125541ef1d83d4edea5ca5d9",
-   "source_url": "https://www.mutopiaproject.org/ftp/HoretzkyF/horetzky34/horetzky34.ly",
-   "work_id": "mutopia:horetzky34"
-  },
-  {
-   "composer": "Felix Horetzky",
    "edition": "Mutopia-2007/11/17-1125",
    "group_id": "mutopia:horetzky35",
    "license": "PD",
@@ -897,7 +863,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "90bed90cddb3c512403d7272d05eb35b89eb2b2e458b4a68221bcf06f77e1f91",
+     "content_sha256": "3c0798201baab82512205b455e32d5270a3a8f8fcf59d4986993b43ab38e70b8",
      "id": "mutopia-horetzky35-movement-1",
      "index": 1,
      "note_count": 192,
@@ -921,7 +887,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "026921a3415946689e2584dd885681b66ddba2a5750e9c821a7e667c01823f2d",
+     "content_sha256": "499f870351a2169cbfc272fda5d1b7cc4e78551d11507d518b43f9c402ffaa71",
      "id": "mutopia-horetzky36-movement-1",
      "index": 1,
      "note_count": 161,
@@ -945,7 +911,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "b2f1615c47c25b59951a1f86556252f666c4eafcee119e0f467a31e124990b60",
+     "content_sha256": "77d4b0e7847280e43234dff1b24513c8aeb2db7653a946615564c6ac61010aff",
      "id": "mutopia-horetzky37-movement-1",
      "index": 1,
      "note_count": 84,
@@ -969,7 +935,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "5b84002420b4546ee444259ddc2a9f38c6fdddfe2e0fdfe3ce7730c487ed0541",
+     "content_sha256": "3f2e0905a51edb574ad55a90dad7ac9eb24b1be31929a1bb5ef06226870ccbbe",
      "id": "mutopia-horetzky38-movement-1",
      "index": 1,
      "note_count": 104,
@@ -993,7 +959,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "1f6561587c193d9f6e3f8541e98d0dbd82cca63b8f2310aa9da1a06b432000ac",
+     "content_sha256": "90d354ee47feb658117deb13102d5934c2af2d11d7dce9cb0d3f170dbffb18b1",
      "id": "mutopia-horetzky39-movement-1",
      "index": 1,
      "note_count": 164,
@@ -1017,7 +983,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "438ac473fecfe12627e6f7674c4d9ba76e6ee37526a650987a211d2d2d1f9933",
+     "content_sha256": "42b4f8e8a03d139ee082d58ac4335731db516d627667848ee2feb1ac9c3b5484",
      "id": "mutopia-horetzky4-movement-1",
      "index": 1,
      "note_count": 113,
@@ -1041,7 +1007,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "f38f0dbc10041d96f84b664e549ae0b6b70facb1f51c828407e5cf8f6c72be10",
+     "content_sha256": "da3147f8f9159716bc357d4b84bfd0be95c6563fe663e463ed535e13ab0c68e2",
      "id": "mutopia-horetzky40-movement-1",
      "index": 1,
      "note_count": 121,
@@ -1065,7 +1031,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "526357b9c1129781979a474f467289b7995ff266faf648df101f79b81f8280e3",
+     "content_sha256": "c214ab6ee17a2252fbb49b29380bcfd1100b056f64b24e5d9b8c09458b2100bd",
      "id": "mutopia-horetzky41-movement-1",
      "index": 1,
      "note_count": 124,
@@ -1089,7 +1055,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "5651aafe3cbd5bdb0d42166f15b9145de1c8cf1e388dc136997dd3e4aaae5c73",
+     "content_sha256": "9427598b45d725d83c4ca72100f7cb9c7ac3243c9e39df8b50f2d1ce2c96e0d5",
      "id": "mutopia-horetzky42-movement-1",
      "index": 1,
      "note_count": 153,
@@ -1113,7 +1079,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "bc8a1606e272398fa05f3ac609135f602d4da2a16b70669e1c8170467693d928",
+     "content_sha256": "721b50266e51aa429758381a783b0769382760fc027382e3a4d25dc8c2bfd3e7",
      "id": "mutopia-horetzky43-movement-1",
      "index": 1,
      "note_count": 228,
@@ -1137,7 +1103,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "72c45d075d121fda8d65491b93aac2060b3b13b5064feb35da32cbfcac1a1bc8",
+     "content_sha256": "6f9694be25373a43b62f59b12ef7935f86fb8560e63fac4e6d76773bed5c504d",
      "id": "mutopia-horetzky44-movement-1",
      "index": 1,
      "note_count": 141,
@@ -1161,7 +1127,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "056de874d9c91f82758aca4e888a4631ff2ec1d40a4327a09aa229bd59bdbdb4",
+     "content_sha256": "2435ba958a007931977b4031862fc1a02e7e5aa768c9cec249f76aae4dd366d1",
      "id": "mutopia-horetzky45-movement-1",
      "index": 1,
      "note_count": 280,
@@ -1185,7 +1151,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "88daba22afd5b71d2b51db81ae785ec42b8fda1db92450d8bd42b3ac8bf5e303",
+     "content_sha256": "4975d25ee7028cccc51d6d2edbfdfa9f27709e80feafd64a1bd0533c0949b115",
      "id": "mutopia-horetzky46-movement-1",
      "index": 1,
      "note_count": 201,
@@ -1209,7 +1175,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "c2978f01243c7b94459c473855adc664ef0b4a872dd46154ce909baffa1b200c",
+     "content_sha256": "8ba1871f6f22d4c27fa22e287f4f5b88b9197c9277c85ab27663147b8a1f101d",
      "id": "mutopia-horetzky47-movement-1",
      "index": 1,
      "note_count": 220,
@@ -1233,7 +1199,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "e7efefeb3eea6b9acba8de235a5d5595208dafd02fb01a25f7e3d60523ba0619",
+     "content_sha256": "ccf8a875f6506d5f23435158258ca41781487b0ece159792e06b4503616d6230",
      "id": "mutopia-horetzky48-movement-1",
      "index": 1,
      "note_count": 169,
@@ -1257,7 +1223,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "c7ed4bdbd3efbe7d4abf872ddb1dfafc307524473a041d4852567d66bfcfe7a3",
+     "content_sha256": "3851098f32df636cd174d0fa65ef01534798ade060e23d5bd13afb2d6cc3bb64",
      "id": "mutopia-horetzky49-movement-1",
      "index": 1,
      "note_count": 283,
@@ -1281,7 +1247,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "49194b8b479628464aee1e01c1da57038cd2894265e0ae3b69a2953d57451ea8",
+     "content_sha256": "15f4fc81a7a427dfd1c4cda3e67ed6d4f587bc522b0cc7937b4b0d59303441d1",
      "id": "mutopia-horetzky5-movement-1",
      "index": 1,
      "note_count": 177,
@@ -1305,7 +1271,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "11dadc5a4013327cce8fbdcab3ef53d747002d3fa00251a94a7772393a6c69d0",
+     "content_sha256": "69dfbd32db71e523b7dbb9a072bc2e4a77a3914b6f20d5747678cdff5bf52206",
      "id": "mutopia-horetzky50-movement-1",
      "index": 1,
      "note_count": 148,
@@ -1353,7 +1319,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "9652d58c0a8d3403ed1d0ee349984e4b5ed93217da680cf12669b4b533d5a924",
+     "content_sha256": "af45479cc465aab4449d552a05efe77b51572365122efe29812b78a9f4e9dbd2",
      "id": "mutopia-horetzky52-movement-1",
      "index": 1,
      "note_count": 113,
@@ -1377,7 +1343,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "de72949f667a3dc7d726dfd0923229ae784b3c36bb360a7708892e6d98573b51",
+     "content_sha256": "50dd2e8899e07d646ed2fb8f26c35f3047ae153b8dababe8a601863c66bd2897",
      "id": "mutopia-horetzky53-movement-1",
      "index": 1,
      "note_count": 279,
@@ -1401,7 +1367,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "d0c09dc3059460a82055c6cb5852ad58657d961f8a6223c5bade429e6151ccef",
+     "content_sha256": "6c1b6acf0ebd6345025680ece76435372e631225ed4e711190a3a6ac33d7f1b9",
      "id": "mutopia-horetzky54-movement-1",
      "index": 1,
      "note_count": 173,
@@ -1425,7 +1391,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "b1b2d693298c4d32c7113c0b44ea34cd9d0dc3d87987dd02203a7cf19ca06645",
+     "content_sha256": "48354b8461f693d5d128d5fe6c3ef71e5c894c38245f39cd1d13016fcd436135",
      "id": "mutopia-horetzky55-movement-1",
      "index": 1,
      "note_count": 144,
@@ -1449,7 +1415,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "08faaf82b1f0bcec55777f9c27767c2b5b892d57446e44e2ee883b2de79e79e8",
+     "content_sha256": "2201af98f6a93d4c45cf1e8e093ac1066eea60fa10ba8789da2a81dff51b01c3",
      "id": "mutopia-horetzky56-movement-1",
      "index": 1,
      "note_count": 235,
@@ -1473,7 +1439,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "1eec478285f8471b70c0ddb4e7236fdc9cabfe1cc23b89dd3fcba133b227e310",
+     "content_sha256": "0851fda0865780d879cd5e8b2d553b9fb387d97e018948c430f8d903c7400de8",
      "id": "mutopia-horetzky57-movement-1",
      "index": 1,
      "note_count": 115,
@@ -1497,7 +1463,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "251f9346860abf6a6da68dd4fc44a7211625f425ccdac4c433dea33d8dd603d3",
+     "content_sha256": "5912a322c88dd50e6ea4f2ddbf81e5e53e46564e101e768c66712b63aa7c582c",
      "id": "mutopia-horetzky58-movement-1",
      "index": 1,
      "note_count": 154,
@@ -1521,7 +1487,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "7d12414554da2f678d06fee7a11a7bcba631e66945c214fea0390aafebf8077e",
+     "content_sha256": "77642edc3926d3ade6a7d45528444175aaa84104726133960da3799759111d05",
      "id": "mutopia-horetzky59-movement-1",
      "index": 1,
      "note_count": 233,
@@ -1545,7 +1511,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "5bccdbcefcca8f332e98e447479cc048f9c77cb0b8e2bb6025220d823b2c357f",
+     "content_sha256": "85321129b55e9fbb540bcb80ed7dde39379e8fc50c7800cfe50691f804f2a0bf",
      "id": "mutopia-horetzky6-movement-1",
      "index": 1,
      "note_count": 143,
@@ -1569,7 +1535,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "fae82b26a800cda789c320f87e80e9c0948fdf639e9353e71608d9abdd627017",
+     "content_sha256": "4fd07569f6a2e59ff69856592500cb6046bb49e4ed0dec60e0606e72239ce82a",
      "id": "mutopia-horetzky60-movement-1",
      "index": 1,
      "note_count": 407,
@@ -1593,7 +1559,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "abdd328e2f34b1bf8ae7ff3ae2b9e4a13c9e8bb19aa5b7f97709d80c3a67584c",
+     "content_sha256": "64782927450c6a78dbbc930cfb9d436ccb43b0aca8feda90ae59a7d8d6106cfe",
      "id": "mutopia-horetzky7-movement-1",
      "index": 1,
      "note_count": 229,
@@ -1617,7 +1583,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "6db3d65e72f483aa41353ca65d1819cab528cd7258ad965e755c581a5913982b",
+     "content_sha256": "343d0268ea4dc8243b6da9749c18555b87e0ab7d1458319d326580fadc4e6678",
      "id": "mutopia-horetzky8-movement-1",
      "index": 1,
      "note_count": 103,
@@ -1641,7 +1607,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "170075ead263605d95d242baae617f80b09e661f7d60a013f74e9dd3e132541f",
+     "content_sha256": "33e207bd56cff574b42b56c087682bdd138693da449f3699867d33caffc8a0f0",
      "id": "mutopia-horetzky9-movement-1",
      "index": 1,
      "note_count": 142,
@@ -1665,7 +1631,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "f336aa856ab5c5c62a7e059a5018fce8e937cdd92c410c1006c6c801372acefd",
+     "content_sha256": "e66e2a9b2eb54c6a0349a24f47d661c63ce89aad7528c15994a3ec49f40accca",
      "id": "mutopia-knjze12monfera-movement-1",
      "index": 1,
      "note_count": 140,
@@ -1689,7 +1655,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "068c7ab98f8d3619e06391ced2fd3f124b22c5b6fe85af6872943866e4bd2e3c",
+     "content_sha256": "9f7a42ec1cbfab619b1503e700f796f89bdca21111ee6bec98af5de2598c845e",
      "id": "mutopia-knjze12monferb-movement-1",
      "index": 1,
      "note_count": 176,
@@ -1713,7 +1679,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "a1dc48a5a3ae60d2ff5bb6b84a39fb20422f55d9c684ed03c0b195ba90e45d51",
+     "content_sha256": "805738304a45a626dd26813f0d2efa8b54e83f9a879c39a43665d7c702b780de",
      "id": "mutopia-knjze12monferc-movement-1",
      "index": 1,
      "note_count": 166,
@@ -1737,7 +1703,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "8005549a5ca93c7c8864cf3af83904ffa1c8a5f2bbd36c851cb50180a29245d6",
+     "content_sha256": "6d51c3b26bc046b70d28d450c2ff913772de31ec060016c935d62f06c6d997a2",
      "id": "mutopia-knjze12monferd-movement-1",
      "index": 1,
      "note_count": 150,
@@ -1761,7 +1727,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "062b0f20b0e8eb995015a2b1cb801633d623abeeade1640ca273eca11eb3a17f",
+     "content_sha256": "9edd91d99e0bdbe178667ba8b2df8aa050f3696cc078de2926095610dcfd2758",
      "id": "mutopia-knjze12monfere-movement-1",
      "index": 1,
      "note_count": 164,
@@ -1785,7 +1751,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "13f35fd5c9412058124476c3d2f3b2d1e80f648eccdf1ad63a67156aeb288c55",
+     "content_sha256": "5090b844a8e1a2160201e17d17b5cd5d6080a4741f23607ea70e55683cdd8f22",
      "id": "mutopia-knjze12monferf-movement-1",
      "index": 1,
      "note_count": 160,
@@ -1809,7 +1775,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "8994920a44ef7d20592f7b9905d343091413f12e2d894668774575f55e582338",
+     "content_sha256": "e5cc7d3d4b15111ed8546fd774fac2d46fb23ea80a0bbacba57dfbdc4cfab5a0",
      "id": "mutopia-knjze12monferg-movement-1",
      "index": 1,
      "note_count": 177,
@@ -1833,7 +1799,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "76c054b25d90cac530e10b178b592ba13460de4ef7be375377f26327967add9f",
+     "content_sha256": "42810a43ce91ca25fda675b37f72d3222ff276ea5e1a66fe5869360a84fe1c9b",
      "id": "mutopia-knjze12monferh-movement-1",
      "index": 1,
      "note_count": 185,
@@ -1857,7 +1823,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "52de40e90ab5c26de050b1651627bf75ef3af8e1f703bb350aae74e9ad55eb88",
+     "content_sha256": "0d8617f939cc25db5c060d4af6a4212a4202535d316917a42a89ed9a3108cfe6",
      "id": "mutopia-knjze12monferi-movement-1",
      "index": 1,
      "note_count": 173,
@@ -1881,7 +1847,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "2d8fe30e9c49ae938218b34ede28ff501e035bd8ebacaca9442750bd128ec03b",
+     "content_sha256": "4dae748eec5952a2d2a0ff86eb3256f846281e8b637a808feb7c4c4aadafea7f",
      "id": "mutopia-knjze12monferj-movement-1",
      "index": 1,
      "note_count": 164,
@@ -1905,7 +1871,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "823dc4761934cf71e2a01c5d37bf519ed33959adba5b12b26b1fd554acd33559",
+     "content_sha256": "fe43899e263a71ef43942ac04a781168d3c14d556525b6c91561e1be2f23757c",
      "id": "mutopia-knjze12monferk-movement-1",
      "index": 1,
      "note_count": 174,
@@ -1929,7 +1895,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "09f3ce33632d4bf2aa01717e34ab3ef45d83f628965d66ac23af011441ea2e2b",
+     "content_sha256": "3eaee02f2be7ae8f832acd5bd97557fe648765c86c71244bd0cbbac9ae063b1f",
      "id": "mutopia-knjze12monferl-movement-1",
      "index": 1,
      "note_count": 170,
@@ -1953,7 +1919,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "13a21d57fc6fc261c4bc2580e17ddd482c5b397425bbff3bdf092f55da771048",
+     "content_sha256": "8ce3a339e6c6deb3b0cb104a0a1387271c05678269c5385b9d160f8acb98afc2",
      "id": "mutopia-matiegka2-movement-1",
      "index": 1,
      "note_count": 967,
@@ -1977,7 +1943,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "7d2835c0ec73e412f35e918f7f78db4afecdedfce9c304811d0c0506119179b9",
+     "content_sha256": "73acf1fb189f1815f29af2a2c4ca34ffe25c60f8b099099d53162d5477b8bdf0",
      "id": "mutopia-matiegka3-movement-1",
      "index": 1,
      "note_count": 690,
@@ -2001,7 +1967,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "a3f06a2b4b705fbf2e161f71e2173ce9c381f1dab13637b48349eaec22caaff4",
+     "content_sha256": "ac81fe9820a43a190a45293df2f4770c8e023c52d18d7495534494e2724dadfb",
      "id": "mutopia-matiegka4-movement-1",
      "index": 1,
      "note_count": 1046,
@@ -2015,30 +1981,6 @@
    "source_sha256": "95c7890520b991c0d34159997e738c810aa78a37c68dce5698b48d04be23b430",
    "source_url": "https://www.mutopiaproject.org/ftp/MatiegkaWT/Matiegka4/Matiegka4.ly",
    "work_id": "mutopia:matiegka4"
-  },
-  {
-   "composer": "Wenzel Thomas Matiegka",
-   "edition": "Mutopia-2007/11/04-1087",
-   "group_id": "mutopia:matiegka5",
-   "license": "PD",
-   "license_url": "",
-   "movements": [
-    {
-     "annotation_count": 0,
-     "content_sha256": "a9fe4851808f8fec2a92c7418666457427a54902070320668c0736ba36677905",
-     "id": "mutopia-matiegka5-movement-1",
-     "index": 1,
-     "note_count": 1559,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "N\u00ba. 5. Siciliano."
-    }
-   ],
-   "path": "sources/mutopia_expanded/Matiegka5.ly",
-   "source_license_declaration": "Public Domain",
-   "source_sha256": "36e79d82cb703af563f72b9bbebed37f965603b83faa136c42c94b1c77ada44a",
-   "source_url": "https://www.mutopiaproject.org/ftp/MatiegkaWT/Matiegka5/Matiegka5.ly",
-   "work_id": "mutopia:matiegka5"
   },
   {
    "composer": "OlsonJJ",
@@ -2073,7 +2015,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "2b2dca3a1de57b7d6e807b5bb198b831df16d2fb51aeab8d82d9e05bdcef4a1f",
+     "content_sha256": "401ef112ea471fb7e9c32dd5413a13e88e7086cf8c08cdda306f8a790594aacc",
      "id": "mutopia-sixstudiesa-movement-1",
      "index": 1,
      "note_count": 508,
@@ -2097,7 +2039,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "7a0603a011c6183226bd4b8ac09946c17543a86f3730e7b51645948777308617",
+     "content_sha256": "ef641e85c2a347e9be1961521f710b85cda353ab65b530bc4a5f258663e001e9",
      "id": "mutopia-sixstudiesb-movement-1",
      "index": 1,
      "note_count": 357,
@@ -2145,7 +2087,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "5dae3f14b231c5871fdb706fe52464203af4da1ee1b9c700038eb47a4743e49b",
+     "content_sha256": "a8a31a8ad59e6dc78a4c6c0eace163b3055dfb5ed9d151d5a81dfcb8b8b1f74c",
      "id": "mutopia-sixstudiesd-movement-1",
      "index": 1,
      "note_count": 306,
@@ -2193,7 +2135,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "5fa0e47f36c50ec245ba549097e97b8326741577f6ceafc999bcce88eba37c90",
+     "content_sha256": "74fc82fbe21ee703c2bda58c6bda0aeb5fac88b4f990163b6603434db5d59cc8",
      "id": "mutopia-spanishfandango1882",
      "index": 1,
      "note_count": 870,

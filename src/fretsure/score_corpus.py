@@ -224,14 +224,41 @@ def _merge_ties(notes: list[_ParsedNote]) -> list[_ParsedNote]:
 def _collapse_notes(
     parsed: list[_ParsedNote],
 ) -> tuple[tuple[Note, ...], tuple[FingeringAnnotation, ...]]:
+    """Assign each note the role the rest of the system will hold it to.
+
+    ``bass`` is a single line, not a bucket.  It used to be one: every note
+    outside the engraver's primary voice was called bass, so a score written as
+    three or four LilyPond voices had its inner parts labelled as the bass line.
+    That put chords in a monophonic role at 2,867 onsets across two thirds of
+    the corpus, and it cost where the label is load-bearing: ``bass_preserved``
+    scored recall over a set that was not the bass, and the sustain model held
+    inner voices to the bass floor of half their written value when ``harmony``
+    would have let them go.  That floor exists so a chord's root still sounds
+    when the chord arrives, which quietly assumed the labelled bass was the
+    lowest note.
+
+    The correction is local: among the notes outside the primary voice at one
+    onset, the lowest is the bass and the others are inner voices.  It stops
+    short of re-deriving the melody from pitch alone, which looks tempting and
+    is wrong -- 12,018 onsets carry no melody at all because a held melody note
+    spans them while only the accompaniment attacks, and calling the highest
+    note there "melody" would invent a line the engraver did not write and pin
+    it to its full value.
+    """
+
     if not parsed:
         raise ValueError("score contains no positive-duration pitched notes")
     primary_voice = min((note.voice_id for note in parsed), key=_voice_key)
     primary_highest: dict[Fraction, int] = {}
+    lowest_secondary: dict[Fraction, int] = {}
     for note in parsed:
         if note.voice_id == primary_voice:
             primary_highest[note.onset] = max(
                 primary_highest.get(note.onset, note.pitch), note.pitch
+            )
+        else:
+            lowest_secondary[note.onset] = min(
+                lowest_secondary.get(note.onset, note.pitch), note.pitch
             )
 
     grouped: dict[tuple[Fraction, int], list[_ParsedNote]] = {}
@@ -243,7 +270,9 @@ def _collapse_notes(
     for (onset, pitch), members in sorted(grouped.items()):
         duration = max(member.duration for member in members)
         if any(member.voice_id != primary_voice for member in members):
-            voice: VoiceRole = "bass"
+            voice: VoiceRole = (
+                "bass" if pitch == lowest_secondary.get(onset) else "harmony"
+            )
         elif pitch == primary_highest.get(onset):
             voice = "melody"
         else:
@@ -260,12 +289,46 @@ def _collapse_notes(
     return tuple(notes), tuple(annotations)
 
 
+def _reject_unrepresentable_onsets(notes: tuple[Note, ...], strings: int) -> None:
+    """Refuse a parse that asks for more simultaneous attacks than there are strings.
+
+    A solo guitar score cannot strike eight pitches at once, so a row that says
+    it does is not a faithful transcription however it came to say so.  Eight
+    corpus pieces did, having been counted for a while as music that is
+    physically impossible -- which is the wrong reading: they are published
+    studies that guitarists play, and it is the import that is wrong.
+
+    ``carcassi-op60-06`` is the clearest of them.  Its source ends
+    ``<c, aes f>2`` over ``<f, c f,>2``, then ``<e c>2`` over ``<g e c>2`` --
+    at most six pitches, then five.  The parse produced two and then eight, so
+    the second-to-last bar's chord landed on the final onset.  The mechanism is
+    not established: spacer rests do not predict which pieces are affected (six
+    of eight, against a base rate of just over half), and comparing parsed
+    length against engraved barlines is swamped by repeat expansion.  The most
+    likely site is the heuristic above that repairs a missing ``<backup>``, since
+    it only fires when the preceding voice filled its bar exactly.
+
+    Until that is settled, refusing the parse is the honest handling.  Scoring a
+    solver against a score no instrument can play measures nothing, and silently
+    keeping it inflates the refusal count with failures that belong here.
+    """
+
+    by_onset: dict[Fraction, int] = {}
+    for note in notes:
+        by_onset[note.onset] = by_onset.get(note.onset, 0) + 1
+    worst = max(by_onset.items(), key=lambda item: item[1], default=None)
+    if worst is not None and worst[1] > strings:
+        raise ValueError(
+            f"onset {worst[0]} carries {worst[1]} simultaneous attacks on a "
+            f"{strings}-string instrument, so the parse does not describe the score"
+        )
+
+
 def parse_score_corpus_source(
     raw: bytes,
     filename: str,
     metadata: ScoreCorpusMetadata,
 ) -> ScoreCorpusExample:
-    """Parse one reviewed MusicXML/MXL edition into the corpus contract."""
 
     root_bytes, root_member = _score_root(raw, filename)
     try:
@@ -387,6 +450,7 @@ def parse_score_corpus_source(
             measure_start = max(measure_start + nominal_length, measure_max)
 
     notes, annotations = _collapse_notes(_merge_ties(parsed))
+    _reject_unrepresentable_onsets(notes, len(metadata.tuning))
     assert time_signature is not None
     resolved_tempo = 90.0 if tempo is None else float(tempo)
     if resolved_tempo <= 0:

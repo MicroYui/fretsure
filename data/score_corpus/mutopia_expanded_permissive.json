@@ -13520,7 +13520,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         }
       ],
       "root_member": null,
@@ -15712,3486 +15712,6 @@
       "annotations": [],
       "capo": 0,
       "composer": "Mauro Giuliani",
-      "edition": "Mutopia-2008/03/05-1330",
-      "grade": null,
-      "group_id": "mutopia:giuliani-op50n02",
-      "id": "mutopia-giuliani-op50n02",
-      "license": "CC-BY-3.0",
-      "notes": [
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            0,
-            1
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            1,
-            2
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            1,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            1,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            3,
-            2
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            3,
-            2
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            2,
-            1
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            2,
-            1
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            5,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            5,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            3,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            3,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            7,
-            2
-          ],
-          "pitch": 59,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            7,
-            2
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            9,
-            2
-          ],
-          "pitch": 55,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            9,
-            2
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            5,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            5,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            11,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            11,
-            2
-          ],
-          "pitch": 69,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            6,
-            1
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            6,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            7,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            7,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            15,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            8,
-            1
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            8,
-            1
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            17,
-            2
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            9,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            9,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            19,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            10,
-            1
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            10,
-            1
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            21,
-            2
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            21,
-            2
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            11,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            11,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            23,
-            2
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            23,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            12,
-            1
-          ],
-          "pitch": 59,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            12,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            25,
-            2
-          ],
-          "pitch": 55,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            13,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            13,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            27,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            27,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            14,
-            1
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            14,
-            1
-          ],
-          "pitch": 69,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            29,
-            2
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            29,
-            2
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            15,
-            1
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            15,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            31,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            16,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            16,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            33,
-            2
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            17,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            17,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            35,
-            2
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            35,
-            2
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            18,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            18,
-            1
-          ],
-          "pitch": 79,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            37,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            19,
-            1
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            19,
-            1
-          ],
-          "pitch": 77,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            39,
-            2
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            39,
-            2
-          ],
-          "pitch": 77,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            20,
-            1
-          ],
-          "pitch": 59,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            20,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            41,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            21,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            21,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            43,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            43,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            22,
-            1
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            22,
-            1
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            45,
-            2
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            45,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            23,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            23,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            47,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            24,
-            1
-          ],
-          "pitch": 59,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            24,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            49,
-            2
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            25,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            25,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            51,
-            2
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            51,
-            2
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            26,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            26,
-            1
-          ],
-          "pitch": 79,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            53,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            27,
-            1
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            27,
-            1
-          ],
-          "pitch": 77,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            55,
-            2
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            55,
-            2
-          ],
-          "pitch": 77,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            28,
-            1
-          ],
-          "pitch": 59,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            28,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            57,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            29,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            29,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            59,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            59,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            30,
-            1
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            30,
-            1
-          ],
-          "pitch": 69,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            61,
-            2
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            61,
-            2
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            31,
-            1
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            31,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            63,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            32,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            32,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            65,
-            2
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            33,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            33,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            133,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            67,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            67,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            135,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            34,
-            1
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            34,
-            1
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            137,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            69,
-            2
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            139,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            35,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            35,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            141,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            71,
-            2
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            71,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            143,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            36,
-            1
-          ],
-          "pitch": 59,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            36,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            145,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            73,
-            2
-          ],
-          "pitch": 55,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            147,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            37,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            37,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            149,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            75,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            75,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            151,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            38,
-            1
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            153,
-            4
-          ],
-          "pitch": 69,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            77,
-            2
-          ],
-          "pitch": 77,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            155,
-            4
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            39,
-            1
-          ],
-          "pitch": 55,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            157,
-            4
-          ],
-          "pitch": 64,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            79,
-            2
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            159,
-            4
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            40,
-            1
-          ],
-          "pitch": 55,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            40,
-            1
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            161,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            81,
-            2
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            163,
-            4
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            41,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            41,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            165,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            83,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            83,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            167,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            42,
-            1
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            42,
-            1
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            169,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            85,
-            2
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            171,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            43,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            43,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            173,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            87,
-            2
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            87,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            175,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            44,
-            1
-          ],
-          "pitch": 59,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            44,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            177,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            89,
-            2
-          ],
-          "pitch": 55,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            179,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            45,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            45,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            181,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            91,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            91,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            183,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            46,
-            1
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            46,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            185,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            93,
-            2
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            93,
-            2
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            187,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            47,
-            1
-          ],
-          "pitch": 55,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            189,
-            4
-          ],
-          "pitch": 65,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            95,
-            2
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            191,
-            4
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            48,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            48,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            48,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            193,
-            4
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            97,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            195,
-            4
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            49,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            49,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            197,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            99,
-            2
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            99,
-            2
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            199,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            50,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            50,
-            1
-          ],
-          "pitch": 79,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            201,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            101,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            203,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            51,
-            1
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            51,
-            1
-          ],
-          "pitch": 77,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            205,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            103,
-            2
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            103,
-            2
-          ],
-          "pitch": 77,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            207,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            52,
-            1
-          ],
-          "pitch": 59,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            52,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            209,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            105,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            211,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            53,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            53,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            213,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            107,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            107,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            215,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            54,
-            1
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            54,
-            1
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            217,
-            4
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            109,
-            2
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            109,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            219,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            55,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            221,
-            4
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            111,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            223,
-            4
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            56,
-            1
-          ],
-          "pitch": 59,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            56,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            225,
-            4
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            113,
-            2
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            227,
-            4
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            57,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            57,
-            1
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            229,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            115,
-            2
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            115,
-            2
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            231,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            58,
-            1
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            58,
-            1
-          ],
-          "pitch": 79,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            233,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            117,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            235,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            59,
-            1
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            59,
-            1
-          ],
-          "pitch": 77,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            237,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            119,
-            2
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            119,
-            2
-          ],
-          "pitch": 77,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            239,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            60,
-            1
-          ],
-          "pitch": 59,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            60,
-            1
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            241,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            121,
-            2
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            243,
-            4
-          ],
-          "pitch": 67,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            61,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            245,
-            4
-          ],
-          "pitch": 76,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            123,
-            2
-          ],
-          "pitch": 64,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            247,
-            4
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            62,
-            1
-          ],
-          "pitch": 65,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            249,
-            4
-          ],
-          "pitch": 69,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            125,
-            2
-          ],
-          "pitch": 62,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            251,
-            4
-          ],
-          "pitch": 71,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            63,
-            1
-          ],
-          "pitch": 55,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            253,
-            4
-          ],
-          "pitch": 65,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            127,
-            2
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            4
-          ],
-          "onset": [
-            255,
-            4
-          ],
-          "pitch": 74,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            64,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            64,
-            1
-          ],
-          "pitch": 64,
-          "voice": "harmony"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            64,
-            1
-          ],
-          "pitch": 67,
-          "voice": "harmony"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            64,
-            1
-          ],
-          "pitch": 72,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            129,
-            2
-          ],
-          "pitch": 55,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            129,
-            2
-          ],
-          "pitch": 67,
-          "voice": "melody"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            65,
-            1
-          ],
-          "pitch": 60,
-          "voice": "bass"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            65,
-            1
-          ],
-          "pitch": 64,
-          "voice": "harmony"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            65,
-            1
-          ],
-          "pitch": 67,
-          "voice": "harmony"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            65,
-            1
-          ],
-          "pitch": 71,
-          "voice": "harmony"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            65,
-            1
-          ],
-          "pitch": 72,
-          "voice": "harmony"
-        },
-        {
-          "duration": [
-            1,
-            1
-          ],
-          "onset": [
-            65,
-            1
-          ],
-          "pitch": 76,
-          "voice": "harmony"
-        },
-        {
-          "duration": [
-            1,
-            2
-          ],
-          "onset": [
-            65,
-            1
-          ],
-          "pitch": 79,
-          "voice": "melody"
-        }
-      ],
-      "root_member": null,
-      "root_sha256": "ac44e6c79ee1cd160083bad636ccdbb31f3664b2a8b9c81cc27527beca09f6ff",
-      "source_filename": "giuliani-op50n02.ly",
-      "source_sha256": "7c1840dc7c0b3af4f011f3e6350b099849d8b6d3b6c0c2b742c16628e1c7dddb",
-      "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O50/giuliani-op50n02/giuliani-op50n02.ly",
-      "split": "train",
-      "styles": [
-        "classical"
-      ],
-      "tempo_bpm": 90.0,
-      "time_signature": [
-        2,
-        4
-      ],
-      "title": "giuliani-op50n02",
-      "tuning": [
-        40,
-        45,
-        50,
-        55,
-        59,
-        64
-      ],
-      "work_id": "mutopia:giuliani-op50n02"
-    },
-    {
-      "annotations": [],
-      "capo": 0,
-      "composer": "Mauro Giuliani",
       "edition": "Mutopia-2008/03/05-1331",
       "grade": null,
       "group_id": "mutopia:giuliani-op50n03",
@@ -19220,7 +15740,7 @@
             1
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -19280,7 +15800,7 @@
             1
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -19316,7 +15836,7 @@
             1
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -19328,7 +15848,7 @@
             1
           ],
           "pitch": 74,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -19388,7 +15908,7 @@
             1
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -19424,7 +15944,7 @@
             1
           ],
           "pitch": 74,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -21320,7 +17840,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -31856,7 +28376,7 @@
             2
           ],
           "pitch": 66,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -32936,7 +29456,7 @@
             1
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -35360,7 +31880,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -35372,7 +31892,7 @@
             1
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         }
       ],
       "root_member": null,
@@ -38204,7 +34724,7 @@
             2
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -42680,7 +39200,7 @@
             1
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -46592,7 +43112,7 @@
             1
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -47708,7 +44228,7 @@
             1
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -52736,7 +49256,7 @@
             1
           ],
           "pitch": 70,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -52772,7 +49292,7 @@
             2
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -52832,7 +49352,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -52868,7 +49388,7 @@
             1
           ],
           "pitch": 66,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -53984,7 +50504,7 @@
             1
           ],
           "pitch": 57,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -54044,7 +50564,7 @@
             2
           ],
           "pitch": 57,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -54128,7 +50648,7 @@
             2
           ],
           "pitch": 57,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -56348,7 +52868,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -56360,7 +52880,7 @@
             1
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -56996,7 +53516,7 @@
             4
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -58760,7 +55280,7 @@
             2
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -58772,7 +55292,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -64964,7 +61484,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65048,7 +61568,7 @@
             2
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65060,7 +61580,7 @@
             2
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65144,7 +61664,7 @@
             1
           ],
           "pitch": 71,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65156,7 +61676,7 @@
             1
           ],
           "pitch": 74,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65204,7 +61724,7 @@
             2
           ],
           "pitch": 81,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65216,7 +61736,7 @@
             2
           ],
           "pitch": 84,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65420,7 +61940,7 @@
             2
           ],
           "pitch": 80,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65780,7 +62300,7 @@
             2
           ],
           "pitch": 76,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65852,7 +62372,7 @@
             1
           ],
           "pitch": 75,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65912,7 +62432,7 @@
             2
           ],
           "pitch": 76,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -65924,7 +62444,7 @@
             2
           ],
           "pitch": 81,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66152,7 +62672,7 @@
             2
           ],
           "pitch": 75,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66380,7 +62900,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66392,7 +62912,7 @@
             2
           ],
           "pitch": 71,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66428,7 +62948,7 @@
             1
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66440,7 +62960,7 @@
             1
           ],
           "pitch": 71,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66476,7 +62996,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66488,7 +63008,7 @@
             2
           ],
           "pitch": 71,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66524,7 +63044,7 @@
             1
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66572,7 +63092,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66656,7 +63176,7 @@
             1
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66716,7 +63236,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -66944,7 +63464,7 @@
             2
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -67052,7 +63572,7 @@
             2
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -67160,7 +63680,7 @@
             2
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -67388,7 +63908,7 @@
             2
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -67424,7 +63944,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -67484,7 +64004,7 @@
             2
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -67580,7 +64100,7 @@
             1
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -68840,7 +65360,7 @@
             1
           ],
           "pitch": 73,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -68900,7 +65420,7 @@
             1
           ],
           "pitch": 71,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -68912,7 +65432,7 @@
             1
           ],
           "pitch": 73,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -69788,7 +66308,7 @@
             1
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -70796,7 +67316,7 @@
             2
           ],
           "pitch": 73,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -70832,7 +67352,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -70844,7 +67364,7 @@
             1
           ],
           "pitch": 73,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -70904,7 +67424,7 @@
             1
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -70916,7 +67436,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -70928,7 +67448,7 @@
             1
           ],
           "pitch": 73,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -71900,7 +68420,7 @@
             2
           ],
           "pitch": 66,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -72992,7 +69512,7 @@
             1
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -73028,7 +69548,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -73076,7 +69596,7 @@
             2
           ],
           "pitch": 66,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -73304,7 +69824,7 @@
             2
           ],
           "pitch": 76,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -73328,7 +69848,7 @@
             2
           ],
           "pitch": 79,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -74276,7 +70796,7 @@
             2
           ],
           "pitch": 71,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -74288,7 +70808,7 @@
             2
           ],
           "pitch": 73,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -74456,7 +70976,7 @@
             2
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -74468,7 +70988,7 @@
             2
           ],
           "pitch": 70,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -75812,7 +72332,7 @@
             2
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -75896,7 +72416,7 @@
             1
           ],
           "pitch": 66,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -75920,7 +72440,7 @@
             2
           ],
           "pitch": 66,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -75992,7 +72512,7 @@
             2
           ],
           "pitch": 66,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -80097,7 +76617,7 @@
             4
           ],
           "pitch": 74,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -80109,7 +76629,7 @@
             4
           ],
           "pitch": 76,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -80181,7 +76701,7 @@
             4
           ],
           "pitch": 66,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -80229,7 +76749,7 @@
             4
           ],
           "pitch": 66,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -80493,7 +77013,7 @@
             1
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -80925,7 +77445,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -81549,7 +78069,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -81681,7 +78201,7 @@
             1
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -83337,7 +79857,7 @@
             1
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -83349,7 +79869,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -84309,7 +80829,7 @@
             1
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -84321,7 +80841,7 @@
             1
           ],
           "pitch": 65,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -84381,7 +80901,7 @@
             2
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -84489,7 +81009,7 @@
             1
           ],
           "pitch": 65,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -84585,7 +81105,7 @@
             1
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -84669,7 +81189,7 @@
             1
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -84765,7 +81285,7 @@
             1
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -84897,7 +81417,7 @@
             1
           ],
           "pitch": 65,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -84993,7 +81513,7 @@
             1
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -85125,7 +81645,7 @@
             1
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -86061,7 +82581,7 @@
             2
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -86073,7 +82593,7 @@
             2
           ],
           "pitch": 65,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -86133,7 +82653,7 @@
             1
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -91365,7 +87885,7 @@
             1
           ],
           "pitch": 76,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -91413,7 +87933,7 @@
             1
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -92997,7 +89517,7 @@
             4
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -93045,7 +89565,7 @@
             4
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -93093,7 +89613,7 @@
             4
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -94245,7 +90765,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -94725,7 +91245,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -94737,7 +91257,7 @@
             2
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -94749,7 +91269,7 @@
             2
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -94761,7 +91281,7 @@
             2
           ],
           "pitch": 74,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -94881,7 +91401,7 @@
             2
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -94893,7 +91413,7 @@
             2
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -94941,7 +91461,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -94977,7 +91497,7 @@
             2
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -95289,7 +91809,7 @@
             2
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -95361,7 +91881,7 @@
             4
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -95409,7 +91929,7 @@
             4
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -96465,7 +92985,7 @@
             1
           ],
           "pitch": 76,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -99681,7 +96201,7 @@
             1
           ],
           "pitch": 71,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -100701,7 +97221,7 @@
             1
           ],
           "pitch": 61,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -100773,7 +97293,7 @@
             1
           ],
           "pitch": 61,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [

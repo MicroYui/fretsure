@@ -453,7 +453,7 @@
             1
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -525,7 +525,7 @@
             1
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -561,7 +561,7 @@
             1
           ],
           "pitch": 57,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -645,7 +645,7 @@
             1
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -717,7 +717,7 @@
             1
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -753,7 +753,7 @@
             1
           ],
           "pitch": 57,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -837,7 +837,7 @@
             1
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -921,7 +921,7 @@
             1
           ],
           "pitch": 55,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -993,7 +993,7 @@
             1
           ],
           "pitch": 55,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -1029,7 +1029,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -1197,7 +1197,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -1209,7 +1209,7 @@
             1
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -1329,7 +1329,7 @@
             1
           ],
           "pitch": 55,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -1341,7 +1341,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -1425,7 +1425,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -1521,7 +1521,7 @@
             1
           ],
           "pitch": 55,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -1593,7 +1593,7 @@
             1
           ],
           "pitch": 55,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -1629,7 +1629,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -1701,7 +1701,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -2109,7 +2109,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -2121,7 +2121,7 @@
             1
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -3190,7 +3190,7 @@
             1
           ],
           "pitch": 52,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -3250,7 +3250,7 @@
             1
           ],
           "pitch": 57,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -3346,7 +3346,7 @@
             1
           ],
           "pitch": 55,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -3502,7 +3502,7 @@
             1
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -3646,7 +3646,7 @@
             1
           ],
           "pitch": 57,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -3814,7 +3814,7 @@
             1
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -3874,7 +3874,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -3934,7 +3934,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -3994,7 +3994,7 @@
             1
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -4054,7 +4054,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -4090,7 +4090,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -4162,7 +4162,7 @@
             1
           ],
           "pitch": 58,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -4258,7 +4258,7 @@
             1
           ],
           "pitch": 59,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -4294,7 +4294,7 @@
             1
           ],
           "pitch": 55,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -7895,7 +7895,7 @@
             1
           ],
           "pitch": 43,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -12553,7 +12553,7 @@
             3
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -12613,7 +12613,7 @@
             3
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -12697,7 +12697,7 @@
             3
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -12757,7 +12757,7 @@
             3
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -12889,7 +12889,7 @@
             3
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -12901,7 +12901,7 @@
             3
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -12961,7 +12961,7 @@
             3
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13057,7 +13057,7 @@
             3
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13069,7 +13069,7 @@
             3
           ],
           "pitch": 65,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13261,7 +13261,7 @@
             3
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13429,7 +13429,7 @@
             3
           ],
           "pitch": 61,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13441,7 +13441,7 @@
             3
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13465,7 +13465,7 @@
             3
           ],
           "pitch": 56,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13477,7 +13477,7 @@
             3
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13489,7 +13489,7 @@
             3
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13537,7 +13537,7 @@
             3
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13609,7 +13609,7 @@
             3
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13621,7 +13621,7 @@
             3
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13669,7 +13669,7 @@
             3
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13753,7 +13753,7 @@
             3
           ],
           "pitch": 57,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13765,7 +13765,7 @@
             3
           ],
           "pitch": 67,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -13873,7 +13873,7 @@
             3
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -14425,7 +14425,7 @@
             3
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -14437,7 +14437,7 @@
             3
           ],
           "pitch": 68,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -14713,7 +14713,7 @@
             2
           ],
           "pitch": 74,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -14905,7 +14905,7 @@
             6
           ],
           "pitch": 76,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -15013,7 +15013,7 @@
             1
           ],
           "pitch": 77,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -15865,7 +15865,7 @@
             1
           ],
           "pitch": 61,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -16009,7 +16009,7 @@
             1
           ],
           "pitch": 61,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -16153,7 +16153,7 @@
             1
           ],
           "pitch": 61,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -16429,7 +16429,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -16465,7 +16465,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -16513,7 +16513,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -16549,7 +16549,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -16609,7 +16609,7 @@
             1
           ],
           "pitch": 60,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -16621,7 +16621,7 @@
             1
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -16897,7 +16897,7 @@
             1
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -16993,7 +16993,7 @@
             1
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -17053,7 +17053,7 @@
             1
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -17197,7 +17197,7 @@
             1
           ],
           "pitch": 76,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -17329,7 +17329,7 @@
             1
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -17341,7 +17341,7 @@
             1
           ],
           "pitch": 75,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -17473,7 +17473,7 @@
             1
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -17485,7 +17485,7 @@
             1
           ],
           "pitch": 74,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -18025,7 +18025,7 @@
             6
           ],
           "pitch": 74,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -18145,7 +18145,7 @@
             3
           ],
           "pitch": 64,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -18157,7 +18157,7 @@
             3
           ],
           "pitch": 72,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -18553,7 +18553,7 @@
             3
           ],
           "pitch": 69,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -18709,7 +18709,7 @@
             3
           ],
           "pitch": 57,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -18721,7 +18721,7 @@
             3
           ],
           "pitch": 62,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -18853,7 +18853,7 @@
             3
           ],
           "pitch": 61,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -18949,7 +18949,7 @@
             3
           ],
           "pitch": 57,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -19189,7 +19189,7 @@
             3
           ],
           "pitch": 55,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -19381,7 +19381,7 @@
             3
           ],
           "pitch": 58,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [
@@ -19465,7 +19465,7 @@
             3
           ],
           "pitch": 55,
-          "voice": "bass"
+          "voice": "harmony"
         },
         {
           "duration": [

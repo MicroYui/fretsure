@@ -86,7 +86,7 @@ def test_additional_mutopia_corpus_has_independent_public_domain_sources() -> No
     examples = json.loads(payload)["examples"]
 
     assert hashlib.sha256(payload).hexdigest() == (
-        "4bf36f7633693f4b02f19bccb1f8ccf704de47915bec2e4bab3f25fad7997e37"
+        "75812c1c4a81e77c887e919c68eea54520f567d489a154d1b88a82dd0064f091"
     )
     assert len(examples) == 5
     assert len({example["composer"] for example in examples}) == 4
@@ -111,20 +111,20 @@ def test_mutopia_sharealike_corpus_is_large_licensed_and_source_complete() -> No
     manifest = json.loads(manifest_payload)
 
     assert hashlib.sha256(payload).hexdigest() == (
-        "c53ae16e24ae2d512f1f7a6f72b225322135b10756a71ba2e45493ca63d5d6bb"
+        "c58134c4a1f79c909e43cdd38b44a5e7c85e8a45b47b815a15e99dcd9d2d9c94"
     )
     assert hashlib.sha256(manifest_payload).hexdigest() == (
-        "d8c228a394a772582a4141de00f871e7a09040bb9ab3570add0391daa655bff4"
+        "f00fe740f76506729764ba04b5d1441be2237c57da84c5d1ebb875b9a7a76123"
     )
-    assert len(manifest["entries"]) == 35
-    assert len(examples) == 37
-    assert sum(len(example["notes"]) for example in examples) == 14_461
-    assert sum(len(example["annotations"]) for example in examples) == 1_776
+    assert len(manifest["entries"]) == 33
+    assert len(examples) == 35
+    assert sum(len(example["notes"]) for example in examples) == 13_955
+    assert sum(len(example["annotations"]) for example in examples) == 1_645
     assert sum(
         any(1 <= finger <= 4 for finger in annotation["accepted_fingers"])
         for example in examples
         for annotation in example["annotations"]
-    ) == 1_673
+    ) == 1_550
     assert {example["license"] for example in examples} == {
         "CC-BY-SA-3.0",
         "CC-BY-SA-4.0",
@@ -139,7 +139,7 @@ def test_mutopia_sharealike_corpus_is_large_licensed_and_source_complete() -> No
         "train",
         "dev",
         "test",
-    )} == {"train": 26, "dev": 5, "test": 6}
+    )} == {"train": 24, "dev": 5, "test": 6}
 
     root_digests = [example["root_sha256"] for example in examples]
     assert len(root_digests) == len(set(root_digests))

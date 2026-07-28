@@ -17,7 +17,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "f0e1c3f146fbfc67a7390981811ce462f9b0c4eb8150f6d96fd5d2f145292b19",
+     "content_sha256": "404ed69cf587d8f1af07d43c595b49f732758c6a0318b2969abec26a46697d44",
      "id": "mutopia-giuliani-op127-1-guitar",
      "index": 1,
      "note_count": 1126,
@@ -58,30 +58,6 @@
   },
   {
    "composer": "Mauro Giuliani",
-   "edition": "Mutopia-2008/03/05-1330",
-   "group_id": "mutopia:giuliani-op50n02",
-   "license": "CC-BY-3.0",
-   "license_url": "https://creativecommons.org/licenses/by/3.0/",
-   "movements": [
-    {
-     "annotation_count": 0,
-     "content_sha256": "12dbcdf171353f5e628585a723cf7397ee8383a142fa346e514129207766e3dd",
-     "id": "mutopia-giuliani-op50n02",
-     "index": 1,
-     "note_count": 287,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "giuliani-op50n02"
-    }
-   ],
-   "path": "sources/mutopia_expanded/giuliani-op50n02.ly",
-   "source_license_declaration": "Creative Commons Attribution 3.0",
-   "source_sha256": "7c1840dc7c0b3af4f011f3e6350b099849d8b6d3b6c0c2b742c16628e1c7dddb",
-   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O50/giuliani-op50n02/giuliani-op50n02.ly",
-   "work_id": "mutopia:giuliani-op50n02"
-  },
-  {
-   "composer": "Mauro Giuliani",
    "edition": "Mutopia-2008/03/05-1331",
    "group_id": "mutopia:giuliani-op50n03",
    "license": "CC-BY-3.0",
@@ -89,7 +65,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "937548143b649bcc4c19d4d0242f9792e155a955f15d5af0e4c5fcdffff8121f",
+     "content_sha256": "4bb47cc7ee940aa18d090a6e6a8c745ccbafb54231f209498e3c9c4417f80c64",
      "id": "mutopia-giuliani-op50n03",
      "index": 1,
      "note_count": 191,
@@ -185,7 +161,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "5e32a55e049d88b38c3c67a49b3330a3cdb1df520c5ec4572e1a38c731c68ace",
+     "content_sha256": "524fa69aa7df8a47d1d399549c536dfd190fbb3f9450c310027a7d10659ae5c3",
      "id": "mutopia-giuliani-op50n07",
      "index": 1,
      "note_count": 346,
@@ -209,7 +185,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "ab8e665e04cec42d09d4d2853d2b08c8ff100169dd69af0a2772cf7df953b11d",
+     "content_sha256": "f25849d3ad4750693b51c8f210564a624d9624fe8a0099223a682afdc7d90c8d",
      "id": "mutopia-giuliani-op50n08",
      "index": 1,
      "note_count": 198,
@@ -233,7 +209,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "58f58d5307ab9690bc4df55045102de8f4f8cfef02b6202837409f6f6d6afabb",
+     "content_sha256": "824ef501b795df0cf8e0aebc52531ce5986d3f212dc48eb64165a46fe58aabb8",
      "id": "mutopia-giuliani-op50n09",
      "index": 1,
      "note_count": 248,
@@ -305,7 +281,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "baf8f1ddada881d463675408ae20321ac65843478d55594eba9b32967c277068",
+     "content_sha256": "864f371c6a52029104b55443cb2b0df2ba014fd64f10185ab9589baf1f57dd0b",
      "id": "mutopia-giuliani-op50n12",
      "index": 1,
      "note_count": 129,
@@ -353,7 +329,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "9cf97d88afe6a233f2cc5da0ef49cd4809a34da480da3559348017853a5b8c9a",
+     "content_sha256": "4375af0d744db3382d6d0b9dee8df99838cd27f0a6aac1aee73729e7d43871ee",
      "id": "mutopia-giuliani-op50n14",
      "index": 1,
      "note_count": 180,
@@ -425,7 +401,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "51add09a747e17f28771d780de2c7bbce68c5e16b15383b84e3b339dc180d0c6",
+     "content_sha256": "50ac6e9f2cd50dfa5d59c06512b25c36250378141ee7162ae07de31c9fffc0c0",
      "id": "mutopia-giuliani-op50n17",
      "index": 1,
      "note_count": 167,
@@ -449,7 +425,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "84719661e8b33d46d6b553565f49ac4659a38ef54c7205b3176996154afcc84f",
+     "content_sha256": "aa8e3e107109207a85585a71b40cd6194f03007f1ee4ad9cb6d3746fbacb2926",
      "id": "mutopia-giuliani-op50n18",
      "index": 1,
      "note_count": 180,
@@ -473,7 +449,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "a7c242ad6b1e7feee9197172f581a427d0cc0fa50ffb53ef03f162f158537bf9",
+     "content_sha256": "cee934e97927f19e8431e3d9675316f83d6305162dfb0c988ff1b1e37bfae5a3",
      "id": "mutopia-giuliani-op50n19",
      "index": 1,
      "note_count": 198,
@@ -545,7 +521,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "f7d79a7eb6cde43d225e40249fefc674eb35fa3276e54f9f9266de0380a6964b",
+     "content_sha256": "73ad2eb3059035c6c430e1b4c2c7e1e032217a11cbcd3a5974c6910a1b7d80ca",
      "id": "mutopia-giuliani-op50n22",
      "index": 1,
      "note_count": 225,
@@ -569,7 +545,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "265facfeed22a6a753fc9753a60a8513411dddec50fd145997b8295c2cdcee09",
+     "content_sha256": "0c7393f5a0cf0210fd20b555f120129060e284556659b54101ff7be7ee6fbeea",
      "id": "mutopia-giuliani-op50n23",
      "index": 1,
      "note_count": 240,
@@ -593,7 +569,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "2af7125abe1076d305a4829bcb25fc5a793edeb2be804451bc29ca053c51fbb8",
+     "content_sha256": "9ab01959e1789261351240438a9727742d368ae78ec47a41d5c5cdee792f5dc0",
      "id": "mutopia-giuliani-op50n24",
      "index": 1,
      "note_count": 251,
@@ -617,7 +593,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "de948f2c2a53b077767288817f8e1bba54c801c8cffc577c3ecc5970df7819a3",
+     "content_sha256": "23a18e33a9aee004d802900c39886e386647b6f29a57a455f7d02f033e359f67",
      "id": "mutopia-giuliani-op50n25",
      "index": 1,
      "note_count": 423,
@@ -641,7 +617,7 @@
    "movements": [
     {
      "annotation_count": 14,
-     "content_sha256": "c4fddc7905cacaf3786265a7b0daab2e1481fc037fb476b13ce9be3ef690725c",
+     "content_sha256": "9088e991e02e5f8ab77f61681481fa4c429c7b4d600bcd78002d25831eb52f66",
      "id": "mutopia-giuliani-op50n26",
      "index": 1,
      "note_count": 335,
@@ -665,7 +641,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "f7f12d6dd4c0d4790b1342be2009ae802f38999965820831f7374f10143b74a6",
+     "content_sha256": "ccb512baec2dc0156331df208b1888e9eafce9153d22923f7f04beb2c7e9fa2b",
      "id": "mutopia-giuliani-op50n27",
      "index": 1,
      "note_count": 264,
@@ -689,7 +665,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "410416105520063079bc3d5a9fc91255388dd908bf6071f41b804c5a42fe92f3",
+     "content_sha256": "587481b12dec3be055303fc9575ec6fcf754fd23492869222af7c89f40c2d917",
      "id": "mutopia-giuliani-op50n28",
      "index": 1,
      "note_count": 228,
@@ -713,7 +689,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "ba836930e51ab541d5a3da97a9fa0b3f4ee0249d987e3fa498e0b5fe38ba83e6",
+     "content_sha256": "f6188cb2670fb4277fb28af8bf0e522778b65922a8c5d174cc21c1ce2f582acc",
      "id": "mutopia-giuliani-op50n29",
      "index": 1,
      "note_count": 428,
@@ -737,7 +713,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "f0b54bddd824fc58d7d03a4e41a6ea7503814f6b974708ae6fb70431d296bb27",
+     "content_sha256": "0af878a8c81c3ac6869eb5be7ed357ed4fe8dcbff3e058138ec18bb06da7d8bd",
      "id": "mutopia-giuliani-op50n30",
      "index": 1,
      "note_count": 238,
@@ -761,7 +737,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "8a7964d6247c0b828a099ecaf61138d095232c53c4d4d0620ac230a8176179ad",
+     "content_sha256": "0ac118c18558a56a5108e687ebc739e2f5d1fa7aa1cbdd9012bed4234addfc62",
      "id": "mutopia-giuliani-op50n31",
      "index": 1,
      "note_count": 178,
@@ -785,7 +761,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "d978d58159fdd59dc3f9cd5878f85815885aa684a76c8c546aab12a1f2215b21",
+     "content_sha256": "7ff93b2ffb748c7f294c048719a6d476c0fbddd7bb5a7d51df4dd45a4e2c0fa8",
      "id": "mutopia-giuliani-op50n32",
      "index": 1,
      "note_count": 356,

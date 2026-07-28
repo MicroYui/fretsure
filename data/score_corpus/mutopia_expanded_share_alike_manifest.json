@@ -17,7 +17,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "fd544e9a0ad51f390fae490797b91ca6e10c6e76378adfdde76e29998401b9d6",
+     "content_sha256": "af2910cea1ba70ce833e9801ad033a66f9403b68721c05343298c89d09d2734f",
      "id": "mutopia-aguado-op03n01",
      "index": 1,
      "note_count": 282,
@@ -41,7 +41,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "aed6139dda94ca56655cd5f6049b2ac5bb9ce430838a185d96a2975a885aeed8",
+     "content_sha256": "d1be70210f489f63d5d5573c4f2985b5e621cd50b03e4a8e1992390d4d6f6149",
      "id": "mutopia-aguado-op03n02",
      "index": 1,
      "note_count": 309,
@@ -65,7 +65,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "c95a90eeb7bf426c6827a6e7c7621624f687b6b3aff044faa21a6aeb118c6960",
+     "content_sha256": "6c797f46efd186e2c93b32e9fa86d2bacce4f53baa311801b4bc550bf04570b8",
      "id": "mutopia-aguado-op03n03",
      "index": 1,
      "note_count": 183,
@@ -89,7 +89,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "862b922e9c20f889c075fc5befa030e6df1ba63fc9135de4f91e2bcd4baa4116",
+     "content_sha256": "b6f1ebf4b5bb9aa7af38f0c3098228666bba7b2d93f01927b2ec2a3f5243a463",
      "id": "mutopia-aguado-op03n04",
      "index": 1,
      "note_count": 329,
@@ -113,7 +113,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "9c57338b31b45d2b3e38a754f04e2d6e55a9a57cc8b417e81b768793386d37f8",
+     "content_sha256": "a9284c2d72fd8d12902973655f42bfa1495541db4e589824edaf60fb1f4a8d95",
      "id": "mutopia-aguado-op03n05",
      "index": 1,
      "note_count": 345,
@@ -137,7 +137,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "5c84ed11f69dfc3aebd76bca4ca3936c77d1b3e460179f07b96311f810886228",
+     "content_sha256": "10c4b67c17b5cb611f12ce43b4355dec01cc9a7aecfe45fea7bf84964e6570c4",
      "id": "mutopia-aguado-op03n07",
      "index": 1,
      "note_count": 368,
@@ -161,7 +161,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "d7a0e8cdf11d856fc12ddfe345695efcc947fa986af2190bceb1211407133171",
+     "content_sha256": "c1d3b4a97da4068d8a5a39a1512c09761095ca49fbdeda280f608ce33d92df17",
      "id": "mutopia-aguado-op03n08",
      "index": 1,
      "note_count": 263,
@@ -253,7 +253,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "77254b3b36f04ccd0dffb392452a48dd307aa997c420878af6c37145cf8105be",
+     "content_sha256": "be16bb878c67f3f916cc09af21d67805b8fc684884eea801650515a0677d6e85",
      "id": "mutopia-bwv-1006a-1g",
      "index": 1,
      "note_count": 1286,
@@ -277,7 +277,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "17a5da4ee56d46df337a6d6678ed310f78f224631b569608a5612ffb262b71f2",
+     "content_sha256": "eff35ff2ab0cefee5569b5f9818ca0d20999c2fb8375c5b6c673fbbf231bcf75",
      "id": "mutopia-bwv-1006a-2g",
      "index": 1,
      "note_count": 207,
@@ -301,7 +301,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "8dfcda2e39b526aa275c8e344f2047239b517739b3781259118131b20d044c3b",
+     "content_sha256": "76a01f5adc86bfc2ba256ec2539d35b638ca18b52a2c524fb28cc4147fe7a223",
      "id": "mutopia-bwv-1006a-3g",
      "index": 1,
      "note_count": 843,
@@ -325,7 +325,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "f191a8d870943b169f9299ee9051b44c389f4c3130ebfeb595068afe237623a5",
+     "content_sha256": "6e498c5be0fc7667e077388eaa90919818d04f363fd013c26ee5a164358e62a0",
      "id": "mutopia-bwv-1006a-4g",
      "index": 1,
      "note_count": 234,
@@ -349,7 +349,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "28e7665dc37a772d402afa1d922821c9af146fb12e32af49c98df7c3b9f325c7",
+     "content_sha256": "2997d80a91e74e0171397208cf57a2ac37404a18419f34bdbe87a3c8f5f2b6fe",
      "id": "mutopia-bwv-1006a-5g",
      "index": 1,
      "note_count": 244,
@@ -397,7 +397,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "d1918b809a459b9c58273d53932ba2d4c521e32d8c17eb7026555c8a4aee569a",
+     "content_sha256": "d036b8c5fecb56dc8f787d1de9dcd5d9eefbbe1c8aaf1a0c6ea609213d11f127",
      "id": "mutopia-bwv-1006a-7g",
      "index": 1,
      "note_count": 430,
@@ -517,7 +517,7 @@
    "movements": [
     {
      "annotation_count": 35,
-     "content_sha256": "f418414f7b1f3471c62c986a6b39574d23d11fdb1a5fec930383ad306bf85a9a",
+     "content_sha256": "7c71ca76999c067109b5538d4925201fbd07d00862bf46006e09ef1a1b038412",
      "id": "mutopia-carcassi-op60-05",
      "index": 1,
      "note_count": 386,
@@ -531,30 +531,6 @@
    "source_sha256": "28c874138e9f35e9a79c7e4e057dd7a1a0329f0825efb7bda6d8e058a5602585",
    "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-05/carcassi-op60-05.ly",
    "work_id": "mutopia:carcassi-op60-05"
-  },
-  {
-   "composer": "Mateo Carcassi",
-   "edition": "Mutopia-2013/09/01-1867",
-   "group_id": "mutopia:carcassi-op60-06",
-   "license": "CC-BY-SA-3.0",
-   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-   "movements": [
-    {
-     "annotation_count": 40,
-     "content_sha256": "06c7bc3d66c72348a2790535e1ff528ae82b3eb353aaa83062cdfed2baf5ee03",
-     "id": "mutopia-carcassi-op60-06",
-     "index": 1,
-     "note_count": 423,
-     "pressed_annotation_count": 40,
-     "tempo_bpm": 90.0,
-     "title": "carcassi-op60-06"
-    }
-   ],
-   "path": "sources/mutopia_expanded/carcassi-op60-06.ly",
-   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
-   "source_sha256": "17c30f2a675d867e5f0655a16ee3fe7a3ecbfbb85f980b1817ad31586eaead0c",
-   "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-06/carcassi-op60-06.ly",
-   "work_id": "mutopia:carcassi-op60-06"
   },
   {
    "composer": "Mateo Carcassi",
@@ -685,7 +661,7 @@
    "movements": [
     {
      "annotation_count": 27,
-     "content_sha256": "31ee705c9673d8d1f1db97f4ed784801636e674e7acf49d1328ee920a5599141",
+     "content_sha256": "d91dd78befff36c5be4178946c5fd8e8ce5fb18c158005e3f485b211779eda0b",
      "id": "mutopia-carcassi-op60-16",
      "index": 1,
      "note_count": 260,
@@ -709,7 +685,7 @@
    "movements": [
     {
      "annotation_count": 51,
-     "content_sha256": "147702112f656ab3b4e0d20a64f312cdbdc858070fac113a570fc5c1458d3ee7",
+     "content_sha256": "6eb4b747aa7eb912ca43b87d3ce1d1179cea4c086f92cd7d0363d28756b887ce",
      "id": "mutopia-carcassi-op60-17",
      "index": 1,
      "note_count": 368,
@@ -733,7 +709,7 @@
    "movements": [
     {
      "annotation_count": 23,
-     "content_sha256": "ade8932efad2ad513db3b0b1b19a95ef70d060958e02ed48894d628afdd05529",
+     "content_sha256": "da754aef9ee44d87ca574d2a75dee07c53b86fbe810ca8b7a70ef04f3e98fd76",
      "id": "mutopia-carcassi-op60-18",
      "index": 1,
      "note_count": 210,
@@ -757,7 +733,7 @@
    "movements": [
     {
      "annotation_count": 10,
-     "content_sha256": "e9f3e9608e8a1f7616ba0342b68e4c5ff136579226f59e9572ad89ae9c57e80f",
+     "content_sha256": "c0a406690042d980be9354ab01d71eb94bb764c06c38218a904dcaf4f40b306c",
      "id": "mutopia-carcassi-op60-19",
      "index": 1,
      "note_count": 460,
@@ -805,7 +781,7 @@
    "movements": [
     {
      "annotation_count": 13,
-     "content_sha256": "458b2b29080053be17e59228cdaef27eda6ed2038dfa9f2235f2ee5d69818382",
+     "content_sha256": "af9fe51085343cb5d84cb50fd2b233f83ad4aea7f0dbf58f3e7a9f3ad707a7c3",
      "id": "mutopia-carcassi-op60-21",
      "index": 1,
      "note_count": 412,
@@ -819,30 +795,6 @@
    "source_sha256": "ae6d85b1ea940e5926d0c24d566183a8813d0e10d32cc6bbaacc9b896028242b",
    "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-21/carcassi-op60-21.ly",
    "work_id": "mutopia:carcassi-op60-21"
-  },
-  {
-   "composer": "Radan Pape\u017e\u00edk",
-   "edition": "Mutopia-2013/03/09-1495",
-   "group_id": "mutopia:forsting",
-   "license": "CC-BY-SA-3.0",
-   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-   "movements": [
-    {
-     "annotation_count": 0,
-     "content_sha256": "201ce211edc6bd93e217bbccfeff0bfbf2d34657e48bbe0cfeba383911515d23",
-     "id": "mutopia-forsting",
-     "index": 1,
-     "note_count": 386,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Recuerdos"
-    }
-   ],
-   "path": "sources/mutopia_expanded/forsting.ly",
-   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
-   "source_sha256": "75e71051d6d19d22abbec11bfd2417ca86249580a1a1c13f87044866bf9620d0",
-   "source_url": "https://www.mutopiaproject.org/ftp/PapezikR/forsting/forsting.ly",
-   "work_id": "mutopia:forsting"
   },
   {
    "composer": "Mauro Giuliani",
@@ -949,7 +901,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "50933a0e293aa7abbcf8df124f4f5d6c19524c8a14bc7e8fc742e78c7c9fed36",
+     "content_sha256": "12207446487dcf1a56a220efb8d155278cee22a5b2e9f11459c0e9bc777bec37",
      "id": "mutopia-giuliani-op59n01",
      "index": 1,
      "note_count": 243,
@@ -973,7 +925,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "85acc4a77c81f7b7fc6617d19d789110c8e2c2996ec697a5aae4cfc4f2da59c7",
+     "content_sha256": "86466a3c0799426a2878c3c987d93a1fa8b913605677dbaf383c0f90457c31ec",
      "id": "mutopia-giuliani-op59n02",
      "index": 1,
      "note_count": 325,
@@ -997,7 +949,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "6110e4c7a39a19c905f52bc7a7189815baf12be13b6694185c798c04454de2a1",
+     "content_sha256": "b8c927b8d8558b40508617347fb3cbe55e3980a3fd154d3b9edd856b5a820a93",
      "id": "mutopia-giuliani-op59n03",
      "index": 1,
      "note_count": 280,
@@ -1021,7 +973,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "c5761ea605219a1910b077dc2c10b35d62c0e03e2c1b453124d68b923a442266",
+     "content_sha256": "8f3ca5e3f48f5011014bcb2a6398232f79a3b4b5874b85456c64f43bae8016d9",
      "id": "mutopia-giuliani-op59n04",
      "index": 1,
      "note_count": 273,
@@ -1045,7 +997,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "4738e465ad6aa673597da5bcffbc26a659192ee58e149a4d22dacc04ff50592e",
+     "content_sha256": "0ac8aa53cd3b465adfd2f653d972a2fa251208e6664f8992e7014c213db9f960",
      "id": "mutopia-giuliani-op59n05",
      "index": 1,
      "note_count": 297,
@@ -1093,7 +1045,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "750eee524b23d7bf7d146723354a1b4ba7ac439dac13f24e332a34989b48f080",
+     "content_sha256": "22989a1c006565de62efd76acec1dd5afd56347465d8d053bb0b09bb31310272",
      "id": "mutopia-giuliani-op59n07",
      "index": 1,
      "note_count": 334,
@@ -1141,7 +1093,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "5d06456aef1b02a8d6ed01f9cc5ad4379760f12e397346a50d1e2ff414a774cb",
+     "content_sha256": "49cd831990259c512be11cf6074b4fb43ccd7c0f0ed7a0e48030ab458477585a",
      "id": "mutopia-giuliani-op59n09",
      "index": 1,
      "note_count": 256,
@@ -1189,7 +1141,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "aeb24b9d958726e54e477e6ffa51be2c660aab38c62671574b18cb3ee3e2ba29",
+     "content_sha256": "99386968e425f68aaaccf64c61064f395785ee5a999c0bdc07d909a04647b2e6",
      "id": "mutopia-giuliani-op59n11",
      "index": 1,
      "note_count": 336,
@@ -1333,7 +1285,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "a5ea3971504b91f7236d238caff5221da5ffd9bf2cd1b814d91e11b3493b44b3",
+     "content_sha256": "d9b37fc6d8fa48df900349191669dbc49c6a4b1ac0b455bab7764c954ebd0a3e",
      "id": "mutopia-giulianiop100no11",
      "index": 1,
      "note_count": 523,
@@ -1477,7 +1429,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "f38f7f942e1dda046545b4d0394f5779b9f0190cbeed7ce388dce420b79ae892",
+     "content_sha256": "381759fc40af780b498c312f9aaf593889b8c638924fd0ee33a9ce3c46ea37d2",
      "id": "mutopia-giulianiop100no17",
      "index": 1,
      "note_count": 91,
@@ -1659,30 +1611,6 @@
    "source_sha256": "9764e23ab7932c826a3619960dc6498ce88af71d0820b3c7f1537a48a8901aa1",
    "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No23/GiulianiOp100No23.ly",
    "work_id": "mutopia:giulianiop100no23"
-  },
-  {
-   "composer": "Mauro Giuliani",
-   "edition": "Mutopia-2012/01/14-1824",
-   "group_id": "mutopia:giulianiop100no24",
-   "license": "CC-BY-SA-3.0",
-   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-   "movements": [
-    {
-     "annotation_count": 0,
-     "content_sha256": "a5be8a5c69542c3792e1e6f3a84b76f3545fbe015f86f7aaf205fd1acc4fd45b",
-     "id": "mutopia-giulianiop100no24",
-     "index": 1,
-     "note_count": 516,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "24 Studies for the Guitar, No. 24"
-    }
-   ],
-   "path": "sources/mutopia_expanded/GiulianiOp100No24.ly",
-   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
-   "source_sha256": "a00f7f56b68d4ef06de8461dee9a80109fc9a172efbb3fbadc4ab69826f246ff",
-   "source_url": "https://www.mutopiaproject.org/ftp/GiulianiM/O100/GiulianiOp100No24/GiulianiOp100No24.ly",
-   "work_id": "mutopia:giulianiop100no24"
   },
   {
    "composer": "Mauro Giuliani",
@@ -1909,7 +1837,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "f7a6fd37294caa4d6f0426af8e8c8b10a797a9abbb774ed80e9b62de38bc02ec",
+     "content_sha256": "665e228f4d6f6fb512fc19fceca01863a959d9e5b52f0ee4994b738954ee48ef",
      "id": "mutopia-sor-op-1-4",
      "index": 1,
      "note_count": 163,
@@ -1957,7 +1885,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "b1dfd901522b7635d84393d39ed1724fc930b28f58fb7572a962ae2fc4557730",
+     "content_sha256": "73513d7d3707cb4b3f7d3f3bcdac63b8549de1ba312366d759eb7077ba61e139",
      "id": "mutopia-sor-op-1-5-3",
      "index": 1,
      "note_count": 319,
@@ -1973,30 +1901,6 @@
    "work_id": "mutopia:sor-op-1-5-3"
   },
   {
-   "composer": "Fernando Sor (1778-1839)",
-   "edition": "Mutopia-2013/03/23-458",
-   "group_id": "mutopia:sor-op-1-6",
-   "license": "CC-BY-SA-3.0",
-   "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-   "movements": [
-    {
-     "annotation_count": 0,
-     "content_sha256": "dee8364843ca4ebf20242ad87941cc7959d4e2af88fab73a6ac3cbec1e1e1515",
-     "id": "mutopia-sor-op-1-6",
-     "index": 1,
-     "note_count": 453,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Divertissements pour la guitare, n\u00b06"
-    }
-   ],
-   "path": "sources/mutopia_expanded/sor_op_1_6.ly",
-   "source_license_declaration": "Creative Commons Attribution-ShareAlike 3.0",
-   "source_sha256": "4e8492532d86f12d063c99a85f4e0bb7a3a2364f977f29fba075f16beffa3e7a",
-   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O1/sor_op_1_6/sor_op_1_6.ly",
-   "work_id": "mutopia:sor-op-1-6"
-  },
-  {
    "composer": "Fernando Sor",
    "edition": "Mutopia-2015/09/06-413",
    "group_id": "mutopia:sor-op1-1",
@@ -2005,7 +1909,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "9fca43bd07ffd56a46819200850f041099282a763d98c9c1d87238b348755140",
+     "content_sha256": "14cc92df53edf5eee380bdfff3c44fd3509685cddce3576755e1f99608a3fd0d",
      "id": "mutopia-sor-op1-1",
      "index": 1,
      "note_count": 216,
@@ -2029,7 +1933,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "7a2386b97c3c5264a49cc1224f3025e8fd55b742ad818df0ee5a423a8d2a9a18",
+     "content_sha256": "6cc2f029bd66c27bae7df3e33e5874e0e49b2edd55dced0440fea2952714a83c",
      "id": "mutopia-sor-op1-2",
      "index": 1,
      "note_count": 300,
@@ -2053,7 +1957,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "134f797c8974ddbbb80751f1c3eac53d1464ccd7b37df3b4de6cd71b99010c8b",
+     "content_sha256": "f5c3679553003a194167b7ffc3293387bab0c5b3cbb0ea86f3a7e24fb678d94d",
      "id": "mutopia-sor-op1-3",
      "index": 1,
      "note_count": 1028,
@@ -2077,7 +1981,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "9efea9760d2e99b7370c2f61d795981ff4178d31e70a60a947c1281263060c8d",
+     "content_sha256": "3fd585cb8669a1bf52e3d3939d40aa86cc510b5415514f4bb13af4dd6606c71b",
      "id": "mutopia-sor-op2-1",
      "index": 1,
      "note_count": 113,
@@ -2101,7 +2005,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "c980f78ac32a926f94f6fac974235885c7a4b2cfc6cb2452bd499b7e53f110a0",
+     "content_sha256": "2455f5049988314ad3b08b3a06b233aaed084f66652f97027b90194be1eadecc",
      "id": "mutopia-sor-op2-2",
      "index": 1,
      "note_count": 217,
@@ -2125,7 +2029,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "139d1a84f3efd63d76596af856070008a784d5cd4a8371c9bf59af7ced2d1df5",
+     "content_sha256": "e0552b062dbe29fab574ea76f97b6f713a8bb1078e8a565f902744efb33fe102",
      "id": "mutopia-sor-op2-3-movement-1",
      "index": 1,
      "note_count": 505,
@@ -2165,30 +2069,6 @@
    "work_id": "mutopia:sor-op2-nr4"
   },
   {
-   "composer": "Fernando Sor",
-   "edition": "Mutopia-2005/08/14-591",
-   "group_id": "mutopia:sor-op2-nr6",
-   "license": "CC-BY-SA-2.5",
-   "license_url": "https://creativecommons.org/licenses/by-sa/2.5/",
-   "movements": [
-    {
-     "annotation_count": 0,
-     "content_sha256": "4d598afb059b5102c6369e99c294a39e5d1a8d6ac071edc29d1e5299a8c9386c",
-     "id": "mutopia-sor-op2-nr6",
-     "index": 1,
-     "note_count": 1020,
-     "pressed_annotation_count": 0,
-     "tempo_bpm": 90.0,
-     "title": "Six Divertissements op. 2 n\ufffd6 Siciliana"
-    }
-   ],
-   "path": "sources/mutopia_expanded/sor_op2_nr6.ly",
-   "source_license_declaration": "Creative Commons Attribution-ShareAlike 2.5",
-   "source_sha256": "29e8fa1214cf024a3d721bca5a3d7e07777ba06009073408611fe9a42fb9425f",
-   "source_url": "https://www.mutopiaproject.org/ftp/SorF/O2/sor_op2_nr6/sor_op2_nr6.ly",
-   "work_id": "mutopia:sor-op2-nr6"
-  },
-  {
    "composer": "Fernando Sor (1778-1839)",
    "edition": "Mutopia-2006/01/01-646",
    "group_id": "mutopia:sor-op5-5",
@@ -2197,7 +2077,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "a472599cd531ed02df49632aef0a1bc4d1951b0d88a67a60f6c130fcfe0c1230",
+     "content_sha256": "5eb2aae9404cdae8e22ca1509f4ebd988dcaa478217c35afd33386f443f70cf9",
      "id": "mutopia-sor-op5-5",
      "index": 1,
      "note_count": 564,
@@ -2437,7 +2317,7 @@
    "movements": [
     {
      "annotation_count": 41,
-     "content_sha256": "5852d56276dbdaab90217088b0a1c57d143ca57ef6115d7d1dbb9f735c2e5507",
+     "content_sha256": "52387c91cead89ba38180835df0e808d0b960938d8b885629a1fb9b18013ba2e",
      "id": "mutopia-sor-op60-13",
      "index": 1,
      "note_count": 169,
@@ -2461,7 +2341,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "a58f819c7f4c827371cfb8a8e22d66164bd93054b2d610c558daa8487c293ffb",
+     "content_sha256": "c7e7cd0fbac0cd18573abe743c07f196296d5edc46fbe998043541c511c73cbf",
      "id": "mutopia-sorf-andantino",
      "index": 1,
      "note_count": 277,
@@ -2485,7 +2365,7 @@
    "movements": [
     {
      "annotation_count": 81,
-     "content_sha256": "4ea88f7b066bcd4b05d067f398b9405bdf4edf9938ae354c5d553b0849a18832",
+     "content_sha256": "f2b978d146f50689eeae0bed038da00d7fbb7b4a6cd5b1066e2b8da378d13077",
      "id": "mutopia-sorf-op35-no1",
      "index": 1,
      "note_count": 173,
@@ -2509,7 +2389,7 @@
    "movements": [
     {
      "annotation_count": 95,
-     "content_sha256": "4ac6d60cca62c58144b00eacefadd5072cdbbe0583a87ff55769dc3348b6396b",
+     "content_sha256": "baa503505b48e297a28835586ced1d1c2f40a58538407db36c679fed550590e8",
      "id": "mutopia-sorf-op35-no10",
      "index": 1,
      "note_count": 320,
@@ -2533,7 +2413,7 @@
    "movements": [
     {
      "annotation_count": 51,
-     "content_sha256": "e15ab01844a732bbe9f28837b472afdf5618cf11ef4afa2bb4f5568e4fac7835",
+     "content_sha256": "75149839824526c427fbc01da74d266f471c12f8bba3591777112a61435c764b",
      "id": "mutopia-sorf-op35-no2",
      "index": 1,
      "note_count": 125,
@@ -2557,7 +2437,7 @@
    "movements": [
     {
      "annotation_count": 86,
-     "content_sha256": "1789956a3562d492e51d159d4c2521d6dd25e9f111106aadcb04886534129d89",
+     "content_sha256": "52edcf20fa461485008855e81e5b750f3bf45cb132de4cbb9d9f8ab5ffa83016",
      "id": "mutopia-sorf-op35-no22-movement-1",
      "index": 1,
      "note_count": 305,
@@ -2581,7 +2461,7 @@
    "movements": [
     {
      "annotation_count": 58,
-     "content_sha256": "cdce9b241ccaae335d7db665e650d17b7ca0ef50d3c3e2901f95e4fec1516387",
+     "content_sha256": "1473e9d8a415c11f28633c08b32abe2ce7cd7e72bd1cbb2101ce5eac6cf51e6e",
      "id": "mutopia-sorf-op35-no3",
      "index": 1,
      "note_count": 188,
@@ -2605,7 +2485,7 @@
    "movements": [
     {
      "annotation_count": 150,
-     "content_sha256": "34bc959cc1258b86724bdcd07740c5cfbdd2a017d835c1b821238229f8ac47f2",
+     "content_sha256": "a6b2f1d06ddab82165e0dcbe010fa887d587f1b1bdb485eb8761ff01e05322ab",
      "id": "mutopia-sorf-op35-no4",
      "index": 1,
      "note_count": 256,
@@ -2653,7 +2533,7 @@
    "movements": [
     {
      "annotation_count": 77,
-     "content_sha256": "d9a6da3e86240bd01f7dd2531e57abd420eb047b2cf4670cc2ea6be7ceade140",
+     "content_sha256": "5408993a047983ceab5d26b00688c5332279b6799ae1181fbe80f959f4f5119b",
      "id": "mutopia-sorf-op35-no6",
      "index": 1,
      "note_count": 187,
@@ -2677,7 +2557,7 @@
    "movements": [
     {
      "annotation_count": 141,
-     "content_sha256": "8a566f375d59faabb13fc5a4f9465753d7a070b9caad7786f9d9ecbceae1d14a",
+     "content_sha256": "0dc66f36f4aff7d7f0a59708227c56d8f10fe67fc77056a3efb3f35ce063ddf6",
      "id": "mutopia-sorf-op35-no7",
      "index": 1,
      "note_count": 748,
@@ -2701,7 +2581,7 @@
    "movements": [
     {
      "annotation_count": 98,
-     "content_sha256": "3d857456ffc19c8288a057faab97e4f83592f8ea2224355d116545045489771c",
+     "content_sha256": "3fa0b0c4e6ea84f1cd11018be905878d52421953f19a0dd992f606a693be257c",
      "id": "mutopia-sorf-op35-no8",
      "index": 1,
      "note_count": 336,
@@ -2749,7 +2629,7 @@
    "movements": [
     {
      "annotation_count": 0,
-     "content_sha256": "e618ae02fc0aedf22cabdbb37ba4cbec9e6f7e01173a64cd8552561ce0af6ca5",
+     "content_sha256": "63dd2ef4e74f9d2597de3aa705c38f05c2c0c90a20ac7435f2e34820d8628922",
      "id": "mutopia-sorf-op45n04",
      "index": 1,
      "note_count": 561,
@@ -2797,7 +2677,7 @@
    "movements": [
     {
      "annotation_count": 12,
-     "content_sha256": "5f8b7e4c118810a31749ea9321e8155e07bd35a64bb210a8231e04f60e17d5b8",
+     "content_sha256": "b75e3a8a8c12470f2c1f3ae208d1292fc7cabfdcb6b7ad434f69b98ef83f0477",
      "id": "mutopia-stille-nacht",
      "index": 1,
      "note_count": 142,
