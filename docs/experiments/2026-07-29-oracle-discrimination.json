@@ -1,0 +1,63 @@
+{
+ "checker_version": "oracle@0.6.0",
+ "curve": [
+  {
+   "admitted": 206,
+   "displacement_frets": 0,
+   "displacement_mm_at_the_nut": 0.0,
+   "refused": 40,
+   "refused_rate": 0.16260162601626016,
+   "unjudged": 3
+  },
+  {
+   "admitted": 108,
+   "displacement_frets": 1,
+   "displacement_mm_at_the_nut": 35.3,
+   "refused": 131,
+   "refused_rate": 0.5481171548117155,
+   "unjudged": 10
+  },
+  {
+   "admitted": 70,
+   "displacement_frets": 2,
+   "displacement_mm_at_the_nut": 68.7,
+   "refused": 168,
+   "refused_rate": 0.7058823529411765,
+   "unjudged": 11
+  },
+  {
+   "admitted": 38,
+   "displacement_frets": 3,
+   "displacement_mm_at_the_nut": 100.2,
+   "refused": 198,
+   "refused_rate": 0.8389830508474576,
+   "unjudged": 13
+  },
+  {
+   "admitted": 1,
+   "displacement_frets": 6,
+   "displacement_mm_at_the_nut": 184.5,
+   "refused": 223,
+   "refused_rate": 0.9955357142857143,
+   "unjudged": 25
+  },
+  {
+   "admitted": 0,
+   "displacement_frets": 12,
+   "displacement_mm_at_the_nut": 314.9,
+   "refused": 151,
+   "refused_rate": 1.0,
+   "unjudged": 98
+  }
+ ],
+ "editorial_frames": 249,
+ "profile": {
+  "fingerprint": "fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62",
+  "hand_span_mm": 100.0,
+  "version": "median@0.1"
+ },
+ "schema": "fretsure-oracle-discrimination@0.1.0",
+ "splits": [
+  "all"
+ ]
+}
