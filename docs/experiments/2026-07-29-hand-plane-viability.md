@@ -67,3 +67,55 @@ is precisely the trade that disqualified the slant exemption.
 Measured, viable, not started. The next step is not more measurement — it is a
 decision about whether to rebuild the oracle's geometry, which is a different
 kind of commitment from the fixes made this week.
+
+## Postscript: measured as a verifier, and it does not dominate — 2026-07-29
+
+The two things measured above are not the model. Whether a hand with free angle,
+spacing and origin can *explain* the printed fingerings: yes, to a median
+residual of 0.0 mm, because three free parameters interpolate. Whether projecting
+fingertips onto an axis while keeping the pairwise `d_max` comparison helps:
+partly, and that is still two fingers at a time.
+
+The model places the whole hand: fingers nominally at `origin + (f-1) * spacing`
+with `spacing = hand_span_mm / 3`, a fingertip reachable within `reach` of where
+the hand puts it, and one check replacing both the span and the monotonic rules.
+Twenty operating points, angle in {0, 10, 20, 30} degrees and reach in
+{10, 15, 20, 25, 30} mm, on both splits.
+
+**No operating point dominates the shipped pairwise rules.**
+
+Train, against `oracle@0.7.0` at 13.3 / 48.2 / 66.8 / 80.4 / 99.4 / 100:
+
+| angle / reach | 0fr | 1fr | 2fr | 3fr | 6fr | 12fr |
+|---|---|---|---|---|---|---|
+| 0° / 20 mm | 13.3 | 44.1 | 63.1 | 78.4 | 100.0 | 100 |
+| 10° / 20 mm | 12.8 | 35.3 | 52.4 | 68.4 | 100.0 | 100 |
+| 30° / 20 mm | 8.2 | 24.1 | 32.1 | 44.1 | 93.8 | 100 |
+
+Every point that improves the zero-displacement rate gives back more in the
+middle, at the same exchange rate as the four bounds tried on the monotonic rule
+directly. Test agrees: against 6.7 / 56.7 / 66.7 / 89.7 / 100 / 100, the points
+matching 6.7 at zero all have a collapsed middle.
+
+So the structural hypothesis is **falsified**. The two rules being separate
+expressions of one question is not what limits the verifier; reorganising them
+into one hand-configuration check adds no discrimination. The information is the
+same information.
+
+### A limit of the instrument, worth stating
+
+The negatives are made by displacing one note along the neck, and at one to three
+frets that often produces a shape a guitarist can still play. So the middle of
+the curve is not cleanly measuring discrimination, and refusing those is not
+obviously a virtue -- reading the instrument at its ends is the honest use.
+
+Even read that way the trade holds: at six frets, 185 mm, which does break a real
+shape, the best hand-plane points give back four to six points of refusal for
+their gain at zero.
+
+### What this leaves
+
+Not a better factoring of the rules. The remaining false negatives need
+information the modelled geometry does not contain, and finding out what that is
+means fingerings from other editors of the same music -- which is where this
+document and `2026-07-29-finger-monotonic-slant.md` now agree the road goes.
