@@ -1,45 +1,45 @@
 {
- "checker_version": "oracle@0.6.0",
+ "checker_version": "oracle@0.7.0",
  "curve": [
   {
-   "admitted": 206,
+   "admitted": 209,
    "displacement_frets": 0,
    "displacement_mm_at_the_nut": 0.0,
-   "refused": 40,
-   "refused_rate": 0.16260162601626016,
+   "refused": 37,
+   "refused_rate": 0.15040650406504066,
    "unjudged": 3
   },
   {
-   "admitted": 108,
+   "admitted": 118,
    "displacement_frets": 1,
    "displacement_mm_at_the_nut": 35.3,
-   "refused": 131,
-   "refused_rate": 0.5481171548117155,
+   "refused": 122,
+   "refused_rate": 0.5083333333333333,
+   "unjudged": 9
+  },
+  {
+   "admitted": 77,
+   "displacement_frets": 2,
+   "displacement_mm_at_the_nut": 68.7,
+   "refused": 162,
+   "refused_rate": 0.6778242677824268,
    "unjudged": 10
   },
   {
-   "admitted": 70,
-   "displacement_frets": 2,
-   "displacement_mm_at_the_nut": 68.7,
-   "refused": 168,
-   "refused_rate": 0.7058823529411765,
-   "unjudged": 11
-  },
-  {
-   "admitted": 38,
+   "admitted": 42,
    "displacement_frets": 3,
    "displacement_mm_at_the_nut": 100.2,
-   "refused": 198,
-   "refused_rate": 0.8389830508474576,
-   "unjudged": 13
+   "refused": 195,
+   "refused_rate": 0.8227848101265823,
+   "unjudged": 12
   },
   {
    "admitted": 1,
    "displacement_frets": 6,
    "displacement_mm_at_the_nut": 184.5,
-   "refused": 223,
-   "refused_rate": 0.9955357142857143,
-   "unjudged": 25
+   "refused": 224,
+   "refused_rate": 0.9955555555555555,
+   "unjudged": 24
   },
   {
    "admitted": 0,

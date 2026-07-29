@@ -29,11 +29,17 @@ _REVOICE_86_COLLISION = (
 )
 _AMBER = (Note(F(0), F(1), 41, "harmony"), Note(F(0), F(1), 49, "melody"))
 _DROP_41 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 41}'
+# A wide two-note target the median profile itself has nothing to say about,
+# while the pessimistic one refuses it -- so repair runs with an empty diagnostic
+# list and has to propose an edit anyway. The pitches moved with `oracle@0.7.0`:
+# measuring the span along the neck rather than in a straight line made the
+# previous pair (44 with 71) outright GREEN, which is the intended direction and
+# left this test with nothing to exercise.
 _AMBER_WITHOUT_MEDIAN_DIAGNOSTICS = (
-    Note(F(0), F(1), 44, "harmony"),
-    Note(F(0), F(1), 71, "melody"),
+    Note(F(0), F(1), 42, "harmony"),
+    Note(F(0), F(1), 69, "melody"),
 )
-_DROP_44 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 44}'
+_DROP_44 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 42}'
 
 
 def test_already_green_returns_immediately() -> None:

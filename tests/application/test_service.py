@@ -524,7 +524,7 @@ def test_real_proxy_arranges_frozen_musescore_and_stamps_every_contract() -> Non
     assert wire["model"] == {"model_id": "gpt-5.6-sol"}
     assert wire["stamps"]["model_id"] == "gpt-5.6-sol"
     assert wire["stamps"]["importer_version"] == "musicxml@0.4.0"
-    assert wire["stamps"]["oracle_checker_version"] == "oracle@0.6.0"
+    assert wire["stamps"]["oracle_checker_version"] == "oracle@0.7.0"
     assert wire["stamps"]["profile_version"] == "median@0.1"
 
 

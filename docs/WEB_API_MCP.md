@@ -6,7 +6,7 @@ API=`fretsure-api@0.3.0`、MCP=`fretsure-mcp@0.2.0`、Web=`fretsure-web@0.3.0`�
 trace=`agent-trace@0.3.0`，faithfulness=`fidelity@0.3.0`、fingering=
 `fingering-solver@0.7.0`、score solver=`score-solver@0.7.0`、公开谱排序=
 `published-fingering-ranker@0.1.0`、出版分级=`published-grade-estimator@0.1.0`。这里的 `GREEN` 始终是
-`oracle@0.6.0` + 指定 profile 下的版本化模型证据，不是真人保证；faithfulness 是另一道独立门。
+`oracle@0.7.0` + 指定 profile 下的版本化模型证据，不是真人保证；faithfulness 是另一道独立门。
 
 ## 本地 Web 与 API
 

@@ -187,7 +187,7 @@ def test_arrangement_wire_stamps_actual_model_and_all_public_contracts(
     assert stamps["service_version"] == "fretsure-service@0.3.0"
     assert stamps["score_input_version"] == "score-input@0.1.0"
     assert stamps["model_id"] == "constant-stub"
-    assert stamps["oracle_checker_version"] == "oracle@0.6.0"
+    assert stamps["oracle_checker_version"] == "oracle@0.7.0"
     assert stamps["oracle_input_schema_version"] == "tab-input@0.3.0"
     assert stamps["fidelity_checker_version"] == "fidelity@0.3.0"
     assert stamps["fingering_solver_version"] == "fingering-solver@0.7.0"

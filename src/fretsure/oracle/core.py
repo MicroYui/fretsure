@@ -32,7 +32,7 @@ from fretsure.oracle.predicates import (
 from fretsure.oracle.profiles import Profile, optimistic, pessimistic
 from fretsure.tab import Tab
 
-CHECKER_VERSION = "oracle@0.6.0"
+CHECKER_VERSION = "oracle@0.7.0"
 
 
 @dataclass(frozen=True)

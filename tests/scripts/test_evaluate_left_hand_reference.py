@@ -29,7 +29,12 @@ def test_carcassi_public_domain_reference_meets_frozen_threshold() -> None:
 
     assert report["status"] == "evaluated"
     assert report["passed"] is True
-    assert report["oracle_verdict"] == "AMBER"
+    # GREEN since `oracle@0.7.0`. The reference Carcassi prelude was AMBER --
+    # accepted but not certified -- while the span rule charged for spreading a
+    # chord across the strings as though it were a stretch up the neck. Measuring
+    # along the neck certifies it outright, which is what a published prelude
+    # fingered by the solver should be.
+    assert report["oracle_verdict"] == "GREEN"
     assert report["exact_matches"] == 17
     assert report["annotation_count"] == 21
     assert report["minimum_exact_matches"] == 17
@@ -38,7 +43,7 @@ def test_carcassi_public_domain_reference_meets_frozen_threshold() -> None:
         "fingering_solver": "fingering-solver@0.7.0",
         "score_solver": "score-solver@0.7.0",
         "left_hand_model": "left-hand-ergonomics@0.1.0",
-        "oracle": "oracle@0.6.0",
+        "oracle": "oracle@0.7.0",
         "profile": "median@0.1",
         "profile_fingerprint": ("fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62"),
     }

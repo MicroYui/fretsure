@@ -12,7 +12,7 @@ finger. ``capo`` shifts every fretted note to its absolute neck position.
 
 import itertools
 
-from fretsure.geometry import d_max, euclid, fingertip_xy
+from fretsure.geometry import d_max, fingertip_xy
 from fretsure.oracle.profiles import Profile
 from fretsure.tab import Frame, TabNote
 
@@ -50,7 +50,11 @@ def assignment_valid(
                 pa = fingertip_xy(fretted[i].string, capo + fretted[i].fret, sl)
                 pb = fingertip_xy(fretted[j].string, capo + fretted[j].fret, sl)
                 assert pa is not None and pb is not None  # fret > 0 => fretted
-                if euclid(pa, pb) > d_max(assignment[i], assignment[j], hs):
+                # Along the neck, matching `check_fret_span`. This file is the
+                # third copy of the physical rules and the agreement test caught
+                # it lagging the first by one commit, which is the failure mode
+                # the whole triple-copy arrangement exists to make loud.
+                if abs(pa[0] - pb[0]) > d_max(assignment[i], assignment[j], hs):
                     return False
     # A barre presses every string it crosses, so nothing inside its span can be
     # stopped lower.  check_barre enforces this on an exhibited Tab; enumerating
@@ -113,7 +117,7 @@ def feasible_finger_assignment(
                     pa = fingertip_xy(note.string, capo + note.fret, profile.string_length_mm)
                     pb = fingertip_xy(pn.string, capo + pn.fret, profile.string_length_mm)
                     assert pa is not None and pb is not None
-                    if euclid(pa, pb) > d_max(f, pf, profile.hand_span_mm):
+                    if abs(pa[0] - pb[0]) > d_max(f, pf, profile.hand_span_mm):
                         ok = False
                         break
             if ok:

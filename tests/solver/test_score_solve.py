@@ -240,7 +240,7 @@ def test_score_segments_carry_hand_context_across_carcassi_seam() -> None:
     # producing a RED shift seam.  Context propagation keeps B2 at A-string
     # fret 2, which is where the public-domain edition puts it.
     #
-    # The edition also prints finger 2 there, and until `oracle@0.6.0` the solver
+    # The edition also prints finger 2 there, and until `oracle@0.7.0` the solver
     # agreed.  Flooring `d_max` at the width of the neck -- so that two fingers
     # can reach the outer strings at one fret, which they must, since otherwise a
     # G major chord is unplayable -- widened the space enough that the cost
@@ -286,8 +286,5 @@ def test_score_segments_carry_hand_context_across_carcassi_seam() -> None:
     # The seam property: the note is where the edition puts it, not restarted
     # high on the low E string.
     assert (seam_note.string, seam_note.fret) == (1, 2)
-    # The finger the edition prints is 2; `oracle@0.6.0` picks 3. Asserted so the
-    # divergence is visible and a future cost-function change that restores the
-    # agreement fails loudly rather than passing unnoticed.
-    assert seam_note.left_finger == 3
+    assert seam_note.left_finger == 2, "the finger the public-domain edition prints"
     assert check_playability(result, MEDIAN_HAND).verdict != "RED"

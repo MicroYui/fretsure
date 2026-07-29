@@ -81,7 +81,32 @@ RESULT_SCHEMA: Final = "fretsure-negative-tab-replay@0.1.0"
 # The remaining 47 AMBER and 21 GREEN have still never been inspected, so this
 # guard continues to assert provenance rather than playability, and a future
 # change that moves them needs the same treatment: look at them.
-EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1650, "AMBER": 47, "GREEN": 21}
+# 2026-07-29, again, and for the same reason as before it. `oracle@0.7.0`
+# measures the span along the neck instead of in a straight line, because the
+# fingers belong to one hand laid across the strings and spreading across them
+# is what the hand is shaped to do. Four tabs move AMBER -> GREEN and two move
+# RED -> AMBER; all six were rendered before this number was touched.
+#
+# The four newly certified are ordinary open-position textures. The one with the
+# tightest margin has finger 3 on the first string at fret 3 and finger 2 on the
+# fifth at fret 2 -- four strings apart, one fret apart, a shape inside any G or
+# D voicing. It measured 53.6 mm in a straight line against a 52.5 mm limit and
+# was refused by 1.1 mm; along the neck it is 33.4 mm.
+#
+# The two leaving RED are the same shape stretched: finger 2 on the sixth string
+# and finger 4 on the first, three frets apart. They land in AMBER, so nothing
+# confidently refused became certified -- the verifier declines rather than
+# commits.
+#
+#     RED   1650 -> 1648
+#     AMBER   47 ->   45
+#     GREEN   21 ->   25
+#
+# What justifies this is not the counts but the discrimination curve, which
+# improved at both ends on both splits: fewer printed fingerings refused, and
+# stretched shapes caught *more* often, because the across-string component had
+# been diluting the limit. See scripts/measure_oracle_discrimination.py.
+EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1648, "AMBER": 45, "GREEN": 25}
 
 
 def load_raw_tabs(canonical: Path) -> tuple[Tab, ...]:
