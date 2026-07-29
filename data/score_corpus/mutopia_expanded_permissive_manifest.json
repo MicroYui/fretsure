@@ -3,6 +3,7 @@
   "libxml2": "2.12.9",
   "lxml": "5.3.0",
   "python_ly": "0.9.10",
+  "python_ly_patch": "python-ly-string-numbers@0.1.0",
   "script": "scripts/m1_lilypond.py",
   "script_sha256": "857f7f8c73239016dc97d406483c0d1dccd9ab88b0b527ef9d872e0c98ef2da1",
   "upstream": "HugoFara/graded-guitar"

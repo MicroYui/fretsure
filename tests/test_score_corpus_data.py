@@ -111,15 +111,15 @@ def test_mutopia_sharealike_corpus_is_large_licensed_and_source_complete() -> No
     manifest = json.loads(manifest_payload)
 
     assert hashlib.sha256(payload).hexdigest() == (
-        "c58134c4a1f79c909e43cdd38b44a5e7c85e8a45b47b815a15e99dcd9d2d9c94"
+        "846c29583198afcbacf9d1878074b6fa2d30c009d9dca692f9a66f98d21138a7"
     )
     assert hashlib.sha256(manifest_payload).hexdigest() == (
-        "f00fe740f76506729764ba04b5d1441be2237c57da84c5d1ebb875b9a7a76123"
+        "011fed2abd6ef5db2f3a778cc9675e54d5d715fd4c0a189b68747c1e22a01a0a"
     )
     assert len(manifest["entries"]) == 33
     assert len(examples) == 35
     assert sum(len(example["notes"]) for example in examples) == 13_955
-    assert sum(len(example["annotations"]) for example in examples) == 1_645
+    assert sum(len(example["annotations"]) for example in examples) == 1_811
     assert sum(
         any(1 <= finger <= 4 for finger in annotation["accepted_fingers"])
         for example in examples
@@ -139,7 +139,7 @@ def test_mutopia_sharealike_corpus_is_large_licensed_and_source_complete() -> No
         "train",
         "dev",
         "test",
-    )} == {"train": 24, "dev": 5, "test": 6}
+    )} == {"train": 25, "dev": 5, "test": 5}
 
     root_digests = [example["root_sha256"] for example in examples]
     assert len(root_digests) == len(set(root_digests))

@@ -53,6 +53,27 @@ def _required_integer(value: Mapping[str, object], key: str) -> int:
 
 
 def _load_converter(path: Path) -> ModuleType:
+    """Load the pinned converter, with string numbers restored to its output.
+
+    `python-ly` lexes a LilyPond string indication -- `<g-1\\2>` is *G, first
+    finger, second string* -- and then drops it: its mediator handles the
+    fingering branch and never wrote the string-number one. 619 indications
+    across 31 sources reached the corpus as nothing, and without them a printed
+    fingering does not locate a note, so every geometric question about the
+    verifier had to guess which string was meant.
+
+    The patch is applied here rather than at each call site so that no build path
+    can quietly produce a corpus without it, and its version is recorded in the
+    manifest beside the converter's digest -- a conversion that does not say it
+    was patched is a different conversion.
+    """
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import ly
+    import python_ly_string_numbers
+
+    python_ly_string_numbers.apply(ly)
+
     spec = importlib.util.spec_from_file_location(
         "fretsure_pinned_mutopia_converter", path
     )
@@ -152,8 +173,24 @@ def _convert_source(
 def build_mutopia_examples(
     manifest_path: Path,
     converter_path: Path,
+    *,
+    rederive_content: bool = False,
 ) -> tuple[ScoreCorpusExample, ...]:
-    """Convert and validate every explicitly selected manifest movement."""
+    """Convert and validate every explicitly selected manifest movement.
+
+    ``rederive_content`` exists for the one situation the digest cannot cover:
+    the conversion itself got better. Restoring the string numbers python-ly was
+    dropping changes what every movement contains, so the pinned digests describe
+    a conversion that no longer runs. Re-deriving them is therefore correct, and
+    it is a separate switch rather than a fallback because a digest that yields
+    whenever it fails is not a digest.
+
+    The **note** count stays checked in that mode, because no improvement to the
+    conversion should move a note -- that is the property worth guarding and a
+    re-derivation that breaks it must fail as loudly as before. The annotation
+    count is not checked, because restoring the string numbers necessarily raises
+    it: notes that carried no technical marking at all now carry one.
+    """
 
     document = cast(
         dict[str, object], json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -256,7 +293,7 @@ def build_mutopia_examples(
             )
             expected_content = _required_string(movement_spec, "content_sha256")
             actual_content = content_sha256(example)
-            if actual_content != expected_content:
+            if actual_content != expected_content and not rederive_content:
                 raise ValueError(
                     f"converted content digest mismatch for {identifier}: "
                     f"expected {expected_content}, got {actual_content}"
@@ -267,7 +304,7 @@ def build_mutopia_examples(
                     f"note count changed for {identifier}: "
                     f"expected {expected_notes}, got {len(example.notes)}"
                 )
-            if len(example.annotations) != expected_annotations:
+            if len(example.annotations) != expected_annotations and not rederive_content:
                 raise ValueError(
                     f"annotation count changed for {identifier}: "
                     f"expected {expected_annotations}, got {len(example.annotations)}"

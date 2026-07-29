@@ -3,6 +3,7 @@
   "libxml2": "2.12.9",
   "lxml": "5.3.0",
   "python_ly": "0.9.10",
+  "python_ly_patch": "python-ly-string-numbers@0.1.0",
   "script": "scripts/m1_lilypond.py",
   "script_sha256": "857f7f8c73239016dc97d406483c0d1dccd9ab88b0b527ef9d872e0c98ef2da1",
   "upstream": "HugoFara/graded-guitar"
@@ -420,8 +421,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
    "movements": [
     {
-     "annotation_count": 0,
-     "content_sha256": "aaade50a80c609c7baf947cf6bfa493366a1c1a667773a9c852dd2bd579532c4",
+     "annotation_count": 3,
+     "content_sha256": "3489b042a7a39eaf592e2659254536ea5db622650a9d968e6fde9b8ec419783b",
      "id": "mutopia-carcassi-op26-01",
      "index": 1,
      "note_count": 588,
@@ -468,8 +469,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
    "movements": [
     {
-     "annotation_count": 13,
-     "content_sha256": "83a60ec1e2c8518999abd56270da4128cce00e45033bba2626d21f261993dd93",
+     "annotation_count": 44,
+     "content_sha256": "96c1b3cae3fd5ea99949be083d50fb910c631917d476eaede358c935a94a844b",
      "id": "mutopia-carcassi-op60-02",
      "index": 1,
      "note_count": 367,
@@ -492,8 +493,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
    "movements": [
     {
-     "annotation_count": 73,
-     "content_sha256": "1512fdb80e4cac3b8d94cd16cd75a9f1d10f70d687a2d171f34f78dafb16cbf2",
+     "annotation_count": 94,
+     "content_sha256": "22371d4c01adc6dfeef5f7acdf2598e806e29f2f5aa4d6a080afc69f9549cf9e",
      "id": "mutopia-carcassi-op60-04",
      "index": 1,
      "note_count": 306,
@@ -540,8 +541,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
    "movements": [
     {
-     "annotation_count": 15,
-     "content_sha256": "6090c83295462fb0a424e8da0cf1b921ed71e7107ddd16fa04cb51e04e30f199",
+     "annotation_count": 16,
+     "content_sha256": "46573f3bffe1679f736e19f469d9f9501620071ee5a335a66c34a792cd0be872",
      "id": "mutopia-carcassi-op60-10",
      "index": 1,
      "note_count": 297,
@@ -732,8 +733,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
    "movements": [
     {
-     "annotation_count": 10,
-     "content_sha256": "c0a406690042d980be9354ab01d71eb94bb764c06c38218a904dcaf4f40b306c",
+     "annotation_count": 24,
+     "content_sha256": "a1a2ae939110890e354ad122c250804b781cbb8f6d9b6a43eadd64bf674d8664",
      "id": "mutopia-carcassi-op60-19",
      "index": 1,
      "note_count": 460,
@@ -1212,8 +1213,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
    "movements": [
     {
-     "annotation_count": 0,
-     "content_sha256": "b340f770f4e7872d2d5466dd120a4796e0d4287970809b320799e2b26942ced8",
+     "annotation_count": 1,
+     "content_sha256": "f9e7bb05daf0cfbfd9c156d04a76c06b9cac1646c62b8ced942bfaf3ebc3261c",
      "id": "mutopia-giuliani-op59n16",
      "index": 1,
      "note_count": 407,
@@ -1260,8 +1261,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
    "movements": [
     {
-     "annotation_count": 0,
-     "content_sha256": "ef965c766ace87c2dfa7bf97b16d8bc676f76eb4564f19bc3b134779eb0a3cc1",
+     "annotation_count": 9,
+     "content_sha256": "f592725b0494ec6a7632f18655489d4ca97308a566518b64fc4831130ab9e913",
      "id": "mutopia-giulianiop100no10",
      "index": 1,
      "note_count": 378,
@@ -1284,8 +1285,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
    "movements": [
     {
-     "annotation_count": 0,
-     "content_sha256": "d9b37fc6d8fa48df900349191669dbc49c6a4b1ac0b455bab7764c954ebd0a3e",
+     "annotation_count": 17,
+     "content_sha256": "a45d48c47a36a2a50920e8f2eed90a6700be1fb83e82384607b50773a5790c3b",
      "id": "mutopia-giulianiop100no11",
      "index": 1,
      "note_count": 523,
@@ -1404,8 +1405,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
    "movements": [
     {
-     "annotation_count": 0,
-     "content_sha256": "68d0388846d6533edf86622b5c38cb8ea4047bfd2dcac3f882ff8963a0132f07",
+     "annotation_count": 2,
+     "content_sha256": "eafab393d3783763eb976d00c1dbf9d84f300ae56ca5ffe3640c2d47b864adbb",
      "id": "mutopia-giulianiop100no16",
      "index": 1,
      "note_count": 784,
@@ -1500,8 +1501,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
    "movements": [
     {
-     "annotation_count": 0,
-     "content_sha256": "d705c02c805f3f7a0e4bd86ef6bca30645b5eabb9492c81d81b35da9a078b6e4",
+     "annotation_count": 7,
+     "content_sha256": "d0349d4eea35186219a71afb5347a488a60d4c91725f944064ff85bbc4ef7bf2",
      "id": "mutopia-giulianiop100no2",
      "index": 1,
      "note_count": 232,
@@ -1644,8 +1645,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
    "movements": [
     {
-     "annotation_count": 0,
-     "content_sha256": "0af9b58b70397ca52e92c47f8910f8ac7dd57c825f260b3f4af50f4099e3376e",
+     "annotation_count": 5,
+     "content_sha256": "2fd2d0e4701823c5a1e337d8abbbf2c9248ab6d22803c75abbae9d5c3e7bdebc",
      "id": "mutopia-giulianiop100no4",
      "index": 1,
      "note_count": 411,
@@ -1668,8 +1669,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
    "movements": [
     {
-     "annotation_count": 0,
-     "content_sha256": "f394e5cec72ec35cf0538330b7e15e188dd9e2524e2f0f162ea50d3f49391ca2",
+     "annotation_count": 21,
+     "content_sha256": "5625fb202f6bdfffab81e0d6ee0c7e37f76709104a260978440ec604acb72de6",
      "id": "mutopia-giulianiop100no5",
      "index": 1,
      "note_count": 328,
@@ -1740,8 +1741,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
    "movements": [
     {
-     "annotation_count": 0,
-     "content_sha256": "c446e968aaf2df764ef75d2184245782bd163b6e3ee1d99494a531d3ed127260",
+     "annotation_count": 1,
+     "content_sha256": "086e647b698729dd131c8fe5b012e2c4be0ff1fc7b54fb5a8caf44589f51f849",
      "id": "mutopia-giulianiop100no8",
      "index": 1,
      "note_count": 187,
@@ -2436,8 +2437,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
    "movements": [
     {
-     "annotation_count": 86,
-     "content_sha256": "52edcf20fa461485008855e81e5b750f3bf45cb132de4cbb9d9f8ab5ffa83016",
+     "annotation_count": 127,
+     "content_sha256": "4319a59c9084b37a66a0b8903bceb854b462f8059122aaa7121dd37e3d4c946a",
      "id": "mutopia-sorf-op35-no22-movement-1",
      "index": 1,
      "note_count": 305,
@@ -2604,8 +2605,8 @@
    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
    "movements": [
     {
-     "annotation_count": 196,
-     "content_sha256": "4eacd6b62e78e85fbda06308997dd044b30fa8f2711477453cdf8d96258c8eb1",
+     "annotation_count": 199,
+     "content_sha256": "6d7d9124cc973a8dbb0ba3851cdc5d420c06576e7fce9897637b69323405b29e",
      "id": "mutopia-sorf-op35-no9",
      "index": 1,
      "note_count": 468,

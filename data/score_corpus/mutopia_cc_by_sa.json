@@ -4225,7 +4225,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "5540864cbc230184d09d0dd15afeb81c9d1223d5cc2d1efee528f40f6e1773ea",
+      "root_sha256": "32a8733e92f1244aa0051feeb453cdd262cb86f4252087aa880a602424a00e8a",
       "source_filename": "aguado-op11n01.ly",
       "source_sha256": "efb7a57a83bcc502db829d23af65745933cb1861c1c109f46c2232b9b18dfaf4",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n01/aguado-op11n01.ly",
@@ -4261,7 +4261,7 @@
             1
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -4369,7 +4369,7 @@
             2
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -6854,7 +6854,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "d287d89ffdb24e39e45878a99485de0b0439efe79cc212c6f54c33eefff4ab1b",
+      "root_sha256": "3692b440bfd7c3153a800b651a80591136bc6fddf46fe8be5e7e59583549c482",
       "source_filename": "aguado-op11n02.ly",
       "source_sha256": "3355a31990aefe83acd156c7e698c6a458228f33b92c1a25c859e970ae953c45",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n02/aguado-op11n02.ly",
@@ -10971,7 +10971,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "69412f63c6b4e44c1d6e87aaa75801a403f8b8248ca9e2e58a392eea5faaefc4",
+      "root_sha256": "6afa51d18ed05a059368872d43ad3d0599a3186ea78eefaa7ef9e22138a96e4e",
       "source_filename": "aguado-op11n03.ly",
       "source_sha256": "e41f36b47d3aff69f8afd423a50e1fa0a326d12b2b207654b22c4a0f8d2e4257",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n03/aguado-op11n03.ly",
@@ -11043,7 +11043,17 @@
             1
           ],
           "pitch": 66,
-          "string": null
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            50,
+            1
+          ],
+          "pitch": 50,
+          "string": 5
         },
         {
           "accepted_fingers": [
@@ -11068,6 +11078,16 @@
           ],
           "pitch": 62,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            158,
+            3
+          ],
+          "pitch": 50,
+          "string": 5
         },
         {
           "accepted_fingers": [
@@ -14404,7 +14424,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "09d37c5964d7d88e8974720db3f5c5d95d526fe6711a7357f807a68ec7bdadbb",
+      "root_sha256": "0d5fd3776fb8ff88e13bbb0b4002b8ac792e02d3d03fe99bed7cf8412516b6cc",
       "source_filename": "aguado-op11n04.ly",
       "source_sha256": "fb02ed68c988005e61b939d902b03467811bb62292be446163a000f48451ea65",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n04/aguado-op11n04.ly",
@@ -17417,7 +17437,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "f45e0f7e7623c7b0634b92dcf2b763b84db5303dda1b3f806ef9b2ca44eec6a9",
+      "root_sha256": "19d75c0148f9c124f09306db8b2d90516984627f6f012990693936952b327d52",
       "source_filename": "aguado-op11n05.ly",
       "source_sha256": "766414549c0029ce27eb1e64d0992c3c9dcff2284e9199e0061379391440dbb2",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n05/aguado-op11n05.ly",
@@ -17525,7 +17545,7 @@
             1
           ],
           "pitch": 55,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -21054,7 +21074,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "e6e5a5310ceb0dd9b988fff934dcdbeb9f4e55b7097c8beec992553152c31e88",
+      "root_sha256": "1d909b27a348bb7bcfd2564a056646f5f4b06722f4254456b3fce9b0464a28e3",
       "source_filename": "aguado-op11n06.ly",
       "source_sha256": "931a067e44de201cd83829fd718bdce1c1d8b7d8e9e581e2f868c1cbc372c5cf",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n06/aguado-op11n06.ly",
@@ -24343,7 +24363,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "d6226a4f645ed0c8d844c34b5142c1c48eee54e3ff9cc4868f8760dfc45561bb",
+      "root_sha256": "f70785664753cbdc0dee232bbfb29b2122234707e8ed1dbd61cfd4d3f897a182",
       "source_filename": "aguado-op11n07.ly",
       "source_sha256": "bc9975da8142b057d7f8d80d4676923c034bc43f84433a0fcfcd957fe30fcf3b",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n07/aguado-op11n07.ly",
@@ -28220,7 +28240,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "206a67c795d70effe04165bf882d6561c0c243a6f5f88da69633e0a432c11d42",
+      "root_sha256": "a15934ea36c67c1bd14baadb80c550ef8e4e6ff6fb4488eb10126e1507357db2",
       "source_filename": "aguado-op11n08.ly",
       "source_sha256": "a91c3e13ea2e576fa91d357c97237f60ebedc4d6e42b687022e8518c0fc03060",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n08/aguado-op11n08.ly",
@@ -28269,6 +28289,16 @@
           ],
           "pitch": 54,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            6,
+            1
+          ],
+          "pitch": 50,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -28352,7 +28382,7 @@
             2
           ],
           "pitch": 56,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -32601,7 +32631,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "720c3e23ea4fe9e03c081b79a3955285bcbf382911a1a9773d0ba4d0c6d02827",
+      "root_sha256": "3e3ea5a4173b0b611855cece76ef2b01a49865af8960890afd9192b3f1d6f2c2",
       "source_filename": "aguado-op11n09.ly",
       "source_sha256": "1cf78d9df02d9c21d25a77998de07544c56f0036067ea0643e4eb730346b5e86",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n09/aguado-op11n09.ly",
@@ -32627,6 +32657,16 @@
     },
     {
       "annotations": [
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            0,
+            1
+          ],
+          "pitch": 64,
+          "string": 4
+        },
         {
           "accepted_fingers": [
             4
@@ -35230,7 +35270,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "2aecb23e6d577787190691cb9d89e2a2f80bd1f5d3a0e99d93c84f5db1338251",
+      "root_sha256": "bc13b9e9a006c2c1d208df47ccbf90abca258576e28c6dfa3a978a0592cf42db",
       "source_filename": "aguado-op11n10.ly",
       "source_sha256": "77c91e1ffba3ca670d1c63e84d4f73595947b536cea6b31360bb70447fe57da7",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/O11/aguado-op11n10/aguado-op11n10.ly",
@@ -35266,7 +35306,7 @@
             1
           ],
           "pitch": 59,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -35278,7 +35318,7 @@
             1
           ],
           "pitch": 60,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -35290,7 +35330,7 @@
             4
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -35305,6 +35345,16 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            31,
+            4
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
           "accepted_fingers": [
             3
           ],
@@ -35314,7 +35364,7 @@
             1
           ],
           "pitch": 59,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -35363,6 +35413,16 @@
           ],
           "pitch": 48,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            18,
+            1
+          ],
+          "pitch": 59,
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -35434,7 +35494,7 @@
             1
           ],
           "pitch": 59,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -35470,7 +35530,7 @@
             1
           ],
           "pitch": 60,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -35482,7 +35542,7 @@
             4
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -35497,6 +35557,16 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            159,
+            4
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
           "accepted_fingers": [
             3
           ],
@@ -35506,7 +35576,7 @@
             1
           ],
           "pitch": 60,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -35518,7 +35588,7 @@
             4
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -35533,6 +35603,16 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            163,
+            4
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
           "accepted_fingers": [
             3
           ],
@@ -35542,7 +35622,7 @@
             1
           ],
           "pitch": 59,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -35554,7 +35634,7 @@
             1
           ],
           "pitch": 59,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -35578,7 +35658,7 @@
             1
           ],
           "pitch": 50,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -35590,7 +35670,7 @@
             2
           ],
           "pitch": 62,
-          "string": null
+          "string": 1
         }
       ],
       "capo": 0,
@@ -38483,7 +38563,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "9ba80802627ab1e9776de8539f2ba72ca2022f3fa58f79d959a49c1bcbe004f2",
+      "root_sha256": "f0241f320a38fb5ef86dd20257dd63795c4f827e74198dc5e53b96d9277f0f88",
       "source_filename": "aminor-study.ly",
       "source_sha256": "a306d54cc9eaefe7e9fae0ac2426fe43d44494ba00dd8e6ae92137b34a7b7aed",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/aminor-study/aminor-study.ly",
@@ -38509,6 +38589,26 @@
     },
     {
       "annotations": [
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            0,
+            1
+          ],
+          "pitch": 52,
+          "string": 0
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            0,
+            1
+          ],
+          "pitch": 57,
+          "string": 2
+        },
         {
           "accepted_fingers": [
             4
@@ -38639,7 +38739,7 @@
             2
           ],
           "pitch": 67,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -38651,7 +38751,47 @@
             4
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            6,
+            1
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            35,
+            4
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            10,
+            1
+          ],
+          "pitch": 52,
+          "string": 0
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            13,
+            1
+          ],
+          "pitch": 57,
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -38783,7 +38923,7 @@
             2
           ],
           "pitch": 67,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -38795,7 +38935,27 @@
             4
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            21,
+            1
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            95,
+            4
+          ],
+          "pitch": 64,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -38831,7 +38991,7 @@
             2
           ],
           "pitch": 55,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -38843,7 +39003,7 @@
             1
           ],
           "pitch": 58,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -38858,6 +39018,16 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            32,
+            1
+          ],
+          "pitch": 64,
+          "string": 2
+        },
+        {
           "accepted_fingers": [
             2
           ],
@@ -38867,7 +39037,7 @@
             1
           ],
           "pitch": 62,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -38879,7 +39049,7 @@
             2
           ],
           "pitch": 61,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -38891,7 +39061,7 @@
             3
           ],
           "pitch": 62,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -38903,7 +39073,7 @@
             6
           ],
           "pitch": 64,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -38915,7 +39085,7 @@
             1
           ],
           "pitch": 62,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -38927,7 +39097,107 @@
             6
           ],
           "pitch": 61,
-          "string": null
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            109,
+            3
+          ],
+          "pitch": 58,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            73,
+            2
+          ],
+          "pitch": 57,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            110,
+            3
+          ],
+          "pitch": 60,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            221,
+            6
+          ],
+          "pitch": 58,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            37,
+            1
+          ],
+          "pitch": 57,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            39,
+            1
+          ],
+          "pitch": 55,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            235,
+            6
+          ],
+          "pitch": 53,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            118,
+            3
+          ],
+          "pitch": 52,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            947,
+            24
+          ],
+          "pitch": 50,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            79,
+            2
+          ],
+          "pitch": 65,
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -38951,7 +39221,17 @@
             3
           ],
           "pitch": 46,
-          "string": null
+          "string": 0
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            81,
+            2
+          ],
+          "pitch": 65,
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -38963,7 +39243,47 @@
             6
           ],
           "pitch": 46,
-          "string": null
+          "string": 0
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            43,
+            1
+          ],
+          "pitch": 45,
+          "string": 0
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            87,
+            2
+          ],
+          "pitch": 65,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            44,
+            1
+          ],
+          "pitch": 53,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            45,
+            1
+          ],
+          "pitch": 52,
+          "string": 1
         },
         {
           "accepted_fingers": [
@@ -38978,6 +39298,16 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            97,
+            2
+          ],
+          "pitch": 65,
+          "string": 2
+        },
+        {
           "accepted_fingers": [
             1
           ],
@@ -38987,7 +39317,27 @@
             1
           ],
           "pitch": 52,
-          "string": null
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            103,
+            2
+          ],
+          "pitch": 61,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            52,
+            1
+          ],
+          "pitch": 53,
+          "string": 1
         },
         {
           "accepted_fingers": [
@@ -38999,7 +39349,7 @@
             1
           ],
           "pitch": 52,
-          "string": null
+          "string": 1
         },
         {
           "accepted_fingers": [
@@ -39011,7 +39361,87 @@
             2
           ],
           "pitch": 57,
-          "string": null
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            111,
+            2
+          ],
+          "pitch": 61,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            57,
+            1
+          ],
+          "pitch": 50,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            119,
+            2
+          ],
+          "pitch": 62,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            121,
+            2
+          ],
+          "pitch": 60,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            62,
+            1
+          ],
+          "pitch": 67,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            66,
+            1
+          ],
+          "pitch": 67,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            141,
+            2
+          ],
+          "pitch": 68,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            283,
+            4
+          ],
+          "pitch": 69,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39095,7 +39525,7 @@
             1
           ],
           "pitch": 53,
-          "string": null
+          "string": 1
         },
         {
           "accepted_fingers": [
@@ -39107,7 +39537,7 @@
             1
           ],
           "pitch": 70,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39131,7 +39561,7 @@
             2
           ],
           "pitch": 64,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -39143,7 +39573,7 @@
             4
           ],
           "pitch": 61,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -39155,7 +39585,7 @@
             1
           ],
           "pitch": 52,
-          "string": null
+          "string": 1
         },
         {
           "accepted_fingers": [
@@ -39182,6 +39612,16 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            157,
+            2
+          ],
+          "pitch": 57,
+          "string": 4
+        },
+        {
           "accepted_fingers": [
             4
           ],
@@ -39191,7 +39631,7 @@
             2
           ],
           "pitch": 67,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39203,7 +39643,7 @@
             4
           ],
           "pitch": 65,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39215,7 +39655,57 @@
             1
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            317,
+            4
+          ],
+          "pitch": 65,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            159,
+            2
+          ],
+          "pitch": 57,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            159,
+            2
+          ],
+          "pitch": 67,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            319,
+            4
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            80,
+            1
+          ],
+          "pitch": 65,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39227,7 +39717,7 @@
             1
           ],
           "pitch": 66,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39299,7 +39789,7 @@
             1
           ],
           "pitch": 52,
-          "string": null
+          "string": 1
         },
         {
           "accepted_fingers": [
@@ -39455,7 +39945,7 @@
             1
           ],
           "pitch": 67,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39491,7 +39981,7 @@
             1
           ],
           "pitch": 52,
-          "string": null
+          "string": 1
         },
         {
           "accepted_fingers": [
@@ -39527,7 +40017,67 @@
             2
           ],
           "pitch": 57,
-          "string": null
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            95,
+            1
+          ],
+          "pitch": 63,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            96,
+            1
+          ],
+          "pitch": 50,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            100,
+            1
+          ],
+          "pitch": 62,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            101,
+            1
+          ],
+          "pitch": 60,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            231,
+            2
+          ],
+          "pitch": 68,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            463,
+            4
+          ],
+          "pitch": 69,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39563,7 +40113,7 @@
             1
           ],
           "pitch": 70,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39575,7 +40125,17 @@
             2
           ],
           "pitch": 64,
-          "string": null
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            483,
+            4
+          ],
+          "pitch": 61,
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -39587,7 +40147,7 @@
             1
           ],
           "pitch": 69,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39599,7 +40159,7 @@
             1
           ],
           "pitch": 69,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39623,7 +40183,7 @@
             4
           ],
           "pitch": 65,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39635,7 +40195,77 @@
             1
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            249,
+            2
+          ],
+          "pitch": 67,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            125,
+            1
+          ],
+          "pitch": 65,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            126,
+            1
+          ],
+          "pitch": 66,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            253,
+            2
+          ],
+          "pitch": 60,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            261,
+            2
+          ],
+          "pitch": 60,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            263,
+            2
+          ],
+          "pitch": 58,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            136,
+            1
+          ],
+          "pitch": 67,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39650,6 +40280,126 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            137,
+            1
+          ],
+          "pitch": 55,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            139,
+            1
+          ],
+          "pitch": 57,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            307,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            315,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            317,
+            2
+          ],
+          "pitch": 52,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            323,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            325,
+            2
+          ],
+          "pitch": 60,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            655,
+            4
+          ],
+          "pitch": 58,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            339,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            347,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            709,
+            4
+          ],
+          "pitch": 67,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            357,
+            2
+          ],
+          "pitch": 52,
+          "string": 1
+        },
+        {
           "accepted_fingers": [
             3
           ],
@@ -39659,7 +40409,7 @@
             4
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39671,7 +40421,7 @@
             2
           ],
           "pitch": 62,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39686,6 +40436,146 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            371,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            379,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            379,
+            2
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            381,
+            2
+          ],
+          "pitch": 52,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            387,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            397,
+            2
+          ],
+          "pitch": 69,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            403,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            405,
+            2
+          ],
+          "pitch": 52,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            407,
+            2
+          ],
+          "pitch": 57,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            409,
+            2
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            205,
+            1
+          ],
+          "pitch": 57,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            411,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            206,
+            1
+          ],
+          "pitch": 62,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            208,
+            1
+          ],
+          "pitch": 67,
+          "string": 4
+        },
+        {
           "accepted_fingers": [
             0
           ],
@@ -39696,6 +40586,96 @@
           ],
           "pitch": 64,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            417,
+            2
+          ],
+          "pitch": 69,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            210,
+            1
+          ],
+          "pitch": 62,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            431,
+            2
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            863,
+            4
+          ],
+          "pitch": 57,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            433,
+            2
+          ],
+          "pitch": 60,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            867,
+            4
+          ],
+          "pitch": 63,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            217,
+            1
+          ],
+          "pitch": 66,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            869,
+            4
+          ],
+          "pitch": 69,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            435,
+            2
+          ],
+          "pitch": 72,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39743,7 +40723,7 @@
             4
           ],
           "pitch": 71,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39755,7 +40735,7 @@
             1
           ],
           "pitch": 68,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39779,7 +40759,7 @@
             2
           ],
           "pitch": 62,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39827,7 +40807,7 @@
             4
           ],
           "pitch": 71,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39839,7 +40819,7 @@
             12
           ],
           "pitch": 71,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39851,7 +40831,7 @@
             12
           ],
           "pitch": 69,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39863,7 +40843,7 @@
             4
           ],
           "pitch": 69,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39875,7 +40855,7 @@
             12
           ],
           "pitch": 67,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39887,7 +40867,7 @@
             12
           ],
           "pitch": 67,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39899,7 +40879,7 @@
             4
           ],
           "pitch": 66,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39911,7 +40891,7 @@
             12
           ],
           "pitch": 66,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39923,7 +40903,7 @@
             2
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -39935,7 +40915,7 @@
             3
           ],
           "pitch": 64,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -39947,7 +40927,7 @@
             6
           ],
           "pitch": 62,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -39959,7 +40939,7 @@
             1
           ],
           "pitch": 62,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -39971,7 +40951,7 @@
             6
           ],
           "pitch": 61,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -39983,7 +40963,7 @@
             3
           ],
           "pitch": 61,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -39995,7 +40975,7 @@
             2
           ],
           "pitch": 53,
-          "string": null
+          "string": 1
         },
         {
           "accepted_fingers": [
@@ -40007,7 +40987,7 @@
             2
           ],
           "pitch": 59,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -40019,7 +40999,7 @@
             3
           ],
           "pitch": 59,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -40031,7 +41011,7 @@
             6
           ],
           "pitch": 58,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -40043,7 +41023,7 @@
             1
           ],
           "pitch": 58,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -40055,7 +41035,7 @@
             6
           ],
           "pitch": 57,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -40067,7 +41047,7 @@
             3
           ],
           "pitch": 57,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -40079,7 +41059,7 @@
             2
           ],
           "pitch": 52,
-          "string": null
+          "string": 1
         },
         {
           "accepted_fingers": [
@@ -40091,7 +41071,117 @@
             2
           ],
           "pitch": 69,
-          "string": null
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            229,
+            1
+          ],
+          "pitch": 65,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            459,
+            2
+          ],
+          "pitch": 53,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            230,
+            1
+          ],
+          "pitch": 65,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            461,
+            2
+          ],
+          "pitch": 52,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            463,
+            2
+          ],
+          "pitch": 45,
+          "string": 0
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            233,
+            1
+          ],
+          "pitch": 65,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            467,
+            2
+          ],
+          "pitch": 53,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            234,
+            1
+          ],
+          "pitch": 65,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            469,
+            2
+          ],
+          "pitch": 52,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            473,
+            2
+          ],
+          "pitch": 69,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            237,
+            1
+          ],
+          "pitch": 65,
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -40103,7 +41193,37 @@
             2
           ],
           "pitch": 52,
-          "string": null
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            483,
+            2
+          ],
+          "pitch": 53,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            483,
+            2
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            485,
+            2
+          ],
+          "pitch": 52,
+          "string": 1
         },
         {
           "accepted_fingers": [
@@ -40115,7 +41235,17 @@
             1
           ],
           "pitch": 57,
-          "string": null
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            491,
+            2
+          ],
+          "pitch": 67,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -40128,6 +41258,216 @@
           ],
           "pitch": 64,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            246,
+            1
+          ],
+          "pitch": 69,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            493,
+            2
+          ],
+          "pitch": 50,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            247,
+            1
+          ],
+          "pitch": 69,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            250,
+            1
+          ],
+          "pitch": 60,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            251,
+            1
+          ],
+          "pitch": 69,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            1011,
+            4
+          ],
+          "pitch": 54,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            253,
+            1
+          ],
+          "pitch": 57,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            1013,
+            4
+          ],
+          "pitch": 62,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            507,
+            2
+          ],
+          "pitch": 66,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            1015,
+            4
+          ],
+          "pitch": 69,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            258,
+            1
+          ],
+          "pitch": 69,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            1035,
+            4
+          ],
+          "pitch": 67,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            259,
+            1
+          ],
+          "pitch": 67,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            778,
+            3
+          ],
+          "pitch": 69,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            779,
+            3
+          ],
+          "pitch": 67,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            521,
+            2
+          ],
+          "pitch": 66,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            525,
+            2
+          ],
+          "pitch": 64,
+          "string": 2
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            529,
+            2
+          ],
+          "pitch": 50,
+          "string": 0
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            271,
+            1
+          ],
+          "pitch": 61,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            288,
+            1
+          ],
+          "pitch": 68,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            1153,
+            4
+          ],
+          "pitch": 69,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -40166,6 +41506,36 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            585,
+            2
+          ],
+          "pitch": 70,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            293,
+            1
+          ],
+          "pitch": 64,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            1173,
+            4
+          ],
+          "pitch": 61,
+          "string": 2
+        },
+        {
           "accepted_fingers": [
             3
           ],
@@ -40175,7 +41545,7 @@
             2
           ],
           "pitch": 69,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -40187,7 +41557,7 @@
             2
           ],
           "pitch": 69,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -40211,7 +41581,7 @@
             4
           ],
           "pitch": 65,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -40223,7 +41593,47 @@
             2
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            297,
+            1
+          ],
+          "pitch": 67,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            595,
+            2
+          ],
+          "pitch": 65,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            597,
+            2
+          ],
+          "pitch": 66,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            308,
+            1
+          ],
+          "pitch": 67,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -40236,6 +41646,16 @@
           ],
           "pitch": 64,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            635,
+            2
+          ],
+          "pitch": 62,
+          "string": 1
         }
       ],
       "capo": 0,
@@ -52404,7 +53824,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "03dec1d340c15595a3c671eee959a8c7062ee7648f562f2c4d59a4de0a0581c7",
+      "root_sha256": "fe9be5ed4a89d03893b9578c171d78b193cbb57e25ed91e0429e4170d68d9040",
       "source_filename": "capricho-arabe.ly",
       "source_sha256": "9d10bb6b43d5cbe400a8cb06a3c46b1c1f0f11aff2959310af5d83dfe64fdc5d",
       "source_url": "https://www.mutopiaproject.org/ftp/TarregaF/capricho-arabe/capricho-arabe.ly",
@@ -52575,6 +53995,16 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            73,
+            2
+          ],
+          "pitch": 59,
+          "string": 3
+        },
+        {
           "accepted_fingers": [
             2
           ],
@@ -52599,6 +54029,86 @@
           "string": null
         },
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            38,
+            1
+          ],
+          "pitch": 59,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            40,
+            1
+          ],
+          "pitch": 50,
+          "string": 1
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            145,
+            2
+          ],
+          "pitch": 60,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            74,
+            1
+          ],
+          "pitch": 60,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            151,
+            2
+          ],
+          "pitch": 60,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            169,
+            2
+          ],
+          "pitch": 60,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            86,
+            1
+          ],
+          "pitch": 60,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            175,
+            2
+          ],
+          "pitch": 60,
+          "string": 3
+        },
+        {
           "accepted_fingers": [
             4
           ],
@@ -52608,7 +54118,7 @@
             2
           ],
           "pitch": 57,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -52620,7 +54130,7 @@
             1
           ],
           "pitch": 60,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -52633,6 +54143,26 @@
           ],
           "pitch": 63,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            128,
+            1
+          ],
+          "pitch": 60,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            257,
+            2
+          ],
+          "pitch": 57,
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -52717,6 +54247,36 @@
           ],
           "pitch": 66,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            369,
+            2
+          ],
+          "pitch": 47,
+          "string": 0
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            381,
+            2
+          ],
+          "pitch": 47,
+          "string": 0
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            393,
+            2
+          ],
+          "pitch": 47,
+          "string": 0
         }
       ],
       "capo": 0,
@@ -57709,7 +59269,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "eecb095921e3b30f5fa7d2ed3e69480ed28243a5926dbe0f6009ac575c0ca7a5",
+      "root_sha256": "65818554e71dcdbe77c0bf53b79dc3632f8e649158c94d09500ace444630da1b",
       "source_filename": "carcassi-op26-03.ly",
       "source_sha256": "16c3b1c319f7b3df7b25d770056e35ca94411aedfc65dd9bc343d939f34b7078",
       "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O26/carcassi-op26-03/carcassi-op26-03.ly",
@@ -57842,6 +59402,56 @@
           ],
           "pitch": 62,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            933,
+            4
+          ],
+          "pitch": 64,
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            935,
+            4
+          ],
+          "pitch": 60,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            236,
+            1
+          ],
+          "pitch": 60,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            473,
+            2
+          ],
+          "pitch": 63,
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            237,
+            1
+          ],
+          "pitch": 64,
+          "string": 3
         }
       ],
       "capo": 0,
@@ -69338,11 +70948,11 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "b4a8fc07255c59129f8bdad04cf4d4505f793a33e3acbe38bb67238b51c78ca2",
+      "root_sha256": "18f4ca06502af3c53630abc0ae55d928d704ed99d034e920bf822be81d3ffb6b",
       "source_filename": "carcassi-op26-04.ly",
       "source_sha256": "ff638a0d8046ce9307731f91e21ee57c137561a6ea524abda086241afe5d5da2",
       "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O26/carcassi-op26-04/carcassi-op26-04.ly",
-      "split": "test",
+      "split": "dev",
       "styles": [
         "classical"
       ],
@@ -80823,7 +82433,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "3ddbbac20b944e512985b1ca14a8fb94c0cf00ee34906a28935f2e1348fff1e0",
+      "root_sha256": "b2511368aed6ef80c37c3d8fa6be955a855f98cbf335260954140785bc955e06",
       "source_filename": "carcassi-op26-05.ly",
       "source_sha256": "67d39e25ecb59506612f721b868c8437b003b3a2834483c85943cddb24076250",
       "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O26/carcassi-op26-05/carcassi-op26-05.ly",
@@ -82252,7 +83862,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "f88ae8c5a88b8124a28f75c735b43fb04deb0f84f12963b25837f54ad2f136af",
+      "root_sha256": "9125923c59d064ec22fc6d1312135aa2490f7954e1b74ed70730b406344f6a2e",
       "source_filename": "carcassi-op60-22.ly",
       "source_sha256": "69f58bbf8e363e80994669185e3ef0da372b2ad0774ad253712576ef53a1b204",
       "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-22/carcassi-op60-22.ly",
@@ -87665,7 +89275,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "21e02b5854609aefe827f23aa014b0cdebacf2749cff5b5b39e5b48e5ad7730c",
+      "root_sha256": "5e39e8bcabddf8ee81cfa128ebf95f7d81dcb376330e921626c7f1d490b5a6b4",
       "source_filename": "carcassi-op60-23.ly",
       "source_sha256": "d145f88c548208d0a73fa127f09dc34b8d2ceeabcf57d9209f6083f384ba5dbd",
       "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-23/carcassi-op60-23.ly",
@@ -96582,7 +98192,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "0146bdedd8a191550c57005ce4ec52a58da2d9406b10ca6c719552805b037597",
+      "root_sha256": "d1bfed589161149906443cccda1499098b46473b3b7204c0f4986637661f4ae7",
       "source_filename": "carcassi-op60-24.ly",
       "source_sha256": "651cfc5351bf59a95bcc61571998d4522c8d8797f2a17de221bc37c783ab3e32",
       "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-24/carcassi-op60-24.ly",
@@ -107119,7 +108729,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "7fbf2699062d9bcb4f2ec2ad6828aa0893893d8b57fc72cff6fa49dcdeba556f",
+      "root_sha256": "bdadce9a0acfdac898f0131a43758073888c89d5cfaaa85a0df44b3d8493b641",
       "source_filename": "carcassi-op60-25.ly",
       "source_sha256": "9d36eba5d92b12a870b54ea3b0953256b7f9ee76e315df903ba9d39bb47759fd",
       "source_url": "https://www.mutopiaproject.org/ftp/CarcassiM/O60/carcassi-op60-25/carcassi-op60-25.ly",
@@ -111248,7 +112858,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "d7155b9e278c8c69a206dd723185a5a5beaa69e83051c324c820cac5c23f961b",
+      "root_sha256": "5dd800d49cc89ab9c851b866ca0e07f64118d8f5908fd5f35baf8308088fb317",
       "source_filename": "g-major-allegro.ly",
       "source_sha256": "2fda15f9c8b5660fe8b732f3f7d8cfec71e6ecc8d5a64b584f59fab7ad17412c",
       "source_url": "https://www.mutopiaproject.org/ftp/AguadoD/g-major-allegro/g-major-allegro.ly",
@@ -113433,7 +115043,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "cf01074a1f60edfe222b3b480577899a6d248eac224211b4d8e97ad32a609907",
+      "root_sha256": "be4113f69c78a880eaf6353f4ad775d08ea09c39b4fe5512586d22fbc6adf39a",
       "source_filename": "sorf_op35_no11.ly",
       "source_sha256": "50dc7584e15852835ea730cfbaa3dc6dd8ed8255282aee7f4ea2814fa2143f87",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no11/sorf_op35_no11.ly",
@@ -118234,7 +119844,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "f00ba0f4cb3d0ae4a77d589a1bec28d326a1febf3931edf4333d5f01ed9fae3f",
+      "root_sha256": "889bfd35ff810fadf62805303d9d4f17cdf4ffbd81772f31b21843fa04f3a686",
       "source_filename": "sorf_op35_no13.ly",
       "source_sha256": "665771bbda69b3c7943cdacd2a6e3a03a2be017d3e408725dab1908282660d19",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no13/sorf_op35_no13.ly",
@@ -121607,7 +123217,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "91f5e1c43ce4ee98dc3342abda5b9ca25b5e98c7456b8d372d7ea498ce0b1936",
+      "root_sha256": "b0167cb7049133859f8b14d45086d142cf625c4284d4df4afcdfbb174f116eb9",
       "source_filename": "sorf_op35_no15.ly",
       "source_sha256": "98ff98d53ca99cbc2c516132b2944872fba82ce7aa738bab5d4b80e5a231e6db",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no15/sorf_op35_no15.ly",
@@ -129444,7 +131054,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "dad8260d0fa5a1afe2188a5b37369473d2b2ef4fe22981af2324f3cc7439d6d6",
+      "root_sha256": "a5acc1c659129d51e2344422989e305325667e7a9c8c004b17af1623e652fe45",
       "source_filename": "sorf_op35_no16.ly",
       "source_sha256": "3bf20632307158bf20ec0c9348b9fa5eeff69ea32387568d0dc34abbe989bfc0",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no16/sorf_op35_no16.ly",
@@ -130069,6 +131679,16 @@
           ],
           "pitch": 52,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            121,
+            2
+          ],
+          "pitch": 59,
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -133957,7 +135577,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "5e797b4684fd5c9fc4732e9dfd310f549ead87d5212b03982d9bf1f4bdda755a",
+      "root_sha256": "1b5a1f4f120295ae676b6001f96143445568f0a3ec805d163176737d181d4bc4",
       "source_filename": "sorf_op35_no17.ly",
       "source_sha256": "bdf53de336c46197d966f71a4803fcda256658f67902b74ee01499a308772da0",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no17/sorf_op35_no17.ly",
@@ -139490,7 +141110,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "2cce41fdb772f9a70363e48765e477cf8d57998d792e7c53e91c27e8155b49b4",
+      "root_sha256": "f2fb3940ea7cf9825474921475e8426c7f2c29f43c443f465b3cc75e16d4e17a",
       "source_filename": "sorf_op35_no18.ly",
       "source_sha256": "68dbf159013583472f8abdb26f257fef40795ae1c5daa3ce3b722abf15961a59",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no18/sorf_op35_no18.ly",
@@ -144711,11 +146331,11 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "acf62af5be6d152e1e60a533e5e7df2c991c597c83ef37fc9373b3d0caf9591f",
+      "root_sha256": "476fdbee591fd8d851ad87923cb09df0d703c598714d773af5b1710a64f61b36",
       "source_filename": "sorf_op35_no19.ly",
       "source_sha256": "bfec865e33de29c16d83ed281fa4f2b19abaf84d3adb8d68722173147cd00417",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no19/sorf_op35_no19.ly",
-      "split": "dev",
+      "split": "train",
       "styles": [
         "classical"
       ],
@@ -144738,6 +146358,16 @@
     {
       "annotations": [
         {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            0,
+            1
+          ],
+          "pitch": 57,
+          "string": 2
+        },
+        {
           "accepted_fingers": [
             2
           ],
@@ -144747,7 +146377,7 @@
             3
           ],
           "pitch": 61,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -144759,7 +146389,17 @@
             3
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            2,
+            1
+          ],
+          "pitch": 64,
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -144783,7 +146423,17 @@
             3
           ],
           "pitch": 61,
-          "string": null
+          "string": 3
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            8,
+            3
+          ],
+          "pitch": 57,
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -144795,7 +146445,7 @@
             3
           ],
           "pitch": 56,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -144807,7 +146457,7 @@
             3
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -144819,7 +146469,7 @@
             1
           ],
           "pitch": 62,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -144831,7 +146481,7 @@
             3
           ],
           "pitch": 61,
-          "string": null
+          "string": 3
         },
         {
           "accepted_fingers": [
@@ -144843,7 +146493,7 @@
             3
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -144855,7 +146505,7 @@
             3
           ],
           "pitch": 64,
-          "string": null
+          "string": 4
         },
         {
           "accepted_fingers": [
@@ -144879,7 +146529,7 @@
             3
           ],
           "pitch": 57,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -144927,7 +146577,7 @@
             3
           ],
           "pitch": 56,
-          "string": null
+          "string": 2
         },
         {
           "accepted_fingers": [
@@ -145312,6 +146962,16 @@
           ],
           "pitch": 52,
           "string": null
+        },
+        {
+          "accepted_fingers": [],
+          "fret": null,
+          "onset": [
+            149,
+            3
+          ],
+          "pitch": 40,
+          "string": 0
         },
         {
           "accepted_fingers": [
@@ -153820,7 +155480,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "f02e995b8b131cb2cdf86d4255a313b2e20e1c7e2f48d7ef627f847a6e3d2346",
+      "root_sha256": "6b7db9c527ae138c9bb90c4500451030403fd00a509e90e8e4b00e2acdc19183",
       "source_filename": "sorf_op35_no20.ly",
       "source_sha256": "aec4f8a2eaa9d931bd9887a26f04be9223bd5593dcec9b2c5bb92f5036a5fd78",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no20/sorf_op35_no20.ly",
@@ -156833,7 +158493,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "d8a8d6378550b019fd7dbd63708191e22afd86d73ca5af289fa0cbd124c5897f",
+      "root_sha256": "a14005e818329a07646017a2fc4a9861a04dca52b9afa5651efb0eae798f0d24",
       "source_filename": "sorf_op35_no23.ly",
       "source_sha256": "b7729711eb91ab7e39321785f1e229f62a50f363627a1543bfff927931b922bc",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no23/sorf_op35_no23.ly",
@@ -167046,7 +168706,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "b2429698c7f8814646d55207ba7d56778d2b3ded0f603285cf247645438c5e24",
+      "root_sha256": "809eb36df39a37668363aff71218304ed5eef86e9f8cc477e6ba02946bb7ffb4",
       "source_filename": "sorf_op35_no24.ly",
       "source_sha256": "bbcbafee6ef919ffa51e81a48a423024853a482bb670c3c4430951d51d10fb00",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O35/sorf_op35_no24/sorf_op35_no24.ly",
@@ -172207,7 +173867,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "3c06e017085a066944658037aa3e5c23ad50523fa5616c235a873ef4338e0b27",
+      "root_sha256": "90cb6d185e596af29b2f8b2e21a7d817831d138c7e5c853cc100c8952e58f083",
       "source_filename": "sorf-op45n02.ly",
       "source_sha256": "5078dc213ccc99eec916629f11b6a10f0ff81288c6aa0cd0f1223ab8a693ef24",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O45/sorf-op45n02/sorf-op45n02.ly",
@@ -174200,7 +175860,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "8155d1a470723c8190773dfac52ed181f1cbe5464b2d3a33ca3c1944f789048c",
+      "root_sha256": "eeba8f0d5607968ad0bf2b542746e8c04dfbf711b064c22710e1e196e295a2a3",
       "source_filename": "sorf-op45n03.ly",
       "source_sha256": "988955cd261e8bb8446468d38f39a58c968967a9e6a07cfc9bb0c4ffc7fcc4fd",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O45/sorf-op45n03/sorf-op45n03.ly",
@@ -176181,7 +177841,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "15a3e8077f6d9256ba2ef7a8fc3534cb38cf6ce5b7d259f4a0bf1818dfba4d9f",
+      "root_sha256": "d1d6687c3ee6ebd5da84709c16dc1beae015a0230c1e8d99e53d71097b61b737",
       "source_filename": "sorf-op45n03.ly",
       "source_sha256": "988955cd261e8bb8446468d38f39a58c968967a9e6a07cfc9bb0c4ffc7fcc4fd",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O45/sorf-op45n03/sorf-op45n03.ly",
@@ -178966,7 +180626,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "0501245cedda147c8c41f1ce53567450e51804277e8d44a7c5c30150e22bb936",
+      "root_sha256": "d297938a4548aa650f4a265ded8e2331c75e989d30310db5b9b072e5478ef064",
       "source_filename": "sorf-op45n03.ly",
       "source_sha256": "988955cd261e8bb8446468d38f39a58c968967a9e6a07cfc9bb0c4ffc7fcc4fd",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O45/sorf-op45n03/sorf-op45n03.ly",
@@ -188471,7 +190131,7 @@
         }
       ],
       "root_member": null,
-      "root_sha256": "5d7c0f9ad20c237b34dc5a4ef1571b07e2cfcb272ad6ec6d81a71da5a3e7460d",
+      "root_sha256": "54fd8f171ec39b4eefb637e263442f159f07203eceb07141088f7f5bb050b272",
       "source_filename": "sorf-op45n05.ly",
       "source_sha256": "4d50763aa6a7595aa62e63e239f0062a3810028a7132fee457d9adaea6fcbeb1",
       "source_url": "https://www.mutopiaproject.org/ftp/SorF/O45/sorf-op45n05/sorf-op45n05.ly",
