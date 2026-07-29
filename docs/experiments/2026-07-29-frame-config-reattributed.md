@@ -95,3 +95,60 @@ that made these too large to analyse exhaustively. Whether the solver is refusin
 them for the same reason this analysis could not judge them is a question the
 generation-width measurement touched (1 of 12 recovered at eight times the bound)
 but did not answer for this bucket specifically.
+
+## Postscript: all 42 judged, and the bucket is genuine — 2026-07-29
+
+The seventeen "too large to enumerate" frames were a self-inflicted bound.
+`check_finger_monotonic` requires finger order to follow fret order, so once the
+(string, fret) assignment is chosen the fingers are **determined** -- sort the
+distinct frets and number them, notes sharing a fret sharing a finger, which is
+what a barre is. Enumerating fingers independently multiplies the space by 4^n
+for nothing. Collapsing it takes `horetzky3` from sixteen million placements to
+about four thousand, and every frame in the bucket becomes enumerable.
+
+Before that, the generation hypothesis was tested directly and killed:
+`frame_configs` returns **zero** configurations for all seventeen dense frames at
+48, 200, 1,000, 5,000 and 20,000 -- four hundred times the shipped bound. Their
+emptiness is not the search failing to look. And none of the 42 needs more than
+four distinct frets, so it is not the finger count either.
+
+All 42, with fingers collapsed:
+
+| | pieces |
+|---|---|
+| FRET_SPAN alone | 14 |
+| several rules, none alone | 14 |
+| no assignment puts them on distinct strings | 10 |
+| the frame alone is fine — the refusal is the history | 2 |
+| FINGER_COUNT | 2 |
+
+How far the closest admissible-shaped placement still sits from the limit:
+
+```
+FRET_SPAN alone            11.0 / 25.8 /  93.1 mm   (min / median / max)
+several rules, none alone  11.0 / 39.7 / 110.2 mm
+```
+
+**Eleven millimetres at best, twenty-six at the median.** For comparison, the
+neck-width floor that made a G major certifiable moved a limit by 2.5 mm, and the
+adjacent-finger factor sweep rejected above gains 1.5 points on train and nothing
+on test. Nothing in that range reaches a median of 26 mm.
+
+### A number of mine that this corrects
+
+The partial attribution earlier in this document reported margins of 5 to 8 mm.
+That version enumerated fingers independently, including assignments the
+monotonic rule then refuses, and a span measured on an illegal fingering can be
+smaller than any legal one. The collapsed figures are the right ones, because the
+solver can only build monotone assignments in the first place.
+
+### Where the bucket stands
+
+Ten are impossible on the instrument -- the pitches cannot occupy distinct
+strings, which is not a hand model at all. Two need a fifth finger. Two are not
+frame problems. The remaining twenty-eight are geometry, at margins no defensible
+constant reaches.
+
+So this bucket is genuine, and unlike the retracted version that claim now rests
+on a corrected corpus, a corrected oracle, and **all 42 judged rather than 25**.
+The remaining headroom in this corpus is not here.
