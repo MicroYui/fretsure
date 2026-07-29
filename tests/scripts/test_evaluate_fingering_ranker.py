@@ -5,6 +5,7 @@ import importlib.util
 import inspect
 import json
 import sys
+from dataclasses import replace
 from fractions import Fraction
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -91,14 +92,42 @@ def _frozen_model(*, sha256: str | None = None) -> object:
     )
 
 
+# The hand this artifact was evaluated against. `oracle@0.7.0` raised the span
+# to admit ordinary stretch technique, so the shipping profile is no longer the
+# one the model was fitted under -- and the model must keep naming the old one,
+# because that is what it was measured on.
+_EVALUATED_UNDER = replace(
+    MEDIAN_HAND, version="median@0.1", hand_span_mm=100.0, reach_mm=50.0
+)
+
+
 def test_checked_in_default_model_is_the_frozen_artifact() -> None:
     model = frozen_eval.load_frozen_model(
         ROOT / frozen_eval.DEFAULT_MODEL,
         expected_sha256=frozen_eval.FROZEN_MODEL_SHA256,
+        profile=_EVALUATED_UNDER,
     )
 
     assert model.sha256 == frozen_eval.FROZEN_MODEL_SHA256
     assert model.payload["production_solver_integration"] is False
+
+
+def test_the_artifact_will_not_load_under_a_hand_it_was_not_measured_on() -> None:
+    """The binding is the point, and it now says which hand rather than "the
+    current one".
+
+    This artifact is experimental and not wired into the shipped solver, so the
+    profile change does not invalidate anything in production. Re-binding it
+    instead of refusing would have been the tempting fix and the wrong one: its
+    numbers were measured against a 100 mm span and mean nothing against a 130.
+    """
+
+    with pytest.raises(ValueError, match="does not match"):
+        frozen_eval.load_frozen_model(
+            ROOT / frozen_eval.DEFAULT_MODEL,
+            expected_sha256=frozen_eval.FROZEN_MODEL_SHA256,
+            profile=MEDIAN_HAND,
+        )
 
 
 def test_model_loader_binds_sha_schema_features_and_nonnegative_weights(

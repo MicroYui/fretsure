@@ -188,10 +188,11 @@ def test_trace_replays_localized_diagnostic_edit_and_green_recheck() -> None:
     checks = [step for step in result.trace.steps if step.event == "PLAYABILITY_CHECKED"]
     assert [step.data["verdict"] for step in checks] == ["AMBER", "GREEN"]
     first_diagnostics = checks[0].data["diagnostics"]
-    assert {row["code"] for row in first_diagnostics} == {
-        "FRET_SPAN",
-        "SHIFT_SPEED",
-    }
+    # FRET_SPAN dropped out at `oracle@0.7.0`: the span now admits ordinary
+    # stretch technique, so this shape is only objected to on the shift. What
+    # the test is about -- that a localized edit is proposed from the diagnostics
+    # and the recheck reaches GREEN -- is unchanged.
+    assert {row["code"] for row in first_diagnostics} == {"SHIFT_SPEED"}
     assert all(row["measure"] == 1 and row["beat"] == "1/1" for row in first_diagnostics)
     edit = next(step for step in result.trace.steps if step.event == "EDIT_APPLIED")
     assert edit.data["edit"] == {

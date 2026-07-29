@@ -48,7 +48,14 @@ _ONE_STRING = _t([TabNote(F(0), F(1), 2, 3, 1, "i"), TabNote(F(0), F(1), 2, 5, 2
 _fc = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)]
 _FINGER_COUNT = _t([TabNote(F(0), F(1), s, fr, min(fr, 4), "p") for s, fr in _fc])
 _MONOTONIC = _t([TabNote(F(0), F(1), 1, 2, 3, "p"), TabNote(F(0), F(1), 2, 5, 1, "i")])
-_SPAN = _t([TabNote(F(0), F(1), 0, 1, 1, "p"), TabNote(F(0), F(1), 1, 5, 4, "i")])
+# Index at fret 1, little at fret 6: 158.0 mm apart along the neck against a
+# 130.0 mm allowance. It was frets 1 and 5 until `oracle@0.7.0` raised the span
+# to admit ordinary stretch technique, at which point 129.9 mm became legal and
+# this trigger stopped triggering -- the suite caught its own trigger going
+# stale, which is the one failure mode a mutation suite cannot afford to miss.
+# A trigger has to stay a shape the *real* predicate refuses, so it moves with
+# the profile rather than being pinned to a number.
+_SPAN = _t([TabNote(F(0), F(1), 0, 1, 1, "p"), TabNote(F(0), F(1), 1, 6, 4, "i")])
 _ACTIVE_SPAN = _t(
     [TabNote(F(0), F(8), 0, 1, 1, "p"), TabNote(F(4), F(1), 1, 15, 4, "i")]
 )

@@ -31,13 +31,13 @@ export const capabilities: CapabilitiesResponse = {
   profiles: [
     {
       name: "small",
-      version: "small@0.1",
+      version: "small@0.2",
       fingerprint: "small123",
       calibration_status: "placeholder_pending_human_calibration",
     },
     {
       name: "median",
-      version: "median@0.1",
+      version: "median@0.2",
       fingerprint: "abc123",
       calibration_status: "placeholder_pending_human_calibration",
     },
@@ -232,7 +232,7 @@ export const arrangement: ArrangementResponse = {
     meaning: "versioned_model_relative_not_a_real_player_guarantee",
     diagnostics: [],
     checker_version: "oracle@0.7.0",
-    profile_version: "median@0.1",
+    profile_version: "median@0.2",
     profile_fingerprint: "abc123",
     input_schema_version: "tab-input@0.3.0",
   },
@@ -308,7 +308,7 @@ export const arrangement: ArrangementResponse = {
     arrangement_style_profile_sha256:
       "c1a57bb1aa4599594db83f5fb9074e96b53be83a03d1e306e38ea5cae7df342d",
     technique_profile_registry_version: "technique-profile-registry@0.1.0",
-    profile_version: "median@0.1",
+    profile_version: "median@0.2",
     profile_fingerprint: "abc123",
     oracle_checker_version: "oracle@0.7.0",
     oracle_input_schema_version: "tab-input@0.3.0",

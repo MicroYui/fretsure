@@ -106,7 +106,36 @@ RESULT_SCHEMA: Final = "fretsure-negative-tab-replay@0.1.0"
 # improved at both ends on both splits: fewer printed fingerings refused, and
 # stretched shapes caught *more* often, because the across-string component had
 # been diluting the limit. See scripts/measure_oracle_discrimination.py.
-EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1648, "AMBER": 45, "GREEN": 25}
+# 2026-07-29, third movement this week, and the tabs behind it were rendered
+# before the number was touched -- twice already that turned out to be the guard
+# misclassifying ordinary playing rather than the verifier weakening.
+#
+# `oracle@0.7.0` raises the median span from 100.2 mm, which is one finger per
+# fret in first position, to 129.9 mm, which is the first-position five-fret
+# stretch. That is a technique decision, not a tuned constant: the old value was
+# the beginner posture and refused two consecutive fingers two frets apart.
+#
+# All 24 tabs leaving RED are that shape and nothing else:
+#
+#     fingers (3,4) two frets apart   9
+#     fingers (2,3) two frets apart   8
+#     fingers (1,2) two frets apart   7
+#
+# None of the 24 reaches GREEN; two others move AMBER -> GREEN. Unlike the G
+# major chords, these are genuine stretches -- a trained guitarist does them
+# routinely, a beginner does not -- so this is a change to what the median
+# profile *means*, and it is recorded as one rather than as a correction.
+#
+#     RED   1648 -> 1624
+#     AMBER   45 ->   67
+#     GREEN   25 ->   27
+#
+# reach_mm deliberately did not move with the span. An earlier attempt scaled it
+# too, on the assumption that reach is half the span by identity, and that
+# certified 27 further tabs by widening the shift-speed window -- a rule this
+# change was never argued from. Reach is where the hand sits; span is how far it
+# stretches, and a hand may cover less than it spans.
+EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1624, "AMBER": 67, "GREEN": 27}
 
 
 def load_raw_tabs(canonical: Path) -> tuple[Tab, ...]:

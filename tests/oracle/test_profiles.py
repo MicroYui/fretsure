@@ -72,12 +72,12 @@ def test_profile_frozen() -> None:
     [
         "",
         " ",
-        " median@0.1",
-        "median@0.1 ",
+        " median@0.2",
+        "median@0.2 ",
         "median hand@0.1",
         "median\n@0.1",
-        "/median@0.1",
-        "median@0.1//pess",
+        "/median@0.2",
+        "median@0.2//pess",
         "a" * 129,
     ],
 )
@@ -193,7 +193,7 @@ def test_profile_fingerprint_is_stable_lowercase_sha256() -> None:
 def test_profile_fingerprint_binds_identity_and_every_model_parameter() -> None:
     base = MEDIAN_HAND
     variants = (
-        replace(base, version="median@0.1/variant"),
+        replace(base, version="median@0.2/variant"),
         replace(base, hand_span_mm=base.hand_span_mm + 1.0),
         replace(base, reach_mm=base.reach_mm + 1.0),
         replace(base, v_shift_mm_per_s=base.v_shift_mm_per_s + 1.0),
@@ -239,7 +239,7 @@ def test_validate_profile_is_public_total_and_side_effect_free() -> None:
     assert validate_profile(MEDIAN_HAND) == ()
     assert validate_profile(MEDIAN_HAND) == ()
 
-    wrong_type = validate_profile({"version": "median@0.1"})
+    wrong_type = validate_profile({"version": "median@0.2"})
     assert wrong_type == (
         ProfileValidationIssue(
             code="PROFILE_TYPE",
@@ -421,11 +421,29 @@ def test_shipped_profiles_span_exactly_what_their_reach_covers() -> None:
             assert span_reach_inconsistency(derived) is None, derived.version
 
 
-def test_the_span_reach_identity_is_checkable_and_names_the_expected_value() -> None:
-    drifted = replace(MEDIAN_HAND, version="drifted@0.1", reach_mm=80.0)
-    issue = span_reach_inconsistency(drifted)
+def test_a_hand_may_not_cover_more_ground_than_its_fingers_span() -> None:
+    """The direction that is incoherent, and the one that is merely modest.
 
+    Reach is where the hand sits; span is how far it stretches. Covering more
+    than the fingers span describes no hand, so it is refused. Covering less is
+    ordinary -- a stretch is something a hand does when it must, not where it
+    rests -- and the two were held equal until `oracle@0.7.0`, which is why
+    raising the span to admit ordinary stretch technique also dragged the
+    shift-speed window up and certified 27 known-bad tabs on a rule that change
+    was never argued from.
+    """
+
+    covering_too_much = replace(MEDIAN_HAND, version="drifted@0.1", reach_mm=80.0)
+    issue = span_reach_inconsistency(covering_too_much)
     assert issue is not None
     assert issue.code == "PROFILE_SPAN_REACH_INCONSISTENT"
     assert issue.path == "$.reach_mm"
-    assert "50.0" in issue.message
+    assert "160.0" in issue.message and "130.0" in issue.message
+
+    modest = replace(MEDIAN_HAND, version="modest@0.1", reach_mm=40.0)
+    assert span_reach_inconsistency(modest) is None
+
+    exactly_half = replace(
+        MEDIAN_HAND, version="half@0.1", reach_mm=MEDIAN_HAND.hand_span_mm / 2.0
+    )
+    assert span_reach_inconsistency(exactly_half) is None

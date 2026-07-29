@@ -70,23 +70,16 @@ OPEN_CHORDS = (
 
 @pytest.mark.parametrize("name,placements", OPEN_CHORDS, ids=[c[0] for c in OPEN_CHORDS])
 @pytest.mark.parametrize("profile", PROFILES, ids=[p.version for p in PROFILES])
-def test_a_first_week_chord_is_certified(name: str, placements, profile, request) -> None:
-    """GREEN, not AMBER. Declining to certify a G major is still a wrong answer."""
+def test_a_first_week_chord_is_certified(name: str, placements, profile) -> None:
+    """GREEN, not AMBER. Declining to certify a G major is still a wrong answer.
 
-    if (name, profile.version) == ("C major", "small@0.1"):
-        pytest.xfail(
-            "a second defect, measured and deliberately not fixed here. The C "
-            "major shape needs 75.6 mm between index and ring -- 68.7 mm of it "
-            "along the neck -- and pessimistic(small@0.1) allows 72.9 mm, since "
-            "the 0.9 factor for the (1, 3) pair applies to an already-shrunk "
-            "span. The neck-width floor is 52.5 mm and correctly does not bind: "
-            "this is a longitudinal stretch, not an across-neck one, so it is a "
-            "different question from the one this change answers. Loosening "
-            "something else to make this line pass would be fitting the model to "
-            "the test, which is exactly how the previous five attempts at this "
-            "went. It is AMBER rather than RED, so the oracle declines to "
-            "certify rather than calling a C major unplayable."
-        )
+    C major on the small hand was an xfail here until `oracle@0.7.0`: it needs
+    75.6 mm between index and ring, of which 68.7 mm is along the neck, and the
+    old profile allowed 72.9 mm once the pessimistic transform had shrunk it.
+    Raising the span to admit ordinary stretch technique cleared it, which is
+    the sort of thing a defect recorded rather than papered over lets you notice.
+    """
+
     result = check_playability(_chord(*placements), profile)
     assert result.verdict == "GREEN", (
         name,

@@ -2,59 +2,59 @@
  "checker_version": "oracle@0.7.0",
  "curve": [
   {
-   "admitted": 209,
+   "admitted": 216,
    "displacement_frets": 0,
    "displacement_mm_at_the_nut": 0.0,
-   "refused": 37,
-   "refused_rate": 0.15040650406504066,
+   "refused": 30,
+   "refused_rate": 0.12195121951219512,
    "unjudged": 3
   },
   {
-   "admitted": 118,
+   "admitted": 148,
    "displacement_frets": 1,
    "displacement_mm_at_the_nut": 35.3,
-   "refused": 122,
-   "refused_rate": 0.5083333333333333,
+   "refused": 92,
+   "refused_rate": 0.38333333333333336,
    "unjudged": 9
   },
   {
-   "admitted": 77,
+   "admitted": 114,
    "displacement_frets": 2,
    "displacement_mm_at_the_nut": 68.7,
-   "refused": 162,
-   "refused_rate": 0.6778242677824268,
-   "unjudged": 10
+   "refused": 124,
+   "refused_rate": 0.5210084033613446,
+   "unjudged": 11
   },
   {
-   "admitted": 42,
+   "admitted": 78,
    "displacement_frets": 3,
    "displacement_mm_at_the_nut": 100.2,
-   "refused": 195,
-   "refused_rate": 0.8227848101265823,
-   "unjudged": 12
+   "refused": 158,
+   "refused_rate": 0.6694915254237288,
+   "unjudged": 13
   },
   {
-   "admitted": 1,
+   "admitted": 2,
    "displacement_frets": 6,
    "displacement_mm_at_the_nut": 184.5,
-   "refused": 224,
-   "refused_rate": 0.9955555555555555,
-   "unjudged": 24
+   "refused": 222,
+   "refused_rate": 0.9910714285714286,
+   "unjudged": 25
   },
   {
    "admitted": 0,
    "displacement_frets": 12,
    "displacement_mm_at_the_nut": 314.9,
-   "refused": 151,
+   "refused": 135,
    "refused_rate": 1.0,
-   "unjudged": 98
+   "unjudged": 114
   }
  ],
  "editorial_frames": 249,
  "profile": {
-  "fingerprint": "fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62",
-  "hand_span_mm": 100.0,
-  "version": "median@0.1"
+  "fingerprint": "c2e9c6d2630cc3472eec0ecf83a999e6457f9c051ea44d5bd7c2ccbbe4084b07",
+  "hand_span_mm": 130.0,
+  "version": "median@0.2"
  },
  "schema": "fretsure-oracle-discrimination@0.1.0",
  "splits": [

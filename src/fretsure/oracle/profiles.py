@@ -5,8 +5,12 @@ pessimistic/optimistic transforms give the three-state verdict its soundness
 direction: GREEN = passes the *pessimistic* profile, RED = fails the
 *optimistic* one.
 
-PLACEHOLDER CALIBRATION — the absolute numbers are v1 placeholders to be fit
-against real players (roadmap D.4). Only their ordering/direction is asserted.
+CALIBRATION — ``hand_span_mm`` and ``reach_mm`` are read off the fret geometry
+as of 2026-07-29: the span is the first-position five-fret stretch and the reach
+the four-fret one, so the model is "this hand size, doing ordinary stretch
+technique". ``v_shift_mm_per_s`` and ``r_max_hz`` remain v1 placeholders with
+only their ordering asserted, and none of the four has been checked against a
+real player (roadmap D.4).
 """
 
 import hashlib
@@ -166,10 +170,19 @@ def _read_field(
 def span_reach_inconsistency(profile: Profile) -> ProfileValidationIssue | None:
     """``hand_span_mm`` and ``reach_mm`` are one quantity written twice.
 
-    ``hand_span_mm`` is the greatest distance between the 1 and 4 fingertips;
-    ``reach_mm`` is how far a finger reaches either side of the hand centre.  A
-    hand that spans S covers exactly S, so ``2 * reach_mm == hand_span_mm`` is an
-    identity, not a coincidence of the placeholder numbers.
+    ``hand_span_mm`` is the greatest distance between the 1 and 4 fingertips --
+    what the hand reaches when it *stretches*.  ``reach_mm`` is how far a finger
+    reaches either side of the hand centre without repositioning, which is what
+    the shift-speed window is about.  A hand cannot cover more ground than its
+    fingers span, so ``2 * reach_mm <= hand_span_mm``; it can very well cover
+    less, because a stretch is something a hand does when it must rather than
+    where it sits.
+
+    The two were equal until 2026-07-29 and that conflated them.  Raising the
+    span to admit ordinary stretch technique -- two consecutive fingers two
+    frets apart -- then dragged the hand-position window up with it and
+    certified 27 tabs on a rule the change was never argued from.  Equality was
+    an assumption, not the identity the previous wording claimed.
 
     Nothing enforced it, and the shipped large profile had already drifted apart
     by a millimetre.  Letting them diverge does not merely look untidy: the two
@@ -185,15 +198,15 @@ def span_reach_inconsistency(profile: Profile) -> ProfileValidationIssue | None:
     tidier invariant.  The shipped profiles are held to it by test instead.
     """
 
-    expected = 2.0 * profile.reach_mm
-    if math.isclose(profile.hand_span_mm, expected, rel_tol=1e-9, abs_tol=1e-9):
+    covered = 2.0 * profile.reach_mm
+    if covered <= profile.hand_span_mm + 1e-9:
         return None
     return ProfileValidationIssue(
         "PROFILE_SPAN_REACH_INCONSISTENT",
         "$.reach_mm",
         (
-            f"reach_mm must be half of hand_span_mm: expected "
-            f"{profile.hand_span_mm / 2.0}, got {profile.reach_mm}"
+            f"reach_mm may be at most half of hand_span_mm: {profile.reach_mm} "
+            f"covers {covered}, more than the {profile.hand_span_mm} its fingers span"
         ),
     )
 
@@ -350,14 +363,41 @@ def profile_fingerprint(profile: Profile) -> str:
     return hashlib.sha256(canonical_profile_bytes(profile)).hexdigest()
 
 
-SMALL_HAND = Profile("small@0.1", 90.0, 45.0, 450.0, 7.0, DEFAULT_STRING_LENGTH_MM)
-MEDIAN_HAND = Profile("median@0.1", 100.0, 50.0, 500.0, 8.0, DEFAULT_STRING_LENGTH_MM)
-# reach_mm is half of hand_span_mm by definition -- see _span_reach_issue.  This
-# profile shipped at 58.0 against a 115 mm span, describing a hand 1 mm wider
-# than the one it claimed.  Measured to move no verdict (d_max is the tighter
-# of the two limits either way), so this is a coherence repair, not a fix to
-# behaviour.
-LARGE_HAND = Profile("large@0.2", 115.0, 57.5, 560.0, 9.0, DEFAULT_STRING_LENGTH_MM)
+# The span each profile allows between index and little is the *stretched* one,
+# not the resting one, because ordinary classical guitar technique stretches.
+#
+# The values shipped until 2026-07-29 were the one-finger-per-fret span: 100.2 mm
+# is exactly frets 1 to 4 in first position, and 89.3 mm is frets 3 to 6. Nothing
+# recorded that, so a documented technique choice read as an uncalibrated
+# placeholder for months -- and it was the *beginner* posture. It refused two
+# consecutive fingers two frets apart, which is not a hard shape; every one of
+# the 24 known-bad tabs that stops being confidently refused by this change is
+# exactly that, and nothing else.
+#
+# 129.9 mm is frets 1 to 5 in first position, the canonical stretch shape, so the
+# median hand is now "median size, doing ordinary stretch technique". The others
+# scale by the same factor: the technique assumption is the same for every hand,
+# and what differs between profiles is size.
+#
+# reach_mm does **not** scale with it, and that is the point. It is where the
+# hand sits rather than how far it stretches, and it feeds the shift-speed
+# window. Raising it alongside the span certified 27 known-bad tabs on a rule
+# this change was never argued from. The old values are kept: a median hand
+# comfortably covers frets 1 to 4, 100.2 mm, so 50 mm either side of centre.
+#
+# For scale, the measured index-to-little span of 210 non-musicians is 161 mm on
+# average with a minimum of 120 (Boyle, Boyle & Booker, APPCA 2015, flat maximal
+# spread). A guitar posture reaches less than a flat spread, so these values stay
+# well inside what a hand can do -- the old ones sat below the smallest hand in
+# that sample.
+#
+# reach_mm is half of hand_span_mm by definition -- see _span_reach_issue. The
+# large profile shipped at 58.0 against a 115 mm span, describing a hand 1 mm
+# wider than the one it claimed; that was measured to move no verdict and
+# repaired for coherence.
+SMALL_HAND = Profile("small@0.2", 117.0, 45.0, 450.0, 7.0, DEFAULT_STRING_LENGTH_MM)
+MEDIAN_HAND = Profile("median@0.2", 130.0, 50.0, 500.0, 8.0, DEFAULT_STRING_LENGTH_MM)
+LARGE_HAND = Profile("large@0.3", 149.5, 57.5, 560.0, 9.0, DEFAULT_STRING_LENGTH_MM)
 
 _PESS = 0.9
 _OPT = 1.1

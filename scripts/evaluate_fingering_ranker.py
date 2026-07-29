@@ -27,7 +27,7 @@ from fretsure.bench.contracts import canonical_json_bytes
 from fretsure.geometry import STANDARD_TUNING
 from fretsure.ir import Note
 from fretsure.oracle.core import check_playability
-from fretsure.oracle.profiles import MEDIAN_HAND
+from fretsure.oracle.profiles import MEDIAN_HAND, Profile
 from fretsure.solver import api as solver_api
 from fretsure.solver.api import Infeasible, SolverInputError
 from fretsure.tab import Tab
@@ -94,7 +94,20 @@ def _finite_decimal_text(value: object, path: str, *, positive: bool) -> float:
     return result
 
 
-def load_frozen_model(path: Path, *, expected_sha256: str) -> FrozenModel:
+def load_frozen_model(
+    path: Path, *, expected_sha256: str, profile: Profile = MEDIAN_HAND
+) -> FrozenModel:
+    """Load the artifact, checking it against the profile it was evaluated under.
+
+    The profile used to be read from the module global, so "the hand this model
+    was fitted against" and "the hand shipping today" were the same expression.
+    They stopped being the same at `oracle@0.7.0`, and the binding then refused
+    to load an artifact that was perfectly valid for the profile it names -- the
+    check was right and the way it was reached was not. A caller loading a
+    historical artifact passes the historical profile; a caller wanting today's
+    passes nothing and gets today's.
+    """
+
     raw = path.read_bytes()
     actual_sha256 = hashlib.sha256(raw).hexdigest()
     if actual_sha256 != expected_sha256:
@@ -119,12 +132,12 @@ def load_frozen_model(path: Path, *, expected_sha256: str) -> FrozenModel:
         "version": FROZEN_CANDIDATE_GENERATOR_VERSION,
     }:
         raise ValueError("model solver binding does not match this candidate generator")
-    profile = _object(payload.get("profile"), "$model.profile")
-    if profile != {
-        "fingerprint": MEDIAN_HAND.fingerprint,
-        "version": MEDIAN_HAND.version,
-    }:
-        raise ValueError("model profile binding does not match median-hand evaluation")
+    bound = _object(payload.get("profile"), "$model.profile")
+    if bound != {"fingerprint": profile.fingerprint, "version": profile.version}:
+        raise ValueError(
+            f"model profile binding {bound.get('version')!r} does not match "
+            f"{profile.version!r}"
+        )
 
     feature_schema = _object(payload.get("feature_schema"), "$model.feature_schema")
     if feature_schema.get("id") != ranker.FEATURE_SCHEMA:

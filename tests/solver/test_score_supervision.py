@@ -162,7 +162,12 @@ def test_decimal_runtime_reproduces_frozen_development_selection() -> None:
         for raw in example["notes"]
     )
     onsets = sorted({note.onset for note in notes})
-    window = frozenset(onsets[16:20])
+    # Onsets 16 to 20 until `oracle@0.7.0`. Widening the span to admit ordinary
+    # stretch technique enlarged the green pool there and the ranker's pick
+    # became the cheapest one, so the window stopped exercising what this test
+    # is for -- that the supervised choice can differ from the cost order. Two
+    # windows still do; this is the earlier of them.
+    window = frozenset(onsets[30:34])
     outcome = _solve_fingering_with_green_pool(
         tuple(note for note in notes if note.onset in window),
         tuple(example["tuning"]),

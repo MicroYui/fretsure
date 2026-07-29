@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Measure what loosening the hand model buys, and what it costs.
 
-`median@0.1` was never fitted to anything -- its own docstring says the numbers
-are v1 placeholders and only their ordering was ever asserted.  The obvious
+`median@0.1` was never fitted to anything -- its own docstring said the numbers
+were v1 placeholders and only their ordering was ever asserted.  That stopped
+being true at `oracle@0.7.0`: the span is now the first-position five-fret
+stretch and the reach the four-fret one, both read off the fret geometry, so the
+question below is no longer "fit an unfitted number" but "is the technique
+assumption right".  The obvious
 next step is to fit them to the published repertoire.  The obvious next step is
 also how a verifier becomes a rubber stamp, because any hand large enough
 accepts everything.  So this measures both sides of every move:

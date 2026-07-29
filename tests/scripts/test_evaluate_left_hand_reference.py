@@ -44,8 +44,8 @@ def test_carcassi_public_domain_reference_meets_frozen_threshold() -> None:
         "score_solver": "score-solver@0.7.0",
         "left_hand_model": "left-hand-ergonomics@0.1.0",
         "oracle": "oracle@0.7.0",
-        "profile": "median@0.1",
-        "profile_fingerprint": ("fcefa5394cba876b94881fc77886e6db130d8be10406d46538ad6c83c40b7b62"),
+        "profile": "median@0.2",
+        "profile_fingerprint": ("c2e9c6d2630cc3472eec0ecf83a999e6457f9c051ea44d5bd7c2ccbbe4084b07"),
     }
     assert report["mismatches"] == [
         {

@@ -377,7 +377,7 @@ def test_task6_runner_rejects_human_labels_before_any_model_call() -> None:
 def test_reference_label_binds_exact_tab_tempo_meter_and_profile_before_calls() -> None:
     label = _label("bound")
     assert label.proposition_sha256 == (
-        "51f9adaace6a297e1460839d6d2084c06be481d007cd6104ea70168aa83dedc2"
+        "6cb44868277c2222aabc329c3f6444dab618e5f1ac0cd298b195f8a530481452"
     )
     judge, fake = _judge(["PLAYABLE"] * 10)
 
