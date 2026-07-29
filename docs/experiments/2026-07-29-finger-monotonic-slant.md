@@ -90,3 +90,64 @@ piece passes only if all ~150 of its frames do, so 0.49 = x^150 puts the require
 per-frame accuracy at 99.5%. Two systematic per-frame defects have now been
 found by asking what human fingerings the verifier refuses. One was fixable from
 the instrument alone; this one is not.
+
+## Postscript: four bounds, one exchange rate — 2026-07-29
+
+The defect survived `oracle@0.7.0`. Of the 36 editorial frames still refused,
+**35 involve `FINGER_MONOTONIC`** and 10 are refused by it alone, so it is
+essentially the whole of the remaining 13.3%.
+
+Four different ways of bounding the exemption were measured, on both span
+metrics:
+
+| bound | 0 frets | 6 frets |
+|---|---|---|
+| shipped `oracle@0.7.0` | 13.3% | 99.4% |
+| exempt the slant entirely (Euclidean span) | 16.3 → 12.2 | 99.6 → 87.6 |
+| exempt, bounded to 2 frets | → 14.2 | → 90.0 |
+| exempt entirely (along-neck span) | 13.3 → 9.2 | 99.4 → 83.3 |
+| exempt within a fingertip width, 25 mm | 13.3 → 12.2 | 99.4 → 94.3 |
+
+Four unrelated bounds, and the exchange rate is the same each time. That
+consistency is the finding: **the monotonic rule is not redundant with the span
+rule.** It carries information the span rule cannot measure -- fingers cannot
+pass through each other, which is not a distance -- so relaxing it loses
+discrimination at a fixed rate no matter where the relaxation is drawn.
+
+### A measurement I got wrong, and the correction
+
+An earlier pass concluded the slant setbacks are large (median 54.5 mm, none
+within a fingertip width) and used that to rule out the finger-width
+explanation. That measurement chose the *lowest-position* realisation of each
+frame, where a fret is 35 mm. The realisations actually admitted are often high
+on the neck, where a fret is 14 mm:
+
+```
+fingers (2, 4)   sixth string fret 18 and fourth string fret 17
+along the neck 14.0 mm       d_max(2,4) = 90.0 mm       span has no objection
+```
+
+Finger 4 one fret nearer the nut than finger 2, at the eighteenth fret, is an
+inversion narrower than a fingertip. So the finger-width idea was right to test
+and was tested wrongly the first time -- but the sweep above shows it does not
+pay either, because a bound loose enough to admit these also admits the shapes
+that should be refused.
+
+### What would unblock it
+
+Not another bound on the monotonic rule. The two rules need to become one
+constraint on hand configuration, which is the hand-plane model measured in
+`2026-07-29-hand-plane-viability.md` -- viable at 30 degrees of rotation and
+about 16 mm of finger play, and requiring two parameters the corpus cannot
+supply, because the setback distribution has no angle to read off.
+
+The evidence base is also smaller than the frame count suggests. 249 editorial
+frames reduce to **182 distinct shapes** corpus-wide; repeat expansion copies a
+typed fingering into every pass. And the LilyPond sources hold no fingerings the
+conversion dropped -- the corpus carries 1,439 against 550 typed, the difference
+being those same repeats -- so there is nothing left to recover from the sources
+already vendored.
+
+More evidence therefore means more *editions*: other publishers, other editors,
+fingering the same repertoire differently. That is a licensing and parsing
+project rather than a modelling one, and it is the concrete unblock.
