@@ -4,34 +4,28 @@
 
 **产品目标一句话**：一个 agent，把一首歌（符号谱 / MIDI / lead sheet；mp3 作 best-effort 前端）编配成在版本化模型内经确定性 oracle 逐音核验的吉他谱（HERO = 指弹独奏；也做伴奏、难度简化）。核心 = "LLM 提议 → 确定性可弹性 oracle 把关 → checker 打分 benchmark"；verifier-guided repair 可选，但 v2 未过保留阈值。
 
-**当前恢复真源（2026-07-25）**：Plan 6B（performance workspace + 真人 money moment）、Plan 7A
-（风格/手型/技巧/局部重生成/手动指号/本地反馈）、Plan 7B（出版谱监督的指法排序 + 独立分级估计）
-与其后的授权语料扩库均已闭门，并已落库推送（`3dce531`）。之后完成了一轮 benchmark 子系统的
-**over-design 清理**：删除 pricing→envelope→budget-gate→pre-call 授权链、preregistration 逐字节
-重推导、power 仿真与 task8/task9 一次性运维脚本。
+**当前恢复真源（2026-07-29）**：`oracle@0.7.0`，曲目门 **146/292 = 50.0%**（GREEN 89）。
+语料是 **292 首不是 389**——86 首是同一段音乐算了两遍（Mutopia 的 `\score{\layout}` +
+`\score{\midi}` 双块被当成两个乐章），11 首从未被正确解析；冻结基线因此是 **56 不是 58**。
 
-当前运行 stamps：package `0.6.0`；`oracle@0.3.0`、`tab-input@0.2.0`、`fidelity@0.3.0`；importers
-`musicxml@0.4.0` / `midi@0.1.0` / `score-input@0.1.0` / `mxl-container@0.1.0`；
-`fingering-solver@0.6.0` / `score-solver@0.4.0` / `left-hand-ergonomics@0.1.0`；
-`published-fingering-ranker@0.1.0`、`published-grade-estimator@0.1.0`、`difficulty@0.1.0`；
-`arrangement-style-registry@0.2.0`、`profile-registry@0.2.0`、`technique-profile-registry@0.1.0`；
-service / API / Web / trace = `0.3.0`，MCP = `0.2.0`；`benchmark-preregistration@0.3.0`、
-`benchmark-live-policy@0.1.0`；runtime 精确锁定 `music21==10.5.0`。
+本轮修掉两个**真缺陷**，都不是调参：`d_max` 比琴颈还窄（同一品横跨六弦 52.5 mm 而
+(2,3) 只给 50 mm，**G 大和弦无法认证**），以及跨度按直线而非**沿颈**计算。后者一行代码、
+零新参数，两个 split 两端同时变好。
 
-**Benchmark v2 结论未变**（数字是历史实测，不因上面的机制清理而改写）：`full` 74/500=`14.8%`
-[Wilson 11.96–18.18]，所有高复杂度格与 3 个 public controls 均为 0；repair Δjoint=`+0.0566`
-低于 `0.10` SESOI → `NOT_KEPT`；best-of-4 Δ=`+0.068` 但 provider token/cost 为 null →
-`PROBATION_COST_UNKNOWN`；critic joint=`-0.002` 且无真人证据 → `HUMAN_BLOCKED_PROBATION`。
-产品缺省因此是 `n=1, max_iters=0, use_critic=false`；search / repair / critic 只能显式 opt in。
-Plan 6B 的真人试奏结论是 `PARTIAL`（`12-10-8-12` 的 `8→12` 大把位跳转不易按），不得外推为
-“真人一定能弹”。
+建立的仪器 `scripts/measure_oracle_discrimination.py` 是本轮最该保留的东西：正例是编者
+印在谱上的指法，负例是同一段音乐沿颈推开，**两侧都来自出版谱、不需要真人**，几分钟跑完
+并能定位到具体的帧和规则——两个缺陷都是它找出来的。**帧级假阴性 15.0%**（全语料）。
 
-**benchmark 机制现状（2026-07-25 清理后）**：live 运行的全部授权面就是一个必须原样重复一遍的
-花费上限（`--live --full-corpus --max-spend-microunits N --confirm-spend N`）；503 项语料由
-`src/fretsure/bench/data/` 的 census + 3 个 pinned 源现场重建（4.8 秒）并只校验一个身份摘要；
-preregistration 由语料推导、不再是提交进仓库的工件，其 `versions` 用**实时**版本号；并发是
-opt-in 的 `--concurrent-units N`，stub 跑 4 lane 与串行跑逐字节相同。attempt-004 的历史 digest
-仍是证据，但**已不能用当前代码复现**——这是用户明确接受的代价（项目从未发布，不为旧版本做兼容）。
+**整曲 50% 与帧级 85% 正确不矛盾——误差连乘**：一首约 150 帧，`0.49 = x^150` 意味着每帧
+需要 99.5%。所以追整曲覆盖率的大改动是徒劳的，有价值的是消除**系统性的每帧缺陷**。
+
+**十一个方向被数据关闭**（beam 宽度 1/16、随机化保留 0/3、生成宽度 1/12、逐对 DP 找到的
+3 条路径在完整检查器下 3/3 失败、持续音、位移速度、hand_span、保持率下限、手掌平面模型
+20 个工作点无一占优、斜角四个界同一汇率、相邻指对因子 train 有效 test 无效）。其中五个
+是在动手实现之前关掉的。**勿重做。**
+
+**唯一还开着的帧级缺陷**：`FINGER_MONOTONIC` 拒绝手腕自然斜角（占 36 个剩余被拒帧的 35 个）。
+解锁条件不是更好的规则组织，是**其它编者版本**或真人测量。
 
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。
 
