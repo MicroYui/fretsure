@@ -543,19 +543,19 @@ def test_public_arrange_results_and_traces_match_current_versioned_goldens() -> 
     }
     expected = {
         "green-critic": (
-                "6480235689d78fd52c112a3b046623aae5541a6f6e71d81a08dc13dc5a0de063",
+                "d91ea7aa6e406336f8678ce93f5049e802386c871ec6626aa5ebeaaedd0f55c6",
             ("GREEN", 1.0, 0.9, 2),
         ),
         "repair": (
-                "20105a3047a07d8980f0762b97996a44a5da32b2fb26ddbdafbc0d53aee8370d",
+                "a69a9a06ac887bee5ef1333ecb813071a1db78f65e47862585c8c7cc1ea7f693",
             ("GREEN", 0.0, None, 1),
         ),
         "fallback": (
-                "527b7fc24f1275a44fb0306f5f156436f11393055b42760c7436f52cd49d0cf5",
+                "ab44388b1fc0458409649d42f5cb7bd7bd67607dab23ef0377f51c28830386a3",
             ("GREEN", 1.0, None, 1),
         ),
         "no-tab": (
-                "ed32f48c39714b59c78f04765b80933765167e4ef2932256a4f0ebe10b023cfc",
+                "397c1a15f08d87dc08ac974c583d6dafe19622da3b16ddba296bdfdb0d924b95",
             ("GREEN", 1.0, None, 1),
         ),
     }

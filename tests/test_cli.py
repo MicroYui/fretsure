@@ -75,7 +75,7 @@ def test_cli_success_prints_full_product_result_and_writes_trace(
     ]
     metadata = trace_rows[0]["data"]
     assert metadata["llm_model_id"] == "constant-stub"
-    assert metadata["checker_version"] == "oracle@0.5.0"
+    assert metadata["checker_version"] == "oracle@0.6.0"
     assert metadata["input_schema_version"] == "tab-input@0.3.0"
     assert metadata["fidelity_checker_version"] == "fidelity@0.3.0"
     assert len(metadata["profile_fingerprint"]) == 64

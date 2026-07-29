@@ -623,7 +623,7 @@ def test_each_row_preserves_formal_label_checker_model_result_and_accounting() -
     assert row.agreement_status is AgreementStatus.SOFTWARE_FIXTURE
     assert row.label_provenance.source is LabelSource.SOFTWARE_FIXTURE
     assert row.checker_verdict == "RED"
-    assert row.checker_version == "oracle@0.5.0"
+    assert row.checker_version == "oracle@0.6.0"
     assert row.model_id == "fake-scripted"
     assert row.max_tokens == JUDGE_MAX_TOKENS
     assert row.temperature == JUDGE_TEMPERATURE

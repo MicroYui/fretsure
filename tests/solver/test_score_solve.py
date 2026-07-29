@@ -238,7 +238,20 @@ def test_score_segments_carry_hand_context_across_carcassi_seam() -> None:
     # Seven source-shaped bars exceed one beam-32 work envelope.  The historical
     # independent-segment implementation restarted at onset 14 on low-E fret 7,
     # producing a RED shift seam.  Context propagation keeps B2 at A-string
-    # fret 2 with finger 2, as the public-domain edition indicates.
+    # fret 2, which is where the public-domain edition puts it.
+    #
+    # The edition also prints finger 2 there, and until `oracle@0.6.0` the solver
+    # agreed.  Flooring `d_max` at the width of the neck -- so that two fingers
+    # can reach the outer strings at one fret, which they must, since otherwise a
+    # G major chord is unplayable -- widened the space enough that the cost
+    # function now prefers finger 3 for this note.  The placement is unchanged
+    # and the seam property this test exists for still holds; what moved is a
+    # fingering choice that used to match the engraver and no longer does.
+    #
+    # That is a real cost of the change and is recorded here rather than folded
+    # into the expected value, because editorial fingerings turned out to be the
+    # most reliable evidence available about this verifier and quietly dropping
+    # an agreement with one would discard exactly that.
     bars = (
         (48, 55, 60, 64, 52, 55, 60, 64),
         (45, 57, 60, 64, 48, 57, 60, 64),
@@ -270,5 +283,11 @@ def test_score_segments_carry_hand_context_across_carcassi_seam() -> None:
     assert isinstance(result, Tab)
     seam_note = next(note for note in result.notes if note.onset == F(14))
     assert note_pitch(seam_note.string, seam_note.fret, result.tuning, result.capo) == 47
-    assert (seam_note.string, seam_note.fret, seam_note.left_finger) == (1, 2, 2)
+    # The seam property: the note is where the edition puts it, not restarted
+    # high on the low E string.
+    assert (seam_note.string, seam_note.fret) == (1, 2)
+    # The finger the edition prints is 2; `oracle@0.6.0` picks 3. Asserted so the
+    # divergence is visible and a future cost-function change that restores the
+    # agreement fails loudly rather than passing unnoticed.
+    assert seam_note.left_finger == 3
     assert check_playability(result, MEDIAN_HAND).verdict != "RED"

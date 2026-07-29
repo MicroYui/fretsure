@@ -18,6 +18,10 @@ from typing import Final
 STANDARD_TUNING: tuple[int, ...] = (40, 45, 50, 55, 59, 64)  # E A D G B E, low -> high
 STRING_SPACING_MM: float = 10.5  # adjacent-string centre distance (v1 constant)
 DEFAULT_STRING_LENGTH_MM: float = 648.0  # classical scale length
+# Outermost string centres at one fret.  This is a property of the instrument,
+# not of a hand, and it is the floor every finger pair has to clear -- see
+# ``d_max``.
+NECK_WIDTH_MM: float = (len(STANDARD_TUNING) - 1) * STRING_SPACING_MM
 
 
 def fret_x(f: int, length_mm: float = DEFAULT_STRING_LENGTH_MM) -> float:
@@ -90,14 +94,40 @@ def d_max(i: int, j: int, hand_span_mm: float) -> float:
 
     ``hand_span_mm`` is the 1--4 fingertip span by definition, so that pair is
     1.0 and every other is a fraction of it.  Same-finger geometry is a barre and
-    is handled separately, hence 0.
+    is handled separately, hence 0 -- and hence exempt from the floor below.
 
-    The factors are not a curve fitted to the corpus: each is a landmark that
-    admits canonical open-position shapes for the median profile, and only one
-    of them has been moved since, against a two-sided measurement.
+    **Every pair reaches at least across the neck.**  The factors alone did not:
+    the outermost string centres sit ``NECK_WIDTH_MM`` = 52.5 mm apart at one
+    fret, while (2, 3) and (3, 4) allowed 50.0 mm on the median hand and 45.0 mm
+    on the small one.  A model in which two fingers cannot touch the outer
+    strings at the same fret is not a strict model of a hand; it is a model of
+    something that cannot play the instrument, and it refused a G major chord::
+
+        G major, 3-2-0-0-0-3, spelled as a thumb sweep plus i-m-a
+            small@0.1   RED    FRET_SPAN over by 7.5 mm
+            median@0.1  AMBER  FRET_SPAN over by 2.5 mm
+        the same chord with the high-E note removed
+            every profile  GREEN
+
+    The floor is therefore not a calibration choice and does not come from
+    fitting the corpus -- five earlier attempts did exactly that and bought +2
+    pieces between them.  It comes from the instrument: a guitarist demonstrably
+    places two fingers on the outer strings at one fret, so no hand model may
+    say otherwise, whatever its span.
+
+    This was hidden because the guard that should have caught it was scoring the
+    other way.  ``replay_negative_tabs.py`` treats any drift toward GREEN over
+    1,718 raw-LLM tabs as the verifier weakening, and the tabs are known-bad by
+    provenance rather than by inspection.  Twelve of them turn GREEN when the
+    span rule stops refusing across-neck shapes, and eleven of those twelve are
+    refused on a pair whose along-neck separation is **zero** -- ordinary chords,
+    counted as false certifications.
     """
 
-    return _SPAN_FACTORS[(min(i, j), max(i, j))] * hand_span_mm
+    low, high = min(i, j), max(i, j)
+    if low == high:
+        return 0.0
+    return max(_SPAN_FACTORS[(low, high)] * hand_span_mm, NECK_WIDTH_MM)
 
 
 def open_pitch(string: int, tuning: tuple[int, ...], capo: int) -> int:

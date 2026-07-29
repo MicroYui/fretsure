@@ -54,7 +54,34 @@ RESULT_SCHEMA: Final = "fretsure-negative-tab-replay@0.1.0"
 # it had already declined to commit. Every earlier candidate in this area was
 # reported only as "false certifications rose from 6 to N" without anyone
 # checking where the N came from.
-EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1650, "AMBER": 58, "GREEN": 10}
+#
+# 2026-07-29: the numbers below moved, and the reason is that this guard was
+# scoring in the wrong direction. It calls any drift toward GREEN a weakening,
+# but these tabs are known-bad by *provenance* -- a language model wrote them
+# without a solver -- and not one had ever been examined. Eleven of them are
+# ordinary open-position chords.
+#
+# `oracle@0.6.0` floors `d_max` at the width of the neck, because the outermost
+# string centres sit 52.5 mm apart at one fret while the (2, 3) and (3, 4)
+# finger pairs allowed 50.0 mm. That refused a G major chord. Rendering the
+# eleven tabs that move shows ten of them refused on the identical frame:
+#
+#     [3 0 x 0 x 3]  G B D G   fingers 2+3, strings 6 and 1, both at fret 3
+#     along the neck 0.0 mm, across the strings 52.5 mm, old limit 50.0 mm
+#
+# The eleventh is the same shape at the sixth fret. So the new expectation is
+# not a re-freeze of whatever the code now emits; it is the old expectation with
+# eleven misclassifications removed, each one identified by sight.
+#
+#     RED   1650 -> 1650   nothing confidently refused was certified
+#     AMBER   58 ->   47
+#     GREEN   10 ->   21
+#
+# RED is unchanged, which is the property that actually protects the verifier.
+# The remaining 47 AMBER and 21 GREEN have still never been inspected, so this
+# guard continues to assert provenance rather than playability, and a future
+# change that moves them needs the same treatment: look at them.
+EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1650, "AMBER": 47, "GREEN": 21}
 
 
 def load_raw_tabs(canonical: Path) -> tuple[Tab, ...]:
