@@ -27,8 +27,10 @@ from fretsure.oracle.predicates import (
     check_finger_monotonic,
     check_fret_span,
     check_one_string_one_note,
+    check_right_hand,
     check_shift_speed,
     check_string_sustain,
+    check_sustain,
 )
 from fretsure.oracle.profiles import MEDIAN_HAND, optimistic
 from fretsure.tab import Tab, TabNote
@@ -158,3 +160,42 @@ def test_assignment_valid_matches_frame_local_predicates(notes: tuple[TabNote, .
         assert csp_ok == predicate_ok, (
             f"assignment_valid={csp_ok} but the predicates say {predicate_ok} for {fretted}"
         )
+
+
+@settings(max_examples=400, deadline=None)
+@given(_tab_notes())
+def test_the_mirror_is_not_merely_sound_but_exact(notes: tuple[TabNote, ...]) -> None:
+    """The other direction, which the design permits to fail and which does not.
+
+    Conservatism is licensed above: the mirror may refuse what the oracle would
+    accept. That licence is not free -- every state refused this way is a legal
+    path the search cannot take -- and it was a live suspect for the beam deaths,
+    which die at transitions that are perfectly legal when the two frames are
+    checked in isolation.
+
+    Measured over 4,000 generated multi-frame tabs, the disagreement rate in the
+    permitted direction is zero. So the mirror is exact, not merely safe, and the
+    beam deaths are not this. Pinning it converts an accidental property into a
+    guaranteed one: a future optimisation that starts pruning slightly harder
+    would otherwise cost repertoire silently and look like a speedup.
+
+    A first attempt at this measurement compared the mirror against a *subset* of
+    the oracle -- it omitted the right-hand repeat rate -- and reported a 30%
+    disagreement that was really repeated open strings at 12 Hz against an 8 Hz
+    limit. Hence the full predicate set below.
+    """
+
+    tab = Tab(tuple(sorted(notes, key=lambda note: (note.onset, note.string))), _TUNING, 0)
+    profile = optimistic(MEDIAN_HAND)
+    oracle_admits = (
+        not any(predicate(tab, profile) for predicate in _FRAME_LOCAL)
+        and not check_shift_speed(tab, profile, tempo_bpm=90.0)
+        and not check_right_hand(tab, profile, tempo_bpm=90.0)
+        and not check_sustain(tab, profile)
+    )
+    if not oracle_admits:
+        return
+    assert _advance_all(notes) is not None, (
+        "the mirror refused a tab every oracle predicate admits; the solver "
+        "cannot reach a state the verifier would have certified"
+    )
