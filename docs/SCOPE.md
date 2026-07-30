@@ -261,8 +261,8 @@ Technique-aware AMBER diagnostics are a future requirement, not a current capabi
 The current distribution package is `0.6.0`. Every oracle verdict carries `checker_version`, `profile_version`, a canonical
 profile SHA-256 fingerprint, and `input_schema_version`; current values are
 `oracle@0.7.0` and `tab-input@0.3.0`, while the bundled preset remains
-`median@0.2` with fingerprint
-`c2e9c6d2630cc3472eec0ecf83a999e6457f9c051ea44d5bd7c2ccbbe4084b07`.
+`median@0.3` with fingerprint
+`41119a9849f8b023f0a2d24c5cf9ed29e6d2a84efbd585ad56c52989da775307`.
 Current CLI/product output names `fidelity@0.3.0` and `score-input@0.1.0` plus the
 actual importer. Successful MusicXML imports carry `musicxml@0.4.0`; successful MIDI
 imports carry `midi@0.1.0`. Both retain structured provenance and raw SHA-256; `.mxl`

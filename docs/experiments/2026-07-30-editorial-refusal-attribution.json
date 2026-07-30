@@ -1,0 +1,529 @@
+{
+ "admitted": 222,
+ "appears_in_some_minimal_set": {
+  "BARRE_INFEASIBLE": 6,
+  "FINGER_MONOTONIC": 20,
+  "FRET_SPAN": 18,
+  "SHIFT_SPEED": 15,
+  "SUSTAIN_CONFLICT": 6
+ },
+ "checker_version": "oracle@0.7.0",
+ "editorial_frames": 249,
+ "frames": [
+  {
+   "id": "mutopia-cc-by-sa-capricho-arabe",
+   "minimal_blocking_sets": [
+    [
+     "BARRE_INFEASIBLE",
+     "FINGER_MONOTONIC",
+     "SUSTAIN_CONFLICT"
+    ]
+   ],
+   "onset": "75",
+   "realisations": 11,
+   "sounding": [
+    53,
+    70
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": []
+  },
+  {
+   "id": "mutopia-cc-by-sa-capricho-arabe",
+   "minimal_blocking_sets": [
+    [
+     "BARRE_INFEASIBLE",
+     "FINGER_MONOTONIC",
+     "SUSTAIN_CONFLICT"
+    ]
+   ],
+   "onset": "76",
+   "realisations": 11,
+   "sounding": [
+    52,
+    69
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": []
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no11",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC",
+     "FRET_SPAN"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "0",
+   "realisations": 696,
+   "sounding": [
+    45,
+    61,
+    62,
+    65
+   ],
+   "split": "dev",
+   "unblocked_by_one_rule": []
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no11",
+   "minimal_blocking_sets": [
+    [
+     "FRET_SPAN"
+    ]
+   ],
+   "onset": "3/2",
+   "realisations": 60,
+   "sounding": [
+    45,
+    61,
+    62
+   ],
+   "split": "dev",
+   "unblocked_by_one_rule": [
+    "FRET_SPAN"
+   ]
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "minimal_blocking_sets": [
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "155/4",
+   "realisations": 288,
+   "sounding": [
+    41,
+    57,
+    58,
+    65
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": []
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "163/4",
+   "realisations": 64,
+   "sounding": [
+    41,
+    62,
+    65
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC"
+   ]
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "187/4",
+   "realisations": 64,
+   "sounding": [
+    41,
+    62,
+    65
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC"
+   ]
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "229/4",
+   "realisations": 116,
+   "sounding": [
+    48,
+    62,
+    65
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC"
+   ]
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "293/4",
+   "realisations": 128,
+   "sounding": [
+    53,
+    57,
+    65
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC"
+   ]
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "365/4",
+   "realisations": 892,
+   "sounding": [
+    53,
+    57,
+    59,
+    65
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC"
+   ]
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no16",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN"
+    ]
+   ],
+   "onset": "385/4",
+   "realisations": 4,
+   "sounding": [
+    44,
+    62
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC",
+    "FRET_SPAN"
+   ]
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no17",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "126",
+   "realisations": 192,
+   "sounding": [
+    50,
+    52,
+    54,
+    62
+   ],
+   "split": "dev",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC"
+   ]
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no19",
+   "minimal_blocking_sets": [
+    [
+     "BARRE_INFEASIBLE",
+     "FINGER_MONOTONIC",
+     "SUSTAIN_CONFLICT"
+    ]
+   ],
+   "onset": "0",
+   "realisations": 730,
+   "sounding": [
+    53,
+    55,
+    60,
+    62,
+    64
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": []
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no19",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC",
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "6",
+   "realisations": 64,
+   "sounding": [
+    48,
+    52,
+    53,
+    55,
+    62
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": []
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no19",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "128/3",
+   "realisations": 892,
+   "sounding": [
+    52,
+    55,
+    62,
+    67
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC"
+   ]
+  },
+  {
+   "id": "mutopia-cc-by-sa-sorf-op35-no19",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "152/3",
+   "realisations": 892,
+   "sounding": [
+    52,
+    55,
+    62,
+    67
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC"
+   ]
+  },
+  {
+   "id": "mutopia-carcassi-op60-17",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC",
+     "FRET_SPAN"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ],
+    [
+     "BARRE_INFEASIBLE",
+     "FINGER_MONOTONIC",
+     "SUSTAIN_CONFLICT"
+    ]
+   ],
+   "onset": "76",
+   "realisations": 1536,
+   "sounding": [
+    62,
+    65,
+    69,
+    70
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": []
+  },
+  {
+   "id": "mutopia-sor-op60-07",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN"
+    ]
+   ],
+   "onset": "117/2",
+   "realisations": 12,
+   "sounding": [
+    57,
+    58
+   ],
+   "split": "test",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC",
+    "FRET_SPAN"
+   ]
+  },
+  {
+   "id": "mutopia-sorf-op35-no10",
+   "minimal_blocking_sets": [
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "64",
+   "realisations": 16,
+   "sounding": [
+    48,
+    52,
+    53
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": []
+  },
+  {
+   "id": "mutopia-sorf-op35-no3",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC",
+     "FRET_SPAN"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "47",
+   "realisations": 800,
+   "sounding": [
+    52,
+    56,
+    57,
+    65
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": []
+  },
+  {
+   "id": "mutopia-sorf-op35-no3",
+   "minimal_blocking_sets": [
+    [
+     "BARRE_INFEASIBLE",
+     "FINGER_MONOTONIC",
+     "SUSTAIN_CONFLICT"
+    ]
+   ],
+   "onset": "52",
+   "realisations": 16,
+   "sounding": [
+    57,
+    60
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": []
+  },
+  {
+   "id": "mutopia-sorf-op35-no4",
+   "minimal_blocking_sets": [
+    [
+     "FINGER_MONOTONIC"
+    ],
+    [
+     "FRET_SPAN",
+     "SHIFT_SPEED"
+    ]
+   ],
+   "onset": "93",
+   "realisations": 36,
+   "sounding": [
+    43,
+    57,
+    60
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": [
+    "FINGER_MONOTONIC"
+   ]
+  },
+  {
+   "id": "mutopia-faure-op78-sicilienne",
+   "minimal_blocking_sets": [
+    [
+     "BARRE_INFEASIBLE",
+     "FINGER_MONOTONIC",
+     "SUSTAIN_CONFLICT"
+    ]
+   ],
+   "onset": "75/2",
+   "realisations": 8,
+   "sounding": [
+    48,
+    70
+   ],
+   "split": "train",
+   "unblocked_by_one_rule": []
+  }
+ ],
+ "needs_more_than_one_rule": 11,
+ "profile": {
+  "fingerprint": "41119a9849f8b023f0a2d24c5cf9ed29e6d2a84efbd585ad56c52989da775307",
+  "hand_span_mm": 130.0,
+  "version": "median@0.3"
+ },
+ "refused": 23,
+ "schema": "fretsure-editorial-refusal-attribution@0.1.0",
+ "splits": [
+  "all"
+ ],
+ "unblocked_by_dropping_one_rule": {
+  "FINGER_MONOTONIC": 11,
+  "FRET_SPAN": 3
+ },
+ "unjudged": 4
+}

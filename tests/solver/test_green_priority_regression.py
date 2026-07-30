@@ -78,7 +78,13 @@ _TWO_POSITION_TUNING = (40, 54, 70, 80, 90, 100)
 
 
 def _two_note_position_tab(*, string: int) -> Tab:
-    pitches = (55, 58)
+    # A four-semitone reach rather than three. At three the low position is a
+    # first-position frets 1-to-4 shift, which the median hand made comfortably
+    # once `reach_mm` became half the span on 2026-07-30, so both arms came out
+    # GREEN and the test no longer contrasted anything. Frets 1 to 5 is the
+    # five-fret stretch the median span is defined as, so it is borderline by
+    # construction: the optimistic hand makes it and the pessimistic one does not.
+    pitches = (55, 59)
     duration = F(1, 16)
     return Tab(
         tuple(
@@ -103,7 +109,7 @@ def test_green_path_dominates_a_lower_position_amber_path(beam: int) -> None:
 
     notes = (
         Note(F(0), F(1, 16), 55, "melody"),
-        Note(F(1, 16), F(1, 16), 58, "melody"),
+        Note(F(1, 16), F(1, 16), 59, "melody"),
     )
     lower_position = _two_note_position_tab(string=1)
     compressed_higher_position = _two_note_position_tab(string=0)

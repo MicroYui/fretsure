@@ -23,9 +23,11 @@ def _t(notes: list[TabNote]) -> Tab:
 GREEN_TAB = _t([TabNote(F(0), F(1), 0, 2, 1, "p"), TabNote(F(0), F(1), 1, 2, 1, "i")])
 # Fret 1 and fret 15 in one frame: unreachable even for the optimistic hand.
 RED_TAB = _t([TabNote(F(0), F(1), 0, 1, 1, "p"), TabNote(F(0), F(1), 1, 15, 4, "i")])
-# ~100.8 mm span between fingers 1 and 4: within optimistic (110) but not
-# pessimistic (90) reach -> borderline.
-AMBER_TAB = _t([TabNote(F(0), F(1), 0, 1, 1, "p"), TabNote(F(0), F(1), 1, 4, 4, "i")])
+# Frets 1 and 5 held by fingers 1 and 4: the first-position five-fret stretch,
+# which is the shape the median span is defined as. A hand of exactly the median
+# size makes it and a slightly smaller one does not, so it is borderline by
+# construction rather than by arithmetic that happens to land in the band.
+AMBER_TAB = _t([TabNote(F(0), F(1), 0, 1, 1, "p"), TabNote(F(0), F(1), 1, 5, 4, "i")])
 
 
 def test_green_verdict() -> None:

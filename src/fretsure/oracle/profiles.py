@@ -5,12 +5,19 @@ pessimistic/optimistic transforms give the three-state verdict its soundness
 direction: GREEN = passes the *pessimistic* profile, RED = fails the
 *optimistic* one.
 
-CALIBRATION — ``hand_span_mm`` and ``reach_mm`` are read off the fret geometry
-as of 2026-07-29: the span is the first-position five-fret stretch and the reach
-the four-fret one, so the model is "this hand size, doing ordinary stretch
-technique". ``v_shift_mm_per_s`` and ``r_max_hz`` remain v1 placeholders with
-only their ordering asserted, and none of the four has been checked against a
-real player (roadmap D.4).
+CALIBRATION — ``hand_span_mm`` is read off the fret geometry as of 2026-07-29:
+the first-position five-fret stretch, so the model is "this hand size, doing
+ordinary stretch technique".  ``reach_mm`` is half of it, which is forced rather
+than chosen (see :func:`span_reach_inconsistency`).
+
+``v_shift_mm_per_s`` and ``r_max_hz`` remain v1 placeholders with only their
+ordering asserted, and as of 2026-07-30 both are measured to be **non-binding**:
+across the 1,718 raw-model tabs the verdict multiset is identical for every
+shift speed from 200 to 2500 mm/s and every repeat rate from 4 to 40 Hz.  The
+shipped 500 and 8 sit in the middle of those plateaus, so their exact values
+change no answer this project currently measures, and looking for a source for
+them would be sourcing a constant that does no work.  None of the four has been
+checked against a real player (roadmap D.4).
 """
 
 import hashlib
@@ -21,7 +28,7 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 from typing import cast
 
-from fretsure.geometry import DEFAULT_STRING_LENGTH_MM
+from fretsure.geometry import DEFAULT_STRING_LENGTH_MM, d_max
 
 MAX_SUPPORTED_FRET = 36
 """Inclusive safety bound for the ordinary-guitar profile input domain."""
@@ -168,28 +175,32 @@ def _read_field(
 
 
 def span_reach_inconsistency(profile: Profile) -> ProfileValidationIssue | None:
-    """``hand_span_mm`` and ``reach_mm`` are one quantity written twice.
+    """``hand_span_mm`` and ``reach_mm`` state one limit in two places.
 
-    ``hand_span_mm`` is the greatest distance between the 1 and 4 fingertips --
-    what the hand reaches when it *stretches*.  ``reach_mm`` is how far a finger
-    reaches either side of the hand centre without repositioning, which is what
-    the shift-speed window is about.  A hand cannot cover more ground than its
-    fingers span, so ``2 * reach_mm <= hand_span_mm``; it can very well cover
-    less, because a stretch is something a hand does when it must rather than
-    where it sits.
+    ``check_fret_span`` bounds each finger pair by ``d_max(i, j, hand_span_mm)``.
+    ``check_shift_speed`` gives every fretted note the hand-centre interval
+    ``[press_x - reach_mm, press_x + reach_mm]`` and intersects them, which holds
+    exactly when the extreme pair lies within ``2 * reach_mm`` along the neck.
+    That is the same physical claim, stated once per pair and once for all
+    fingers at once, so whichever constant is smaller is the one in force and
+    the other is decoration.
 
-    The two were equal until 2026-07-29 and that conflated them.  Raising the
-    span to admit ordinary stretch technique -- two consecutive fingers two
-    frets apart -- then dragged the hand-position window up with it and
-    certified 27 tabs on a rule the change was never argued from.  Equality was
-    an assumption, not the identity the previous wording claimed.
+    The window is the finger-blind one, so it can only be a *relaxation*: its
+    allowance has to be the widest any pair is granted.  Below that it overrides
+    ``d_max`` for the widest pairs and the span the profile documents is not the
+    span the verifier applies.  Above it, a hand centre is admitted that no
+    finger can reach from.  Hence equality.
 
-    Nothing enforced it, and the shipped large profile had already drifted apart
-    by a millimetre.  Letting them diverge does not merely look untidy: the two
-    feed different predicates -- pairwise fingertip distance and the hand-centre
-    window -- so a profile whose reach exceeds half its span describes a hand
-    that can cover more ground than its own fingers can span, and certificates
-    issued under it would not correspond to any hand.
+    Both directions have shipped.  The large profile was 1 mm over until
+    2026-07-27, describing a hand marginally wider than the one it claimed.
+    Then on 2026-07-29 the span was raised to admit ordinary stretch technique
+    and reach was deliberately held back, on the reasoning that reach is where
+    the hand sits while span is how far it stretches -- which sounds right and
+    is not, because the window is not a resting-position rule but the same
+    stretch rule with the fingers rubbed out.  The effective allowance for the
+    (1, 4) pair stayed at 100 mm, the beginner posture the change was made to
+    retire, and the decision reached the documentation without reaching the
+    verifier.  It refused frets 3 to 7 held by fingers 1 and 4.
 
     This is deliberately *not* part of ``validate_profile``.  The mutation suite
     earns its keep by building profiles that are incoherent on purpose, each
@@ -198,15 +209,18 @@ def span_reach_inconsistency(profile: Profile) -> ProfileValidationIssue | None:
     tidier invariant.  The shipped profiles are held to it by test instead.
     """
 
+    widest = max(
+        d_max(i, j, profile.hand_span_mm) for i in range(1, 5) for j in range(i + 1, 5)
+    )
     covered = 2.0 * profile.reach_mm
-    if covered <= profile.hand_span_mm + 1e-9:
+    if abs(covered - widest) <= 1e-9:
         return None
     return ProfileValidationIssue(
         "PROFILE_SPAN_REACH_INCONSISTENT",
         "$.reach_mm",
         (
-            f"reach_mm may be at most half of hand_span_mm: {profile.reach_mm} "
-            f"covers {covered}, more than the {profile.hand_span_mm} its fingers span"
+            f"2 * reach_mm must equal the widest pairwise allowance: {profile.reach_mm} "
+            f"covers {covered}, not the {widest} that d_max grants the (1, 4) pair"
         ),
     )
 
@@ -379,25 +393,28 @@ def profile_fingerprint(profile: Profile) -> str:
 # scale by the same factor: the technique assumption is the same for every hand,
 # and what differs between profiles is size.
 #
-# reach_mm does **not** scale with it, and that is the point. It is where the
-# hand sits rather than how far it stretches, and it feeds the shift-speed
-# window. Raising it alongside the span certified 27 known-bad tabs on a rule
-# this change was never argued from. The old values are kept: a median hand
-# comfortably covers frets 1 to 4, 100.2 mm, so 50 mm either side of centre.
-#
 # For scale, the measured index-to-little span of 210 non-musicians is 161 mm on
 # average with a minimum of 120 (Boyle, Boyle & Booker, APPCA 2015, flat maximal
 # spread). A guitar posture reaches less than a flat spread, so these values stay
-# well inside what a hand can do -- the old ones sat below the smallest hand in
-# that sample.
+# well inside what a hand can do -- the pre-2026-07-29 ones sat below the
+# smallest hand in that sample.
 #
-# reach_mm is half of hand_span_mm by definition -- see _span_reach_issue. The
-# large profile shipped at 58.0 against a 115 mm span, describing a hand 1 mm
-# wider than the one it claimed; that was measured to move no verdict and
-# repaired for coherence.
-SMALL_HAND = Profile("small@0.2", 117.0, 45.0, 450.0, 7.0, DEFAULT_STRING_LENGTH_MM)
-MEDIAN_HAND = Profile("median@0.2", 130.0, 50.0, 500.0, 8.0, DEFAULT_STRING_LENGTH_MM)
-LARGE_HAND = Profile("large@0.3", 149.5, 57.5, 560.0, 9.0, DEFAULT_STRING_LENGTH_MM)
+# reach_mm is half the span, and that is not a tidiness constraint -- see
+# span_reach_inconsistency. Holding it at 50 mm while the span went to 130 left
+# the shift-speed window enforcing a 100 mm limit on the (1, 4) pair, so the
+# stretch technique this profile claims to model was documented but not applied:
+# the verifier still refused frets 3 to 7 held by fingers 1 and 4, which is the
+# shape itself, one position up the neck.
+#
+# Raising it moves 218 of the 1,718 raw-model tabs out of confident refusal.
+# Every dropped refusal was checked against the pairwise rule that owns the same
+# limit and all 495 of them lie inside the allowance for their own finger pair,
+# so none is a violation the window was catching on its own merits. On the
+# published-fingering curve the printed-fingering refusal falls from 12.2% to
+# 9.8% while the twelve-fret far field stays at 100%.
+SMALL_HAND = Profile("small@0.3", 117.0, 58.5, 450.0, 7.0, DEFAULT_STRING_LENGTH_MM)
+MEDIAN_HAND = Profile("median@0.3", 130.0, 65.0, 500.0, 8.0, DEFAULT_STRING_LENGTH_MM)
+LARGE_HAND = Profile("large@0.4", 149.5, 74.75, 560.0, 9.0, DEFAULT_STRING_LENGTH_MM)
 
 _PESS = 0.9
 _OPT = 1.1

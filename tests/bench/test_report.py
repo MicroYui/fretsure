@@ -271,11 +271,14 @@ def test_collection_row_bundle_indexes_joined_calls_once_without_byte_drift(
     )
 
     assert joined_iterations == 1
+    # Re-frozen 2026-07-30 for `median@0.3`: the canonical bytes carry the profile
+    # version and fingerprint, so a hand-model change moves them by design. The
+    # property under test is that they do not drift for any *other* reason.
     assert hashlib.sha256(rows_bytes).hexdigest() == (
-        "32be8a1dc09435da6baff6f4e8d5642de44628aa43e5d86ef3b60296d9f576f7"
+        "17b028eb7ca464f7d2c85ea29c54d9d60cee8381e4ce716824bac6884b1c415a"
     )
     assert hashlib.sha256(blobs_bytes).hexdigest() == (
-        "43f8de7737a48b8c84f77a2a41250df01509248e32158b8097624dfe0663351f"
+        "bce91f59bd1d8881c94d4e289e717a16ac87c5d712c58116db6fccfd9531bff1"
     )
 
 
@@ -751,7 +754,7 @@ def test_report_aggregates_separate_strata_inference_baselines_usage_and_wire(
     wire = report_to_dict(report)
 
     assert hashlib.sha256(report.wire_json).hexdigest() == (
-        "5f25d950b2c65fd34e518bbcc50770e13ae96ddbcd2a52bb6db1576b30e26e4b"
+        "4027ff904b4aaadc70faaa6cc76a64c0c1f983a90fe9a1d12355c0fabc6919f0"
     )
     assert report == build_benchmark_report(
         collection.plan,

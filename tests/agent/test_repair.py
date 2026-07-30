@@ -27,8 +27,12 @@ _DROP_120 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 120}'
 _REVOICE_86_COLLISION = (
     '{"op": "revoice", "target_onset": "0", "target_pitch": 86, "arg": 85}'
 )
-_AMBER = (Note(F(0), F(1), 41, "harmony"), Note(F(0), F(1), 49, "melody"))
-_DROP_41 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 41}'
+# Pitches 41+49 solved to AMBER until 2026-07-30, when `reach_mm` became half
+# the span and the pair became comfortable. 43+72 is the same situation the
+# tests need -- accepted but not certified, with median-profile diagnostics to
+# base an edit on -- under the current hand model.
+_AMBER = (Note(F(0), F(1), 43, "harmony"), Note(F(0), F(1), 72, "melody"))
+_DROP_41 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 43}'
 # A wide two-note target the median profile itself has nothing to say about,
 # while the pessimistic one refuses it -- so repair runs with an empty diagnostic
 # list and has to propose an edit anyway. The pitches moved with `oracle@0.7.0`:
@@ -37,7 +41,7 @@ _DROP_41 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 41}'
 # left this test with nothing to exercise.
 _AMBER_WITHOUT_MEDIAN_DIAGNOSTICS = (
     Note(F(0), F(1), 42, "harmony"),
-    Note(F(0), F(1), 69, "melody"),
+    Note(F(0), F(1), 70, "melody"),
 )
 _DROP_44 = '{"op": "drop_note", "target_onset": "0", "target_pitch": 42}'
 
@@ -188,17 +192,18 @@ def test_trace_replays_localized_diagnostic_edit_and_green_recheck() -> None:
     checks = [step for step in result.trace.steps if step.event == "PLAYABILITY_CHECKED"]
     assert [step.data["verdict"] for step in checks] == ["AMBER", "GREEN"]
     first_diagnostics = checks[0].data["diagnostics"]
-    # FRET_SPAN dropped out at `oracle@0.7.0`: the span now admits ordinary
-    # stretch technique, so this shape is only objected to on the shift. What
-    # the test is about -- that a localized edit is proposed from the diagnostics
-    # and the recheck reaches GREEN -- is unchanged.
-    assert {row["code"] for row in first_diagnostics} == {"SHIFT_SPEED"}
+    # Both, and necessarily both: since 2026-07-30 the hand-centre window is a
+    # relaxation of the pairwise span rule, so a frame it objects to is one the
+    # span rule objects to as well. What the test is about -- that a localized
+    # edit is proposed from the diagnostics and the recheck reaches GREEN -- is
+    # unchanged.
+    assert {row["code"] for row in first_diagnostics} == {"FRET_SPAN", "SHIFT_SPEED"}
     assert all(row["measure"] == 1 and row["beat"] == "1/1" for row in first_diagnostics)
     edit = next(step for step in result.trace.steps if step.event == "EDIT_APPLIED")
     assert edit.data["edit"] == {
         "op": "drop_note",
         "target_onset": "0/1",
-        "target_pitch": 41,
+        "target_pitch": 43,
         "arg": 0,
     }
     assert edit.data["status"] == "applied"

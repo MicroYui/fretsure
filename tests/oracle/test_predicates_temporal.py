@@ -122,11 +122,19 @@ def test_repeated_value_after_release_is_not_a_guide_finger() -> None:
 
 
 def test_terminal_sustained_shape_controls_later_shift() -> None:
+    """A note still sounding pins the hand, so a later distant attack is refused.
+
+    The third note sits at fret 8 rather than fret 6 for margin. At fret 6 the
+    optimistic hand cleared the gap by 3 mm once `reach_mm` became half the span
+    on 2026-07-30, which turned this into an AMBER that was really testing where
+    a constant happened to land rather than whether a sustained shape propagates.
+    """
+
     t = _t(
         [
             TabNote(F(0), F(2), 0, 1, 1, "p"),
             TabNote(F(0), F(1), 1, 3, 3, "i"),
-            TabNote(F(21, 10), F(1), 2, 6, 4, "m"),
+            TabNote(F(21, 10), F(1), 2, 8, 4, "m"),
         ]
     )
     diagnostics = check_shift_speed(t, MEDIAN_HAND, tempo_bpm=120.0)
@@ -442,3 +450,47 @@ def test_sustain_predicates_emit_at_most_one_conflict_per_new_note() -> None:
     assert len(check_fret_span(tab, MEDIAN_HAND)) <= len(notes)
     assert len(check_barre(tab, MEDIAN_HAND)) <= len(notes)
     assert len(check_shift_speed(tab, MEDIAN_HAND)) <= len(notes)
+
+
+def test_the_hand_window_never_refuses_a_frame_the_exact_rules_admit() -> None:
+    """The two rules state one limit, so the finger-blind one must be the loose one.
+
+    `check_fret_span` bounds each pair of *different* fingers by `d_max`, and
+    `check_barre` owns the same-finger case, where `d_max` is zero because one
+    finger holding two frets is a different claim. Between them they say exactly
+    how far apart a frame's fretted notes may be. `check_shift_speed` gives every
+    fretted note a hand-centre interval of half-width `reach_mm` and intersects
+    them, which is that same claim about the extreme pair with the fingers rubbed
+    out. Whichever constant is smaller is the one in force.
+
+    So the window has to be a relaxation: `2 * reach_mm` equals the widest
+    allowance any pair gets, and then a single frame it refuses is always a frame
+    an exact rule refuses too. Between 2026-07-29 and 07-30 it was 30 mm tighter,
+    `d_max(1, 4)` became unreachable, and the verifier refused frets 3 to 7 held
+    by fingers 1 and 4 -- an ordinary shape, and the very stretch the span had
+    just been raised to admit.
+
+    Enumerated rather than sampled: one frame is small enough to cover outright,
+    and a property this cheap to check should not be left to chance.
+    """
+
+    for profile in (pessimistic(MEDIAN_HAND), MEDIAN_HAND, optimistic(MEDIAN_HAND)):
+        for low_fret in range(1, 20):
+            for high_fret in range(low_fret, 23):
+                for low_finger in range(1, 5):
+                    for high_finger in range(1, 5):
+                        tab = Tab(
+                            (
+                                TabNote(F(0), F(1), 0, low_fret, low_finger, "p"),
+                                TabNote(F(0), F(1), 1, high_fret, high_finger, "i"),
+                            ),
+                            TUN,
+                            0,
+                        )
+                        if not check_shift_speed(tab, profile):
+                            continue
+                        assert check_fret_span(tab, profile) or check_barre(tab, profile), (
+                            profile.version,
+                            (low_fret, low_finger),
+                            (high_fret, high_finger),
+                        )

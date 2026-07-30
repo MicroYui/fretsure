@@ -376,8 +376,11 @@ def test_task6_runner_rejects_human_labels_before_any_model_call() -> None:
 
 def test_reference_label_binds_exact_tab_tempo_meter_and_profile_before_calls() -> None:
     label = _label("bound")
+    # Re-frozen 2026-07-30 for `median@0.3`. The digest binds the profile
+    # fingerprint on purpose, so a hand-model change moving it is the feature
+    # working; what the four rejections below check is unchanged.
     assert label.proposition_sha256 == (
-        "6cb44868277c2222aabc329c3f6444dab618e5f1ac0cd298b195f8a530481452"
+        "b1cddf7b06bd43ba411baf785adc3ff332e6e3a8ce87a57e04790321500ab871"
     )
     judge, fake = _judge(["PLAYABLE"] * 10)
 

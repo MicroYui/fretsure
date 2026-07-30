@@ -135,7 +135,42 @@ RESULT_SCHEMA: Final = "fretsure-negative-tab-replay@0.1.0"
 # certified 27 further tabs by widening the shift-speed window -- a rule this
 # change was never argued from. Reach is where the hand sits; span is how far it
 # stretches, and a hand may cover less than it spans.
-EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1624, "AMBER": 67, "GREEN": 27}
+# 2026-07-30, and this is the largest movement the guard has ever recorded: 218
+# tabs, RED 1624 -> 1449. It is also the one with the least room for doubt about
+# direction, because for once the shapes did not have to be judged by eye.
+#
+# `reach_mm` becomes half `hand_span_mm`. The two constants state one limit:
+# `check_fret_span` bounds each finger pair by `d_max`, and `check_shift_speed`
+# gives each fretted note a hand-centre interval of half-width `reach_mm` and
+# intersects them, which is the same claim about the extreme pair with the
+# fingers rubbed out. At 2 * 50 = 100 mm against a `d_max(1, 4)` of 130 mm the
+# finger-blind copy was the stricter, so it silently overrode the exact one and
+# the stretch technique the profile was raised to model on 2026-07-29 never
+# reached the verifier. It refused frets 3 to 7 held by fingers 1 and 4.
+#
+# Every dropped refusal was checked against the rule that owns the same limit:
+#
+#     495 named two or more fretted notes; all 495 lie inside the pairwise
+#         allowance for their own finger pair, so none was a violation the
+#         window caught on its own merits
+#     100 named one, so they came from the interval carried across time rather
+#         than from any single frame -- and in all 100 the distance was inside
+#         what v_shift permits in the elapsed time, several by an order of
+#         magnitude (35.3 mm needed, 366.7 mm available). Not one was a shift
+#         that was too fast; every one was an interval too narrow to hold a hand
+#
+# So the refusals this change gives up were not being made on speed at all. What
+# justifies it is the published-fingering curve, where the printed-fingering
+# refusal falls 12.2% -> 9.8% while the twelve-fret far field stays at 100%.
+#
+#     RED   1624 -> 1449
+#     AMBER   67 ->  188
+#     GREEN   27 ->   81
+#
+# GREEN 27 -> 81 is the part to keep in view. 81 of 1,718 raw model tabs now
+# certify, and unlike the earlier movements these have not been inspected one by
+# one. The guard continues to assert provenance rather than playability.
+EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1449, "AMBER": 188, "GREEN": 81}
 
 
 def load_raw_tabs(canonical: Path) -> tuple[Tab, ...]:

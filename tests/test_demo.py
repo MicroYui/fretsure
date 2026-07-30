@@ -86,7 +86,10 @@ def test_render_demo_amber_does_not_overclaim() -> None:
     from fretsure.tab import Tab, TabNote
 
     tun = (40, 45, 50, 55, 59, 64)
-    amber = Tab((TabNote(F(0), F(1), 0, 1, 1, "p"), TabNote(F(0), F(1), 1, 4, 4, "i")), tun, 0)
+    # Frets 1 and 5 held by fingers 1 and 4: the first-position five-fret stretch
+    # the median span is defined as, so it is borderline by construction. Frets
+    # 1 and 4 was borderline only against the pre-2026-07-30 reach.
+    amber = Tab((TabNote(F(0), F(1), 0, 1, 1, "p"), TabNote(F(0), F(1), 1, 5, 4, "i")), tun, 0)
     oracle = check_playability(amber, MEDIAN_HAND)
     assert oracle.verdict == "AMBER"  # guard: this fixture must actually be AMBER
     demo = DemoResult(ArrangeResult(amber, oracle, None, None, Trace(), 1), None)

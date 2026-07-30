@@ -16,10 +16,16 @@ which note. The labels give the finger only, so the test is whether *any*
 does is the verifier refusing, under every possible reading, a fingering a human
 committed to in print.
 
-**Negatives** are those same frames with one note displaced along the neck by a
-growing number of frets. At twelve frets the fingers are a fifth of a metre
-apart and no hand of any size makes the shape, so a verifier that still admits
-it is not discriminating at all.
+**Negatives** are those same frames pulled wider: an extreme note is pushed
+further out along the neck by a growing number of frets. At twelve frets the
+fingers are a fifth of a metre apart and no hand of any size makes the shape, so
+a verifier that still admits it is not discriminating at all.
+
+The note that moves has to be an extreme one and it has to move outward. An
+earlier version displaced whichever fretted note came first and always upward,
+so when that note was the lowest of the shape the "negative" was the shape
+*collapsed*, sometimes onto a single fret. Those are not negatives, and counting
+them as such made correct admissions read as lost discrimination.
 
 What matters is the *curve*, not either endpoint. A well-placed boundary admits
 nearly everything at zero displacement and refuses nearly everything far out,
@@ -167,79 +173,46 @@ def _displaced_admits(
     frame: dict[str, object], profile: Profile,
     realisation: list[tuple[int, int, int]], displacement: int,
 ) -> bool | None:
-    """Judge *that* fingering with one note moved -- never a re-enumeration.
+    """Judge *that* fingering with the shape pulled wider -- never a re-enumeration.
 
     Re-enumerating is what the first version did, asking "is there any
     realisation whose displaced form still passes". With dozens of realisations
     per frame some always survive, so a note pulled a third of a metre away
     looked admissible half the time. That measured the enumerator, not the
     verifier. The negative has to be the same hand shape, pulled apart.
+
+    Which note moves is not incidental either, and the second version got it
+    wrong: it displaced whichever fretted note came first in the realisation and
+    always displaced it *upward*. When that note was the lowest of the shape,
+    moving it up brought it toward the others, and four of the frames counted as
+    six-fret negatives ended with two fingers on the same fret -- a shape any
+    hand holds. Counting those as negatives made a correct admission look like
+    lost discrimination.
+
+    So move an extreme note further out: the highest up the neck, or, if that
+    runs off the fretboard, the lowest down toward the nut. Either way the
+    extreme pair ends further apart than it started, which is what "displaced"
+    was always supposed to mean.
     """
 
     fretted = [i for i, (_, f, lf) in enumerate(realisation) if f > 0 and lf > 0]
     if len(fretted) < 2:
         return None
-    target = fretted[0]
-    string, fret, finger = realisation[target]
-    if fret + displacement > profile.max_fret:
+    highest = max(fretted, key=lambda i: realisation[i][1])
+    lowest = min(fretted, key=lambda i: realisation[i][1])
+    outward = (
+        (highest, realisation[highest][1] + displacement),
+        (lowest, realisation[lowest][1] - displacement),
+    )
+    on_board = [pair for pair in outward if 1 <= pair[1] <= profile.max_fret]
+    if not on_board:
         return None
+    target, moved_fret = on_board[0]
+    string, _fret, finger = realisation[target]
     moved = list(realisation)
-    moved[target] = (string, fret + displacement, finger)
+    moved[target] = (string, moved_fret, finger)
     tab = _frame_tab(moved, frame["tuning"], frame["capo"])
     return check_playability(tab, profile).verdict != "RED"
-
-
-def _admits(frame: dict[str, object], profile: Profile, displacement: int) -> bool | None:
-    """Does any realisation of the editor's fingering survive, once displaced?
-
-    ``None`` means the frame could not be judged -- too many realisations to
-    enumerate, or the displacement runs off the fretboard -- and those are
-    reported rather than folded into either side.
-    """
-
-    tuning = frame["tuning"]
-    capo = frame["capo"]
-    wanted = frame["fingers"]
-    per_pitch = []
-    for pitch in frame["sounding"]:
-        options = []
-        for string, fret in candidates(pitch, tuning, capo, profile.max_fret):
-            if fret == 0:
-                options.append((string, fret, 0))
-                continue
-            allowed = wanted.get(pitch)
-            for finger in (sorted(allowed) if allowed else (1, 2, 3, 4)):
-                options.append((string, fret, finger))
-        if not options:
-            return None
-        per_pitch.append(options)
-
-    total = 1
-    for options in per_pitch:
-        total *= len(options)
-    if total > MAX_REALISATIONS:
-        return None
-
-    judged = False
-    for combo in itertools.product(*per_pitch):
-        strings = [c[0] for c in combo]
-        if len(set(strings)) != len(strings):
-            continue
-        placements = list(combo)
-        if displacement:
-            fretted = [i for i, (_, f, lf) in enumerate(placements) if f > 0 and lf > 0]
-            if len(fretted) < 2:
-                continue
-            target = fretted[0]
-            string, fret, finger = placements[target]
-            if fret + displacement > profile.max_fret:
-                continue
-            placements[target] = (string, fret + displacement, finger)
-        judged = True
-        tab = _frame_tab(placements, tuning, capo)
-        if check_playability(tab, profile).verdict != "RED":
-            return True
-    return False if judged else None
 
 
 def measure(profile: Profile, splits: frozenset[str]) -> dict[str, object]:

@@ -162,12 +162,12 @@ def test_decimal_runtime_reproduces_frozen_development_selection() -> None:
         for raw in example["notes"]
     )
     onsets = sorted({note.onset for note in notes})
-    # Onsets 16 to 20 until `oracle@0.7.0`. Widening the span to admit ordinary
-    # stretch technique enlarged the green pool there and the ranker's pick
-    # became the cheapest one, so the window stopped exercising what this test
-    # is for -- that the supervised choice can differ from the cost order. Two
-    # windows still do; this is the earlier of them.
-    window = frozenset(onsets[30:34])
+    # Onsets 16 to 20, then 30 to 34, now 10 to 14. Each move had the same cause:
+    # a change to the hand model enlarges the green pool in a window until the
+    # ranker's pick is simply the cheapest one, and then that window no longer
+    # exercises what this test is for -- that the supervised choice can differ
+    # from the cost order. Seven windows still do; this is the earliest.
+    window = frozenset(onsets[10:14])
     outcome = _solve_fingering_with_green_pool(
         tuple(note for note in notes if note.onset in window),
         tuple(example["tuning"]),
@@ -186,13 +186,13 @@ def test_decimal_runtime_reproduces_frozen_development_selection() -> None:
     )
 
     # The index is a property of the pool, and the pool is whatever the search
-    # kept.  Re-frozen twice now: first when the incremental mirror became an
-    # exact replica of check_shift_speed, and again for the per-pair d_max table,
-    # since a different index-middle allowance admits different frame
-    # configurations and so a different set of states survives the beam.  What
-    # must hold is not the number but that the ranker still moves off the
-    # incumbent to a certified GREEN finalist inside its effort guard, which is
-    # asserted directly below rather than implied by the index.
+    # kept.  Re-frozen three times now: when the incremental mirror became an
+    # exact replica of check_shift_speed, for the per-pair d_max table, and for
+    # reach_mm becoming half the span.  Each admits different frame
+    # configurations, so a different set of states survives the beam.  What must
+    # hold is not the number but that the ranker still moves off the incumbent to
+    # a certified GREEN finalist inside its effort guard, which is asserted
+    # directly below rather than implied by the index.
     assert selected != 0
     assert selected == 1
     assert outcome.green_pool[selected].quality.awkward_fingering_events == 0

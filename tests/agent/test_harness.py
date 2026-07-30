@@ -508,6 +508,11 @@ def test_public_arrange_results_and_traces_match_current_versioned_goldens() -> 
     # Plan 7A intentionally evolved the trace schema to record style and technique
     # controls. These hashes freeze that new document while the semantic result
     # fingerprints below retain the clean prerefactor behavior check.
+    #
+    # Re-frozen 2026-07-30 for `median@0.3`. Every semantic fingerprint below is
+    # byte-identical to the previous freeze; the traces carry the profile version
+    # and fingerprint, so only the digests moved. That separation is the reason
+    # the two are asserted apart.
     repaired = arrange(
         _IR,
         ArrangeGoal(),
@@ -543,19 +548,19 @@ def test_public_arrange_results_and_traces_match_current_versioned_goldens() -> 
     }
     expected = {
         "green-critic": (
-                "0cbd796e3bad08d15ea0707fa2b73ea43f2f5005bc8f8e3d377df72a14350de0",
+                "c5fdfc77f1abbc12612efba23a1584b5c1d072a20affeffbf25d99b9b4e7a261",
             ("GREEN", 1.0, 0.9, 2),
         ),
         "repair": (
-                "3be116e1ec1f9ba91b3d204393723482a5e4dc4b7cb8ce6b8f4789cfac18ba49",
+                "575674fc0d7151226b228e2c2335ffbb6c5fad211d28a74597cace6f2a4c36db",
             ("GREEN", 0.0, None, 1),
         ),
         "fallback": (
-                "fe4eec763a0e52f7bd93472ee681292f43bcd18e150907fffeb290df2ecae195",
+                "9190e188466e3923fa1535195793902674cd7aa104e804836a6ae1ae59e38448",
             ("GREEN", 1.0, None, 1),
         ),
         "no-tab": (
-                "c3b32b5aed40ac182640a4e3f129a8a8c7990944d31c0df6e90158a81e54c633",
+                "2967f0c3876145e82b495d6894067043d2f804006f6315028c485cc6f740709b",
             ("GREEN", 1.0, None, 1),
         ),
     }

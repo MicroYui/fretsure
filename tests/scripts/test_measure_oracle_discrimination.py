@@ -26,6 +26,7 @@ from types import ModuleType
 
 import pytest
 
+from fretsure.oracle.core import check_playability
 from fretsure.oracle.profiles import MEDIAN_HAND
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -129,3 +130,28 @@ def test_frames_that_cannot_be_judged_are_reported_not_absorbed(script) -> None:
         assert row["unjudged"] >= 0
         if judged:
             assert abs(row["refused_rate"] - row["refused"] / judged) < 1e-9
+
+
+def test_displacing_widens_the_shape_instead_of_collapsing_it(script) -> None:
+    """The bug that made correct admissions look like lost discrimination.
+
+    The second version moved whichever fretted note came first in the
+    realisation, and always up the neck. When that note was the *lowest* of the
+    shape, moving it up carried it toward the others: four frames counted as
+    six-fret negatives ended with two fingers on one fret, which every hand can
+    hold. Admitting them is right, so the instrument was scoring a correct
+    answer as a failure.
+
+    Here the first-listed note is the low one, and seven frets of upward
+    displacement would land it exactly on top of its neighbour.
+    """
+
+    frame = {"tuning": (40, 45, 50, 55, 59, 64), "capo": 0}
+    realisation = [(0, 1, 1), (1, 8, 4)]
+
+    collapsed = script._frame_tab([(0, 8, 1), (1, 8, 4)], frame["tuning"], 0)
+    assert check_playability(collapsed, MEDIAN_HAND).verdict != "RED", (
+        "two fingers on one fret is playable, so it cannot be used as a negative"
+    )
+
+    assert script._displaced_admits(frame, MEDIAN_HAND, realisation, 7) is False

@@ -421,16 +421,15 @@ def test_shipped_profiles_span_exactly_what_their_reach_covers() -> None:
             assert span_reach_inconsistency(derived) is None, derived.version
 
 
-def test_a_hand_may_not_cover_more_ground_than_its_fingers_span() -> None:
-    """The direction that is incoherent, and the one that is merely modest.
+def test_a_hand_may_not_cover_more_or_less_ground_than_its_fingers_span() -> None:
+    """Both directions are incoherent, and the modest-looking one shipped.
 
-    Reach is where the hand sits; span is how far it stretches. Covering more
-    than the fingers span describes no hand, so it is refused. Covering less is
-    ordinary -- a stretch is something a hand does when it must, not where it
-    rests -- and the two were held equal until `oracle@0.7.0`, which is why
-    raising the span to admit ordinary stretch technique also dragged the
-    shift-speed window up and certified 27 known-bad tabs on a rule that change
-    was never argued from.
+    Covering more than the fingers span describes no hand. Covering *less* looks
+    modest and is worse in practice: the hand-centre window then overrides
+    `d_max` for the widest pairs, so the span the profile documents stops being
+    the span the verifier applies. That shipped between 2026-07-29 and 07-30 --
+    span 130 mm with a 100 mm window -- and the effective (1, 4) allowance stayed
+    at the beginner posture the span change was made to retire.
     """
 
     covering_too_much = replace(MEDIAN_HAND, version="drifted@0.1", reach_mm=80.0)
@@ -440,8 +439,10 @@ def test_a_hand_may_not_cover_more_ground_than_its_fingers_span() -> None:
     assert issue.path == "$.reach_mm"
     assert "160.0" in issue.message and "130.0" in issue.message
 
-    modest = replace(MEDIAN_HAND, version="modest@0.1", reach_mm=40.0)
-    assert span_reach_inconsistency(modest) is None
+    covering_too_little = replace(MEDIAN_HAND, version="modest@0.1", reach_mm=40.0)
+    understated = span_reach_inconsistency(covering_too_little)
+    assert understated is not None
+    assert understated.code == "PROFILE_SPAN_REACH_INCONSISTENT"
 
     exactly_half = replace(
         MEDIAN_HAND, version="half@0.1", reach_mm=MEDIAN_HAND.hand_span_mm / 2.0
