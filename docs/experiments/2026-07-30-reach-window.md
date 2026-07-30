@@ -1,5 +1,12 @@
 # The window was the span rule, and it had the wrong number — 2026-07-30
 
+> **Numbers superseded the same day.** The frame-level figures below (9.8%
+> refused, 23 refused frames) were correct for this change in isolation. The
+> monotonic slant exemption and a fourth instrument fix followed; the current
+> state is 3.3% and 7 frames. See `2026-07-30-monotonic-slant-remeasured.md`.
+> The reasoning here — one limit stated in two places, the smaller silently in
+> force — is unchanged.
+
 Two questions were open at the start of the day. Both are answered, and the
 answer to the second turned out to be the reason the first mattered.
 

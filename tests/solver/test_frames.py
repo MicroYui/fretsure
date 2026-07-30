@@ -123,7 +123,16 @@ def test_config_limit_round_robins_left_fingers_within_each_geometry() -> None:
 def test_stress_frame_bounds_internal_work_and_constructs_only_final_configs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Count both bounded internals and the much smaller public result objects."""
+    """Count both bounded internals and the much smaller public result objects.
+
+    Re-frozen 2026-07-30 for `oracle@0.8.0`: exempting the hand's slant makes
+    more finger assignments valid, so more of the per-frame enumeration budget
+    gets used and the internals roughly triple on this deliberately pathological
+    profile. The envelope itself does not move -- `feasible_fingerings` is capped
+    at `MAX_SOLVER_FRAME_FINGERINGS` and the input contract already prices every
+    frame at that cap -- and the public result is still seven configurations, so
+    what changed is occupancy of a pre-paid bound rather than the bound.
+    """
 
     stress_profile = Profile(
         "stress@0.1",
@@ -170,8 +179,8 @@ def test_stress_frame_bounds_internal_work_and_constructs_only_final_configs(
     )
 
     assert len(configs) == 7
-    assert static_checks == 1_160
-    assert internal_candidates == 4_640
+    assert static_checks == 3_328
+    assert internal_candidates == 13_312
     assert materialized == 7
 
 

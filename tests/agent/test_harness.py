@@ -509,7 +509,8 @@ def test_public_arrange_results_and_traces_match_current_versioned_goldens() -> 
     # controls. These hashes freeze that new document while the semantic result
     # fingerprints below retain the clean prerefactor behavior check.
     #
-    # Re-frozen 2026-07-30 for `median@0.3`. Every semantic fingerprint below is
+    # Re-frozen 2026-07-30 twice, for `median@0.3` and then for `oracle@0.8.0`.
+    # Every semantic fingerprint below is
     # byte-identical to the previous freeze; the traces carry the profile version
     # and fingerprint, so only the digests moved. That separation is the reason
     # the two are asserted apart.
@@ -548,19 +549,19 @@ def test_public_arrange_results_and_traces_match_current_versioned_goldens() -> 
     }
     expected = {
         "green-critic": (
-                "c5fdfc77f1abbc12612efba23a1584b5c1d072a20affeffbf25d99b9b4e7a261",
+                "7885507153c6c4b3208c8bfa910183192c02ab386c858f9d3340981cd0d299f5",
             ("GREEN", 1.0, 0.9, 2),
         ),
         "repair": (
-                "575674fc0d7151226b228e2c2335ffbb6c5fad211d28a74597cace6f2a4c36db",
+                "723e8086f2b3e5dd7159c940f0e8d451ade648c8204296685a712f1dc2a8404d",
             ("GREEN", 0.0, None, 1),
         ),
         "fallback": (
-                "9190e188466e3923fa1535195793902674cd7aa104e804836a6ae1ae59e38448",
+                "389653d47c407ebcc3ac09dacb54e5655aebfaddc20e7b0e09ba4406b4d940b1",
             ("GREEN", 1.0, None, 1),
         ),
         "no-tab": (
-                "2967f0c3876145e82b495d6894067043d2f804006f6315028c485cc6f740709b",
+                "59f30323b1f9138cac5815413d23c744c96ec5b80126cd425535964dc8646287",
             ("GREEN", 1.0, None, 1),
         ),
     }

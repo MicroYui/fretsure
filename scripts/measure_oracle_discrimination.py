@@ -134,11 +134,53 @@ def _frame_tab(
     return Tab(tuple(notes), tuning, capo)
 
 
+def _self_contradictory(frame: dict[str, object], profile: Profile) -> bool:
+    """Does the editor's own annotation put one finger on two different frets?
+
+    A frame is built from everything sounding at an onset, which assumes each
+    notated duration is held to its end. Editors do not finger that way: the mark
+    on a bass note describes the hand when it was *attacked*, and by the time a
+    later melody note arrives the finger has been lifted and reused. Where that
+    happens the frame carries one finger number on two notes that share no fret,
+    which no hand can hold and therefore no verifier can admit.
+
+    Such a frame says nothing about the verifier -- a perfect one refuses it too
+    -- so it is reported as unjudgeable rather than counted as a false negative.
+    Five of the thirteen frames refused at `oracle@0.8.0` are this, and reporting
+    them as refusals put the frame-level rate at 5.3% when it is 3.3%.
+
+    A pitch playable on an open string escapes: open takes finger 0 and joins no
+    collision. A shared fret escapes too, because that is a barre.
+    """
+
+    forced = {
+        pitch: fingers
+        for pitch, fingers in frame["fingers"].items()
+        if len(fingers) == 1
+    }
+    pitches = sorted(forced)
+    for index, a in enumerate(pitches):
+        for b in pitches[index + 1:]:
+            if forced[a] != forced[b]:
+                continue
+            places_a = candidates(a, frame["tuning"], frame["capo"], profile.max_fret)
+            places_b = candidates(b, frame["tuning"], frame["capo"], profile.max_fret)
+            if any(fret == 0 for _s, fret in places_a):
+                continue
+            if any(fret == 0 for _s, fret in places_b):
+                continue
+            if not ({fret for _s, fret in places_a} & {fret for _s, fret in places_b}):
+                return True
+    return False
+
+
 def _admitted_realisation(
     frame: dict[str, object], profile: Profile
 ) -> list[tuple[int, int, int]] | None:
     """The realisation of the editor's fingering the verifier accepts, if any."""
 
+    if _self_contradictory(frame, profile):
+        return None
     tuning = frame["tuning"]
     capo = frame["capo"]
     wanted = frame["fingers"]

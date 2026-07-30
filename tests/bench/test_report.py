@@ -275,10 +275,10 @@ def test_collection_row_bundle_indexes_joined_calls_once_without_byte_drift(
     # version and fingerprint, so a hand-model change moves them by design. The
     # property under test is that they do not drift for any *other* reason.
     assert hashlib.sha256(rows_bytes).hexdigest() == (
-        "17b028eb7ca464f7d2c85ea29c54d9d60cee8381e4ce716824bac6884b1c415a"
+        "9eff378f37f3c93a4613f92549a6599609ddb04dd25c13ca34cfb92cf2668a85"
     )
     assert hashlib.sha256(blobs_bytes).hexdigest() == (
-        "bce91f59bd1d8881c94d4e289e717a16ac87c5d712c58116db6fccfd9531bff1"
+        "6818d2c3640dee8fcf639d72d5bea35c11efec7b331b701aba2f8c03fa00c27b"
     )
 
 
@@ -754,7 +754,7 @@ def test_report_aggregates_separate_strata_inference_baselines_usage_and_wire(
     wire = report_to_dict(report)
 
     assert hashlib.sha256(report.wire_json).hexdigest() == (
-        "4027ff904b4aaadc70faaa6cc76a64c0c1f983a90fe9a1d12355c0fabc6919f0"
+        "595946a217981c62c4156b05eb3f86f2b1ac5aed694984fe0de28f676604c693"
     )
     assert report == build_benchmark_report(
         collection.plan,

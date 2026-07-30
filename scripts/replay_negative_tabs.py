@@ -170,7 +170,30 @@ RESULT_SCHEMA: Final = "fretsure-negative-tab-replay@0.1.0"
 # GREEN 27 -> 81 is the part to keep in view. 81 of 1,718 raw model tabs now
 # certify, and unlike the earlier movements these have not been inspected one by
 # one. The guard continues to assert provenance rather than playability.
-EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1449, "AMBER": 188, "GREEN": 81}
+# 2026-07-30, second movement of the day. `oracle@0.8.0` exempts the hand's slant
+# from `check_finger_monotonic`: an inversion is refused only when the
+# higher-numbered finger is toward the *bass*, because a finger reaching toward
+# the trebles lands nearer the nut and that is the wrist's own geometry.
+#
+# Ten tabs move and all ten are one shape family, rendered before this number was
+# touched -- the higher finger on a more treble string, one or two frets nearer
+# the nut:
+#
+#     s2f5g3 s5f3g4     ring on the A string, little on the B a fret back
+#     s4f4g3 s6f3g4     little on the top string, one fret back
+#     s1f2g1 s5f1g2     index on the bass, middle toward the trebles
+#
+# Nine land in AMBER and one reaches GREEN. Justification is the published
+# fingering curve rather than these counts: printed-fingering refusal falls
+# 9.8% -> 5.3% (test split 3.3% -> 0.0%) while the twelve-fret far field stays at
+# 100% and the test split's six-fret field is unchanged. The prototype of this
+# exemption was declined on 2026-07-29 for costing a tenth of the far field; both
+# instruments behind that number were later found defective.
+#
+#     RED   1449 -> 1439
+#     AMBER  188 ->  197
+#     GREEN   81 ->   82
+EXPECTED_VERDICTS: Final[dict[str, int]] = {"RED": 1439, "AMBER": 197, "GREEN": 82}
 
 
 def load_raw_tabs(canonical: Path) -> tuple[Tab, ...]:

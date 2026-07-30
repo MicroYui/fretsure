@@ -1,5 +1,13 @@
 # The monotonic rule refuses the hand's slant — 2026-07-29
 
+> **Superseded 2026-07-30.** The trade recorded below was measured with two
+> instruments later found defective: the hand-centre window was 30 mm tighter
+> than the span rule it duplicates, and the negative construction collapsed
+> shapes instead of pulling them apart. Re-measured, the far-field cost is 1.2
+> points rather than twelve and the exemption ships. See
+> `2026-07-30-monotonic-slant-remeasured.md`. Kept as the record of what was
+> measured that day.
+
 ## Confirmed, not fixed
 
 `check_finger_monotonic` requires finger order to follow fret order globally:

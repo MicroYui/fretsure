@@ -155,3 +155,45 @@ def test_displacing_widens_the_shape_instead_of_collapsing_it(script) -> None:
     )
 
     assert script._displaced_admits(frame, MEDIAN_HAND, realisation, 7) is False
+
+
+def test_a_frame_the_editor_never_held_together_is_not_evidence(script) -> None:
+    """The fourth defect this instrument has had, and the same shape as the others.
+
+    Frames are built from everything sounding at an onset, so a long notated bass
+    note joins every melody note under it. The editor's mark on that bass note
+    describes the hand when it was attacked; by the melody note the finger has
+    been lifted and reused, and the frame ends up carrying one finger number on
+    two notes sharing no fret. No hand holds that, so no verifier can admit it,
+    and counting it as a false negative measures the instrument rather than the
+    oracle -- exactly the check that a perfect subject would still fail.
+    """
+
+    tuning = (40, 45, 50, 55, 59, 64)
+    both_need_finger_three = {
+        "tuning": tuning,
+        "capo": 0,
+        "sounding": (48, 70),
+        "fingers": {48: frozenset({3}), 70: frozenset({3})},
+    }
+    assert script._self_contradictory(both_need_finger_three, MEDIAN_HAND) is True
+    assert script._admitted_realisation(both_need_finger_three, MEDIAN_HAND) is None
+
+    # An open string takes finger 0 and joins no collision, so a pitch that can be
+    # played open is never forced into one.
+    open_escape = {
+        "tuning": tuning,
+        "capo": 0,
+        "sounding": (40, 70),
+        "fingers": {40: frozenset({3}), 70: frozenset({3})},
+    }
+    assert script._self_contradictory(open_escape, MEDIAN_HAND) is False
+
+    # Two pitches sharing a fret are a barre, which is an ordinary thing to write.
+    barre = {
+        "tuning": tuning,
+        "capo": 0,
+        "sounding": (42, 47),
+        "fingers": {42: frozenset({1}), 47: frozenset({1})},
+    }
+    assert script._self_contradictory(barre, MEDIAN_HAND) is False

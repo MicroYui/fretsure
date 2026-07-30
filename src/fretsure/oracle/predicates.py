@@ -188,8 +188,43 @@ def check_finger_count(
 def check_finger_monotonic(
     tab: Tab, profile: Profile, *, beats_per_bar: int = 4
 ) -> list[Diagnostic]:
-    """Fret order must map to finger order: fret_a<fret_b => finger_a<=finger_b,
-    and the same finger may only span one fret (a barre)."""
+    """Fret order must map to finger order, except along the hand's own slant.
+
+    Fingers cannot pass through one another, so a higher-numbered finger nearer
+    the nut is normally impossible -- and the same finger may only span one fret,
+    which is a barre.
+
+    The wrist is not square to the neck. It angles across, so a finger reaching
+    toward the treble strings lands slightly nearer the nut, and the shape that
+    produces is one editors print constantly: of the 63 inverted pairs in the
+    published fingerings, 50 are that slant and 13 are the opposite cross. The
+    rule consulted only the frets, so it refused all 63.
+
+    The exemption is therefore directional -- an inversion is allowed only when
+    the higher-numbered finger is toward the trebles, which on this tuning is the
+    higher string index -- and it carries no bound on how far back the finger may
+    sit. That is deliberate. ``check_fret_span`` already bounds the distance
+    between any two fingers, and its bound is positional: `d_max(1, 4)` permits a
+    four-fret setback in first position and nine around the twelfth, which is the
+    shape of the real constraint, since frets narrow up the neck. Editors write
+    setbacks of one to five frets, comfortably inside it. Adding a fret-count
+    bound here would be a third statement of the same longitudinal limit, and
+    this file has just finished paying for the second one.
+
+    Measured on 2026-07-30, all splits, against the shipped rule:
+
+        printed fingerings refused   9.8% -> 5.3%   (test split 3.3% -> 0.0%)
+        6-fret far field            97.9% -> 96.7%  (test split unchanged)
+        12-fret far field            100% ->  100%
+        editorial frames refused        23 -> 12, none now blocked by this rule
+
+    An earlier prototype of the same exemption was declined on 2026-07-29 for
+    costing a tenth of the far field. Both instruments behind that number were
+    later found defective -- the hand-centre window was 30 mm tighter than the
+    span rule it duplicates, and the negative construction collapsed shapes
+    instead of pulling them apart -- so it was re-measured rather than inherited.
+    """
+
     out: list[Diagnostic] = []
     for onset, notes in _indexed_sounding_frames(tab):
         fretted = [(idx, n) for idx, n in notes if n.fret > 0 and n.left_finger > 0]
@@ -198,7 +233,11 @@ def check_finger_monotonic(
             for ib, nb in fretted:
                 if ia == ib:
                     continue
-                if na.fret < nb.fret and na.left_finger > nb.left_finger:
+                if (
+                    na.fret < nb.fret
+                    and na.left_finger > nb.left_finger
+                    and na.string <= nb.string
+                ):
                     bad.update((ia, ib))
                 if na.left_finger == nb.left_finger and na.fret != nb.fret:
                     bad.update((ia, ib))

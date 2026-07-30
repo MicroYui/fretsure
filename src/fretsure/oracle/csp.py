@@ -38,7 +38,7 @@ def assignment_valid(
                 continue
             na, nb = fretted[i], fretted[j]
             fa, fb = assignment[i], assignment[j]
-            if na.fret < nb.fret and fa > fb:  # monotonic
+            if na.fret < nb.fret and fa > fb and na.string <= nb.string:  # monotonic
                 return False
             if fa == fb and na.fret != nb.fret:  # same finger => same fret (barre)
                 return False
@@ -103,7 +103,13 @@ def feasible_finger_assignment(
         note = fretted[k]
         lo = 1
         for pk in order[:pos]:
-            if fretted[pk].fret < note.fret:
+            # Only a note the hand's slant does not excuse bounds this finger
+            # from below. Notes are assigned in fret-ascending order, so every
+            # `pk` sits at or below `note`; one that is also toward the trebles
+            # is the slant `check_finger_monotonic` allows, and bounding on it
+            # would prune away exactly the fingerings the oracle now admits --
+            # leaving the solver unable to find what the verifier would accept.
+            if fretted[pk].fret < note.fret and fretted[pk].string <= note.string:
                 lo = max(lo, assign[pk])
         for f in range(lo, 5):
             ok = True

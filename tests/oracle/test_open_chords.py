@@ -31,6 +31,7 @@ import pytest
 
 from fretsure.geometry import NECK_WIDTH_MM, STANDARD_TUNING, STRING_SPACING_MM, d_max
 from fretsure.oracle.core import check_playability
+from fretsure.oracle.predicates import check_finger_monotonic
 from fretsure.oracle.profiles import LARGE_HAND, MEDIAN_HAND, SMALL_HAND
 from fretsure.tab import Tab, TabNote
 
@@ -139,5 +140,92 @@ def test_a_stretch_along_the_neck_is_still_refused() -> None:
         0,
     )
     result = check_playability(impossible, MEDIAN_HAND)
+    assert result.verdict == "RED"
+    assert "FRET_SPAN" in {str(d.violation_type) for d in result.diagnostics}
+
+
+def test_the_wrist_slants_and_the_opposite_cross_still_does_not() -> None:
+    """The exemption is directional, and the direction is the whole point.
+
+    A finger reaching toward the treble strings lands nearer the nut, so a
+    higher-numbered finger there is the hand's own geometry. The mirror image --
+    a higher-numbered finger nearer the nut on the *bass* side -- is fingers
+    passing through one another, and stays refused. Editors write the first 50
+    times to the second's 13.
+    """
+
+    slant = Tab(
+        (
+            TabNote(Fraction(0), Fraction(1), 1, 5, 2, "p"),
+            TabNote(Fraction(0), Fraction(1), 4, 3, 3, "i"),
+        ),
+        STANDARD_TUNING,
+        0,
+    )
+    cross = Tab(
+        (
+            TabNote(Fraction(0), Fraction(1), 4, 5, 2, "i"),
+            TabNote(Fraction(0), Fraction(1), 1, 3, 3, "p"),
+        ),
+        STANDARD_TUNING,
+        0,
+    )
+    assert check_finger_monotonic(slant, MEDIAN_HAND) == []
+    assert [str(d.violation_type) for d in check_finger_monotonic(cross, MEDIAN_HAND)] == [
+        "FINGER_MONOTONIC"
+    ]
+
+
+def test_a_barre_across_two_frets_is_still_refused_on_the_slant() -> None:
+    """One finger, two frets, is a different claim and the exemption misses it.
+
+    The slant excuses fingers being out of order; it says nothing about a single
+    finger stopping two different frets, which no direction across the strings
+    makes possible.
+    """
+
+    two_frets_one_finger = Tab(
+        (
+            TabNote(Fraction(0), Fraction(1), 1, 5, 3, "p"),
+            TabNote(Fraction(0), Fraction(1), 4, 3, 3, "i"),
+        ),
+        STANDARD_TUNING,
+        0,
+    )
+    assert [
+        str(d.violation_type) for d in check_finger_monotonic(two_frets_one_finger, MEDIAN_HAND)
+    ] == ["FINGER_MONOTONIC"]
+
+
+def test_the_span_rule_still_bounds_how_far_back_the_slant_may_sit() -> None:
+    """No fret-count bound is needed here because one already exists elsewhere.
+
+    `d_max` bounds any two fingers, and positionally: four frets of setback in
+    first position, nine around the twelfth, because frets narrow up the neck.
+    Editors write one to five. A second bound inside the monotonic rule would be
+    a third statement of the same longitudinal limit.
+    """
+
+    reachable = Tab(
+        (
+            TabNote(Fraction(0), Fraction(1), 1, 5, 2, "p"),
+            TabNote(Fraction(0), Fraction(1), 4, 2, 4, "i"),
+        ),
+        STANDARD_TUNING,
+        0,
+    )
+    too_far = Tab(
+        (
+            TabNote(Fraction(0), Fraction(1), 1, 14, 2, "p"),
+            TabNote(Fraction(0), Fraction(1), 4, 2, 4, "i"),
+        ),
+        STANDARD_TUNING,
+        0,
+    )
+    assert check_finger_monotonic(too_far, MEDIAN_HAND) == [], (
+        "the slant exemption itself must not be what refuses this"
+    )
+    assert check_playability(reachable, MEDIAN_HAND).verdict != "RED"
+    result = check_playability(too_far, MEDIAN_HAND)
     assert result.verdict == "RED"
     assert "FRET_SPAN" in {str(d.violation_type) for d in result.diagnostics}
