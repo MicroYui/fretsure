@@ -307,7 +307,16 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, KeyError) as error:
         print(f"repertoire evaluation failed: {error}", file=sys.stderr)
         return 2
-    payload = report["aggregate"] if args.summary_only else report
+    # The summary carries what produced it, not only what came out. Every frozen
+    # gate artifact before 2026-07-31 was a bare aggregate: no mode, no beam, no
+    # profile, no checker version. That is how 146/292 came to be quoted for
+    # months without anyone being able to tell it was the `--choose-capo` figure,
+    # and how it was then "corrected" to a number measured the other way.
+    payload = (
+        {key: report[key] for key in ("schema", "configuration", "versions", "aggregate")}
+        if args.summary_only
+        else report
+    )
     text = json.dumps(payload, indent=1, sort_keys=True, allow_nan=False)
     if args.output is None:
         print(text)

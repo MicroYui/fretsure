@@ -83,7 +83,8 @@ Every step ran, and passed:
 ```
 uv run --frozen ruff check && uv run --frozen mypy --strict src
 uv run --frozen pytest -q -m 'not integration'          # 2758 passed
-uv run --frozen python scripts/evaluate_repertoire_playability.py
+uv run --frozen python scripts/evaluate_repertoire_playability.py   # fixed capo
+uv run --frozen python scripts/evaluate_repertoire_playability.py --choose-capo
 uv run --frozen python scripts/replay_negative_tabs.py
 uv run --frozen python scripts/evaluate_left_hand_reference.py   # 17/21, unmoved
 ```
@@ -91,7 +92,16 @@ uv run --frozen python scripts/evaluate_left_hand_reference.py   # 17/21, unmove
 New permanent instruments, all re-runnable after any future change:
 
 - `scripts/evaluate_repertoire_playability.py` — the gate itself, with per-piece
-  outcome, failure reason and sustain retention;
+  outcome, failure reason and sustain retention. **It has two modes and they are
+  different metrics.** Without `--choose-capo` the capo stays where the corpus put
+  it; with it, a refused score may try other positions, which is worth about +24
+  pieces at `oracle@0.8.0` and thins every infeasible bucket. A gate number
+  without its mode is not comparable with anything — the figure quoted across
+  sessions as 146/292 was the capo one, was re-measured as the fixed one, and was
+  then wrongly published as a correction. Since 2026-07-31 `--summary-only`
+  emits `configuration` and `versions` alongside the aggregate so a frozen
+  artifact can no longer be silent about what produced it; the three artifacts
+  from 07-26, 07-27 and 07-28 are bare aggregates and cannot be attributed;
 - `scripts/replay_negative_tabs.py` — verdict-multiset invariance on the
   negative set;
 - `scripts/measure_profile_frontier.py` — the two-sided profile frontier and the
