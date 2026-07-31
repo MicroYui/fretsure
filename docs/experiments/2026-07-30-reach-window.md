@@ -153,6 +153,14 @@ the largest movement it has ever recorded.
 
 ## The repertoire gate, and a number that does not reproduce
 
+> **Withdrawn 2026-07-31.** It reproduces. The historical figures were measured
+> with `--choose-capo` and mine without, and the two agree id-for-id on the
+> frozen 56-slice where a capo is inert while differing by 33 on the expanded
+> corpus where it recovers 43% of refusals. The section below is left as written
+> because the reasoning error in it — testing a claim about 292 pieces on the one
+> 56-piece subset where the mechanism cannot act — is the point. See
+> [`2026-07-31-gate-had-two-modes.md`](2026-07-31-gate-had-two-modes.md).
+
 Both arms measured in one process, same corpus files, only `reach_mm` differing:
 
 | | accepted | GREEN | AMBER | INFEASIBLE | frozen 56-slice |
