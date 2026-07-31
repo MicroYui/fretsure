@@ -113,3 +113,41 @@ def test_a_score_that_no_guitar_produces_is_not_called_a_defect(
     row = script.audit_example(_example([39, 98]), 22)
     assert row is not None
     assert row["verdict"].endswith("not a guitar score")
+
+
+def test_a_few_stray_notes_are_not_the_whole_score(script: ModuleType) -> None:
+    """The case that can hide, and the one no whole-piece repair describes.
+
+    `aguado-op03n05` has 23 notes of 345 an octave above where they belong,
+    scattered across the piece; the rest is ordinary. Only the ones clearing fret
+    22 announce themselves, so the same defect in a lower-lying score passes
+    silently with wrong notes. Reporting it as "not a guitar score" sends someone
+    to delete real repertoire, and reporting it as an octave error sends them to
+    transpose 322 correct notes.
+    """
+
+    # The open low E has to be in there, or the whole score fits an octave down
+    # as well and range alone cannot separate the two readings -- a real ambiguity
+    # the audit records rather than hides.
+    mostly_fine = [40] * 40 + [95, 96]
+    row = script.audit_example(_example(mostly_fine), 22)
+    assert row is not None
+    assert row["verdict"] == "partial: 2 of 42 notes an octave high"
+
+
+def test_a_screen_that_would_fire_on_a_clean_corpus_is_not_used(
+    script: ModuleType,
+) -> None:
+    """Recorded because the obvious detector for the hidden case does not work.
+
+    Screening for a note that leaps up an octave and straight back finds 133 of
+    292 scores, because that is what a guitar arpeggio does -- bass, melody,
+    back down -- inside one voice label. A clean corpus would score the same, so
+    the screen measures texture rather than displacement. The audit therefore
+    reports only what it can see from the fretboard, and finding the hidden ones
+    needs the sources rather than a heuristic.
+    """
+
+    source = (ROOT / "scripts" / "audit_corpus_range.py").read_text()
+    assert "spike" not in source.lower()
+    assert "instrument_range" in source

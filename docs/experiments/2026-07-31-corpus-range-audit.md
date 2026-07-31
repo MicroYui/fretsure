@@ -50,6 +50,45 @@ The frame-config closure survives the correction — excluding the four bad scor
 the median margin is unchanged at 21.3 mm, because the two contaminated geometry
 frames sat at 3.4 and 67.2, one at each end.
 
+## The mechanism, proven for the tuning case
+
+`faure_op78_sicilienne.ly` is one of eight sources vendored locally, and it is
+one of the nineteen. Its source says, in two places:
+
+```lilypond
+piece = \markup { \circle 6 = D }          % drop D tuning
+%        stringTunings = #guitar-drop-d-tuning
+```
+
+The tuning is declared in a `\markup` for the reader and in a **commented-out**
+`stringTunings` line. The corpus recorded `[40, 45, 50, 55, 59, 64]` — standard.
+
+So for this class the answer is not inference: **the score says what instrument
+it is for, and the converter reads only notes.** Everything on the page about the
+instrument — clef, tuning markup, string indications — is discarded.
+
+## A third case, and the one that can hide
+
+`aguado-op03n05` is not "not a guitar score". It has **23 notes of 345** an octave
+above where they belong, spread over 23 different onsets from beat 72 to beat
+589, while the other 322 are ordinary. Shifting only those down twelve puts them
+at 76–86, the top of the fretboard.
+
+Partial displacement only announces itself when a stray note clears fret 22. The
+same defect in a lower-lying score passes silently, with wrong notes, into every
+measurement.
+
+I tried to screen for it — a note that leaps up an octave and straight back —
+and it fires on **133 of 292 scores**, because that is exactly what a guitar
+arpeggio does inside one voice label: bass, melody, back down. `spanish-romance`
+scores 22. A clean corpus would score the same, so the screen measures texture
+rather than defect and is not used. **Finding the hidden ones needs the sources.**
+
+Two limits are recorded in the script rather than smoothed over: a score whose
+whole range also fits an octave down is reported as written pitch even if only
+some notes are displaced, since only a score reaching the open low E
+disambiguates itself.
+
 ## The evidence, and its limit
 
 The sources for the affected scores are not vendored here, so the mechanism

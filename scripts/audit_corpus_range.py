@@ -13,7 +13,16 @@ solved, scored and reported against music a fifth of the corpus above where it
 belongs, and the failures land in whichever bucket they reach first.
 
 The signature is a range that no guitar can play and that lands exactly on the
-guitar when shifted down an octave. That is evidence, not proof: the sources for
+guitar when shifted down an octave.
+
+Two limits worth stating. A score whose whole range also fits an octave down is
+reported as written pitch even if only a few of its notes are displaced -- range
+alone cannot separate those readings, and only a score reaching the open low E
+disambiguates itself. And a partial displacement whose stray notes stay under
+fret 22 is invisible here entirely; the obvious screen for it, an octave leap up
+and straight back, fires on 133 of 292 scores because that is what a guitar
+arpeggio does inside one voice label, so it measures texture rather than defect.
+Finding those needs the sources. That is evidence, not proof: the sources for
 the affected scores are not vendored here, so this reports rather than repairs.
 Transposing a corpus on a hunch is how the first frame-config analysis came to be
 retracted.
@@ -78,6 +87,19 @@ def audit_example(example: dict[str, object], max_fret: int) -> dict[str, object
     fits_down = fits(-OCTAVE, 0)
     drop = next((d for d in (1, 2) if fits(0, d)), None)
     drop_and_octave = next((d for d in (1, 2) if fits(-OCTAVE, d)), None)
+
+    # A fourth case, and the one that can hide. `aguado-op03n05` has 23 notes of
+    # 345 sitting an octave above where they belong, scattered across the whole
+    # piece; the rest is ordinary. Only the ones that clear fret 22 announce
+    # themselves, so the same defect in a lower-lying piece passes silently with
+    # wrong notes. Whole-piece repairs do not describe it and calling it "not a
+    # guitar score" sends someone to delete real repertoire.
+    offenders = [pitch for pitch in pitches if pitch > reach_high]
+    partial = (
+        bool(offenders)
+        and len(offenders) < len(pitches) // 10
+        and all(reach_low <= pitch - OCTAVE <= reach_high for pitch in offenders)
+    )
     return {
         "id": str(example.get("id")),
         "split": example.get("split"),
@@ -97,6 +119,8 @@ def audit_example(example: dict[str, object], max_fret: int) -> dict[str, object
             if drop is not None
             else f"written pitch and sixth string down {drop_and_octave}"
             if drop_and_octave is not None
+            else f"partial: {len(offenders)} of {len(pitches)} notes an octave high"
+            if partial
             else "fits no octave or sixth-string tuning -- not a guitar score"
         ),
     }

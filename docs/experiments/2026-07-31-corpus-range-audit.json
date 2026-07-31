@@ -137,7 +137,7 @@
     98
    ],
    "split": "train",
-   "verdict": "fits no octave or sixth-string tuning -- not a guitar score"
+   "verdict": "partial: 23 of 345 notes an octave high"
   },
   {
    "above": 1,
@@ -329,7 +329,7 @@
  ],
  "unplayable": 19,
  "verdicts": {
-  "fits no octave or sixth-string tuning -- not a guitar score": 1,
+  "partial: 23 of 345 notes an octave high": 1,
   "unrecorded tuning: fits with the sixth string down 1": 1,
   "unrecorded tuning: fits with the sixth string down 2": 3,
   "written pitch and sixth string down 2": 1,
