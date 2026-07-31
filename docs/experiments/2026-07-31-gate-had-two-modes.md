@@ -55,13 +55,29 @@ than a merely wrong measurement — the most expensive form it has taken.
 
 | | fixed capo | capo ladder |
 |---|---|---|
-| `d753751` — span 100, before the week's fixes | 110 / 292 | *(the 146 recorded)* |
-| `oracle@0.8.0` / `median@0.3` — current | 149 / 292 | see below |
+| `d753751` — span 100, before the week's fixes | 110 / 292, GREEN 69 | 146 / 292, GREEN 89 *(recorded)* |
+| `oracle@0.8.0` / `median@0.3` — current | 149 / 292, GREEN 114 | **173 / 292, GREEN 129** |
 
 Everything measured on 2026-07-30 — the reach fix at 152, the slant exemption at
 149, beam 32 at 143 — is in the **fixed-capo** column and is internally
 consistent. None of it is comparable with the historical figures, and the claim
 that those figures were erroneous is withdrawn.
+
+Read down the column that history was written in, the week moves the gate from
+**146 to 173 of 292**, 50.0% to 59.2%, and certifications from 89 to 129. That is
+the apples-to-apples number and it is a much better one than the fixed-capo
+column suggested. The two fixes it comes from are the reach window and the slant
+exemption, both of which stopped the verifier refusing shapes editors print.
+
+At the current oracle the ladder itself is worth **+24 pieces**, 149 to 173, and
+it thins every infeasible bucket rather than one:
+
+```
+                                    fixed capo   capo ladder
+no feasible frame config                    44            38
+no non-red extension within beam            93            75
+frozen 56-slice accepted                    30            32
+```
 
 ## The product finding underneath
 
