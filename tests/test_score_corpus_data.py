@@ -85,8 +85,13 @@ def test_additional_mutopia_corpus_has_independent_public_domain_sources() -> No
     payload = ADDITIONAL.read_bytes()
     examples = json.loads(payload)["examples"]
 
+    # Re-frozen 2026-07-31: `scripts/repair_corpus_pitches.py` corrected the
+    # pitches and tunings the converter never read. The generator is upstream
+    # and would put them back, so the corrections are a table in the repo and
+    # `tests/test_corpus_fits_the_instrument.py` is what fails if a rebuild
+    # drops them.
     assert hashlib.sha256(payload).hexdigest() == (
-        "75812c1c4a81e77c887e919c68eea54520f567d489a154d1b88a82dd0064f091"
+        "9dac3b8284af0c1228baf24aeacb363095b0c03d72d80715757103662eec2bc3"
     )
     assert len(examples) == 5
     assert len({example["composer"] for example in examples}) == 4
@@ -110,8 +115,13 @@ def test_mutopia_sharealike_corpus_is_large_licensed_and_source_complete() -> No
     manifest_payload = CC_BY_SA_MANIFEST.read_bytes()
     manifest = json.loads(manifest_payload)
 
+    # Re-frozen 2026-07-31: `scripts/repair_corpus_pitches.py` corrected the
+    # pitches and tunings the converter never read. The generator is upstream
+    # and would put them back, so the corrections are a table in the repo and
+    # `tests/test_corpus_fits_the_instrument.py` is what fails if a rebuild
+    # drops them.
     assert hashlib.sha256(payload).hexdigest() == (
-        "846c29583198afcbacf9d1878074b6fa2d30c009d9dca692f9a66f98d21138a7"
+        "f480788a8e45a63640070e02eee059cef6b0bf4c7b7a34cfc854a3f7a73683bf"
     )
     assert hashlib.sha256(manifest_payload).hexdigest() == (
         "011fed2abd6ef5db2f3a778cc9675e54d5d715fd4c0a189b68747c1e22a01a0a"

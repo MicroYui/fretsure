@@ -10,14 +10,15 @@
    "mutopia_expanded_public_domain.json",
    "mutopia_expanded_share_alike.json"
   ],
+  "escalate": false,
   "profile_fingerprint": "41119a9849f8b023f0a2d24c5cf9ed29e6d2a84efbd585ad56c52989da775307",
   "profile_version": "median@0.3",
   "sustain_retention_floor": "9/10"
  },
- "frames": 44,
+ "frames": 46,
  "margin_mm": {
-  "max": 67.2,
-  "median": 21.3,
+  "max": 117.8,
+  "median": 21.8,
   "min": 3.4
  },
  "rows": [
@@ -31,6 +32,16 @@
     62,
     67,
     68
+   ],
+   "verdict": "geometry"
+  },
+  {
+   "id": "mutopia-faure-op78-sicilienne",
+   "margin_mm": 41.5,
+   "onset": "36",
+   "pitches": [
+    39,
+    71
    ],
    "verdict": "geometry"
   },
@@ -68,6 +79,16 @@
     62,
     63,
     65
+   ],
+   "verdict": "geometry"
+  },
+  {
+   "id": "mutopia-cc-by-sa-carcassi-op60-23",
+   "margin_mm": 117.8,
+   "onset": "6",
+   "pitches": [
+    40,
+    76
    ],
    "verdict": "geometry"
   },
@@ -161,16 +182,6 @@
    "verdict": "geometry"
   },
   {
-   "id": "mutopia-giuliani-op50n26",
-   "margin_mm": 3.4,
-   "onset": "33",
-   "pitches": [
-    52,
-    86
-   ],
-   "verdict": "geometry"
-  },
-  {
    "id": "mutopia-giuliani-op50n31",
    "margin_mm": 66.5,
    "onset": "25/2",
@@ -181,6 +192,20 @@
     72,
     74,
     76
+   ],
+   "verdict": "geometry"
+  },
+  {
+   "id": "mutopia-giuliani-op50n32",
+   "margin_mm": 23.3,
+   "onset": "84",
+   "pitches": [
+    45,
+    57,
+    61,
+    62,
+    68,
+    69
    ],
    "verdict": "geometry"
   },
@@ -243,6 +268,19 @@
     74,
     78,
     81
+   ],
+   "verdict": "no assignment puts them on distinct strings"
+  },
+  {
+   "id": "mutopia-horetzky49-movement-1",
+   "onset": "85/4",
+   "pitches": [
+    50,
+    52,
+    56,
+    58,
+    59,
+    62
    ],
    "verdict": "no assignment puts them on distinct strings"
   },
@@ -465,31 +503,17 @@
    "verdict": "geometry"
   },
   {
-   "id": "mutopia-sor-op-1-5-1",
-   "onset": "37/2",
-   "pitches": [
-    71,
-    72,
-    76,
-    77,
-    79,
-    86
-   ],
-   "verdict": "no assignment puts them on distinct strings"
-  },
-  {
    "id": "mutopia-sor-op-1-5-3",
-   "margin_mm": 67.2,
    "onset": "2",
    "pitches": [
-    60,
-    62,
-    63,
-    65,
-    67,
-    74
+    48,
+    50,
+    51,
+    53,
+    55,
+    62
    ],
-   "verdict": "geometry"
+   "verdict": "no assignment puts them on distinct strings"
   },
   {
    "id": "mutopia-sor-op1-1",
@@ -509,13 +533,13 @@
    "id": "mutopia-sor-op1-3",
    "onset": "19/2",
    "pitches": [
+    38,
     50,
-    62,
-    81,
-    83,
-    85
+    69,
+    71,
+    73
    ],
-   "verdict": "no assignment puts them on distinct strings"
+   "verdict": "the frame alone is fine -- the refusal is the history"
   },
   {
    "id": "mutopia-sorf-andantino",
@@ -544,9 +568,9 @@
  "schema": "fretsure-frame-config-attribution@0.1.0",
  "verdicts": {
   "a barre crosses a string stopped behind it": 3,
-  "geometry": 19,
+  "geometry": 20,
   "no assignment puts them on distinct strings": 18,
-  "the frame alone is fine -- the refusal is the history": 4
+  "the frame alone is fine -- the refusal is the history": 5
  },
  "versions": {
   "checker": "oracle@0.8.0",

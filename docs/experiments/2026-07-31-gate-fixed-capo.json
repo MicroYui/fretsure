@@ -1,6 +1,6 @@
 {
  "aggregate": {
-  "accepted": 149,
+  "accepted": 154,
   "baseline_subset": {
    "accepted": 30,
    "accepted_ids": [
@@ -39,17 +39,14 @@
   },
   "examples": 292,
   "infeasible_reason_counts": {
-   "no feasible frame config": 44,
-   "no non-red extension within beam": 93,
-   "pitch 38 unreachable on this tuning/capo": 2,
-   "pitch 39 unreachable on this tuning/capo": 1,
-   "pitch 87 unreachable on this tuning/capo": 1,
-   "pitch 88 unreachable on this tuning/capo": 2
+   "no feasible frame config": 46,
+   "no non-red extension within beam": 91,
+   "pitch 39 unreachable on this tuning/capo": 1
   },
   "outcome_counts": {
-   "AMBER": 35,
-   "GREEN": 114,
-   "INFEASIBLE": 143
+   "AMBER": 37,
+   "GREEN": 117,
+   "INFEASIBLE": 138
   }
  },
  "configuration": {
@@ -63,6 +60,7 @@
    "mutopia_expanded_public_domain.json",
    "mutopia_expanded_share_alike.json"
   ],
+  "escalate": false,
   "profile_fingerprint": "41119a9849f8b023f0a2d24c5cf9ed29e6d2a84efbd585ad56c52989da775307",
   "profile_version": "median@0.3",
   "sustain_retention_floor": "9/10"
