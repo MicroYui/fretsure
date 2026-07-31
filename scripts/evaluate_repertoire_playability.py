@@ -34,6 +34,7 @@ from fretsure.solver.score import (
     SCORE_SOLVER_VERSION,
     solve_fingering_score,
     solve_fingering_score_choosing_capo,
+    solve_fingering_score_with_escalation,
 )
 from fretsure.solver.sustain import SUSTAIN_RETENTION_FLOOR
 from fretsure.tab import Tab
@@ -133,6 +134,7 @@ def evaluate_example(
     profile: Profile,
     beam: int,
     choose_capo: bool = False,
+    escalate: bool = False,
 ) -> dict[str, object]:
     example_id = str(example.get("id"))
     notes = _notes(example, example_id)
@@ -161,7 +163,12 @@ def evaluate_example(
     # recorded one: choosing a capo is a real arranging liberty, and a gate that
     # silently started taking it would make every earlier measurement
     # incomparable.
-    solver = solve_fingering_score_choosing_capo if choose_capo else solve_fingering_score
+    if escalate:
+        solver = solve_fingering_score_with_escalation
+    elif choose_capo:
+        solver = solve_fingering_score_choosing_capo
+    else:
+        solver = solve_fingering_score
     try:
         solved = solver(
             notes,
@@ -208,6 +215,7 @@ def run(
     profile: Profile,
     beam: int,
     choose_capo: bool = False,
+    escalate: bool = False,
 ) -> dict[str, object]:
     records: list[dict[str, object]] = []
     for path in paths:
@@ -215,7 +223,8 @@ def run(
         for example in document["examples"]:
             records.append(
                 evaluate_example(
-                    example, profile=profile, beam=beam, choose_capo=choose_capo
+                    example, profile=profile, beam=beam, choose_capo=choose_capo,
+                    escalate=escalate,
                 )
             )
     outcomes = Counter(str(record["outcome"]) for record in records)
@@ -236,6 +245,7 @@ def run(
             "corpus": [path.name for path in paths],
             "sustain_retention_floor": str(SUSTAIN_RETENTION_FLOOR),
             "choose_capo": choose_capo,
+            "escalate": escalate,
         },
         "versions": {
             "checker": CHECKER_VERSION,
@@ -288,6 +298,14 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="let a refused score try other capo positions; reported separately",
     )
+    parser.add_argument(
+        "--escalate",
+        action="store_true",
+        help=(
+            "capo ladder then beam ladder -- the full escalation the solver "
+            "already implements and nothing outside tests has ever called"
+        ),
+    )
     parser.add_argument("--output", type=Path)
     parser.add_argument(
         "--summary-only",
@@ -302,7 +320,11 @@ def main(argv: list[str] | None = None) -> int:
     paths = tuple(args.corpus) if args.corpus else DEFAULT_CORPUS
     try:
         report = run(
-            paths, profile=MEDIAN_HAND, beam=args.beam, choose_capo=args.choose_capo
+            paths,
+            profile=MEDIAN_HAND,
+            beam=args.beam,
+            choose_capo=args.choose_capo,
+            escalate=args.escalate,
         )
     except (OSError, ValueError, KeyError) as error:
         print(f"repertoire evaluation failed: {error}", file=sys.stderr)

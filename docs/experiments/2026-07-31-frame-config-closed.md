@@ -38,10 +38,28 @@ reaching for a margin. Nothing defensible reaches a median of 21 mm.
 defects the previous verdict was measured with.** Twenty-five of the forty-four
 are not hand-model questions at any margin.
 
+## Corrected the same day: four of the forty-four are not real
+
+A corpus audit written an hour later found **19 of 292 scores hold pitches no
+guitar can sound** — thirteen entered at written pitch, an octave high, and five
+in a tuning the corpus did not record. The gate reports only six of them as out
+of range; the rest fail at whichever bucket they reach first, and four of them
+land here.
+
+Excluding those four, geometry is **17 frames, median still 21.3 mm**, min 3.4,
+max 66.5. The two contaminated geometry frames sat at 3.4 and 67.2 — one at each
+end, so the closure is unaffected. The other two were "no assignment puts them on
+distinct strings", which is what an octave-high score looks like.
+
 ## What that leaves
 
 ```
-143 refused = 44 frame-config (closed)  +  93 beam  +  6 out of range
+292 scores
+  19  hold pitches no guitar can sound          corpus defect, see the range audit
+ 149  accepted
+ 124  refused, of sound scores
+        40  frame-config   →  17 geometry at a median of 21.3 mm, closed
+        84  beam
 ```
 
 Beam *width* is measured flat — 32 is worse than 16 and the bucket moves 93 → 94.
