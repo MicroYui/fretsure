@@ -136,3 +136,46 @@ def test_the_summary_still_carries_the_aggregate(
     assert aggregate["accepted"] in (0, 1)
     assert sum(aggregate["outcome_counts"].values()) == 1
     assert "baseline_subset" in aggregate
+
+
+def test_the_three_solver_modes_are_selected_and_recorded(
+    script: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Three modes, three metrics, and the summary has to say which ran.
+
+    `--escalate` reaches `solve_fingering_score_with_escalation`, which nothing
+    outside tests had ever called although it has been implemented and documented
+    for a week. It was added to the gate on 2026-07-31 with no test that it picks
+    the right solver -- a flag that silently falls back to the plain path would
+    report a ceiling measurement as a floor one.
+    """
+
+    called: list[str] = []
+
+    from fretsure.solver.api import Infeasible, InfeasibleCode
+
+    def _spy(name: str):
+        def solver(*_args: object, **_kwargs: object) -> Infeasible:
+            called.append(name)
+            return Infeasible(InfeasibleCode.NO_FRAME_CONFIG, None, "spy", ())
+
+        return solver
+
+    monkeypatch.setattr(script, "solve_fingering_score", _spy("plain"))
+    monkeypatch.setattr(script, "solve_fingering_score_choosing_capo", _spy("capo"))
+    monkeypatch.setattr(script, "solve_fingering_score_with_escalation", _spy("escalate"))
+
+    for flags, expected in (
+        ((), "plain"),
+        (("--choose-capo",), "capo"),
+        (("--escalate",), "escalate"),
+        # Escalation already contains the capo ladder, so it wins when both are
+        # given rather than the two quietly composing into something neither
+        # flag names.
+        (("--choose-capo", "--escalate"), "escalate"),
+    ):
+        called.clear()
+        summary = _summary(script, tmp_path / f"m{len(called)}{''.join(flags)}", *flags)
+        assert called == [expected], (flags, called)
+        assert summary["configuration"]["escalate"] is ("--escalate" in flags)
+        assert summary["configuration"]["choose_capo"] is ("--choose-capo" in flags)
