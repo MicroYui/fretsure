@@ -99,11 +99,23 @@ horetzky53-movement-1      train   TIMEOUT   TIMEOUT   TIMEOUT
 ```
 
 `bwv-1006a-7g` **solves at baseline**. Probes 1 through 4 used plain
-`solve_fingering_score` at the requested capo; the gate uses
-`solve_fingering_score_with_escalation`, which tries a capo ladder and then
-widens. So the population under analysis was "fails the plain solver" — a
-superset of the gate's refusals containing pieces the shipped gate already
-solves.
+`solve_fingering_score` at the requested capo; the gate does not.
+
+> **Mechanism corrected 2026-08-01.** This said the gate uses
+> `solve_fingering_score_with_escalation`. It did not, and never had:
+> `evaluate_repertoire_playability.py` chose between `solve_fingering_score` and
+> `solve_fingering_score_choosing_capo`, and the escalation entry point was
+> called by nothing outside tests until it was wired to a `--escalate` flag on
+> 2026-07-31. The claim was false when written and it propagated.
+>
+> The **conclusion is unaffected** and its real cause is the same one that later
+> produced a wrong "correction" of the 146/292 figure: the gate was being *run*
+> with `--choose-capo`, and the probes were not. Two modes under one name, a
+> second time, in a second document.
+
+So the population under analysis was "fails the plain solver at the requested
+capo" — a superset of the gate's refusals containing pieces the shipped gate
+already solves.
 
 That is the same class of error the skill-registry ablation hit: measuring at
 the wrong layer, so the thing being explained is not the thing that happens.
