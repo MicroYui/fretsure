@@ -9,6 +9,7 @@
 ```
 曲目门（固定变调夹） 154 / 292 = 52.7%   GREEN 117 · AMBER 37 · INFEASIBLE 138
 曲目门（capo ladder）178 / 292 = 61.0%   GREEN 132 · AMBER 46 · INFEASIBLE 114
+曲目门（完整 escalation）182 / 292 = 62.3%  GREEN 135 · AMBER 47 · INFEASIBLE 110（上限）
 冻结基线            30 / 56（固定）· 32 / 56（capo）
 帧级假阴性           4.1%（245 帧判定，10 帧被拒，全部 FRET_SPAN）
 判别力               95.9 个百分点
