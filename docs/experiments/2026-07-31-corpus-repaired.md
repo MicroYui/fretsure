@@ -48,28 +48,38 @@ scores. The same is true of the octave clef: 124 of 125 scores carrying
 ## The check that does come from the source
 
 Twenty-seven scores carry printed **string numbers**, and a string number pins a
-pitch to a 22-fret window. The numbering convention is not documented, so it was
-calibrated rather than assumed — and it is **1 = lowest string**, the opposite of
-the usual ①=high-E convention:
+pitch to a 22-fret window.
 
-```
-1 = highest string   consistent 383 / 476 = 80.5%
-1 = lowest string    consistent 471 / 476 = 98.9%
-```
+> **Corrected 2026-08-01.** I first wrote that the convention was undocumented
+> and calibrated it to "1 = lowest string" at 98.9% against 80.5%. Both halves
+> were wrong. `score_corpus.py:177` stores `string_count - musicxml_string`, so
+> the value is **0-based with 0 = lowest** — the project's own `TabNote.string`
+> convention, written in the code, needing no calibration. My reading dropped
+> every annotation on the lowest string and put the rest one string too low.
+>
+> Worse, it still scored 98.7% that way, against 98.6% for the correct indexing.
+> **A 22-fret window is wide enough that a note usually still fits the wrong
+> string**, so the check cannot distinguish conventions and verifies much less
+> than I claimed for it. Read correctly it is 487/494 = 98.6%, 7 disagreements
+> across 4 scores.
 
-Under the correct reading, `capricho-arabe` is **197/204 consistent as recorded**
-and only 149/204 an octave down. So its pitches are right and its tuning is
-wrong, confirmed from the score's own string marks and not from its range.
+What the check does support is a comparison where the margin is large. Under the
+correct indexing `capricho-arabe` is **202/204 consistent as recorded** and
+**32/204 an octave down**. That separation is far outside the check's noise, so
+its pitches are right and its tuning is wrong — confirmed from the score's own
+marks rather than from its range.
 
-Five annotations across three scores still disagree, and the source shows why —
-`carcassi-op60-10.ly` line 59:
+The remaining disagreements are chord members. In `carcassi-op60-10.ly` line 59:
 
 ```lilypond
 <a cis,>8 <cis-4 e,-3\3> <cis e,\3> |
 ```
 
-The `\3` belongs to `e,`, and the corpus attached it to `cis`. That is a chord
-attachment bug in `python_ly_string_numbers.py`, not a pitch error.
+the `\3` belongs to `e,` and the corpus attached it to `cis`. This is **not a
+new finding**: `python_ly_string_numbers.py` documents it at line 35 — the
+mediator points at one `current_note` for every chord member, python-ly's own
+fingering support loses one the same way, and the patch mirrors that path
+deliberately rather than diverging from it.
 
 ## What was measured on the instrument
 
@@ -162,7 +172,8 @@ after two fixes  44 / 271 scores identical
 ```
 
 Two real bugs were found and fixed along the way: octave resolution in
-`elative` goes by **letter distance, not semitones** (`c`→`fis` and `c`→`ges`
+`
+elative` goes by **letter distance, not semitones** (`c`→`fis` and `c`→`ges`
 are both a fourth on the staff but not in semitones), and `\key a \major` holds a
 note name that is not a note. Sixteen percent agreement after that is still a
 broken parser, not a corpus finding, and the diagnostic that settled it was the
