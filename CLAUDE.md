@@ -98,6 +98,14 @@ reach 那一改 +45 首正是这样来的：改的是一条每帧都在生效的
 20 个工作点无一占优、斜角四个界同一汇率、相邻指对因子 train 有效 test 无效）。其中五个
 是在动手实现之前关掉的。**勿重做。**
 
+**负样本守卫的 82 张 GREEN 已经查过了**（08-01）：全部 13 个音以上、8–32 个 onset、
+13–26 个按弦音，81/82 形状互不相同——"它们只是平凡样例"这个解释不成立。但把它们和
+被拒的 1439 张比，**音符数完全相同（中位 28）、把位也相同**，唯一有系统差别的是
+**同时按住的最宽帧：GREEN 75.1 mm · AMBER 100.2 · RED 129.9**——正是 `d_max` 与手位窗口
+限制的那个量，单调分离。75 mm 是一把位 1→3 品。**所以这 82 张不是随机认证的**；但这不证明
+它们可弹（右手实用性、musicality、持续音都在检查之外），守卫仍然断言 provenance 而非
+playability。见 `docs/experiments/2026-08-01-certified-model-tabs.md`。
+
 **真源分工**：设计 spec 是产品/方法学决策真源；`docs/PROJECT_STATE.md` 是当前实现进度真源；代码、测试和 `docs/BENCHMARK_RESULTS.md` 是已实现能力与实测结果的最终证据。不要用历史计划中的未勾 checkbox 推断当前状态。
 
 **CI / 合并规则**：自动 CI 只在 pull request 与 `main` push 上按 Python/Web/文档路径分别运行轻量检查；完整 benchmark、集成边界、冻结工件、依赖审计和发行包 smoke 只通过 `Full validation` 手动 workflow 在 Task 验收时运行。每个 Task 完成后必须先通过完整验收，再合并或 fast-forward 回 `main` 并推送 `main`，然后才能开始下一 Task。

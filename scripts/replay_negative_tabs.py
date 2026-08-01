@@ -167,9 +167,31 @@ RESULT_SCHEMA: Final = "fretsure-negative-tab-replay@0.1.0"
 #     AMBER   67 ->  188
 #     GREEN   27 ->   81
 #
-# GREEN 27 -> 81 is the part to keep in view. 81 of 1,718 raw model tabs now
-# certify, and unlike the earlier movements these have not been inspected one by
-# one. The guard continues to assert provenance rather than playability.
+# GREEN 27 -> 81 is the part to keep in view, and on 2026-08-01 the certified set
+# was finally characterised instead of counted. It is not what "false
+# certifications" suggests:
+#
+#   * every one is substantial -- 13+ notes, 8 to 32 onsets, 13 to 26 fretted --
+#     so "they are trivial two-note tabs" is not the explanation;
+#   * 81 of the 82 are distinct shapes;
+#   * they carry the *same amount of music* as the refused ones, median 28 notes
+#     in all three verdicts, at the same median fret.
+#
+# What separates them is exactly the quantity the hand model bounds:
+#
+#     median widest simultaneous frame   GREEN  75.1 mm
+#                                        AMBER 100.2 mm
+#                                        RED   129.9 mm
+#
+# A clean monotone separation on the one feature the geometry is about, with note
+# count and position held equal. 75 mm is frets 1 to 3 in first position, a shape
+# any hand makes. So the oracle is certifying substantial tabs built from
+# comfortable shapes rather than certifying arbitrarily.
+#
+# That is not proof they are playable -- right-hand practicality, musicality and
+# the sustain model are all outside it -- and the guard still asserts provenance
+# rather than playability. But "82 uninspected certifications" was the wrong
+# framing for it.
 # 2026-07-30, second movement of the day. `oracle@0.8.0` exempts the hand's slant
 # from `check_finger_monotonic`: an inversion is refused only when the
 # higher-numbered finger is toward the *bass*, because a finger reaching toward
