@@ -132,10 +132,19 @@ Two frozen corpus digests were re-frozen with the reason recorded.
 
 Same mode (fixed capo), same profile, `oracle@0.8.0` / `median@0.3`:
 
-| | accepted | GREEN | AMBER | frame-config | beam | out of range |
+| fixed capo | accepted | GREEN | AMBER | frame-config | beam | out of range |
 |---|---|---|---|---|---|---|
 | before the repair | 149 / 292 | 114 | 35 | 44 | 93 | 6 |
 | **after** | **154 / 292 = 52.7%** | **117** | 37 | 46 | 91 | **1** |
+
+| capo ladder | accepted | GREEN | AMBER | frame-config | beam | out of range |
+|---|---|---|---|---|---|---|
+| before the repair | 173 / 292 | 129 | 44 | 38 | 75 | 6 |
+| **after** | **178 / 292 = 61.0%** | **132** | 46 | 40 | 73 | **1** |
+
+Both modes move by the same five pieces and three certifications. Read down the
+column history was written in, the fortnight is **146 → 178 of 292**, 50.0% to
+61.0%, and certifications 89 → 132.
 
 Five pieces and three certifications, which is exactly the five that became
 playable when shifted piece by piece — the whole-corpus number and the per-piece

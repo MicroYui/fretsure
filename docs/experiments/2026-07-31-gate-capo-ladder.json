@@ -1,0 +1,78 @@
+{
+ "aggregate": {
+  "accepted": 178,
+  "baseline_subset": {
+   "accepted": 32,
+   "accepted_ids": [
+    "mutopia-brahms-op39-no9",
+    "mutopia-carcassi-op59-prelude-01",
+    "mutopia-carcassi-op59-prelude-02",
+    "mutopia-carcassi-op59-prelude-03",
+    "mutopia-carcassi-op59-prelude-04",
+    "mutopia-carcassi-op59-prelude-05",
+    "mutopia-carcassi-op59-prelude-07",
+    "mutopia-carcassi-op59-prelude-08",
+    "mutopia-carcassi-op59-prelude-09",
+    "mutopia-carcassi-op59-prelude-10",
+    "mutopia-carcassi-op59-prelude-11",
+    "mutopia-carcassi-op59-prelude-12",
+    "mutopia-carcassi-op59-prelude-13",
+    "mutopia-carcassi-op59-prelude-14",
+    "mutopia-carcassi-op59-prelude-15",
+    "mutopia-carcassi-op59-prelude-16",
+    "mutopia-cc-by-sa-aguado-op11n01",
+    "mutopia-cc-by-sa-aguado-op11n02",
+    "mutopia-cc-by-sa-aguado-op11n04",
+    "mutopia-cc-by-sa-aguado-op11n06",
+    "mutopia-cc-by-sa-aguado-op11n07",
+    "mutopia-cc-by-sa-aminor-study",
+    "mutopia-cc-by-sa-carcassi-op26-03",
+    "mutopia-cc-by-sa-carcassi-op26-04",
+    "mutopia-cc-by-sa-carcassi-op26-05",
+    "mutopia-cc-by-sa-carcassi-op60-22",
+    "mutopia-cc-by-sa-sorf-op35-no11",
+    "mutopia-cc-by-sa-sorf-op35-no15",
+    "mutopia-cc-by-sa-sorf-op35-no17",
+    "mutopia-cc-by-sa-sorf-op35-no24",
+    "mutopia-cc-by-sa-sorf-op45n03-movement-2",
+    "mutopia-cc-by-sa-sorf-op45n03-movement-3"
+   ],
+   "examples": 56
+  },
+  "examples": 292,
+  "infeasible_reason_counts": {
+   "no feasible frame config": 40,
+   "no non-red extension within beam": 73,
+   "pitch 39 unreachable on this tuning/capo": 1
+  },
+  "outcome_counts": {
+   "AMBER": 46,
+   "GREEN": 132,
+   "INFEASIBLE": 114
+  }
+ },
+ "configuration": {
+  "beam": 16,
+  "choose_capo": true,
+  "corpus": [
+   "carcassi_op59.json",
+   "mutopia_pd_additional.json",
+   "mutopia_cc_by_sa.json",
+   "mutopia_expanded_permissive.json",
+   "mutopia_expanded_public_domain.json",
+   "mutopia_expanded_share_alike.json"
+  ],
+  "escalate": false,
+  "profile_fingerprint": "41119a9849f8b023f0a2d24c5cf9ed29e6d2a84efbd585ad56c52989da775307",
+  "profile_version": "median@0.3",
+  "sustain_retention_floor": "9/10"
+ },
+ "schema": "fretsure-repertoire-playability@0.1.0",
+ "versions": {
+  "checker": "oracle@0.8.0",
+  "fingering_solver": "fingering-solver@0.7.0",
+  "input_schema": "tab-input@0.3.0",
+  "left_hand_model": "left-hand-ergonomics@0.1.0",
+  "score_solver": "score-solver@0.7.0"
+ }
+}
